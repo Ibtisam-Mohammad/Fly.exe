@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "eon-demo-populations-v0.1",
+  "dataset_id": "male-cns:v1.0",
+  "populations": [
+    {
+      "id": "steering-dn-left",
+      "role": "Track A left steering readout",
+      "combine": "all",
+      "queries": [
+        {"field": "type", "operator": "regex", "value": "^DNa0[12]$"},
+        {"field": "instance", "operator": "regex", "value": "_L$"}
+      ],
+      "expected_min": 2,
+      "expected_max": 2,
+      "provenance": "M",
+      "fallback": "semantic placeholder in engineering demo only"
+    },
+    {
+      "id": "steering-dn-right",
+      "role": "Track A right steering readout",
+      "combine": "all",
+      "queries": [
+        {"field": "type", "operator": "regex", "value": "^DNa0[12]$"},
+        {"field": "instance", "operator": "regex", "value": "_R$"}
+      ],
+      "expected_min": 2,
+      "expected_max": 2,
+      "provenance": "M",
+      "fallback": "semantic placeholder in engineering demo only"
+    },
+    {
+      "id": "forward-odn1",
+      "role": "Eon-style forward readout",
+      "combine": "any",
+      "queries": [{"field": "type", "operator": "exact", "value": "oDN1"}],
+      "expected_min": 1,
+      "expected_max": 2,
+      "provenance": "P/E",
+      "fallback": "unresolved; no scientific fallback"
+    },
+    {
+      "id": "feeding-mn9",
+      "role": "proboscis extension initiation readout",
+      "combine": "any",
+      "queries": [{"field": "type", "operator": "exact", "value": "MN9"}],
+      "expected_min": 2,
+      "expected_max": 2,
+      "provenance": "M/P",
+      "fallback": "semantic placeholder in engineering demo only"
+    },
+    {
+      "id": "grooming-jo-f",
+      "role": "antennal mechanosensory entry population",
+      "combine": "all",
+      "queries": [
+        {"field": "class", "operator": "exact", "value": "mechanosensory"},
+        {"field": "subclass", "operator": "exact", "value": "grooming"},
+        {"field": "type", "operator": "regex", "value": "^JO-F"}
+      ],
+      "expected_min": 1,
+      "expected_max": 200,
+      "provenance": "M/P",
+      "fallback": "semantic placeholder in engineering demo only"
+    },
+    {
+      "id": "grooming-descending-readout",
+      "role": "antennal grooming action initiator",
+      "combine": "any",
+      "queries": [
+        {"field": "type", "operator": "regex", "value": "groom.*DN"},
+        {"field": "instance", "operator": "regex", "value": "groom.*DN"}
+      ],
+      "expected_min": 1,
+      "expected_max": 20,
+      "provenance": "P/E",
+      "fallback": "unresolved; no scientific fallback"
+    },
+    {
+      "id": "ethyl-acetate-receptor-entry",
+      "role": "first odor sensory entry",
+      "combine": "any",
+      "queries": [
+        {"field": "type", "operator": "regex", "value": "^Or42b$"},
+        {"field": "receptorType", "operator": "regex", "value": "^Or42b$"}
+      ],
+      "expected_min": 1,
+      "expected_max": 100,
+      "provenance": "P/E",
+      "fallback": "unresolved; require peripheral-to-CNS registration"
+    },
+    {
+      "id": "sucrose-receptor-entry",
+      "role": "sweet contact sensory entry",
+      "combine": "any",
+      "queries": [
+        {"field": "type", "operator": "regex", "value": "^(Gr5a|Gr64f)$"},
+        {"field": "receptorType", "operator": "regex", "value": "^(Gr5a|Gr64f)$"}
+      ],
+      "expected_min": 1,
+      "expected_max": 200,
+      "provenance": "P/E",
+      "fallback": "unresolved; require gustatory crosswalk"
+    }
+  ]
+}
+

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "male-cns:v1.0",
+  "source_page": "https://male-cns.janelia.org/download/",
+  "license": "CC-BY",
+  "coordinate_notes": "Synapse tables use 8 nm voxel units; skeleton variants may use 8 nm, 1 nm, or 1 um units.",
+  "artifacts": [
+    {
+      "id": "body-annotations",
+      "filename": "body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "profiles": ["metadata", "starter", "full"],
+      "published_size": "13 MB",
+      "sha256": null
+    },
+    {
+      "id": "body-neurotransmitters",
+      "filename": "body-neurotransmitters-male-cns-v1.0.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
+      "profiles": ["metadata", "starter", "full"],
+      "published_size": "42 MB",
+      "sha256": null
+    },
+    {
+      "id": "body-stats",
+      "filename": "body-stats-male-cns-v1.0-minconf-0.5.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-stats-male-cns-v1.0-minconf-0.5.feather",
+      "profiles": ["starter", "full"],
+      "published_size": "780 MB",
+      "sha256": null
+    },
+    {
+      "id": "connectome-weights",
+      "filename": "connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "profiles": ["starter", "full"],
+      "published_size": "1.1 GB",
+      "sha256": null
+    },
+    {
+      "id": "syn-points",
+      "filename": "syn-points-male-cns-v1.0-minconf-0.5.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather",
+      "profiles": ["full"],
+      "published_size": "12.7 GB",
+      "sha256": null
+    },
+    {
+      "id": "syn-partners",
+      "filename": "syn-partners-male-cns-v1.0-minconf-0.5.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-partners-male-cns-v1.0-minconf-0.5.feather",
+      "profiles": ["full"],
+      "published_size": "6.8 GB",
+      "sha256": null
+    },
+    {
+      "id": "tbar-neurotransmitters",
+      "filename": "tbar-neurotransmitters-male-cns-v1.0.feather",
+      "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/tbar-neurotransmitters-male-cns-v1.0.feather",
+      "profiles": ["full"],
+      "published_size": "2.7 GB",
+      "sha256": null
+    }
+  ]
+}

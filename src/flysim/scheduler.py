@@ -1,0 +1,108 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Causal multi-rate orchestration."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from flysim.contracts import ActuatorCommandFrame, NeuralInputFrame, SignalType
+from flysim.engines.base import BodyEngine, NeuralEngine
+from flysim.engines.body import COMMAND_IDS
+from flysim.engines.reference import REFERENCE_OUTPUT_IDS
+from flysim.errors import CausalityError, ConfigurationError
+from flysim.scenario import DemoState, EonDemoController
+
+
+@dataclass(frozen=True, slots=True)
+class SchedulerResult:
+    completed: bool
+    final_t_us: int
+    final_state: DemoState
+    trace: tuple[dict[str, Any], ...]
+    events: tuple[dict[str, Any], ...]
+
+
+class CausalScheduler:
+    def __init__(
+        self,
+        neural: NeuralEngine,
+        body: BodyEngine,
+        controller: EonDemoController,
+        coupling_us: int,
+    ) -> None:
+        if coupling_us <= 0:
+            raise ConfigurationError("Coupling interval must be positive")
+        if neural.t_us != body.t_us:
+            raise CausalityError("Neural and body engines must start at the same time")
+        self.neural = neural
+        self.body = body
+        self.controller = controller
+        self.coupling_us = coupling_us
+
+    def run_until(self, duration_us: int) -> SchedulerResult:
+        if duration_us <= self.body.t_us:
+            raise ConfigurationError("Run duration must exceed current simulation time")
+        initial = ActuatorCommandFrame(
+            t_us=self.body.t_us,
+            ids=COMMAND_IDS,
+            values=tuple(0.0 for _ in COMMAND_IDS),
+            units="mm/s, rad/s, normalized, normalized",
+            signal_type=SignalType.ACTUATOR_COMMAND,
+            provenance="E",
+            assumption_ids=("MOTOR-03",),
+            metadata={"controller_state": "INITIAL_DELAY", "vnc_bypass": True},
+        )
+        self.body.apply_actuators(initial)
+        trace: list[dict[str, Any]] = []
+
+        while self.body.t_us < duration_us and self.controller.state != DemoState.COMPLETE:
+            current_t = self.body.t_us
+            if current_t != self.neural.t_us:
+                raise CausalityError(
+                    f"Engine clocks diverged: body={current_t}, neural={self.neural.t_us}"
+                )
+            sensors_before = self.body.sample_sensors()
+            neural_inputs = NeuralInputFrame(
+                t_us=current_t,
+                ids=sensors_before.ids,
+                values=sensors_before.values,
+                units=sensors_before.units,
+                signal_type=SignalType.RECEPTOR_ACTIVITY,
+                provenance="E",
+                assumption_ids=sensors_before.assumption_ids,
+                metadata={"transduction": "identity-reference-scaffold"},
+            )
+            self.neural.push_inputs(neural_inputs)
+            next_t = min(duration_us, current_t + self.coupling_us)
+
+            # The body advances on the previously committed command while the neural engine
+            # processes current sensors. The newly decoded command starts only at next_t.
+            self.neural.step_until(next_t)
+            self.body.step_until(next_t)
+            if self.body.t_us != self.neural.t_us:
+                raise CausalityError("Engine clocks diverged after stepping")
+
+            neural_outputs = self.neural.read_outputs(REFERENCE_OUTPUT_IDS, self.coupling_us)
+            sensors_after = self.body.sample_sensors()
+            command = self.controller.decode(neural_outputs, sensors_after)
+            self.body.apply_actuators(command)
+            trace.append(
+                {
+                    "t_us": next_t,
+                    "state": self.controller.state.value,
+                    "body": self.body.snapshot(),
+                    "sensors": sensors_after.as_dict(),
+                    "neural": neural_outputs.as_dict(),
+                    "actuators": command.as_dict(),
+                }
+            )
+
+        return SchedulerResult(
+            completed=self.controller.state == DemoState.COMPLETE,
+            final_t_us=self.body.t_us,
+            final_state=self.controller.state,
+            trace=tuple(trace),
+            events=tuple(event.as_dict() for event in self.controller.events),
+        )
+
