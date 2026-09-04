@@ -151,6 +151,7 @@ These are current starting decisions, not claims that the biology is solved.
 | `DATA-01` | Connectome | Use MaleCNS v1.0 chemical topology and exact stable IDs. | `M` | Release checksums, schema tests, count/annotation audits. |
 | `DATA-02` | Structural uncertainty | Keep strong edges fixed initially; retain weak edges and sample/drop them in sensitivity ensembles rather than deleting them silently. | `M/E` | Detector confidence, bilateral homologues, cross-connectome recurrence. |
 | `DATA-03` | Cross-specimen mapping | Maintain explicit MaleCNS↔MANC/FANC/BANC/FlyWire/type crosswalks with confidence. | `P` | Morphology, type identity, side/segment and source evidence. |
+| `DATA-04` | Runtime body universe | Provisional starter derivative uses annotation `status=Traced`; the immutable source retains every segment, and excluded segment edges/contacts are counted. | `M/E` | Compare Traced against Traced+Assign+Anchor and review official count/motif sensitivity before acceptance. |
 | `ND-01` | Neuron formalism | Hybrid model: graded passive cells where established; LIF/AdEx for established spiking cells; competing variants for unknown types. | `P/F/E` | Type-resolved voltage, spike and calcium recordings. |
 | `ND-02` | Membrane parameters | Use type-level distributions; use global Shiu-style values only as labelled fallbacks. | `P/F` | Resting voltage, input resistance, time constant, threshold and adaptation data. |
 | `ND-03` | Edge polarity | Infer from transmitter plus receptor evidence; unresolved signs remain latent alternatives. | `M/P/F` | Receptor protein/transcript evidence and paired physiology. |
@@ -441,5 +442,6 @@ The following are deliberately not fixed yet. Agents may investigate them, but m
 - physiological datasets and loss functions for parameter fitting;
 - weak-edge uncertainty model;
 - male body scaling dataset;
+- runtime body universe: retain only `Traced` bodies or include `Assign` and `Anchor` statuses after sensitivity review;
 
 Resolve these through evidence-backed decisions, not convenience alone.
