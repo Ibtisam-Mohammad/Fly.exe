@@ -8,7 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from flysim.errors import DatasetError
+from flysim.errors import DatasetError, ValidationError
+from flysim.evidence import validate_evidence_bundle
 from flysim.runs import read_trace
 
 
@@ -89,6 +90,30 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
             failures.append(
                 "an engineering run without a connectome must not claim a validation tier"
             )
+    claimed_tier = manifest.get("result", {}).get("highest_validation_tier")
+    if claimed_tier is not None:
+        evidence = manifest.get("evidence_bundle")
+        if not isinstance(evidence, dict):
+            failures.append("a validation-tier claim requires an evidence_bundle record")
+        else:
+            bundle_path = Path(str(evidence.get("path", "")))
+            if not bundle_path.is_absolute():
+                bundle_path = run_directory / bundle_path
+            if not bundle_path.is_file():
+                failures.append(f"evidence bundle is missing: {bundle_path}")
+            else:
+                observed_bundle_sha = _sha256_file(bundle_path)
+                if observed_bundle_sha != evidence.get("sha256"):
+                    failures.append("evidence bundle checksum mismatch")
+                try:
+                    bundle_report = validate_evidence_bundle(bundle_path)
+                except ValidationError as exc:
+                    failures.append(f"evidence bundle is malformed: {exc}")
+                else:
+                    if not bundle_report["valid"]:
+                        failures.append("evidence bundle validation failed")
+                    if bundle_report["tier"] != claimed_tier:
+                        failures.append("evidence bundle tier differs from run claim")
 
     report = {
         "schema_version": "1.0",
@@ -98,7 +123,7 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
         "trace_records": len(trace),
         "completed": completed,
         "required_sequence_observed": cursor == len(required_order),
-        "scientific_validation_tier": manifest.get("result", {}).get("highest_validation_tier"),
+        "scientific_validation_tier": claimed_tier,
     }
     report_path = run_directory / "validation-report.json"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

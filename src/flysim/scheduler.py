@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from flysim.contracts import ActuatorCommandFrame, NeuralInputFrame, SignalType
@@ -12,6 +12,7 @@ from flysim.engines.body import COMMAND_IDS
 from flysim.engines.reference import REFERENCE_OUTPUT_IDS
 from flysim.errors import CausalityError, ConfigurationError
 from flysim.scenario import DemoState, EonDemoController
+from flysim.timing import CausalDelayQueue
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +31,8 @@ class CausalScheduler:
         body: BodyEngine,
         controller: EonDemoController,
         coupling_us: int,
+        sensory_delay_us: int = 0,
+        motor_delay_us: int = 0,
     ) -> None:
         if coupling_us <= 0:
             raise ConfigurationError("Coupling interval must be positive")
@@ -39,6 +42,12 @@ class CausalScheduler:
         self.body = body
         self.controller = controller
         self.coupling_us = coupling_us
+        self.sensory_queue: CausalDelayQueue[NeuralInputFrame] = CausalDelayQueue(
+            sensory_delay_us
+        )
+        self.motor_queue: CausalDelayQueue[ActuatorCommandFrame] = CausalDelayQueue(
+            motor_delay_us
+        )
 
     def run_until(self, duration_us: int) -> SchedulerResult:
         if duration_us <= self.body.t_us:
@@ -54,6 +63,7 @@ class CausalScheduler:
             metadata={"controller_state": "INITIAL_DELAY", "vnc_bypass": True},
         )
         self.body.apply_actuators(initial)
+        applied_command = initial
         trace: list[dict[str, Any]] = []
 
         while self.body.t_us < duration_us and self.controller.state != DemoState.COMPLETE:
@@ -73,7 +83,14 @@ class CausalScheduler:
                 assumption_ids=sensors_before.assumption_ids,
                 metadata={"transduction": "identity-reference-scaffold"},
             )
-            self.neural.push_inputs(neural_inputs)
+            self.sensory_queue.push(current_t, neural_inputs)
+            for delayed_input in self.sensory_queue.pop_ready(current_t):
+                delivered_input = replace(
+                    delayed_input,
+                    t_us=current_t,
+                    metadata={**delayed_input.metadata, "source_t_us": delayed_input.t_us},
+                )
+                self.neural.push_inputs(delivered_input)
             next_t = min(duration_us, current_t + self.coupling_us)
 
             # The body advances on the previously committed command while the neural engine
@@ -86,7 +103,16 @@ class CausalScheduler:
             neural_outputs = self.neural.read_outputs(REFERENCE_OUTPUT_IDS, self.coupling_us)
             sensors_after = self.body.sample_sensors()
             command = self.controller.decode(neural_outputs, sensors_after)
-            self.body.apply_actuators(command)
+            self.motor_queue.push(next_t, command)
+            ready_commands = self.motor_queue.pop_ready(next_t)
+            if ready_commands:
+                decoded = ready_commands[-1]
+                applied_command = replace(
+                    decoded,
+                    t_us=next_t,
+                    metadata={**decoded.metadata, "source_t_us": decoded.t_us},
+                )
+                self.body.apply_actuators(applied_command)
             trace.append(
                 {
                     "t_us": next_t,
@@ -94,7 +120,7 @@ class CausalScheduler:
                     "body": self.body.snapshot(),
                     "sensors": sensors_after.as_dict(),
                     "neural": neural_outputs.as_dict(),
-                    "actuators": command.as_dict(),
+                    "actuators": applied_command.as_dict(),
                 }
             )
 
@@ -105,4 +131,3 @@ class CausalScheduler:
             trace=tuple(trace),
             events=tuple(event.as_dict() for event in self.controller.events),
         )
-

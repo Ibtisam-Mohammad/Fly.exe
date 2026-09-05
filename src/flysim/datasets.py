@@ -10,8 +10,10 @@ import re
 import shutil
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -35,6 +37,11 @@ class ArtifactSpec:
     profiles: tuple[str, ...]
     published_size: str
     sha256: str | None
+    expected_bytes: int | None = None
+    gcs_generation: str | None = None
+    etag: str | None = None
+    md5_base64: str | None = None
+    crc32c_base64: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +64,13 @@ class DatasetSpec:
                 profiles=tuple(item["profiles"]),
                 published_size=str(item["published_size"]),
                 sha256=item.get("sha256"),
+                expected_bytes=(
+                    int(item["expected_bytes"]) if item.get("expected_bytes") is not None else None
+                ),
+                gcs_generation=item.get("gcs_generation"),
+                etag=item.get("etag"),
+                md5_base64=item.get("md5_base64"),
+                crc32c_base64=item.get("crc32c_base64"),
             )
             for item in raw["artifacts"]
         )
@@ -116,6 +130,26 @@ def _write_lock(root: Path, dataset_id: str, lock: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+@contextmanager
+def _mutation_lock(root: Path, dataset_id: str) -> Iterator[None]:
+    """Prevent two data writers from mutating one dataset directory."""
+    path = _dataset_directory(root, dataset_id) / ".flysim-data.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise DatasetError(
+            f"Dataset mutation is already locked: {path}. Investigate the recorded PID before "
+            "removing a stale lock."
+        ) from exc
+    try:
+        with os.fdopen(descriptor, "w", encoding="ascii") as stream:
+            stream.write(f"pid={os.getpid()}\n")
+        yield
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def ensure_free_space(root: Path, minimum_free_gb: float) -> None:
     root.mkdir(parents=True, exist_ok=True)
     free_gb = shutil.disk_usage(root).free / (1024**3)
@@ -157,9 +191,15 @@ def _download_resumable(
     }
     if resumed_from:
         headers["Range"] = f"bytes={resumed_from}-"
+        if artifact.etag is not None:
+            headers["If-Range"] = f'"{artifact.etag}"'
         progress(f"resuming {artifact.id} from {resumed_from:,} bytes")
 
-    request = urllib.request.Request(artifact.url, headers=headers)
+    url = artifact.url
+    if artifact.gcs_generation is not None:
+        separator = "&" if urllib.parse.urlsplit(url).query else "?"
+        url = f"{url}{separator}generation={artifact.gcs_generation}"
+    request = urllib.request.Request(url, headers=headers)
     try:
         response = urllib.request.urlopen(request, timeout=120)
     except urllib.error.HTTPError as exc:
@@ -168,7 +208,17 @@ def _download_resumable(
             match = _UNSATISFIED_CONTENT_RANGE.fullmatch(header.strip()) if header else None
             if match is not None and int(match.group(1)) == resumed_from:
                 return sha256_file(temporary), resumed_from, resumed_from
-        raise
+        raise DatasetError(
+            f"HTTP {exc.code} while acquiring {artifact.id}: {exc.reason}",
+            code="DATA_HTTP_ERROR",
+            retryable=500 <= exc.code < 600,
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise DatasetError(
+            f"Network failure while acquiring {artifact.id}: {exc.reason}",
+            code="DATA_NETWORK_ERROR",
+            retryable=True,
+        ) from exc
 
     with response:
         status = _response_status(response)
@@ -182,6 +232,11 @@ def _download_resumable(
                     f"{response.headers.get('Content-Range')!r}"
                 )
             expected_total = parsed_range[2]
+            if artifact.expected_bytes is not None and expected_total != artifact.expected_bytes:
+                raise DatasetError(
+                    f"Remote size changed for {artifact.id}: expected "
+                    f"{artifact.expected_bytes:,}, got {expected_total!r}"
+                )
             mode = "ab"
         else:
             if resumed_from:
@@ -204,7 +259,14 @@ def _download_resumable(
     if expected_total is not None and byte_count != expected_total:
         raise DatasetError(
             f"Incomplete download for {artifact.id}: expected {expected_total:,} bytes, "
-            f"received {byte_count:,}; the partial file was kept for resume"
+            f"received {byte_count:,}; the partial file was kept for resume",
+            code="DATA_STREAM_INCOMPLETE",
+            retryable=True,
+        )
+    if artifact.expected_bytes is not None and byte_count != artifact.expected_bytes:
+        raise DatasetError(
+            f"Pinned byte count mismatch for {artifact.id}: expected "
+            f"{artifact.expected_bytes:,}, received {byte_count:,}; the partial file was kept"
         )
     return sha256_file(temporary), byte_count, resumed_from
 
@@ -220,6 +282,41 @@ def sync_dataset(
     ensure_free_space(root, minimum_free_gb)
     directory = _dataset_directory(root, spec.dataset_id)
     directory.mkdir(parents=True, exist_ok=True)
+    failed_path = directory / "dataset.failed.json"
+    if failed_path.exists():
+        raise DatasetError(
+            f"A terminal dataset failure is recorded at {failed_path}; investigate it before "
+            "explicitly removing the failure record.",
+            code="DATA_TERMINAL_FAILURE_RECORDED",
+        )
+    try:
+        with _mutation_lock(root, spec.dataset_id):
+            return _sync_dataset_locked(spec, root, profile, progress)
+    except DatasetError as exc:
+        if not exc.retryable:
+            payload = {
+                "schema_version": "1.0",
+                "dataset_id": spec.dataset_id,
+                "code": exc.code,
+                "retryable": False,
+                "error": str(exc),
+                "observed_at_unix_s": int(time.time()),
+            }
+            temporary = failed_path.with_suffix(".json.part")
+            temporary.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+            os.replace(temporary, failed_path)
+        raise
+
+
+def _sync_dataset_locked(
+    spec: DatasetSpec,
+    root: Path,
+    profile: str,
+    progress: Progress,
+) -> dict[str, Any]:
+    directory = _dataset_directory(root, spec.dataset_id)
     lock = _load_lock(root, spec.dataset_id)
     lock["source_page"] = spec.source_page
     lock["license"] = spec.license
@@ -228,6 +325,16 @@ def sync_dataset(
     for artifact in spec.for_profile(profile):
         destination = directory / artifact.filename
         locked = lock["artifacts"].get(artifact.id)
+        if locked and not destination.exists():
+            raise DatasetError(
+                f"Locked artifact is missing: {destination}. Restore it or explicitly remove "
+                "the affected lock record after investigation; it will not be replaced silently."
+            )
+        if destination.exists() and not locked:
+            raise DatasetError(
+                f"Existing artifact is not checksum-locked: {destination}. Move it aside or "
+                "audit and register it; it will not be overwritten."
+            )
         if destination.exists() and locked:
             observed = sha256_file(destination)
             if observed == locked.get("sha256"):
@@ -258,16 +365,133 @@ def sync_dataset(
             "observed_at_unix_s": int(time.time()),
             "resumed_from_bytes": resumed_from,
             "upstream_checksum_published": artifact.sha256 is not None,
+            "expected_bytes": artifact.expected_bytes,
+            "gcs_generation": artifact.gcs_generation,
+            "etag": artifact.etag,
+            "md5_base64": artifact.md5_base64,
+            "crc32c_base64": artifact.crc32c_base64,
         }
         _write_lock(root, spec.dataset_id, lock)
         progress(f"locked {artifact.id}: {observed}")
     return lock
 
 
+def dataset_status(spec: DatasetSpec, root: Path, profile: str) -> dict[str, Any]:
+    """Report acquisition state without hashing multi-gigabyte artifacts."""
+    lock = _load_lock(root, spec.dataset_id)
+    directory = _dataset_directory(root, spec.dataset_id)
+    artifacts: list[dict[str, Any]] = []
+    for artifact in spec.for_profile(profile):
+        destination = directory / artifact.filename
+        partial = destination.with_suffix(destination.suffix + ".part")
+        locked = lock["artifacts"].get(artifact.id)
+        state = "locked" if destination.exists() and locked else "missing"
+        if partial.exists():
+            state = "partial"
+        elif destination.exists() and not locked:
+            state = "unlocked"
+        elif locked and not destination.exists():
+            state = "locked-missing"
+        artifacts.append(
+            {
+                "id": artifact.id,
+                "state": state,
+                "bytes": destination.stat().st_size if destination.exists() else 0,
+                "partial_bytes": partial.stat().st_size if partial.exists() else 0,
+                "expected_bytes": artifact.expected_bytes,
+                "sha256_locked": locked.get("sha256") if locked else None,
+            }
+        )
+    return {
+        "schema_version": "1.0",
+        "dataset_id": spec.dataset_id,
+        "profile": profile,
+        "complete": all(item["state"] == "locked" for item in artifacts),
+        "artifacts": artifacts,
+    }
+
+
+def _remote_identity(artifact: ArtifactSpec) -> dict[str, str | int | None]:
+    request = urllib.request.Request(
+        artifact.url,
+        headers={"Accept-Encoding": "identity", "User-Agent": "malecns-flysim/0.1"},
+        method="HEAD",
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        headers = response.headers
+        hashes = {
+            name: value
+            for raw in (headers.get_all("x-goog-hash") or [])
+            for name, separator, value in (raw.partition("="),)
+            if separator
+        }
+        return {
+            "bytes": int(headers["Content-Length"]) if headers.get("Content-Length") else None,
+            "gcs_generation": headers.get("x-goog-generation"),
+            "etag": headers.get("ETag", "").strip('"') or None,
+            "md5_base64": hashes.get("md5"),
+            "crc32c_base64": hashes.get("crc32c"),
+        }
+
+
+_DEEP_SCHEMA_TYPES: dict[str, dict[str, str]] = {
+    "connectome-weights": {"body_pre": "int64", "body_post": "int64", "weight": "int64"},
+    "syn-points": {
+        "x": "int32", "y": "int32", "z": "int32", "kind": "dictionary",
+        "conf": "float", "sv": "int64", "body": "int64", "point_id": "uint64",
+    },
+    "syn-partners": {
+        "x_pre": "int32", "y_pre": "int32", "z_pre": "int32", "body_pre": "int64",
+        "conf_pre": "float", "x_post": "int32", "y_post": "int32", "z_post": "int32",
+        "body_post": "int64", "conf_post": "float", "primary_post": "dictionary",
+    },
+    "tbar-neurotransmitters": {
+        "point_id": "uint64", "x": "int32", "y": "int32", "z": "int32",
+        "conf": "float", "sv": "int64", "body": "int64",
+        "nt_acetylcholine_prob": "float", "nt_dopamine_prob": "float",
+        "nt_gaba_prob": "float", "nt_glutamate_prob": "float",
+        "nt_histamine_prob": "float", "nt_octopamine_prob": "float",
+        "nt_serotonin_prob": "float",
+    },
+}
+
+
+def _feather_footer_valid(artifact_id: str, path: Path) -> tuple[bool, str | None]:
+    try:
+        import pyarrow as pa
+        import pyarrow.ipc as ipc
+
+        with pa.memory_map(str(path), "r") as source:
+            reader = ipc.open_file(source)
+            schema = reader.schema
+            _ = reader.num_record_batches
+            expected = _DEEP_SCHEMA_TYPES.get(artifact_id, {})
+            for name, expected_type in expected.items():
+                index = schema.get_field_index(name)
+                if index < 0:
+                    return False, f"required column is missing: {name}"
+                observed_type = schema.field(index).type
+                if expected_type == "dictionary":
+                    matches = pa.types.is_dictionary(observed_type)
+                else:
+                    matches = str(observed_type) == expected_type
+                if not matches:
+                    return (
+                        False,
+                        f"column {name} has type {observed_type}, expected {expected_type}",
+                    )
+        return True, None
+    except Exception as exc:  # pyarrow exposes several backend-specific exception types
+        return False, str(exc)
+
+
 def validate_dataset(
     spec: DatasetSpec,
     root: Path,
     profile: str | None = None,
+    *,
+    remote: bool = False,
+    deep: bool = False,
 ) -> list[dict[str, Any]]:
     lock = _load_lock(root, spec.dataset_id)
     selected: Iterable[ArtifactSpec] = spec.for_profile(profile) if profile else spec.artifacts
@@ -283,6 +507,42 @@ def validate_dataset(
             status = "ok" if observed == locked.get("sha256") else "checksum-mismatch"
         elif destination.exists():
             status = "unlocked"
+        details: dict[str, Any] = {}
+        if (
+            status == "ok"
+            and locked
+            and artifact.expected_bytes is not None
+            and destination.stat().st_size != artifact.expected_bytes
+        ):
+            status = "byte-count-mismatch"
+        if status == "ok" and deep and destination.suffix == ".feather":
+            footer_valid, footer_error = _feather_footer_valid(artifact.id, destination)
+            details["feather_footer_valid"] = footer_valid
+            if not footer_valid:
+                status = "invalid-feather-footer"
+                details["footer_error"] = footer_error
+        if remote:
+            try:
+                identity = _remote_identity(artifact)
+                details["remote_identity"] = identity
+                comparisons = {
+                    "bytes": artifact.expected_bytes,
+                    "gcs_generation": artifact.gcs_generation,
+                    "etag": artifact.etag,
+                    "md5_base64": artifact.md5_base64,
+                    "crc32c_base64": artifact.crc32c_base64,
+                }
+                changed = [
+                    name
+                    for name, expected in comparisons.items()
+                    if expected is not None and identity.get(name) != expected
+                ]
+                if changed:
+                    status = "remote-identity-mismatch"
+                    details["remote_mismatches"] = changed
+            except (OSError, urllib.error.URLError) as exc:
+                status = "remote-unavailable"
+                details["remote_error"] = str(exc)
         results.append(
             {
                 "id": artifact.id,
@@ -290,6 +550,7 @@ def validate_dataset(
                 "status": status,
                 "sha256": observed,
                 "locked_sha256": locked.get("sha256") if locked else None,
+                **details,
             }
         )
     return results

@@ -99,6 +99,16 @@ class MuscleActivationFrame(SignalFrame):
 
 
 @dataclass(frozen=True, slots=True)
+class MuscleForceFrame(SignalFrame):
+    """Muscle or tendon force before conversion to joint torque."""
+
+
+@dataclass(frozen=True, slots=True)
+class JointTorqueFrame(SignalFrame):
+    """Joint torque after explicit muscle, tendon, and moment-arm transforms."""
+
+
+@dataclass(frozen=True, slots=True)
 class ActuatorCommandFrame(SignalFrame):
     """Engineering commands accepted by the current body backend."""
 

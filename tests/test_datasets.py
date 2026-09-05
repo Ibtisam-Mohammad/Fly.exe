@@ -5,7 +5,13 @@ from typing import Any, ClassVar
 
 import pytest
 
-from flysim.datasets import ArtifactSpec, DatasetSpec, sync_dataset, validate_dataset
+from flysim.datasets import (
+    ArtifactSpec,
+    DatasetSpec,
+    dataset_status,
+    sync_dataset,
+    validate_dataset,
+)
 from flysim.errors import DatasetError
 
 
@@ -107,3 +113,20 @@ def test_sync_keeps_partial_when_stream_breaks(
         sync_dataset(dataset, root, "starter", minimum_free_gb=0.0, progress=lambda _: None)
 
     assert (root / "raw" / "test-v1" / "artifact.bin.part").read_bytes() == b"te"
+
+
+def test_status_distinguishes_partial_locked_and_locked_missing(tmp_path: Path) -> None:
+    source = tmp_path / "source.bin"
+    source.write_bytes(b"test")
+    root = tmp_path / "data"
+    dataset = spec(source)
+    partial = root / "raw" / "test-v1" / "artifact.bin.part"
+    partial.parent.mkdir(parents=True)
+    partial.write_bytes(b"te")
+    assert dataset_status(dataset, root, "starter")["artifacts"][0]["state"] == "partial"
+
+    partial.unlink()
+    sync_dataset(dataset, root, "starter", minimum_free_gb=0.0, progress=lambda _: None)
+    assert dataset_status(dataset, root, "starter")["complete"] is True
+    (root / "raw" / "test-v1" / "artifact.bin").unlink()
+    assert dataset_status(dataset, root, "starter")["artifacts"][0]["state"] == "locked-missing"

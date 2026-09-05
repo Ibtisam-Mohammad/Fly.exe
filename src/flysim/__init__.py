@@ -3,8 +3,10 @@
 
 from .contracts import (
     ActuatorCommandFrame,
+    JointTorqueFrame,
     MotorNeuronFrame,
     MuscleActivationFrame,
+    MuscleForceFrame,
     NeuralInputFrame,
     NeuralOutputFrame,
     SensorFrame,
@@ -13,8 +15,10 @@ from .contracts import (
 
 __all__ = [
     "ActuatorCommandFrame",
+    "JointTorqueFrame",
     "MotorNeuronFrame",
     "MuscleActivationFrame",
+    "MuscleForceFrame",
     "NeuralInputFrame",
     "NeuralOutputFrame",
     "SensorFrame",
@@ -22,4 +26,3 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
-

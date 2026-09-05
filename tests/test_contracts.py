@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import pytest
 
-from flysim.contracts import SensorFrame, SignalType, frame_from_dict
+from flysim.contracts import MuscleForceFrame, SensorFrame, SignalType, frame_from_dict
 from flysim.errors import ConfigurationError
 
 
@@ -45,3 +45,16 @@ def test_invalid_frames_fail(
             provenance="E",
             assumption_ids=assumption_ids,
         )
+
+
+def test_force_boundary_is_not_an_actuator_command() -> None:
+    force = MuscleForceFrame(
+        t_us=100,
+        ids=("T1-flexor",),
+        values=(1.5,),
+        units="mN",
+        signal_type=SignalType.MUSCLE_FORCE,
+        provenance="P/F/E",
+        assumption_ids=("MOTOR-02",),
+    )
+    assert force.signal_type is SignalType.MUSCLE_FORCE

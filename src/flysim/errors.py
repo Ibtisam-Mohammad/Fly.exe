@@ -5,6 +5,20 @@
 class FlySimError(RuntimeError):
     """Base class for expected user-facing errors."""
 
+    default_code = "FLYSIM_ERROR"
+    default_retryable = False
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        retryable: bool | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code or self.default_code
+        self.retryable = self.default_retryable if retryable is None else retryable
+
 
 class ConfigurationError(FlySimError):
     """Configuration or provenance metadata is invalid."""
@@ -12,6 +26,8 @@ class ConfigurationError(FlySimError):
 
 class DatasetError(FlySimError):
     """Dataset acquisition or validation failed."""
+
+    default_code = "DATASET_ERROR"
 
 
 class CausalityError(FlySimError):
@@ -21,3 +37,8 @@ class CausalityError(FlySimError):
 class ReadinessError(FlySimError):
     """A scientific command is gated by missing prerequisites."""
 
+
+class ValidationError(FlySimError):
+    """Evidence is incomplete, malformed, or insufficient for a claimed tier."""
+
+    default_code = "VALIDATION_ERROR"

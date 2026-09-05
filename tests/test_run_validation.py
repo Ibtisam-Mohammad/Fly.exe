@@ -47,3 +47,26 @@ def test_trace_mutation_is_detected(tmp_path: Path) -> None:
     assert not report["valid"]
     assert any("checksum mismatch" in failure for failure in report["failures"])
 
+
+def test_validation_tier_without_evidence_bundle_is_rejected(tmp_path: Path) -> None:
+    demo = build_reference_demo(seed=1)
+    result = demo.scheduler.run_until(demo.duration_us)
+    written = write_run(
+        result,
+        demo.scenario,
+        demo.registry,
+        seed=1,
+        output_root=tmp_path,
+        ablated_inputs=(),
+        ablated_outputs=(),
+    )
+    manifest = json.loads(written.manifest_path.read_text(encoding="utf-8"))
+    manifest["connectome"]["graph_used"] = True
+    manifest["result"]["highest_validation_tier"] = "V0"
+    written.manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    report = validate_run(written.directory)
+    assert not report["valid"]
+    assert any("requires an evidence_bundle" in failure for failure in report["failures"])
