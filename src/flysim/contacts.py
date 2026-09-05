@@ -168,47 +168,72 @@ def import_contact_table(
         reader = ipc.open_file(mapped)
         checkpoint.setdefault("source_schema_sha256", _schema_sha256(reader.schema))
         next_batch = int(checkpoint["next_batch"])
-        buffered: list[pa.RecordBatch] = []
-        buffered_rows = 0
+        row_group_batches: list[pa.RecordBatch] = []
+        row_group_buffered_rows = 0
+        shard_rows_written = 0
+        shard_first_batch = next_batch
+        shard_last_batch = next_batch
+        writer: pq.ParquetWriter | None = None
+        logical_digest = hashlib.sha256()
+        destination: Path | None = None
+        temporary: Path | None = None
         for batch_index in range(next_batch, reader.num_record_batches):
             batch = _normalize_unsigned_ids(reader.get_batch(batch_index))
-            buffered.append(batch)
-            buffered_rows += batch.num_rows
+            row_group_batches.append(batch)
+            row_group_buffered_rows += batch.num_rows
             is_last = batch_index + 1 == reader.num_record_batches
-            if buffered_rows < shard_rows and not is_last:
-                if _peak_rss_bytes() > memory_limit_bytes:
-                    raise DatasetError("Contact importer exceeded its peak RSS limit")
+            if row_group_buffered_rows < row_group_rows and not is_last:
                 continue
 
-            table = pa.Table.from_batches(buffered, schema=buffered[0].schema)
+            table = pa.Table.from_batches(row_group_batches, schema=row_group_batches[0].schema)
             checkpoint.setdefault("normalized_schema_sha256", _schema_sha256(table.schema))
-            shard_index = len(checkpoint["shards"])
-            filename = f"part-{shard_index:06d}.parquet"
-            destination = output / filename
-            temporary = destination.with_suffix(".parquet.part")
-            pq.write_table(
-                table,
-                temporary,
-                compression="zstd",
-                compression_level=DEFAULT_ZSTD_LEVEL,
-                row_group_size=row_group_rows,
-                use_dictionary=True,
-                write_statistics=True,
-            )
+            if writer is None:
+                shard_index = len(checkpoint["shards"])
+                filename = f"part-{shard_index:06d}.parquet"
+                destination = output / filename
+                temporary = destination.with_suffix(".parquet.part")
+                temporary.unlink(missing_ok=True)
+                writer = pq.ParquetWriter(
+                    temporary,
+                    table.schema,
+                    compression="zstd",
+                    compression_level=DEFAULT_ZSTD_LEVEL,
+                    use_dictionary=True,
+                    write_statistics=True,
+                    write_page_checksum=True,
+                )
+                shard_first_batch = batch_index - len(row_group_batches) + 1
+            writer.write_table(table, row_group_size=row_group_rows)
+            logical_digest.update(bytes.fromhex(_logical_table_sha256(table)))
+            shard_rows_written += table.num_rows
+            shard_last_batch = batch_index
+            row_group_batches = []
+            row_group_buffered_rows = 0
+            if _peak_rss_bytes() > memory_limit_bytes:
+                writer.close()
+                raise DatasetError("Contact importer exceeded its peak RSS limit")
+            if shard_rows_written < shard_rows and not is_last:
+                continue
+
+            writer.close()
+            writer = None
+            if destination is None or temporary is None:
+                raise DatasetError("Contact shard writer lost its destination")
             os.replace(temporary, destination)
             checkpoint["shards"].append(
                 {
-                    "filename": filename,
-                    "rows": table.num_rows,
+                    "filename": destination.name,
+                    "rows": shard_rows_written,
                     "bytes": destination.stat().st_size,
                     "sha256": sha256_file(destination),
-                    "logical_sha256": _logical_table_sha256(table),
-                    "first_source_batch": int(checkpoint["next_batch"]),
-                    "last_source_batch": batch_index,
+                    "logical_sha256": logical_digest.hexdigest(),
+                    "logical_digest_policy": "sha256-of-fixed-row-group-logical-digests-v1",
+                    "first_source_batch": shard_first_batch,
+                    "last_source_batch": shard_last_batch,
                 }
             )
-            checkpoint["next_batch"] = batch_index + 1
-            checkpoint["rows"] = int(checkpoint["rows"]) + table.num_rows
+            checkpoint["next_batch"] = shard_last_batch + 1
+            checkpoint["rows"] = int(checkpoint["rows"]) + shard_rows_written
             checkpoint["peak_rss_bytes"] = _peak_rss_bytes()
             _write_json_atomic(checkpoint_path, checkpoint)
             progress(
@@ -217,8 +242,10 @@ def import_contact_table(
             )
             if checkpoint["peak_rss_bytes"] > memory_limit_bytes:
                 raise DatasetError("Contact importer exceeded its peak RSS limit")
-            buffered = []
-            buffered_rows = 0
+            shard_rows_written = 0
+            logical_digest = hashlib.sha256()
+            destination = None
+            temporary = None
 
     manifest = {
         **checkpoint,
