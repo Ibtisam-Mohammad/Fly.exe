@@ -12,9 +12,11 @@ from .contracts import (
     SensorFrame,
     SignalType,
 )
+from .evidence import EvidenceBundle, ValidationTier
 
 __all__ = [
     "ActuatorCommandFrame",
+    "EvidenceBundle",
     "JointTorqueFrame",
     "MotorNeuronFrame",
     "MuscleActivationFrame",
@@ -23,6 +25,7 @@ __all__ = [
     "NeuralOutputFrame",
     "SensorFrame",
     "SignalType",
+    "ValidationTier",
 ]
 
 __version__ = "0.1.0"
