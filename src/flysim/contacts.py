@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import json
 import os
@@ -246,6 +247,9 @@ def import_contact_table(
             logical_digest = hashlib.sha256()
             destination = None
             temporary = None
+            del table
+            gc.collect()
+            pa.default_memory_pool().release_unused()
 
     manifest = {
         **checkpoint,
