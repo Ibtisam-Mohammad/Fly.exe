@@ -18,6 +18,8 @@ Status date: 2026-09-05
 - Aggregate connectome importer with reversible `uint64` body IDs and `uint32` dense IDs.
 - NumPy reference neural engine for interface tests and a small engineering circuit.
 - Sparse small-circuit LIF oracle that requires explicit functional edge signs.
+- Deterministic three-neuron LIF parity harness across NumPy, Brian2 2.10.1, and direct
+  float32 PyGeNN 5.4.0; all 14 ordered spikes match within the 100-microsecond gate.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -33,12 +35,14 @@ Status date: 2026-09-05
 - All seven MaleCNS v1.0 flat-connectome artifacts are checksum-locked. Contact normalization,
   polyadic T-bar, coordinate, morphology, and complete Stage-0 motif audits have not passed.
 - Resumable bounded-memory contact normalization is active under the Windows host supervisor;
-  the strict endpoint, polyad, transmitter, and aggregate-reconciliation audit follows automatically.
+  verified shards trigger clean worker recycling before allocator growth reaches the hard limit. The
+  strict endpoint, polyad, transmitter, and aggregate-reconciliation audit follows automatically.
 - Ten fixed 8-nm morphology canaries are generation-pinned, checksum-locked, and structurally
   valid across bilateral descending, antennal sensory, and motor populations.
 
 Detailed integrity evidence: [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md)
-and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md).
+and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
+[LIF backend parity](evidence/LIF_BACKEND_PARITY.md).
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
@@ -54,7 +58,7 @@ and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md).
 | Provisional traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| Automated tests | 37 passing |
+| Automated tests | 40 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) remain proposed until the status-universe sensitivity audit is reviewed.
 

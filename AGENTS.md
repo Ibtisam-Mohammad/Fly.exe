@@ -31,9 +31,10 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 0 — reproducible data foundation (active; exit gate not passed)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; contact normalization and structural audits pending
 HIGHEST_VALIDATION_TIER: none (pre-V0)
-ENGINEERING_STATUS: zero-weight GeNN topology load and controller-only/Eon-like scaffolds only
+ENGINEERING_STATUS: zero-weight GeNN topology load, deterministic NumPy/Brian2/PyGeNN parity, and controller-only/Eon-like scaffolds only
 NEXT_GATE: streaming contact/polyad audit -> body-universe sensitivity -> V0 review
-FOUNDATION_JOB: resumable bounded-memory contact normalization active under the Windows host supervisor; strict contact audit follows
+FOUNDATION_JOB: resumable bounded-memory contact normalization active with verified-shard worker recycling under Windows host supervision; strict contact audit follows
+NEURAL_PARITY: deterministic three-neuron fixture passes NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory
