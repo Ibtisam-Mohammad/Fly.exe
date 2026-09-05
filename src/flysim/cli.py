@@ -34,6 +34,7 @@ from flysim.evidence import (
 )
 from flysim.factory import build_reference_demo
 from flysim.morphology import sync_morphology_canaries
+from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
 from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
@@ -166,6 +167,25 @@ def _command_data_resolve_populations(args: argparse.Namespace) -> int:
         }
     )
     return 0 if payload["all_required_resolved"] else 2
+
+
+def _command_data_build_edge_signs(args: argparse.Namespace) -> int:
+    graph = SparseConnectome.load(args.graph)
+    source = args.transmitters or (
+        args.root
+        / "raw"
+        / "male-cns-v1.0"
+        / "body-neurotransmitters-male-cns-v1.0.feather"
+    )
+    payload = write_edge_sign_variant(
+        graph,
+        source,
+        args.output,
+        unresolved_policy=UnresolvedSignPolicy(args.unresolved_policy),
+        seed=args.seed,
+    )
+    _print_json(payload)
+    return 0
 
 
 def _command_data_import_contacts(args: argparse.Namespace) -> int:
@@ -537,6 +557,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     resolver.add_argument("--output", type=Path)
     resolver.set_defaults(func=_command_data_resolve_populations)
+
+    signs = data_commands.add_parser("build-edge-signs")
+    signs.add_argument("--root", type=Path, default=default_data_root())
+    signs.add_argument("--graph", type=Path, required=True)
+    signs.add_argument("--transmitters", type=Path)
+    signs.add_argument("--output", type=Path, required=True)
+    signs.add_argument(
+        "--unresolved-policy",
+        choices=tuple(item.value for item in UnresolvedSignPolicy),
+        required=True,
+    )
+    signs.add_argument("--seed", type=int, default=1)
+    signs.set_defaults(func=_command_data_build_edge_signs)
 
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
