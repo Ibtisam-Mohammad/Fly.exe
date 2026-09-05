@@ -87,7 +87,7 @@ try {
             "--memory-limit-gb", "3",
             "--threads", "2",
             "--minimum-free-gb", "80",
-            "--max-new-shards-per-process", "48",
+            "--max-new-shards-per-process", "24",
             "--root", $DatasetRoot,
             "--spec", $DatasetSpec
         )

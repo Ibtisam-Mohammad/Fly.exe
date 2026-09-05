@@ -47,7 +47,7 @@ function Invoke-RecycledImport {
         $exitCode = Invoke-Flysim @(
             "data", "import-contacts", "--resume",
             "--memory-limit-gb", "3", "--threads", "2", "--minimum-free-gb", "80",
-            "--max-new-shards-per-process", "48",
+            "--max-new-shards-per-process", "24",
             "--row-group-rows", "$RowGroupRows", "--shard-rows", "1048576",
             "--output-root", $OutputRoot,
             "--root", $DatasetRoot, "--spec", $DatasetSpec
