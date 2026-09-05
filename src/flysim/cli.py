@@ -34,6 +34,7 @@ from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
 from flysim.runs import write_run
+from flysim.universes import audit_body_universes
 from flysim.validation import validate_run
 
 
@@ -229,6 +230,23 @@ def _command_data_sync_skeleton_canaries(args: argparse.Namespace) -> int:
     result = sync_morphology_canaries(args.config, output)
     _print_json(result)
     return 0 if result["complete"] else 2
+
+
+def _command_data_audit_body_universes(args: argparse.Namespace) -> int:
+    raw = args.root / "raw" / "male-cns-v1.0"
+    annotations = raw / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+    aggregate = raw / "connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+    output = args.output or (
+        args.root / "evidence" / "male-cns-v1.0" / "body-universe-sensitivity.json"
+    )
+    result = audit_body_universes(
+        annotations,
+        aggregate,
+        output,
+        canary_body_ids=(10442, 10760, 523769, 10360, 127912, 26519, 10331, 16949),
+    )
+    _print_json(result)
+    return 0
 
 
 def _command_benchmark(args: argparse.Namespace) -> int:
@@ -458,6 +476,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     skeletons.add_argument("--output", type=Path)
     skeletons.set_defaults(func=_command_data_sync_skeleton_canaries)
+
+    universes = data_commands.add_parser("audit-body-universes")
+    universes.add_argument("--root", type=Path, default=default_data_root())
+    universes.add_argument("--output", type=Path)
+    universes.set_defaults(func=_command_data_audit_body_universes)
 
     resolver = data_commands.add_parser("resolve-populations")
     resolver.add_argument("--root", type=Path, default=default_data_root())
