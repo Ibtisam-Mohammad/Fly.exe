@@ -49,6 +49,9 @@ and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementa
 - DNa01/DNa02, MN9, and JO-F populations resolve from official annotations. The sourced
   oDN1-to-DNg97 crosswalk now resolves MaleCNS bodies `13805` and `230783`. Ethyl-acetate
   entry neurons, sucrose entry neurons, and the grooming descending population remain unresolved.
+- Özdil et al. Supplementary Data 1 is locally checksum-locked with a dataset card. It supplies
+  FAFB/FlyWire aDN1-3 identities, but no direct MaleCNS body-ID crosswalk, so the grooming-DN
+  gate remains unresolved rather than being filled by a name guess.
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
 - No structural or physiological validation tier has passed yet.
 

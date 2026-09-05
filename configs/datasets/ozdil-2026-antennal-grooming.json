@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "ozdil-2026-antennal-grooming-supplementary-data-1",
+  "title": "Centralized brain networks controlling antennal grooming coordination - Supplementary Data 1",
+  "paper": "https://doi.org/10.1038/s41467-026-72152-x",
+  "source_url": "https://media.springernature.com/original/springer-static/esm/art%3A10.1038%2Fs41467-026-72152-x/MediaObjects/41467_2026_72152_MOESM18_ESM.xlsx",
+  "local_filename": "supplementary-data-1.xlsx",
+  "bytes": 50119,
+  "sha256": "3ec7f348371cbe3cf39b65cfef72a115546180a29b6c1f08c2acb9b0eb9df3cb",
+  "license": "CC-BY-NC-ND-4.0 article terms; verify supplementary-file terms before redistribution",
+  "redistribute_with_gpl_release": false,
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "female for the FAFB/FlyWire brain connectome; experimental cohorts described in the paper",
+    "age": "paper-specific; not the MaleCNS donor",
+    "strain": "paper-specific",
+    "preparation": "tethered behavior, optogenetic or air-puff elicitation, connectome analysis, and simulation"
+  },
+  "connectome_context": {
+    "brain": "FAFB/FlyWire materialization snapshot 783",
+    "vnc": "MANC v1.2.1 where used",
+    "male_cns": "no direct MaleCNS body-ID crosswalk supplied"
+  },
+  "sampling_rate": "sheet-specific; inspect before numerical use",
+  "units": "sheet-specific; inspect before numerical use",
+  "role": "mapping and later grooming-trajectory candidate; not currently a fitting dataset",
+  "mismatches": [
+    "female brain connectome versus the MaleCNS male specimen",
+    "cross-specimen neuron identity",
+    "tethered elicited grooming versus free closed-loop behavior",
+    "published trajectories are controller priors, not MaleCNS neural validation"
+  ],
+  "permitted_claim": "Supports named antennal-grooming network candidates and kinematic replay provenance after explicit crosswalk validation.",
+  "forbidden_claim": "Does not by itself resolve aDN1-3 to MaleCNS body IDs or validate a MaleCNS-generated grooming bout.",
+  "status": "checksum-locked locally; content and redistribution audit pending",
+  "last_reviewed": "2026-09-05"
+}
