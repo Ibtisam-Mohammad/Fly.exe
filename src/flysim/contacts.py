@@ -8,6 +8,7 @@ import json
 import os
 import resource
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -107,6 +108,7 @@ def import_contact_table(
     row_group_rows: int = DEFAULT_ROW_GROUP_ROWS,
     shard_rows: int = DEFAULT_SHARD_ROWS,
     expected_sha256: str | None = None,
+    progress: Callable[[str], None] = lambda _: None,
 ) -> ContactImportResult:
     """Stream native IPC batches into immutable, resumable Parquet shards."""
     if not source.is_file():
@@ -209,6 +211,10 @@ def import_contact_table(
             checkpoint["rows"] = int(checkpoint["rows"]) + table.num_rows
             checkpoint["peak_rss_bytes"] = _peak_rss_bytes()
             _write_json_atomic(checkpoint_path, checkpoint)
+            progress(
+                f"normalized {artifact_id}: {checkpoint['rows']:,} rows, "
+                f"{len(checkpoint['shards']):,} shards"
+            )
             if checkpoint["peak_rss_bytes"] > memory_limit_bytes:
                 raise DatasetError("Contact importer exceeded its peak RSS limit")
             buffered = []

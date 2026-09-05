@@ -190,6 +190,7 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
             memory_limit_gb=args.memory_limit_gb,
             minimum_free_gb=args.minimum_free_gb,
             expected_sha256=lock["artifacts"][artifact.id]["sha256"],
+            progress=_progress_jsonl,
         )
         results.append(result.as_dict())
     _print_json(
