@@ -251,6 +251,16 @@ def _command_data_audit_body_universes(args: argparse.Namespace) -> int:
 
 
 def _command_benchmark(args: argparse.Namespace) -> int:
+    if args.parity:
+        command = [
+            sys.executable,
+            str(project_root() / "scripts" / "validate_lif_parity.py"),
+        ]
+        if args.output is not None:
+            command.extend(("--output", str(args.output)))
+        if args.build_root is not None:
+            command.extend(("--build-path", str(args.build_root)))
+        return subprocess.run(command, check=False).returncode
     if args.genn:
         if args.graph is None:
             raise ReadinessError("--genn requires --graph")
@@ -505,7 +515,13 @@ def build_parser() -> argparse.ArgumentParser:
     neural.add_argument("--scales", type=float, nargs="+", default=[0.01, 0.1, 1.0])
     neural.add_argument("--graph", type=Path)
     neural.add_argument("--assumptions", type=Path, default=_default_assumptions())
-    neural.add_argument("--genn", action="store_true", help="run measured CUDA load benchmark")
+    neural_mode = neural.add_mutually_exclusive_group()
+    neural_mode.add_argument(
+        "--genn", action="store_true", help="run measured CUDA graph-load benchmark"
+    )
+    neural_mode.add_argument(
+        "--parity", action="store_true", help="compare NumPy, Brian2, and direct PyGeNN"
+    )
     neural.add_argument("--seed", type=int, default=1)
     neural.add_argument("--output", type=Path)
     neural.add_argument("--build-root", type=Path)
