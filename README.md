@@ -58,6 +58,20 @@ flysim benchmark neural --genn --scales 0.01 0.1 1.0 --graph /srv/flybrain-data/
 
 Use `--profile metadata` for the initial 55 MB annotation/transmitter audit, `starter` for the aggregate graph inputs, and `full` only when contact-level Stage 0 validation begins.
 
+For an unattended full-profile download, launch the Windows-host supervisor rather than a
+service inside WSL. The host process keeps `wsl.exe` attached, preserves HTTP partial files,
+retries failures, prevents system sleep while active, and exits only after full-profile
+checksum validation succeeds:
+
+```powershell
+$script = (Resolve-Path scripts\supervise_full_dataset.ps1).Path
+Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script)
+Get-Content artifacts\logs\full-dataset-supervisor.log -Wait
+```
+
+Completion is recorded in `artifacts\logs\full-dataset-supervisor.complete`. A single-instance
+mutex prevents two supervisors from writing the same partial artifact.
+
 `full-vnc-walk` deliberately refuses to run until the required MaleCNS graph, sensory registry, motor mapping, and production backends pass their readiness gates. There is no synthetic fallback hidden behind that scientific command.
 
 ## Data and credentials
