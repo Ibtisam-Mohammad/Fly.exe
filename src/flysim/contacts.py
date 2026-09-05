@@ -124,19 +124,41 @@ def import_contact_table(
             f"at least {minimum_free_gb:.1f} GB is required"
         )
 
-    source_sha256 = sha256_file(source)
+    checkpoint_path = output / "import-checkpoint.json"
+    manifest_path = output / "manifest.json"
+    stored_identity: dict[str, Any] | None = None
+    if manifest_path.exists():
+        stored_identity = json.loads(manifest_path.read_text(encoding="utf-8"))
+    elif checkpoint_path.exists():
+        stored_identity = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    if (
+        expected_sha256 is not None
+        and stored_identity is not None
+        and stored_identity.get("source_sha256") == expected_sha256
+        and stored_identity.get("source_bytes", source.stat().st_size) == source.stat().st_size
+        and stored_identity.get("source_mtime_ns", source.stat().st_mtime_ns)
+        == source.stat().st_mtime_ns
+    ):
+        # The immutable dataset lock was freshly deep-validated before construction. Re-reading
+        # tens of gigabytes on every process restart adds no identity evidence, so a matching
+        # derivative checkpoint resumes from the already pinned lock identity.
+        source_sha256 = expected_sha256
+    else:
+        source_sha256 = sha256_file(source)
     if expected_sha256 is not None and source_sha256 != expected_sha256:
         raise DatasetError(
             f"Contact source checksum mismatch for {artifact_id}: expected "
             f"{expected_sha256}, got {source_sha256}"
         )
-    checkpoint_path = output / "import-checkpoint.json"
-    manifest_path = output / "manifest.json"
     if manifest_path.exists():
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload = stored_identity or json.loads(manifest_path.read_text(encoding="utf-8"))
         if payload.get("source_sha256") != source_sha256:
             raise DatasetError(f"Completed derivative source changed: {source}")
         _validate_checkpoint_shards(output, payload["shards"])
+        if "source_bytes" not in payload or "source_mtime_ns" not in payload:
+            payload["source_bytes"] = source.stat().st_size
+            payload["source_mtime_ns"] = source.stat().st_mtime_ns
+            _write_json_atomic(manifest_path, payload)
         return ContactImportResult(
             artifact_id=artifact_id,
             output=output.resolve(),
@@ -152,6 +174,8 @@ def import_contact_table(
         "artifact_id": artifact_id,
         "source": str(source.resolve()),
         "source_sha256": source_sha256,
+        "source_bytes": source.stat().st_size,
+        "source_mtime_ns": source.stat().st_mtime_ns,
         "next_batch": 0,
         "rows": 0,
         "shards": [],
@@ -162,6 +186,8 @@ def import_contact_table(
         checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
         if checkpoint.get("source_sha256") != source_sha256:
             raise DatasetError("Contact import checkpoint belongs to a different source")
+        checkpoint.setdefault("source_bytes", source.stat().st_size)
+        checkpoint.setdefault("source_mtime_ns", source.stat().st_mtime_ns)
         _validate_checkpoint_shards(output, checkpoint["shards"])
 
     memory_limit_bytes = int(memory_limit_gb * 1024**3)
