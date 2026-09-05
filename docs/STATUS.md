@@ -39,6 +39,9 @@ Status date: 2026-09-05
 - Resumable bounded-memory contact normalization is active under the Windows host supervisor;
   verified shards trigger clean worker recycling before allocator growth reaches the hard limit. The
   strict endpoint, polyad, transmitter, and aggregate-reconciliation audit follows automatically.
+- A second Windows-host supervisor is waiting on that strict-audit marker. It will independently
+  rebuild all four contact derivatives at 262,144- and 131,072-row Parquet group sizes, then require
+  layout-independent logical equality against the original and between both clean rebuilds.
 - Ten fixed 8-nm morphology canaries are generation-pinned, checksum-locked, and structurally
   valid across bilateral descending, antennal sensory, and motor populations.
 

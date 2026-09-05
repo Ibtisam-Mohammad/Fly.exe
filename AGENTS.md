@@ -34,6 +34,7 @@ HIGHEST_VALIDATION_TIER: none (pre-V0)
 ENGINEERING_STATUS: zero-weight GeNN topology load, deterministic NumPy/Brian2/PyGeNN parity, and controller-only/Eon-like scaffolds only
 NEXT_GATE: streaming contact/polyad audit -> body-universe sensitivity -> V0 review
 FOUNDATION_JOB: resumable bounded-memory contact normalization active with verified-shard worker recycling under Windows host supervision; strict contact audit follows
+FOUNDATION_REBUILD: clean 262144-row-group and 131072-row-group rebuilds are queued behind the strict audit with logical-digest comparison
 NEURAL_PARITY: deterministic three-neuron fixture passes NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
