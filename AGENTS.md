@@ -171,7 +171,7 @@ These are current starting decisions, not claims that the biology is solved.
 | `DATA-01` | Connectome | Use MaleCNS v1.0 chemical topology and exact stable IDs. | `M` | Release checksums, schema tests, count/annotation audits. |
 | `DATA-02` | Structural uncertainty | Keep strong edges fixed initially; retain weak edges and sample/drop them in sensitivity ensembles rather than deleting them silently. | `M/E` | Detector confidence, bilateral homologues, cross-connectome recurrence. |
 | `DATA-03` | Cross-specimen mapping | Maintain explicit MaleCNS↔MANC/FANC/BANC/FlyWire/type crosswalks with confidence. | `P` | Morphology, type identity, side/segment and source evidence. |
-| `DATA-04` | Runtime body universe | Provisional starter derivative uses annotation `status=Traced`; the immutable source retains every segment, and excluded segment edges/contacts are counted. | `M/E` | Compare Traced against Traced+Assign+Anchor and review official count/motif sensitivity before acceptance. |
+| `DATA-04` | Runtime body universe | Use annotation `status=Traced`; the immutable source retains every segment, excluded segment edges/contacts are counted, and Assign/Anchor remain sensitivity alternatives. | `M/E` | V0 count, annotation-canary, motif and body-universe sensitivity audits. |
 | `DATA-05` | Contact storage | Preserve official Feather files immutably and build lossless, versioned, sharded Parquet derivatives with reversible point IDs, explicit 8-nm coordinates, complete confidence/transmitter fields, and no biological threshold. | `M/E` | Contact/partner referential integrity, aggregate reconciliation, logical-digest reproducibility, and bounded-memory tests. |
 | `ND-01` | Neuron formalism | Hybrid model: graded passive cells where established; LIF/AdEx for established spiking cells; competing variants for unknown types. | `P/F/E` | Type-resolved voltage, spike and calcium recordings. |
 | `ND-02` | Membrane parameters | Use type-level distributions; use global Shiu-style values only as labelled fallbacks. | `P/F` | Resting voltage, input resistance, time constant, threshold and adaptation data. |
@@ -455,6 +455,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-04 | Freeze most internal state and long-term plasticity in v1. | These variables are not recoverable from EM and would make early failures non-identifiable. |
 | 2026-09-04 | Accept ADR-2026-001 for the initial local runtime and data stack. | The approved implementation plan fixes Python 3.12, direct PyGeNN/GeNN 5.4, official Feather to loss-aware sparse derivatives, FlyGym 2.1, ethyl acetate, local RTX 3060 execution and initial validation tolerances. |
 | 2026-09-05 | Accept ADR-2026-003 for the contact-level storage and audit boundary. | Full contact tables remain immutable CPU-side evidence; bounded lossless derivatives support V0 without entering the GPU runtime graph. |
+| 2026-09-06 | Accept `status=Traced` as the production neural-body universe; retain Assign/Anchor and all-segment alternatives for sensitivity analyses. | Expanding through Anchor changed traced contacts by 0.12% and edges by 0.24%, while all fixed sensorimotor annotation canaries remained uniquely traced. |
 
 ## 15. Unresolved project-level choices
 
@@ -464,6 +465,5 @@ The following are deliberately not fixed yet. Agents may investigate them, but m
 - physiological datasets and loss functions for parameter fitting;
 - weak-edge uncertainty model;
 - male body scaling dataset;
-- runtime body universe: retain only `Traced` bodies or include `Assign` and `Anchor` statuses after sensitivity review;
 
 Resolve these through evidence-backed decisions, not convenience alone.

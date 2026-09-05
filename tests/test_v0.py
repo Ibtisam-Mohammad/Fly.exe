@@ -17,6 +17,31 @@ def _write(path: Path, payload: dict[str, object]) -> None:
 
 
 def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> None:
+    config_root = spec_path.parent.parent
+    project_root = config_root.parent
+    assumptions = config_root / "assumptions.json"
+    _write(
+        assumptions,
+        {
+            "assumption_set_id": "foundation-v0.3",
+            "records": [
+                {
+                    "id": assumption_id,
+                    "status": "accepted",
+                    "value": {"annotation_statuses": ["Traced"]}
+                    if assumption_id == "DATA-04"
+                    else {},
+                }
+                for assumption_id in ("DATA-01", "DATA-02", "DATA-04", "DATA-05")
+            ],
+        },
+    )
+    adr = project_root / "docs" / "adr" / "ADR-2026-002-traced-neuron-universe.md"
+    adr.parent.mkdir(parents=True, exist_ok=True)
+    adr.write_text(
+        "Status: accepted\napproved_by: project-owner via test fixture\n",
+        encoding="utf-8",
+    )
     raw = root / "raw" / "male-cns-v1.0"
     artifacts = []
     locked: dict[str, object] = {}
@@ -143,7 +168,7 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
 
 def test_build_v0_derives_gates_from_artifacts(tmp_path: Path) -> None:
     root = tmp_path / "data"
-    spec = tmp_path / "spec.json"
+    spec = tmp_path / "project" / "configs" / "datasets" / "spec.json"
     _fixture(root, spec)
 
     bundle = build_v0_evidence_bundle(root, spec, tmp_path / "V0.json")
@@ -155,7 +180,7 @@ def test_build_v0_derives_gates_from_artifacts(tmp_path: Path) -> None:
 
 def test_build_v0_rejects_clean_rebuild_at_memory_ceiling(tmp_path: Path) -> None:
     root = tmp_path / "data"
-    spec = tmp_path / "spec.json"
+    spec = tmp_path / "project" / "configs" / "datasets" / "spec.json"
     _fixture(root, spec, excessive_peak=True)
 
     with pytest.raises(ValidationError, match="exceeded the 3-GiB RSS gate"):

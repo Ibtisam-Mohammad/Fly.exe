@@ -229,6 +229,43 @@ def _validate_clean_manifests(root: Path) -> None:
             )
 
 
+def _validate_foundation_decisions(spec_path: Path) -> tuple[Path, Path]:
+    config_root = spec_path.resolve().parents[1]
+    project_root = config_root.parent
+    assumptions_path = config_root / "assumptions.json"
+    adr_path = project_root / "docs" / "adr" / "ADR-2026-002-traced-neuron-universe.md"
+    assumptions = _read_json(assumptions_path)
+    _require(
+        assumptions.get("assumption_set_id") == "foundation-v0.3",
+        "V0 requires the reviewed foundation-v0.3 assumption set",
+    )
+    records = {
+        str(record.get("id")): record
+        for record in assumptions.get("records", [])
+        if isinstance(record, dict)
+    }
+    for assumption_id in ("DATA-01", "DATA-02", "DATA-04", "DATA-05"):
+        _require(
+            records.get(assumption_id, {}).get("status") == "accepted",
+            f"V0 foundation decision is not accepted: {assumption_id}",
+        )
+    data04 = records["DATA-04"]
+    _require(
+        data04.get("value", {}).get("annotation_statuses") == ["Traced"],
+        "DATA-04 must select the reviewed Traced runtime universe",
+    )
+    try:
+        adr_text = adr_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValidationError(f"Cannot read reviewed body-universe ADR: {exc}") from exc
+    _require("Status: accepted" in adr_text, "ADR-2026-002 is not accepted")
+    _require(
+        "approved_by: project-owner" in adr_text,
+        "ADR-2026-002 has no project-owner approval",
+    )
+    return assumptions_path, adr_path
+
+
 def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> EvidenceBundle:
     """Derive all V0 gates from verified artifacts, then build an immutable bundle."""
     root = root.resolve()
@@ -253,6 +290,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
     _validate_comparison(batch_compare, "Batch-size reproducibility")
     _validate_structural_reference(structural)
     _validate_clean_manifests(root)
+    assumptions_path, universe_adr_path = _validate_foundation_decisions(spec_path)
 
     raw_review = _raw_profile_review(root, spec_path.resolve())
     raw_review_path = evidence_root / "raw-profile-integrity-review.json"
@@ -265,6 +303,8 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
         f"canonical-contact-rebuild={original_compare_path}",
         f"batch-size-reproducibility={batch_compare_path}",
         f"structural-reference-audit={structural_path}",
+        f"assumption-registry={assumptions_path}",
+        f"body-universe-decision={universe_adr_path}",
     )
     gate_values = (
         "raw_profile_integrity=true",
@@ -274,6 +314,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
         "aggregate_reconciliation=true",
         "morphology_canaries=true",
         "body_universe_sensitivity=true",
+        "body_universe_decision=true",
         "batch_size_reproducibility=true",
         "official_counts_and_motifs=true",
         "confidence_sensitivity=true",

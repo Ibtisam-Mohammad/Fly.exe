@@ -40,7 +40,7 @@ def test_project_assumptions_are_complete_and_unique() -> None:
         "NUM-01",
         "VAL-01",
     )
-    assert registry.assumption_set_id == "foundation-v0.2"
+    assert registry.assumption_set_id == "foundation-v0.3"
     assert registry.sha256
 
 

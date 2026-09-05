@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.2",
+  "assumption_set_id": "foundation-v0.3",
   "records": [
     {
       "id": "DATA-01",
@@ -53,14 +53,14 @@
       "value": {"annotation_statuses": ["Traced"], "preserve_isolated_bodies": true},
       "units": "categorical selection",
       "provenance": "M/E",
-      "applies_to": "starter aggregate runtime graph",
+      "applies_to": "production aggregate runtime graph",
       "source": "MaleCNS v1.0 body annotations and official all-segment weight-table description",
-      "biological_mismatch": "Assign and Anchor bodies are excluded from the default derivative pending review; all-segment source files remain immutable.",
-      "uncertainty": "Run Traced+Assign+Anchor and status-specific alternatives during V0 sensitivity analysis.",
-      "status": "proposed",
-      "validation": "official count, motif and status-sensitivity audit",
+      "biological_mismatch": "Assign and Anchor bodies are excluded from the default derivative; all-segment source files remain immutable.",
+      "uncertainty": "Traced+Assign and Traced+Assign+Anchor remain registered structural sensitivity alternatives.",
+      "status": "accepted",
+      "validation": "V0 official count, annotation canary, motif, and status-universe sensitivity audit",
       "owner": "data",
-      "last_reviewed": "2026-09-04"
+      "last_reviewed": "2026-09-06"
     },
     {
       "id": "DATA-05",

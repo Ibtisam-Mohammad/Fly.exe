@@ -36,6 +36,7 @@ REQUIRED_GATES: dict[ValidationTier, tuple[str, ...]] = {
         "aggregate_reconciliation",
         "morphology_canaries",
         "body_universe_sensitivity",
+        "body_universe_decision",
         "batch_size_reproducibility",
         "official_counts_and_motifs",
         "confidence_sensitivity",

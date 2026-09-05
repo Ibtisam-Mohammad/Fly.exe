@@ -44,4 +44,4 @@ The official download page describes the aggregate weights as segment-to-segment
 | Unimportant | 10,751 |
 | missing | 5,472 |
 
-The provisional runtime derivative uses `status=Traced`, retains all 165,122 IDs including any isolated bodies, and retains 25,563,197 edges whose two endpoints are traced. It records 126,293,487 excluded all-segment rows and 187,808,197 excluded contacts. No contact-count or weak-edge threshold is applied. See proposed [ADR-2026-002](../adr/ADR-2026-002-traced-neuron-universe.md).
+The accepted runtime derivative uses `status=Traced`, retains all 165,122 IDs including any isolated bodies, and retains 25,563,197 edges whose two endpoints are traced. It records 126,293,487 excluded all-segment rows and 187,808,197 excluded contacts. No contact-count or weak-edge threshold is applied. Assign/Anchor remain explicit sensitivity alternatives. See [ADR-2026-002](../adr/ADR-2026-002-traced-neuron-universe.md).
