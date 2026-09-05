@@ -66,7 +66,7 @@ and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementa
 | Provisional traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| Automated tests | 40 passing |
+| Automated tests | 42 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) remain proposed until the status-universe sensitivity audit is reviewed.
 
