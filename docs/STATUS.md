@@ -20,6 +20,8 @@ Status date: 2026-09-05
 - Sparse small-circuit LIF oracle that requires explicit functional edge signs.
 - Deterministic three-neuron LIF parity harness across NumPy, Brian2 2.10.1, and direct
   float32 PyGeNN 5.4.0; all 14 ordered spikes match within the 100-microsecond gate.
+- Executable Shiu transmitter-only sign regression with named zero, excitatory, inhibitory,
+  and seeded-balanced unresolved-sign policies. None is the physiological default.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -42,7 +44,8 @@ Status date: 2026-09-05
 
 Detailed integrity evidence: [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md)
 and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
-[LIF backend parity](evidence/LIF_BACKEND_PARITY.md).
+[LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
+[transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md).
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
