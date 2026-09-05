@@ -27,10 +27,19 @@ function Invoke-Flysim {
         "--", "env", "PYTHONUNBUFFERED=1",
         $FlysimPath
     ) + $FlysimArguments
-    & wsl.exe @wslArguments 2>&1 |
-        Tee-Object -FilePath $LogPath -Append |
-        Out-Null
-    return $LASTEXITCODE
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # Native stderr carries JSONL progress and must not become a terminating PowerShell error.
+        $ErrorActionPreference = "Continue"
+        & wsl.exe @wslArguments 2>&1 |
+            Tee-Object -FilePath $LogPath -Append |
+            Out-Null
+        $nativeExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+    return $nativeExitCode
 }
 
 Add-Type -TypeDefinition @"
