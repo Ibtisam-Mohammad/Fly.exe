@@ -33,6 +33,7 @@ DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked
 HIGHEST_VALIDATION_TIER: none (pre-V0)
 ENGINEERING_STATUS: zero-weight GeNN topology load and controller-only/Eon-like scaffolds only
 NEXT_GATE: full-profile lock -> streaming contact/polyad audit -> morphology and universe sensitivity -> V0 review
+FOUNDATION_JOB: resumable bounded-memory contact normalization active under the Windows host supervisor; strict contact audit follows
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory
