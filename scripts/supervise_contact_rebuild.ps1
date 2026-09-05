@@ -96,6 +96,15 @@ try {
         Start-Sleep -Seconds 30
     }
 
+    Write-RebuildLog "Starting paper-count, motif, confidence, and cross-connectome audit."
+    $structuralExit = Invoke-Flysim @(
+        "data", "audit-structural-references", "--root", $DatasetRoot,
+        "--supplement-card", "/mnt/i/AI/fly_brain/configs/datasets/berg-malecns-2025-supplement.json"
+    )
+    if ($structuralExit -ne 0) {
+        throw "Structural reference audit failed with exit code $structuralExit."
+    }
+
     $canonical = "$DatasetRoot/derived/male-cns-v1.0/contacts-rebuild-262144"
     $alternate = "$DatasetRoot/derived/male-cns-v1.0/contacts-rebuild-131072"
     Write-RebuildLog "Starting clean 262144-row-group rebuild."

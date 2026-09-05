@@ -39,6 +39,7 @@ from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
 from flysim.runs import write_run
+from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
 from flysim.v0 import build_v0_evidence_bundle
 from flysim.validation import validate_run
@@ -279,6 +280,7 @@ def _command_data_audit_contacts(args: argparse.Namespace) -> int:
         args.temporary_storage,
         memory_limit_gb=args.memory_limit_gb,
         threads=args.threads,
+        progress=_progress_jsonl,
     )
     _print_json({**report, "report": str(report_path.resolve())})
     return 0 if report["valid"] else 2
@@ -308,6 +310,15 @@ def _command_data_audit_body_universes(args: argparse.Namespace) -> int:
     )
     _print_json(result)
     return 0
+
+
+def _command_data_audit_structural_references(args: argparse.Namespace) -> int:
+    output = args.output or (
+        args.root / "evidence" / "male-cns-v1.0" / "structural-reference-audit.json"
+    )
+    result = audit_structural_references(args.root, args.supplement_card, output)
+    _print_json(result)
+    return 0 if result["valid"] else 2
 
 
 def _command_benchmark(args: argparse.Namespace) -> int:
@@ -567,6 +578,19 @@ def build_parser() -> argparse.ArgumentParser:
     universes.add_argument("--root", type=Path, default=default_data_root())
     universes.add_argument("--output", type=Path)
     universes.set_defaults(func=_command_data_audit_body_universes)
+
+    structural = data_commands.add_parser("audit-structural-references")
+    structural.add_argument("--root", type=Path, default=default_data_root())
+    structural.add_argument(
+        "--supplement-card",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "datasets"
+        / "berg-malecns-2025-supplement.json",
+    )
+    structural.add_argument("--output", type=Path)
+    structural.set_defaults(func=_command_data_audit_structural_references)
 
     resolver = data_commands.add_parser("resolve-populations")
     resolver.add_argument("--root", type=Path, default=default_data_root())

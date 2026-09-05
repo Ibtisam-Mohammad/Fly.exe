@@ -104,7 +104,7 @@ try {
         "data", "audit-contacts",
         "--strict",
         "--memory-limit-gb", "3",
-        "--threads", "2",
+        "--threads", "1",
         "--root", $DatasetRoot
     )
     if ($auditExit -ne 0) {

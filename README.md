@@ -83,6 +83,7 @@ flysim data import-contacts --resume --memory-limit-gb 3 --threads 2 --root /srv
 flysim data audit-contacts --strict --root /srv/flybrain-data
 flysim data sync-skeleton-canaries --root /srv/flybrain-data
 flysim data audit-body-universes --root /srv/flybrain-data
+flysim data audit-structural-references --root /srv/flybrain-data
 ```
 
 For the long normalization and audit sequence, use

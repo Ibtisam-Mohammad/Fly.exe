@@ -91,6 +91,16 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
     }
     _write(evidence / "canonical-contact-rebuild.json", comparison)
     _write(evidence / "contact-batch-size-reproducibility.json", comparison)
+    _write(
+        evidence / "structural-reference-audit.json",
+        {
+            "valid": True,
+            "count_checks": {"published_counts": True},
+            "selected_motifs": {"valid": True},
+            "confidence_sensitivity": {"valid": True},
+            "cross_connectome_comparison": {"valid": True},
+        },
+    )
 
     morphology = root / "derived" / "male-cns-v1.0" / "morphology-canaries"
     canaries = []

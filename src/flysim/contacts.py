@@ -446,6 +446,7 @@ def audit_contact_derivatives(
     *,
     memory_limit_gb: float = DEFAULT_MEMORY_LIMIT_GB,
     threads: int = 2,
+    progress: Callable[[str], None] = lambda _: None,
 ) -> dict[str, Any]:
     """Run the exhaustive Stage-0 contact, polyad, and aggregate reconciliation audit."""
     try:
@@ -465,7 +466,9 @@ def audit_contact_derivatives(
     temporary_storage.mkdir(parents=True, exist_ok=True)
     connection = duckdb.connect()
     connection.execute(f"SET threads={int(threads)}")
-    connection.execute(f"SET memory_limit='{float(memory_limit_gb)}GB'")
+    memory_limit_bytes = int(memory_limit_gb * 1024**3)
+    connection.execute(f"SET memory_limit='{memory_limit_bytes}B'")
+    connection.execute("SET preserve_insertion_order=false")
     escaped_temp = str(temporary_storage.resolve()).replace("'", "''")
     connection.execute(f"SET temp_directory='{escaped_temp}'")
     for artifact_id in required:
@@ -476,11 +479,16 @@ def audit_contact_derivatives(
     checks: dict[str, dict[str, Any]] = {}
 
     def scalar_check(name: str, query: str, expected: int = 0) -> None:
-        row = connection.execute(query).fetchone()
+        progress(f"contact audit starting: {name}")
+        try:
+            row = connection.execute(query).fetchone()
+        except Exception as exc:
+            raise DatasetError(f"Contact audit check failed ({name}): {exc}") from exc
         if row is None:
             raise DatasetError(f"Contact audit query returned no result: {name}")
         observed = int(row[0])
         checks[name] = {"passed": observed == expected, "observed": observed, "expected": expected}
+        progress(f"contact audit completed: {name}; observed={observed}; expected={expected}")
 
     scalar_check(
         "packed_point_id_bijection",
@@ -545,16 +553,22 @@ def audit_contact_derivatives(
            OR {invalid_probability}
         """,
     )
-    polyads = connection.execute(
-        """
-        SELECT count(*) AS presynaptic_sites, count_if(fanout > 1) AS polyadic_sites,
-               max(fanout) AS maximum_fanout
-        FROM (
-          SELECT x_pre, y_pre, z_pre, count(*) AS fanout
-          FROM syn_partners GROUP BY x_pre, y_pre, z_pre
-        )
-        """
-    ).fetchone()
+    progress("contact audit starting: polyadic_fanout_preserved")
+    try:
+        polyads = connection.execute(
+            """
+            SELECT count(*) AS presynaptic_sites, count_if(fanout > 1) AS polyadic_sites,
+                   max(fanout) AS maximum_fanout
+            FROM (
+              SELECT x_pre, y_pre, z_pre, count(*) AS fanout
+              FROM syn_partners GROUP BY x_pre, y_pre, z_pre
+            )
+            """
+        ).fetchone()
+    except Exception as exc:
+        raise DatasetError(
+            f"Contact audit check failed (polyadic_fanout_preserved): {exc}"
+        ) from exc
     if polyads is None:
         raise DatasetError("Polyadic contact audit returned no result")
     checks["polyadic_fanout_preserved"] = {
@@ -563,6 +577,10 @@ def audit_contact_derivatives(
         "polyadic_sites": int(polyads[1]),
         "maximum_fanout": int(polyads[2]),
     }
+    progress(
+        "contact audit completed: polyadic_fanout_preserved; "
+        f"sites={int(polyads[0])}; polyadic={int(polyads[1])}; max_fanout={int(polyads[2])}"
+    )
     connection.close()
     failures = sorted(name for name, result in checks.items() if result["passed"] is not True)
     report = {

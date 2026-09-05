@@ -175,6 +175,26 @@ def _validate_comparison(report: dict[str, Any], label: str) -> None:
     _require(observed == set(CONTACT_ARTIFACTS), f"{label} does not cover all contact artifacts")
 
 
+def _validate_structural_reference(report: dict[str, Any]) -> None:
+    _require(report.get("valid") is True, "Structural reference audit did not pass")
+    count_checks = report.get("count_checks")
+    if not isinstance(count_checks, dict) or not count_checks:
+        raise ValidationError("Structural reference audit has no count checks")
+    _require(all(value is True for value in count_checks.values()), "Official count check failed")
+    _require(
+        report.get("selected_motifs", {}).get("valid") is True,
+        "Selected structural motif check failed",
+    )
+    _require(
+        report.get("confidence_sensitivity", {}).get("valid") is True,
+        "Confidence sensitivity check failed",
+    )
+    _require(
+        report.get("cross_connectome_comparison", {}).get("valid") is True,
+        "Cross-connectome comparison check failed",
+    )
+
+
 def _validate_clean_manifests(root: Path) -> None:
     limit_bytes = 3 * 1024**3
     layouts = (("contacts-rebuild-262144", 262_144), ("contacts-rebuild-131072", 131_072))
@@ -201,18 +221,21 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
     universe_path = evidence_root / "body-universe-sensitivity.json"
     original_compare_path = evidence_root / "canonical-contact-rebuild.json"
     batch_compare_path = evidence_root / "contact-batch-size-reproducibility.json"
+    structural_path = evidence_root / "structural-reference-audit.json"
     morphology_path = root / "derived" / "male-cns-v1.0" / "morphology-canaries" / "manifest.json"
 
     contact = _read_json(contact_path)
     universe = _read_json(universe_path)
     original_compare = _read_json(original_compare_path)
     batch_compare = _read_json(batch_compare_path)
+    structural = _read_json(structural_path)
     morphology = _read_json(morphology_path)
     _validate_contact_report(contact)
     _validate_morphology(root, morphology)
     _validate_universe_report(universe)
     _validate_comparison(original_compare, "Canonical rebuild")
     _validate_comparison(batch_compare, "Batch-size reproducibility")
+    _validate_structural_reference(structural)
     _validate_clean_manifests(root)
 
     raw_review = _raw_profile_review(root, spec_path.resolve())
@@ -225,6 +248,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
         f"body-universe-sensitivity={universe_path}",
         f"canonical-contact-rebuild={original_compare_path}",
         f"batch-size-reproducibility={batch_compare_path}",
+        f"structural-reference-audit={structural_path}",
     )
     gate_values = (
         "raw_profile_integrity=true",
@@ -235,6 +259,9 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
         "morphology_canaries=true",
         "body_universe_sensitivity=true",
         "batch_size_reproducibility=true",
+        "official_counts_and_motifs=true",
+        "confidence_sensitivity=true",
+        "cross_connectome_comparison=true",
     )
     return build_evidence_bundle(
         ValidationTier.V0,

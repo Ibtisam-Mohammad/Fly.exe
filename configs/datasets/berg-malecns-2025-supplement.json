@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "berg-malecns-paper-supplement-67767d2",
+  "title": "MaleCNS paper structural and male-female comparison supplement",
+  "paper": "https://doi.org/10.1016/j.cell.2026.08.015",
+  "source_repository": "https://github.com/flyconnectome/2025malecns",
+  "source_commit": "67767d2233657983993ff6c2be48e836a935863c",
+  "license": "Paper is CC-BY-4.0; repository-file redistribution terms require confirmation",
+  "redistribute_with_gpl_release": false,
+  "artifacts": [
+    {
+      "filename": "mcns_fw_edge_comp.feather",
+      "bytes": 100367578,
+      "rows": 3761792,
+      "sha256": "1cac309c7760d16f5f041a7b924efbf5cdfa3a46570090fb234c2323ed9e313c",
+      "role": "MaleCNS-to-FlyWire cross-matched central-brain type-edge comparison"
+    },
+    {
+      "filename": "mcns_fw_edge_comp_mappings.json",
+      "bytes": 6723460,
+      "entries": 281656,
+      "sha256": "94aaadbefedcc314c69fb8ad62a07361c1f78ee39424bad38ac1a6d7ca4d0a12",
+      "role": "Neuron-to-cross-connectome-label assignments used by the aligned edge table"
+    },
+    {
+      "filename": "quantify-neuron-connections.ipynb",
+      "bytes": 5170,
+      "sha256": "0f8b191be7cea941799133e5fc354ee299b849ceb26e4fb2904e3b07108357ec",
+      "role": "Paper-author notebook defining reported neuron and connection counts"
+    }
+  ],
+  "biological_context": {
+    "male": "MaleCNS v1.0 adult male CNS",
+    "female": "FlyWire female brain used by the paper authors",
+    "comparison_scope": "cross-matched cell types with central-brain arbors; MaleCNS VNC connections excluded"
+  },
+  "units": "edge weights are synapse/contact counts; mapping identifiers are dataset-specific IDs",
+  "role": "V0 structural reference, count-definition, and cross-connectome comparison evidence",
+  "mismatches": [
+    "cross-sex and cross-specimen comparison",
+    "the aligned table excludes MaleCNS VNC connections",
+    "the paper notebook applies declared connection-strength thresholds distinct from the canonical unthresholded derivative"
+  ],
+  "permitted_claim": "Supports structural count-definition and MaleCNS-to-FlyWire comparison gates within the paper's declared scope.",
+  "forbidden_claim": "Does not establish physiological conservation, functional edge weights, or whole-CNS female equivalence.",
+  "status": "checksum-locked locally; V0 structural audit pending",
+  "last_reviewed": "2026-09-05"
+}
