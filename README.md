@@ -46,7 +46,8 @@ flysim data sync --profile starter --root /srv/flybrain-data
 flysim data validate --root /srv/flybrain-data
 flysim data import-aggregate --root /srv/flybrain-data
 flysim benchmark neural --scales 0.01 0.1 1.0 --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
-flysim run eon-demo --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
+flysim run eon-demo --seed 1 --headless
+flysim run eon-malecns --graph /srv/flybrain-data/derived/male-cns-v1.0/graph --headless
 flysim run full-vnc-walk --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
 ```
 
@@ -72,7 +73,34 @@ Get-Content artifacts\logs\full-dataset-supervisor.log -Wait
 Completion is recorded in `artifacts\logs\full-dataset-supervisor.complete`. A single-instance
 mutex prevents two supervisors from writing the same partial artifact.
 
-`full-vnc-walk` deliberately refuses to run until the required MaleCNS graph, sensory registry, motor mapping, and production backends pass their readiness gates. There is no synthetic fallback hidden behind that scientific command.
+The full profile is now seven checksum-locked flat-connectome tables. Contact-level Stage 0 work
+uses bounded, resumable sharding and keeps contact rows off the GPU:
+
+```text
+flysim data status --profile full --json --root /srv/flybrain-data
+flysim data validate --profile full --remote --deep --root /srv/flybrain-data
+flysim data import-contacts --resume --memory-limit-gb 3 --threads 2 --root /srv/flybrain-data
+flysim data audit-contacts --strict --root /srv/flybrain-data
+flysim data sync-skeleton-canaries --root /srv/flybrain-data
+flysim data audit-body-universes --root /srv/flybrain-data
+```
+
+For the long normalization and audit sequence, use
+`scripts/supervise_contact_foundation.ps1`. Progress is JSONL in
+`artifacts/logs/contact-foundation-supervisor.log`; a completion marker means the contact and
+body-universe audits ran, not that V0 was automatically awarded.
+
+Scientific tier claims require an immutable evidence bundle. A bundle cannot be created unless
+all registered gates for its requested tier are explicitly passed and every artifact is hashed:
+
+```text
+flysim evidence build --tier V0 --artifact NAME=PATH --gate NAME=true --output PATH
+flysim evidence validate PATH
+```
+
+`eon-malecns` and `full-vnc-walk` deliberately refuse to run until their numeric population,
+neural parity, sensory, and motor gates pass. There is no synthetic fallback hidden behind either
+scientific command. `eon-demo` remains the semantic engineering storyboard.
 
 ## Data and credentials
 
