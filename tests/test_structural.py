@@ -85,3 +85,48 @@ def test_cross_connectome_review_uses_pinned_card(tmp_path: Path) -> None:
     assert result["valid"] is True
     assert result["aligned_edge_rows"] == 2
     assert result["mapping_rows"] == 2
+
+
+def test_annotation_canaries_require_exact_stable_identity_and_side(tmp_path: Path) -> None:
+    annotations = tmp_path / "annotations.feather"
+    feather.write_feather(
+        pa.table(
+            {
+                "bodyId": [10, 11],
+                "status": ["Traced", "Traced"],
+                "type": ["DNa01", "MN9"],
+                "instance": ["DNa01(VES006)_L", "MN9_R"],
+                "superclass": ["descending_neuron", "cb_motor"],
+            }
+        ),
+        annotations,
+    )
+    config = tmp_path / "canaries.json"
+    _write_json(
+        config,
+        {
+            "canaries": [
+                {
+                    "body_id": 10,
+                    "label": "DNa01_L",
+                    "side": "L",
+                    "expected_status": "Traced",
+                    "expected_type": "DNa01",
+                    "expected_superclass": "descending_neuron",
+                },
+                {
+                    "body_id": 11,
+                    "label": "MN9_R",
+                    "side": "R",
+                    "expected_status": "Traced",
+                    "expected_type": "MN9",
+                    "expected_superclass": "cb_motor",
+                },
+            ]
+        },
+    )
+
+    result = structural._annotation_canary_review(annotations, config)
+
+    assert result["valid"] is True
+    assert {item["observed_type"] for item in result["canaries"]} == {"DNa01", "MN9"}

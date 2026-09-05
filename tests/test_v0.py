@@ -50,6 +50,8 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
             "artifacts": artifacts,
         },
     )
+    canary_config = spec_path.parent / "morphology-canaries.json"
+    _write(canary_config, {"canaries": [{"body_id": body_id} for body_id in range(8)]})
     _write(raw / "dataset-lock.json", {"dataset_id": "male-cns:v1.0", "artifacts": locked})
 
     evidence = root / "evidence" / "male-cns-v1.0"
@@ -117,7 +119,14 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
                 "valid": True,
             }
         )
-    _write(morphology / "manifest.json", {"complete": True, "canaries": canaries})
+    _write(
+        morphology / "manifest.json",
+        {
+            "complete": True,
+            "config_sha256": sha256_file(canary_config),
+            "canaries": canaries,
+        },
+    )
 
     peak = 3 * 1024**3 if excessive_peak else 512 * 1024**2
     derived = root / "derived" / "male-cns-v1.0"

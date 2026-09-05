@@ -4,15 +4,15 @@
   "coordinate_units": "8 nm voxel units",
   "base_url": "https://storage.googleapis.com/flyem-male-cns/v1.0/segmentation/skeletons-malecns/skeletons-swc",
   "canaries": [
-    {"body_id": 10442, "label": "DNa01_L", "role": "bilateral brain-to-VNC descending", "side": "L", "provenance": "M"},
-    {"body_id": 10760, "label": "DNa01_R", "role": "bilateral brain-to-VNC descending", "side": "R", "provenance": "M"},
-    {"body_id": 523769, "label": "DNa02_L", "role": "bilateral brain-to-VNC descending", "side": "L", "provenance": "M"},
-    {"body_id": 10360, "label": "DNa02_R", "role": "bilateral brain-to-VNC descending", "side": "R", "provenance": "M"},
-    {"body_id": 127912, "label": "JO-FV_L", "role": "bilateral antennal sensory", "side": "L", "provenance": "M/P"},
-    {"body_id": 26519, "label": "JO-FV_R", "role": "bilateral antennal sensory", "side": "R", "provenance": "M/P"},
-    {"body_id": 38160, "label": "JO-FD1_L", "role": "antennal grooming sensory", "side": "L", "provenance": "M/P"},
-    {"body_id": 92767, "label": "JO-FD1_L_replica", "role": "antennal grooming sensory", "side": "L", "provenance": "M/P"},
-    {"body_id": 10331, "label": "MN9_L", "role": "bilateral feeding motor", "side": "L", "provenance": "M/P"},
-    {"body_id": 16949, "label": "MN9_R", "role": "bilateral feeding motor", "side": "R", "provenance": "M/P"}
+    {"body_id": 10442, "label": "DNa01_L", "role": "bilateral brain-to-VNC descending", "side": "L", "expected_status": "Traced", "expected_type": "DNa01", "expected_superclass": "descending_neuron", "provenance": "M"},
+    {"body_id": 10760, "label": "DNa01_R", "role": "bilateral brain-to-VNC descending", "side": "R", "expected_status": "Traced", "expected_type": "DNa01", "expected_superclass": "descending_neuron", "provenance": "M"},
+    {"body_id": 523769, "label": "DNa02_L", "role": "bilateral brain-to-VNC descending", "side": "L", "expected_status": "Traced", "expected_type": "DNa02", "expected_superclass": "descending_neuron", "provenance": "M"},
+    {"body_id": 10360, "label": "DNa02_R", "role": "bilateral brain-to-VNC descending", "side": "R", "expected_status": "Traced", "expected_type": "DNa02", "expected_superclass": "descending_neuron", "provenance": "M"},
+    {"body_id": 127912, "label": "JO-FV_L", "role": "bilateral antennal sensory", "side": "L", "expected_status": "Traced", "expected_type": "JO-FV", "expected_superclass": "cb_sensory", "provenance": "M/P"},
+    {"body_id": 26519, "label": "JO-FV_R", "role": "bilateral antennal sensory", "side": "R", "expected_status": "Traced", "expected_type": "JO-FV", "expected_superclass": "cb_sensory", "provenance": "M/P"},
+    {"body_id": 38160, "label": "JO-FD1_L", "role": "antennal grooming sensory", "side": "L", "expected_status": "Traced", "expected_type": "JO-FD1", "expected_superclass": "cb_sensory", "provenance": "M/P"},
+    {"body_id": 92767, "label": "JO-FD1_L_replica", "role": "antennal grooming sensory", "side": "L", "expected_status": "Traced", "expected_type": "JO-FD1", "expected_superclass": "cb_sensory", "provenance": "M/P"},
+    {"body_id": 10331, "label": "MN9_L", "role": "bilateral feeding motor", "side": "L", "expected_status": "Traced", "expected_type": "MN9", "expected_superclass": "cb_motor", "provenance": "M/P"},
+    {"body_id": 16949, "label": "MN9_R", "role": "bilateral feeding motor", "side": "R", "expected_status": "Traced", "expected_type": "MN9", "expected_superclass": "cb_motor", "provenance": "M/P"}
   ]
 }

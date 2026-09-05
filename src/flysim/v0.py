@@ -125,8 +125,17 @@ def _validate_contact_report(report: dict[str, Any]) -> None:
         _require(checks.get(name, {}).get("passed") is True, f"Contact check failed: {name}")
 
 
-def _validate_morphology(root: Path, manifest: dict[str, Any]) -> None:
+def _validate_morphology(
+    root: Path,
+    manifest: dict[str, Any],
+    canary_config_path: Path,
+) -> None:
     _require(manifest.get("complete") is True, "Morphology canary manifest is incomplete")
+    _require(canary_config_path.is_file(), "Morphology canary configuration is missing")
+    _require(
+        manifest.get("config_sha256") == sha256_file(canary_config_path),
+        "Morphology canary configuration changed after synchronization",
+    )
     canaries = manifest.get("canaries")
     if not isinstance(canaries, list) or len(canaries) < 8:
         raise ValidationError("Too few morphology canaries")
@@ -231,7 +240,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
     structural = _read_json(structural_path)
     morphology = _read_json(morphology_path)
     _validate_contact_report(contact)
-    _validate_morphology(root, morphology)
+    _validate_morphology(root, morphology, spec_path.resolve().parent / "morphology-canaries.json")
     _validate_universe_report(universe)
     _validate_comparison(original_compare, "Canonical rebuild")
     _validate_comparison(batch_compare, "Batch-size reproducibility")

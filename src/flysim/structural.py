@@ -72,6 +72,58 @@ def _confidence_sensitivity(partner_root: Path) -> dict[str, Any]:
     }
 
 
+def _annotation_canary_review(annotations_path: Path, canary_config_path: Path) -> dict[str, Any]:
+    """Verify stable IDs and selected sensorimotor annotations against a pinned canary card."""
+    config = _read_json(canary_config_path)
+    canaries = config.get("canaries")
+    if not isinstance(canaries, list) or not canaries:
+        raise DatasetError("Morphology canary configuration has no annotation canaries")
+    expected_ids = {int(item["body_id"]) for item in canaries}
+    table = feather.read_table(
+        annotations_path,
+        columns=["bodyId", "status", "type", "instance", "superclass"],
+    )
+    body_ids = table.column("bodyId").to_numpy(zero_copy_only=False)
+    indices: dict[int, list[int]] = {}
+    for index, raw_body_id in enumerate(body_ids):
+        body_id = int(raw_body_id)
+        if body_id in expected_ids:
+            indices.setdefault(body_id, []).append(index)
+    rows = table.to_pydict()
+    records: list[dict[str, Any]] = []
+    for canary in canaries:
+        body_id = int(canary["body_id"])
+        matches = indices.get(body_id, [])
+        unique = len(matches) == 1
+        row = {name: rows[name][matches[0]] for name in rows} if unique else {}
+        side = str(canary["side"])
+        fields_match = unique and all(
+            row.get(field) == canary[f"expected_{field}"]
+            for field in ("status", "type", "superclass")
+        )
+        instance_matches_side = unique and str(row.get("instance", "")).endswith(f"_{side}")
+        records.append(
+            {
+                "body_id": body_id,
+                "label": canary["label"],
+                "rows": len(matches),
+                "observed_status": row.get("status"),
+                "observed_type": row.get("type"),
+                "observed_instance": row.get("instance"),
+                "observed_superclass": row.get("superclass"),
+                "fields_match": fields_match,
+                "instance_matches_side": instance_matches_side,
+                "valid": bool(unique and fields_match and instance_matches_side),
+            }
+        )
+    return {
+        "annotations_sha256": sha256_file(annotations_path),
+        "canary_config_sha256": sha256_file(canary_config_path),
+        "canaries": records,
+        "valid": all(record["valid"] for record in records),
+    }
+
+
 def _cross_connectome_review(supplement_root: Path, card_path: Path) -> dict[str, Any]:
     card = _read_json(card_path)
     if card.get("source_commit") != "67767d2233657983993ff6c2be48e836a935863c":
@@ -149,6 +201,7 @@ def _cross_connectome_review(supplement_root: Path, card_path: Path) -> dict[str
 def audit_structural_references(
     root: Path,
     supplement_card: Path,
+    canary_config: Path,
     output: Path,
 ) -> dict[str, Any]:
     """Audit paper counts, structural canary motifs, confidence, and FlyWire comparison."""
@@ -206,6 +259,13 @@ def audit_structural_references(
     confidence = _confidence_sensitivity(
         root / "derived" / "male-cns-v1.0" / "contacts" / "syn-partners"
     )
+    annotation_canaries = _annotation_canary_review(
+        root
+        / "raw"
+        / "male-cns-v1.0"
+        / "body-annotations-male-cns-v1.0-minconf-0.5.feather",
+        canary_config.resolve(),
+    )
     cross_connectome = _cross_connectome_review(
         root / "raw" / "auxiliary" / "berg-malecns-2025-supplement",
         supplement_card.resolve(),
@@ -215,6 +275,7 @@ def audit_structural_references(
         and motif_valid
         and confidence["valid"]
         and confidence["rows"] == observed["postsynaptic_contacts"]
+        and annotation_canaries["valid"]
         and cross_connectome["valid"]
     )
     report = {
@@ -231,7 +292,8 @@ def audit_structural_references(
         "selected_motifs": {
             "polyadic_sites": polyads,
             "bilateral_sensorimotor_canary": motif,
-            "valid": motif_valid,
+            "annotation_canaries": annotation_canaries,
+            "valid": motif_valid and annotation_canaries["valid"],
         },
         "confidence_sensitivity": confidence,
         "cross_connectome_comparison": cross_connectome,

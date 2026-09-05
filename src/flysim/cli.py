@@ -316,7 +316,12 @@ def _command_data_audit_structural_references(args: argparse.Namespace) -> int:
     output = args.output or (
         args.root / "evidence" / "male-cns-v1.0" / "structural-reference-audit.json"
     )
-    result = audit_structural_references(args.root, args.supplement_card, output)
+    result = audit_structural_references(
+        args.root,
+        args.supplement_card,
+        args.canary_config,
+        output,
+    )
     _print_json(result)
     return 0 if result["valid"] else 2
 
@@ -588,6 +593,11 @@ def build_parser() -> argparse.ArgumentParser:
         / "configs"
         / "datasets"
         / "berg-malecns-2025-supplement.json",
+    )
+    structural.add_argument(
+        "--canary-config",
+        type=Path,
+        default=project_root() / "configs" / "datasets" / "morphology-canaries.json",
     )
     structural.add_argument("--output", type=Path)
     structural.set_defaults(func=_command_data_audit_structural_references)
