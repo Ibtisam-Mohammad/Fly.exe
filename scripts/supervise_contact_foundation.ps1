@@ -105,9 +105,18 @@ try {
         throw "Strict contact audit exited with code $auditExit. No validation tier was awarded."
     }
 
+    Write-FoundationLog "Contact audit passed; starting body-universe sensitivity audit."
+    $universeExit = Invoke-Flysim @(
+        "data", "audit-body-universes",
+        "--root", $DatasetRoot
+    )
+    if ($universeExit -ne 0) {
+        throw "Body-universe sensitivity audit exited with code $universeExit."
+    }
+
     $completedAt = Get-Date -Format "o"
     Set-Content -Path $completionPath -Value $completedAt -Encoding ascii
-    Write-FoundationLog "Contact normalization and strict structural audit completed."
+    Write-FoundationLog "Contact, structural, and body-universe foundation audits completed."
 }
 catch {
     $failure = [ordered]@{
