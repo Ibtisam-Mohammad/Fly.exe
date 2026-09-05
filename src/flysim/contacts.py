@@ -504,25 +504,46 @@ def audit_contact_derivatives(
         "SELECT count(*) - count(DISTINCT point_id) FROM syn_points",
     )
     scalar_check(
-        "partner_endpoint_resolution",
+        "partner_pre_endpoint_resolution",
         """
         WITH endpoints AS (
-          SELECT *,
-            ((CAST(z_pre AS UBIGINT) << 42) | (CAST(y_pre AS UBIGINT) << 21) |
-             CAST(x_pre AS UBIGINT)) AS pre_id,
-            ((CAST(z_post AS UBIGINT) << 42) | (CAST(y_post AS UBIGINT) << 21) |
-             CAST(x_post AS UBIGINT)) AS post_id
+          SELECT *, ((CAST(z_pre AS UBIGINT) << 42) |
+                     (CAST(y_pre AS UBIGINT) << 21) |
+                     CAST(x_pre AS UBIGINT)) AS endpoint_id
           FROM syn_partners
         )
         SELECT count(*) FROM endpoints e
-        LEFT JOIN syn_points pre ON pre.point_id=e.pre_id
-        LEFT JOIN syn_points post ON post.point_id=e.post_id
-        WHERE pre.point_id IS NULL OR post.point_id IS NULL
-           OR pre.kind != 'PreSyn' OR post.kind != 'PostSyn'
-           OR pre.body != e.body_pre OR post.body != e.body_post
-           OR pre.conf != e.conf_pre OR post.conf != e.conf_post
+        ANTI JOIN syn_points p
+          ON p.kind = 'PreSyn' AND p.point_id = e.endpoint_id
+         AND p.body = e.body_pre AND p.conf = e.conf_pre
         """,
     )
+    scalar_check(
+        "partner_post_endpoint_resolution",
+        """
+        WITH endpoints AS (
+          SELECT *, ((CAST(z_post AS UBIGINT) << 42) |
+                     (CAST(y_post AS UBIGINT) << 21) |
+                     CAST(x_post AS UBIGINT)) AS endpoint_id
+          FROM syn_partners
+        )
+        SELECT count(*) FROM endpoints e
+        ANTI JOIN syn_points p
+          ON p.kind = 'PostSyn' AND p.point_id = e.endpoint_id
+         AND p.body = e.body_post AND p.conf = e.conf_post
+        """,
+    )
+    pre_endpoint = checks["partner_pre_endpoint_resolution"]
+    post_endpoint = checks["partner_post_endpoint_resolution"]
+    checks["partner_endpoint_resolution"] = {
+        "passed": pre_endpoint["passed"] is True and post_endpoint["passed"] is True,
+        "observed": int(pre_endpoint["observed"]) + int(post_endpoint["observed"]),
+        "expected": 0,
+        "components": [
+            "partner_pre_endpoint_resolution",
+            "partner_post_endpoint_resolution",
+        ],
+    }
     scalar_check(
         "aggregate_pair_reconciliation",
         """
