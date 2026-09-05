@@ -32,7 +32,7 @@ CURRENT_STAGE: Stage 0 — reproducible data foundation (active; exit gate not p
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; contact normalization and structural audits pending
 HIGHEST_VALIDATION_TIER: none (pre-V0)
 ENGINEERING_STATUS: zero-weight GeNN topology load and controller-only/Eon-like scaffolds only
-NEXT_GATE: full-profile lock -> streaming contact/polyad audit -> morphology and universe sensitivity -> V0 review
+NEXT_GATE: streaming contact/polyad audit -> body-universe sensitivity -> V0 review
 FOUNDATION_JOB: resumable bounded-memory contact normalization active under the Windows host supervisor; strict contact audit follows
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -47,6 +47,10 @@ neither the zero-functional-weight GeNN load nor the controller-only and semanti
 demonstrations are biological validation. “Full profile” refers only to the seven registered
 flat-connectome artifacts; it does not include the skeleton collections, segmentation volumes,
 or neuPrint database. Download completion alone does not pass Stage 0 or V0.
+
+Morphology checkpoint, 2026-09-05: ten fixed bilateral descending, antennal-sensory,
+and motor SWC canaries are generation-pinned, checksum-locked, and structurally valid in 8-nm
+coordinates. This passes only the morphology-canary component of the future V0 evidence bundle.
 
 Useful retrieval commands:
 

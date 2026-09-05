@@ -29,6 +29,7 @@ from flysim.evidence import (
     validate_evidence_bundle,
 )
 from flysim.factory import build_reference_demo
+from flysim.morphology import sync_morphology_canaries
 from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
@@ -219,6 +220,15 @@ def _command_data_audit_contacts(args: argparse.Namespace) -> int:
     )
     _print_json({**report, "report": str(report_path.resolve())})
     return 0 if report["valid"] else 2
+
+
+def _command_data_sync_skeleton_canaries(args: argparse.Namespace) -> int:
+    output = args.output or (
+        args.root / "derived" / "male-cns-v1.0" / "morphology-canaries"
+    )
+    result = sync_morphology_canaries(args.config, output)
+    _print_json(result)
+    return 0 if result["complete"] else 2
 
 
 def _command_benchmark(args: argparse.Namespace) -> int:
@@ -438,6 +448,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     contact_audit.add_argument("--output", type=Path)
     contact_audit.set_defaults(func=_command_data_audit_contacts)
+
+    skeletons = data_commands.add_parser("sync-skeleton-canaries")
+    skeletons.add_argument("--root", type=Path, default=default_data_root())
+    skeletons.add_argument(
+        "--config",
+        type=Path,
+        default=project_root() / "configs" / "datasets" / "morphology-canaries.json",
+    )
+    skeletons.add_argument("--output", type=Path)
+    skeletons.set_defaults(func=_command_data_sync_skeleton_canaries)
 
     resolver = data_commands.add_parser("resolve-populations")
     resolver.add_argument("--root", type=Path, default=default_data_root())
