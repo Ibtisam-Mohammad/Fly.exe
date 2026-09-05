@@ -48,6 +48,17 @@ REQUIRED_GATES: dict[ValidationTier, tuple[str, ...]] = {
     ValidationTier.V8: ("cross_animal_generalization", "unseen_task_generalization"),
 }
 
+TIER_PREREQUISITE: dict[ValidationTier, ValidationTier] = {
+    ValidationTier.V1: ValidationTier.V0,
+    ValidationTier.V2: ValidationTier.V1,
+    ValidationTier.V3: ValidationTier.V2,
+    ValidationTier.V4: ValidationTier.V3,
+    ValidationTier.V5: ValidationTier.V4,
+    ValidationTier.V6: ValidationTier.V5,
+    ValidationTier.V7: ValidationTier.V6,
+    ValidationTier.V8: ValidationTier.V7,
+}
+
 
 def sha256_file(path: Path, chunk_bytes: int = 8 * 1024 * 1024) -> str:
     digest = hashlib.sha256()
@@ -110,6 +121,18 @@ def build_evidence_bundle(
         )
     if not artifacts:
         raise ValidationError("An evidence bundle requires at least one hashed artifact")
+    prerequisite = TIER_PREREQUISITE.get(tier)
+    if prerequisite is not None:
+        prior_paths = [path for name, path in artifacts if name == "prior-tier-evidence"]
+        if len(prior_paths) != 1:
+            raise ValidationError(
+                f"{tier.value} requires exactly one prior-tier-evidence artifact"
+            )
+        prior_report = validate_evidence_bundle(prior_paths[0])
+        if not prior_report["valid"] or prior_report["tier"] != prerequisite.value:
+            raise ValidationError(
+                f"{tier.value} requires a valid {prerequisite.value} evidence bundle"
+            )
 
     created_at = datetime.now(UTC)
     bundle_id = f"{created_at.strftime('%Y%m%dT%H%M%SZ')}_{tier.value}"

@@ -43,3 +43,16 @@ def test_bundle_rejects_missing_gate_and_detects_artifact_mutation(tmp_path: Pat
     result = validate_evidence_bundle(output)
     assert result["valid"] is False
     assert any("artifact byte count changed" in item for item in result["failures"])
+
+
+def test_higher_tier_requires_valid_immediate_prerequisite(tmp_path: Path) -> None:
+    artifact = tmp_path / "cellular-report.json"
+    artifact.write_text("{}\n", encoding="utf-8")
+    gates = tuple(f"{gate}=true" for gate in REQUIRED_GATES[ValidationTier.V1])
+    with pytest.raises(ValidationError, match="prior-tier-evidence"):
+        build_evidence_bundle(
+            ValidationTier.V1,
+            tmp_path / "V1.json",
+            (f"cellular-report={artifact}",),
+            gates,
+        )
