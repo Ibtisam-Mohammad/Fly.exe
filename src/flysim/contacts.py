@@ -10,7 +10,7 @@ import os
 import resource
 import shutil
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +49,17 @@ class ContactImportResult:
             "peak_rss_bytes": self.peak_rss_bytes,
             "manifest_sha256": self.manifest_sha256,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class LogicalDerivativeDigest:
+    artifact_id: str
+    rows: int
+    batches: int
+    sha256: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 def _peak_rss_bytes() -> int:
@@ -157,6 +168,10 @@ def import_contact_table(
         payload = stored_identity or json.loads(manifest_path.read_text(encoding="utf-8"))
         if payload.get("source_sha256") != source_sha256:
             raise DatasetError(f"Completed derivative source changed: {source}")
+        if payload.get("row_group_rows") != row_group_rows:
+            raise DatasetError("Completed derivative uses a different row-group size")
+        if payload.get("shard_rows") != shard_rows:
+            raise DatasetError("Completed derivative uses a different shard size")
         _validate_checkpoint_shards(output, payload["shards"])
         if "source_bytes" not in payload or "source_mtime_ns" not in payload:
             payload["source_bytes"] = source.stat().st_size
@@ -182,6 +197,8 @@ def import_contact_table(
         "next_batch": 0,
         "rows": 0,
         "shards": [],
+        "row_group_rows": row_group_rows,
+        "shard_rows": shard_rows,
     }
     if checkpoint_path.exists():
         if not resume:
@@ -191,6 +208,12 @@ def import_contact_table(
             raise DatasetError("Contact import checkpoint belongs to a different source")
         checkpoint.setdefault("source_bytes", source.stat().st_size)
         checkpoint.setdefault("source_mtime_ns", source.stat().st_mtime_ns)
+        checkpoint.setdefault("row_group_rows", row_group_rows)
+        checkpoint.setdefault("shard_rows", shard_rows)
+        if checkpoint["row_group_rows"] != row_group_rows:
+            raise DatasetError("Contact import checkpoint uses a different row-group size")
+        if checkpoint["shard_rows"] != shard_rows:
+            raise DatasetError("Contact import checkpoint uses a different shard size")
         _validate_checkpoint_shards(output, checkpoint["shards"])
 
     memory_limit_bytes = int(memory_limit_gb * 1024**3)
@@ -316,6 +339,104 @@ def import_contact_table(
         peak_rss_bytes=int(manifest["peak_rss_bytes"]),
         manifest_sha256=sha256_file(manifest_path),
     )
+
+
+def logical_derivative_digest(
+    artifact_root: Path, *, scan_batch_rows: int = 65_536
+) -> LogicalDerivativeDigest:
+    """Hash logical Arrow rows independently of Parquet row-group size."""
+    if scan_batch_rows <= 0:
+        raise DatasetError("Logical digest scan batch size must be positive")
+    manifest_path = artifact_root / "manifest.json"
+    if not manifest_path.is_file():
+        raise DatasetError(f"Contact derivative manifest is missing: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not manifest.get("complete"):
+        raise DatasetError(f"Contact derivative is incomplete: {artifact_root}")
+    shards = manifest.get("shards", [])
+    _validate_checkpoint_shards(artifact_root, shards)
+    digest = hashlib.sha256()
+    rows = 0
+    batches = 0
+    schema_identity: str | None = None
+    for shard in shards:
+        parquet = pq.ParquetFile(artifact_root / str(shard["filename"]))
+        for batch in parquet.iter_batches(batch_size=scan_batch_rows):
+            arrays: list[pa.Array] = []
+            fields: list[pa.Field] = []
+            for field, column in zip(batch.schema, batch.columns, strict=True):
+                if pa.types.is_dictionary(field.type):
+                    value_type = field.type.value_type
+                    arrays.append(pc.cast(column, value_type))
+                    fields.append(pa.field(field.name, value_type, nullable=field.nullable))
+                else:
+                    arrays.append(column)
+                    fields.append(field)
+            canonical = pa.RecordBatch.from_arrays(arrays, schema=pa.schema(fields))
+            current_schema = _schema_sha256(canonical.schema)
+            if schema_identity is None:
+                schema_identity = current_schema
+                digest.update(bytes.fromhex(current_schema))
+            elif current_schema != schema_identity:
+                raise DatasetError(f"Logical schema changed within {artifact_root}")
+            payload = canonical.serialize().to_pybytes()
+            digest.update(len(payload).to_bytes(8, "little"))
+            digest.update(payload)
+            rows += canonical.num_rows
+            batches += 1
+    if rows != int(manifest["rows"]):
+        raise DatasetError(
+            f"Logical digest row count mismatch for {artifact_root}: {rows} != {manifest['rows']}"
+        )
+    return LogicalDerivativeDigest(
+        artifact_id=str(manifest["artifact_id"]),
+        rows=rows,
+        batches=batches,
+        sha256=digest.hexdigest(),
+    )
+
+
+def compare_contact_derivatives(
+    left_root: Path,
+    right_root: Path,
+    output: Path,
+    *,
+    scan_batch_rows: int = 65_536,
+) -> dict[str, Any]:
+    """Require layout-independent logical equality for all contact artifacts."""
+    artifact_ids = (
+        "connectome-weights",
+        "syn-points",
+        "syn-partners",
+        "tbar-neurotransmitters",
+    )
+    comparisons: list[dict[str, Any]] = []
+    for artifact_id in artifact_ids:
+        left = logical_derivative_digest(
+            left_root / artifact_id, scan_batch_rows=scan_batch_rows
+        )
+        right = logical_derivative_digest(
+            right_root / artifact_id, scan_batch_rows=scan_batch_rows
+        )
+        comparisons.append(
+            {
+                "artifact_id": artifact_id,
+                "left": left.as_dict(),
+                "right": right.as_dict(),
+                "matches": left.rows == right.rows and left.sha256 == right.sha256,
+            }
+        )
+    report = {
+        "schema_version": "1.0",
+        "gate": "batch_size_reproducibility",
+        "scan_batch_rows": scan_batch_rows,
+        "left_root": str(left_root.resolve()),
+        "right_root": str(right_root.resolve()),
+        "comparisons": comparisons,
+        "valid": all(item["matches"] for item in comparisons),
+    }
+    _write_json_atomic(output, report)
+    return report
 
 
 def audit_contact_derivatives(

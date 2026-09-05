@@ -14,7 +14,11 @@ from typing import Any
 from flysim.benchmark import estimate_sparse_memory
 from flysim.config import project_root
 from flysim.connectome import SparseConnectome, import_aggregate_graph
-from flysim.contacts import audit_contact_derivatives, import_contact_table
+from flysim.contacts import (
+    audit_contact_derivatives,
+    compare_contact_derivatives,
+    import_contact_table,
+)
 from flysim.datasets import (
     DatasetSpec,
     dataset_status,
@@ -173,7 +177,9 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
     raw_directory = args.root / "raw" / spec.dataset_id.replace(":", "-")
     lock_path = raw_directory / "dataset-lock.json"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    output_root = args.root / "derived" / "male-cns-v1.0" / "contacts"
+    output_root = args.output_root or (
+        args.root / "derived" / "male-cns-v1.0" / "contacts"
+    )
     results: list[dict[str, Any]] = []
     for artifact in spec.artifacts:
         if artifact.id not in {
@@ -191,6 +197,8 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
             resume=args.resume,
             memory_limit_gb=args.memory_limit_gb,
             minimum_free_gb=args.minimum_free_gb,
+            row_group_rows=args.row_group_rows,
+            shard_rows=args.shard_rows,
             max_new_shards_per_process=args.max_new_shards_per_process,
             expected_sha256=lock["artifacts"][artifact.id]["sha256"],
             progress=_progress_jsonl,
@@ -206,6 +214,17 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def _command_data_verify_contact_rebuild(args: argparse.Namespace) -> int:
+    report = compare_contact_derivatives(
+        args.left,
+        args.right,
+        args.output,
+        scan_batch_rows=args.scan_batch_rows,
+    )
+    _print_json(report)
+    return 0 if report["valid"] else 2
 
 
 def _command_data_audit_contacts(args: argparse.Namespace) -> int:
@@ -458,6 +477,9 @@ def build_parser() -> argparse.ArgumentParser:
     contacts.add_argument("--memory-limit-gb", type=float, default=3.0)
     contacts.add_argument("--threads", type=int, default=2)
     contacts.add_argument("--minimum-free-gb", type=float, default=80.0)
+    contacts.add_argument("--output-root", type=Path)
+    contacts.add_argument("--row-group-rows", type=int, default=262_144)
+    contacts.add_argument("--shard-rows", type=int, default=1_048_576)
     contacts.add_argument(
         "--max-new-shards-per-process",
         type=int,
@@ -469,6 +491,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/srv/flybrain-data/tmp/contact-audit"),
     )
     contacts.set_defaults(func=_command_data_import_contacts)
+
+    rebuild = data_commands.add_parser("verify-contact-rebuild")
+    rebuild.add_argument("--left", type=Path, required=True)
+    rebuild.add_argument("--right", type=Path, required=True)
+    rebuild.add_argument("--output", type=Path, required=True)
+    rebuild.add_argument("--scan-batch-rows", type=int, default=65_536)
+    rebuild.set_defaults(func=_command_data_verify_contact_rebuild)
 
     contact_audit = data_commands.add_parser("audit-contacts")
     contact_audit.add_argument("--root", type=Path, default=default_data_root())

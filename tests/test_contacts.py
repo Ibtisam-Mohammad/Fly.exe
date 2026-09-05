@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.feather as feather
 import pytest
 
-from flysim.contacts import import_contact_table
+from flysim.contacts import compare_contact_derivatives, import_contact_table
 from flysim.datasets import sha256_file
 from flysim.errors import ContactImportRecycle
 
@@ -108,3 +108,43 @@ def test_contact_import_can_recycle_at_a_verified_shard(tmp_path: Path) -> None:
         shard_rows=4,
     )
     assert result.rows == 12
+
+
+def test_contact_rebuild_digest_ignores_row_group_size(tmp_path: Path) -> None:
+    source = tmp_path / "contacts.feather"
+    feather.write_feather(
+        pa.table({"point_id": range(16), "kind": ["PreSyn", "PostSyn"] * 8}),
+        source,
+        chunksize=2,
+    )
+    left = tmp_path / "left"
+    right = tmp_path / "right"
+    for artifact_id in (
+        "connectome-weights",
+        "syn-points",
+        "syn-partners",
+        "tbar-neurotransmitters",
+    ):
+        import_contact_table(
+            artifact_id,
+            source,
+            left / artifact_id,
+            minimum_free_gb=0.0,
+            row_group_rows=4,
+            shard_rows=8,
+        )
+        import_contact_table(
+            artifact_id,
+            source,
+            right / artifact_id,
+            minimum_free_gb=0.0,
+            row_group_rows=2,
+            shard_rows=8,
+        )
+    report = compare_contact_derivatives(
+        left,
+        right,
+        tmp_path / "comparison.json",
+        scan_batch_rows=2,
+    )
+    assert report["valid"]
