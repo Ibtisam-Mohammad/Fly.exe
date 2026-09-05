@@ -11,6 +11,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
       "profiles": ["metadata", "starter", "full"],
       "published_size": "13 MB",
+      "expected_bytes": 14483314,
+      "gcs_generation": "1780494878811468",
+      "etag": "50a7718770c57220f160ba4f431ab89e",
+      "md5_base64": "UKdxh3DFciDxYLpPQxq4ng==",
+      "crc32c_base64": "vjz9cg==",
       "sha256": null
     },
     {
@@ -19,6 +24,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
       "profiles": ["metadata", "starter", "full"],
       "published_size": "42 MB",
+      "expected_bytes": 43282834,
+      "gcs_generation": "1780894899156750",
+      "etag": "3d842b12fe5c49eefade528d7dd24a1f",
+      "md5_base64": "PYQrEv5cSe763lKNfdJKHw==",
+      "crc32c_base64": "jcpNFg==",
       "sha256": null
     },
     {
@@ -27,6 +37,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-stats-male-cns-v1.0-minconf-0.5.feather",
       "profiles": ["starter", "full"],
       "published_size": "780 MB",
+      "expected_bytes": 778062826,
+      "gcs_generation": "1780494888472305",
+      "etag": "404c3349c28580148e16815eb99f382a",
+      "md5_base64": "QEwzScKFgBSOFoFeuZ84Kg==",
+      "crc32c_base64": "MGOCPQ==",
       "sha256": null
     },
     {
@@ -35,6 +50,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
       "profiles": ["starter", "full"],
       "published_size": "1.1 GB",
+      "expected_bytes": 1051241946,
+      "gcs_generation": "1780494887545976",
+      "etag": "f30e9dcca25cfd021bf1e7b3d975599e",
+      "md5_base64": "8w6dzKJc/QIb8eez2XVZng==",
+      "crc32c_base64": "dKRPVQ==",
       "sha256": null
     },
     {
@@ -43,6 +63,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather",
       "profiles": ["full"],
       "published_size": "12.7 GB",
+      "expected_bytes": 13061489098,
+      "gcs_generation": "1780494991007477",
+      "etag": "c69d08758de07582035cc8843574493a",
+      "md5_base64": "xp0IdY3gdYIDXMiENXRJOg==",
+      "crc32c_base64": "1E7gRw==",
       "sha256": null
     },
     {
@@ -51,6 +76,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-partners-male-cns-v1.0-minconf-0.5.feather",
       "profiles": ["full"],
       "published_size": "6.8 GB",
+      "expected_bytes": 6777179098,
+      "gcs_generation": "1780494942562468",
+      "etag": "58efcf712f8c4d4de5f2ad51e97def76",
+      "md5_base64": "WO/PcS+MTU3l8q1R6X3vdg==",
+      "crc32c_base64": "jTlNIA==",
       "sha256": null
     },
     {
@@ -59,6 +89,11 @@
       "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/tbar-neurotransmitters-male-cns-v1.0.feather",
       "profiles": ["full"],
       "published_size": "2.7 GB",
+      "expected_bytes": 2651680218,
+      "gcs_generation": "1780894927871192",
+      "etag": "51b02c11690662aedef28f86d394ff0d",
+      "md5_base64": "UbAsEWkGYq7e8o+G05T/DQ==",
+      "crc32c_base64": "RrR5/g==",
       "sha256": null
     }
   ]

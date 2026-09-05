@@ -1,8 +1,9 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.0  
+Version: 1.1
 Last evidence review: 2026-09-04  
+Last implementation audit: 2026-09-05
 Applies to: this repository and every subdirectory
 
 ## 1. Agent bootstrap
@@ -27,7 +28,11 @@ These stable keys are intended for agent search and handoff:
 PROJECT_GOAL: MaleCNS-constrained embodied adult-male sensorimotor model
 CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital twin
 CANONICAL_CONNECTOME: MaleCNS v1.0
-CURRENT_STAGE: Stage 0 — reproducible data foundation
+CURRENT_STAGE: Stage 0 — reproducible data foundation (active; exit gate not passed)
+DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; contact normalization and structural audits pending
+HIGHEST_VALIDATION_TIER: none (pre-V0)
+ENGINEERING_STATUS: zero-weight GeNN topology load and controller-only/Eon-like scaffolds only
+NEXT_GATE: full-profile lock -> streaming contact/polyad audit -> morphology and universe sensitivity -> V0 review
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory
@@ -35,6 +40,12 @@ BODY_BASELINE: FlyGym/NeuroMechFly with explicit female-body and actuator mismat
 PLASTICITY_V1: disabled
 SUCCESS_RULE: behavioral resemblance alone is insufficient
 ```
+
+Operational checkpoint, 2026-09-05: the aggregate MaleCNS foundation is executable, but
+neither the zero-functional-weight GeNN load nor the controller-only and semantic-population
+demonstrations are biological validation. “Full profile” refers only to the seven registered
+flat-connectome artifacts; it does not include the skeleton collections, segmentation volumes,
+or neuPrint database. Download completion alone does not pass Stage 0 or V0.
 
 Useful retrieval commands:
 
@@ -152,6 +163,7 @@ These are current starting decisions, not claims that the biology is solved.
 | `DATA-02` | Structural uncertainty | Keep strong edges fixed initially; retain weak edges and sample/drop them in sensitivity ensembles rather than deleting them silently. | `M/E` | Detector confidence, bilateral homologues, cross-connectome recurrence. |
 | `DATA-03` | Cross-specimen mapping | Maintain explicit MaleCNS↔MANC/FANC/BANC/FlyWire/type crosswalks with confidence. | `P` | Morphology, type identity, side/segment and source evidence. |
 | `DATA-04` | Runtime body universe | Provisional starter derivative uses annotation `status=Traced`; the immutable source retains every segment, and excluded segment edges/contacts are counted. | `M/E` | Compare Traced against Traced+Assign+Anchor and review official count/motif sensitivity before acceptance. |
+| `DATA-05` | Contact storage | Preserve official Feather files immutably and build lossless, versioned, sharded Parquet derivatives with reversible point IDs, explicit 8-nm coordinates, complete confidence/transmitter fields, and no biological threshold. | `M/E` | Contact/partner referential integrity, aggregate reconciliation, logical-digest reproducibility, and bounded-memory tests. |
 | `ND-01` | Neuron formalism | Hybrid model: graded passive cells where established; LIF/AdEx for established spiking cells; competing variants for unknown types. | `P/F/E` | Type-resolved voltage, spike and calcium recordings. |
 | `ND-02` | Membrane parameters | Use type-level distributions; use global Shiu-style values only as labelled fallbacks. | `P/F` | Resting voltage, input resistance, time constant, threshold and adaptation data. |
 | `ND-03` | Edge polarity | Infer from transmitter plus receptor evidence; unresolved signs remain latent alternatives. | `M/P/F` | Receptor protein/transcript evidence and paired physiology. |
@@ -433,6 +445,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-04 | Use a provisional actuator decoder, visibly separated from the biological motor interface. | Complete adult MN→NMJ→muscle→force data do not yet exist. |
 | 2026-09-04 | Freeze most internal state and long-term plasticity in v1. | These variables are not recoverable from EM and would make early failures non-identifiable. |
 | 2026-09-04 | Accept ADR-2026-001 for the initial local runtime and data stack. | The approved implementation plan fixes Python 3.12, direct PyGeNN/GeNN 5.4, official Feather to loss-aware sparse derivatives, FlyGym 2.1, ethyl acetate, local RTX 3060 execution and initial validation tolerances. |
+| 2026-09-05 | Accept ADR-2026-003 for the contact-level storage and audit boundary. | Full contact tables remain immutable CPU-side evidence; bounded lossless derivatives support V0 without entering the GPU runtime graph. |
 
 ## 15. Unresolved project-level choices
 

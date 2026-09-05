@@ -1,17 +1,20 @@
 # Implementation status
 
-Status date: 2026-09-04
+Status date: 2026-09-05
 
 ## Implemented
 
 - Dedicated Ubuntu 24.04 WSL2 distribution `FlyBrain` at `D:\WSL\FlyBrain`, with data, environments, and compiler caches under `/srv/flybrain-data`.
+- Verified 8 GiB WSL swap at `D:\WSL\FlyBrain\wsl-swap.vhdx`; the obsolete `F:` swap was removed only after the new device was active.
 - Python 3.12 production environment with FlyGym 2.1.0, MuJoCo 3.9.0, Brian2 2.10.1, and pinned GeNN/PyGeNN 5.4.0.
 - CUDA 12.0 compilation and execution on the RTX 3060; a GeNN LIF smoke model advances on device 0.
 - GPL project and reproducible Python package foundation.
 - Machine-readable assumption and dataset registries.
 - Typed, unit-carrying neural/sensory/motor interface frames.
 - Causal multi-rate scheduler with a one-coupling-cycle actuator delay.
-- Streaming official-artifact downloader with local immutable checksums.
+- Streaming official-artifact downloader with local immutable checksums and pinned GCS object identities.
+- Windows-host download supervisor that keeps WSL attached, resumes partial HTTP ranges, and
+  requires a complete full-profile checksum validation before declaring completion.
 - Aggregate connectome importer with reversible `uint64` body IDs and `uint32` dense IDs.
 - NumPy reference neural engine for interface tests and a small engineering circuit.
 - Sparse small-circuit LIF oracle that requires explicit functional edge signs.
@@ -27,7 +30,8 @@ Status date: 2026-09-04
 
 ## Not implemented or not yet validated
 
-- Contact-level MaleCNS tables, polyadic T-bars, coordinates, and complete Stage-0 motif audits have not been downloaded or validated.
+- All seven MaleCNS v1.0 flat-connectome artifacts are checksum-locked. Contact normalization,
+  polyadic T-bar, coordinate, morphology, and complete Stage-0 motif audits have not passed.
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
@@ -43,7 +47,7 @@ Status date: 2026-09-04
 | Provisional traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| Automated tests | 22 passing |
+| Automated tests | 32 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) remain proposed until the status-universe sensitivity audit is reviewed.
 
@@ -55,4 +59,6 @@ The GPU measurements are topology-allocation results, not biological-time perfor
 
 The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the required 1.5 GB headroom.
 
-Highest validation tier: **none**. The engineering demo is not a validation tier.
+Highest validation tier: **none (pre-V0)**. Dataset checksums, software tests,
+topology-allocation benchmarks, and engineering-demo completion are implementation evidence,
+not a scientific validation tier.
