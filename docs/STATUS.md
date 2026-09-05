@@ -36,6 +36,9 @@ Status date: 2026-09-05
   the strict endpoint, polyad, transmitter, and aggregate-reconciliation audit follows automatically.
 - Ten fixed 8-nm morphology canaries are generation-pinned, checksum-locked, and structurally
   valid across bilateral descending, antennal sensory, and motor populations.
+
+Detailed integrity evidence: [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md)
+and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md).
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
