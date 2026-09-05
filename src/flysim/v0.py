@@ -48,11 +48,13 @@ def _require(condition: bool, message: str) -> None:
         raise ValidationError(message)
 
 
-def _write_json_new(path: Path, payload: dict[str, Any]) -> None:
+def _write_json_immutable(path: Path, payload: dict[str, Any]) -> None:
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
-        raise ValidationError(f"Refusing to overwrite V0 review artifact: {path}")
+        if _read_json(path) == payload:
+            return
+        raise ValidationError(f"Refusing to replace changed V0 review artifact: {path}")
     temporary = path.with_suffix(path.suffix + ".part")
     temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(temporary, path)
@@ -215,7 +217,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
 
     raw_review = _raw_profile_review(root, spec_path.resolve())
     raw_review_path = evidence_root / "raw-profile-integrity-review.json"
-    _write_json_new(raw_review_path, raw_review)
+    _write_json_immutable(raw_review_path, raw_review)
     artifact_values = (
         f"raw-profile-integrity={raw_review_path}",
         f"contact-structural-audit={contact_path}",

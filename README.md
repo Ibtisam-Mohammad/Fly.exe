@@ -86,9 +86,10 @@ flysim data audit-body-universes --root /srv/flybrain-data
 ```
 
 For the long normalization and audit sequence, use
-`scripts/supervise_contact_foundation.ps1`. Progress is JSONL in
-`artifacts/logs/contact-foundation-supervisor.log`; a completion marker means the contact and
-body-universe audits ran, not that V0 was automatically awarded.
+`scripts/supervise_contact_foundation.ps1`, followed by
+`scripts/supervise_contact_rebuild.ps1`. Progress is JSONL in the matching logs. The foundation
+marker covers contact and body-universe audits; the rebuild marker is written only after both clean
+layouts, their logical comparisons, evidence-derived V0 construction, and final bundle validation.
 
 Scientific tier claims require an immutable evidence bundle. A bundle cannot be created unless
 all registered gates for its requested tier are explicitly passed and every artifact is hashed:

@@ -121,8 +121,37 @@ try {
     if ($batchCompare -ne 0) {
         throw "Batch-size reproducibility comparison failed with $batchCompare."
     }
+    $bundlePath = "$evidenceRoot/V0-evidence.json"
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & wsl.exe -d $DistroName -u $WslUser -- test -f $bundlePath 2>&1 | Out-Null
+        $bundleExists = $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+    if ($bundleExists) {
+        Write-RebuildLog "V0 bundle already exists; validating immutable evidence."
+        $bundleExit = Invoke-Flysim @("evidence", "validate", $bundlePath)
+    }
+    else {
+        Write-RebuildLog "Logical rebuild gates passed; deriving the V0 evidence bundle."
+        $bundleExit = Invoke-Flysim @(
+            "evidence", "build", "--tier", "V0",
+            "--root", $DatasetRoot, "--spec", $DatasetSpec,
+            "--output", $bundlePath
+        )
+    }
+    if ($bundleExit -ne 0) {
+        throw "V0 evidence construction or validation failed with $bundleExit."
+    }
+    $bundleValidateExit = Invoke-Flysim @("evidence", "validate", $bundlePath)
+    if ($bundleValidateExit -ne 0) {
+        throw "Final V0 evidence validation failed with $bundleValidateExit."
+    }
     Set-Content -LiteralPath $completePath -Value (Get-Date -Format "o") -Encoding ascii
-    Write-RebuildLog "Both clean rebuilds and logical comparisons passed."
+    Write-RebuildLog "Both clean rebuilds, logical comparisons, and the V0 bundle passed."
 }
 catch {
     [ordered]@{
