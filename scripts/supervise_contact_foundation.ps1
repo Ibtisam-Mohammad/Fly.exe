@@ -80,23 +80,25 @@ try {
         Write-FoundationLog "WARNING: Windows rejected the temporary sleep-prevention request."
     }
     Write-FoundationLog "Starting resumable bounded-memory contact normalization."
-    do {
-        $importExit = Invoke-Flysim @(
-            "data", "import-contacts",
-            "--resume",
-            "--memory-limit-gb", "3",
-            "--threads", "2",
-            "--minimum-free-gb", "80",
-            "--max-new-shards-per-process", "24",
-            "--root", $DatasetRoot,
-            "--spec", $DatasetSpec
-        )
-        if ($importExit -eq 75) {
-            Write-FoundationLog "Contact checkpoint is safe; recycling the WSL worker."
+    foreach ($artifactId in @(
+        "connectome-weights", "syn-points", "syn-partners", "tbar-neurotransmitters"
+    )) {
+        do {
+            $importExit = Invoke-Flysim @(
+                "data", "import-contacts", "--resume", "--artifact", $artifactId,
+                "--memory-limit-gb", "3", "--threads", "2", "--minimum-free-gb", "80",
+                "--max-new-shards-per-process", "24",
+                "--root", $DatasetRoot, "--spec", $DatasetSpec
+            )
+            if ($importExit -eq 75) {
+                Write-FoundationLog (
+                    "Verified $artifactId checkpoint; recycling the WSL worker."
+                )
+            }
+        } while ($importExit -eq 75)
+        if ($importExit -ne 0) {
+            throw "Contact import exited for $artifactId with code $importExit."
         }
-    } while ($importExit -eq 75)
-    if ($importExit -ne 0) {
-        throw "Contact import exited with code $importExit. Shards remain resumable."
     }
 
     Write-FoundationLog "Contact derivatives complete; starting strict structural audit."

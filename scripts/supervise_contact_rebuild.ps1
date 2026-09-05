@@ -43,21 +43,27 @@ function Invoke-RecycledImport {
         [Parameter(Mandatory)][string]$OutputRoot,
         [Parameter(Mandatory)][int]$RowGroupRows
     )
-    do {
-        $exitCode = Invoke-Flysim @(
-            "data", "import-contacts", "--resume",
-            "--memory-limit-gb", "3", "--threads", "2", "--minimum-free-gb", "80",
-            "--max-new-shards-per-process", "24",
-            "--row-group-rows", "$RowGroupRows", "--shard-rows", "1048576",
-            "--output-root", $OutputRoot,
-            "--root", $DatasetRoot, "--spec", $DatasetSpec
-        )
-        if ($exitCode -eq 75) {
-            Write-RebuildLog "Verified checkpoint reached for $OutputRoot; recycling worker."
+    foreach ($artifactId in @(
+        "connectome-weights", "syn-points", "syn-partners", "tbar-neurotransmitters"
+    )) {
+        do {
+            $exitCode = Invoke-Flysim @(
+                "data", "import-contacts", "--resume", "--artifact", $artifactId,
+                "--memory-limit-gb", "3", "--threads", "2", "--minimum-free-gb", "80",
+                "--max-new-shards-per-process", "24",
+                "--row-group-rows", "$RowGroupRows", "--shard-rows", "1048576",
+                "--output-root", $OutputRoot,
+                "--root", $DatasetRoot, "--spec", $DatasetSpec
+            )
+            if ($exitCode -eq 75) {
+                Write-RebuildLog (
+                    "Verified $artifactId checkpoint for $OutputRoot; recycling worker."
+                )
+            }
+        } while ($exitCode -eq 75)
+        if ($exitCode -ne 0) {
+            throw "Contact rebuild failed for $OutputRoot/$artifactId with exit code $exitCode."
         }
-    } while ($exitCode -eq 75)
-    if ($exitCode -ne 0) {
-        throw "Contact rebuild failed for $OutputRoot with exit code $exitCode."
     }
 }
 

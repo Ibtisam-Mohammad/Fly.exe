@@ -222,14 +222,16 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
     output_root = args.output_root or (
         args.root / "derived" / "male-cns-v1.0" / "contacts"
     )
+    contact_artifact_ids = {
+        "syn-points",
+        "syn-partners",
+        "tbar-neurotransmitters",
+        "connectome-weights",
+    }
+    selected_artifact_ids = set(args.artifact or contact_artifact_ids)
     results: list[dict[str, Any]] = []
     for artifact in spec.artifacts:
-        if artifact.id not in {
-            "syn-points",
-            "syn-partners",
-            "tbar-neurotransmitters",
-            "connectome-weights",
-        }:
+        if artifact.id not in selected_artifact_ids:
             continue
         _progress_jsonl(f"normalizing {artifact.id}")
         result = import_contact_table(
@@ -537,6 +539,17 @@ def build_parser() -> argparse.ArgumentParser:
     contacts.add_argument("--output-root", type=Path)
     contacts.add_argument("--row-group-rows", type=int, default=262_144)
     contacts.add_argument("--shard-rows", type=int, default=1_048_576)
+    contacts.add_argument(
+        "--artifact",
+        action="append",
+        choices=(
+            "connectome-weights",
+            "syn-points",
+            "syn-partners",
+            "tbar-neurotransmitters",
+        ),
+        help="normalize only this contact artifact; repeat to select more",
+    )
     contacts.add_argument(
         "--max-new-shards-per-process",
         type=int,
