@@ -34,11 +34,12 @@ Status date: 2026-09-05
 
 ## Not implemented or not yet validated
 
-- All seven MaleCNS v1.0 flat-connectome artifacts are checksum-locked. Contact normalization,
-  polyadic T-bar, coordinate, morphology, and complete Stage-0 motif audits have not passed.
-- Resumable bounded-memory contact normalization is active under the Windows host supervisor;
-  verified shards trigger clean worker recycling before allocator growth reaches the hard limit. The
-  strict endpoint, polyad, transmitter, and aggregate-reconciliation audit follows automatically.
+- All seven MaleCNS v1.0 flat-connectome artifacts are checksum-locked. All four lossless contact
+  derivatives are normalized; the final transmitter derivative contains 45,656,140 rows in 44
+  shards. Polyadic T-bar, coordinate, and complete Stage-0 motif audits have not passed yet.
+- The strict endpoint, polyad, transmitter, and aggregate-reconciliation audit is active under the
+  Windows host supervisor. The canonical resumed manifest retains the earlier 3.206 GB peak-RSS
+  failure; the queued clean rebuild must independently satisfy the under-3-GiB ingestion gate.
 - A second Windows-host supervisor is waiting on that strict-audit marker. It will independently
   rebuild all four contact derivatives at 262,144- and 131,072-row Parquet group sizes, then require
   layout-independent logical equality against the original and between both clean rebuilds.
