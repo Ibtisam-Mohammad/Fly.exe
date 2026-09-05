@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from flysim.datasets import validate_feather_footer
 from flysim.errors import ValidationError
 from flysim.evidence import EvidenceBundle, ValidationTier, build_evidence_bundle, sha256_file
 
@@ -94,6 +95,11 @@ def _raw_profile_review(root: Path, spec_path: Path) -> dict[str, Any]:
             observed_sha256 == record.get("sha256"),
             f"Raw SHA-256 changed for {artifact_id}",
         )
+        footer_valid, footer_error = validate_feather_footer(artifact_id, source)
+        _require(
+            footer_valid,
+            f"Raw Feather schema/footer failed for {artifact_id}: {footer_error}",
+        )
         records.append(
             {
                 "artifact_id": artifact_id,
@@ -104,6 +110,7 @@ def _raw_profile_review(root: Path, spec_path: Path) -> dict[str, Any]:
                 "etag": item["etag"],
                 "md5_base64": item["md5_base64"],
                 "crc32c_base64": item["crc32c_base64"],
+                "feather_footer_and_schema_valid": footer_valid,
             }
         )
     return {

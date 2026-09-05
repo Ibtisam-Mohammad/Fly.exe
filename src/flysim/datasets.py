@@ -456,7 +456,8 @@ _DEEP_SCHEMA_TYPES: dict[str, dict[str, str]] = {
 }
 
 
-def _feather_footer_valid(artifact_id: str, path: Path) -> tuple[bool, str | None]:
+def validate_feather_footer(artifact_id: str, path: Path) -> tuple[bool, str | None]:
+    """Validate that an IPC/Feather footer opens and required columns retain exact types."""
     try:
         import pyarrow as pa
         import pyarrow.ipc as ipc
@@ -516,7 +517,7 @@ def validate_dataset(
         ):
             status = "byte-count-mismatch"
         if status == "ok" and deep and destination.suffix == ".feather":
-            footer_valid, footer_error = _feather_footer_valid(artifact.id, destination)
+            footer_valid, footer_error = validate_feather_footer(artifact.id, destination)
             details["feather_footer_valid"] = footer_valid
             if not footer_valid:
                 status = "invalid-feather-footer"

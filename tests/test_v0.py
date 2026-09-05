@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+import pyarrow as pa
+import pyarrow.feather as feather
 import pytest
 
 from flysim.errors import ValidationError
@@ -23,7 +25,7 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
         filename = f"artifact-{index}.feather"
         path = raw / filename
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(f"raw-{index}".encode())
+        feather.write_feather(pa.table({"fixture": [f"raw-{index}"]}), path)
         digest = sha256_file(path)
         artifacts.append(
             {
