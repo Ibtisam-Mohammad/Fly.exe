@@ -568,8 +568,11 @@ def audit_contact_derivatives(
         "tbar_point_and_probability_resolution",
         f"""
         SELECT count(*) FROM tbar_neurotransmitters t
-        LEFT JOIN syn_points p USING (point_id)
-        WHERE p.point_id IS NULL OR p.kind != 'PreSyn' OR p.body != t.body
+        LEFT JOIN (
+          SELECT point_id, body, x, y, z, conf
+          FROM syn_points WHERE kind = 'PreSyn'
+        ) p USING (point_id)
+        WHERE p.point_id IS NULL OR p.body != t.body
            OR p.x != t.x OR p.y != t.y OR p.z != t.z OR p.conf != t.conf
            OR {invalid_probability}
         """,
@@ -581,8 +584,11 @@ def audit_contact_derivatives(
             SELECT count(*) AS presynaptic_sites, count_if(fanout > 1) AS polyadic_sites,
                    max(fanout) AS maximum_fanout
             FROM (
-              SELECT x_pre, y_pre, z_pre, count(*) AS fanout
-              FROM syn_partners GROUP BY x_pre, y_pre, z_pre
+              SELECT ((CAST(z_pre AS UBIGINT) << 42) |
+                      (CAST(y_pre AS UBIGINT) << 21) |
+                      CAST(x_pre AS UBIGINT)) AS presynaptic_point_id,
+                     count(*) AS fanout
+              FROM syn_partners GROUP BY presynaptic_point_id
             )
             """
         ).fetchone()
