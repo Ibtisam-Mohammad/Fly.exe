@@ -26,7 +26,7 @@ from flysim.datasets import (
     sync_dataset,
     validate_dataset,
 )
-from flysim.errors import FlySimError, ReadinessError
+from flysim.errors import FlySimError, ReadinessError, ValidationError
 from flysim.evidence import (
     ValidationTier,
     build_evidence_bundle,
@@ -40,6 +40,7 @@ from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
 from flysim.runs import write_run
 from flysim.universes import audit_body_universes
+from flysim.v0 import build_v0_evidence_bundle
 from flysim.validation import validate_run
 
 
@@ -88,9 +89,15 @@ def _command_data_status(args: argparse.Namespace) -> int:
 
 
 def _command_evidence_build(args: argparse.Namespace) -> int:
-    bundle = build_evidence_bundle(
-        ValidationTier(args.tier), args.output, tuple(args.artifact), tuple(args.gate)
-    )
+    tier = ValidationTier(args.tier)
+    if tier is ValidationTier.V0:
+        if args.artifact or args.gate:
+            raise ValidationError(
+                "V0 gates are evidence-derived; omit --artifact/--gate and use --root/--spec"
+            )
+        bundle = build_v0_evidence_bundle(args.root, args.spec, args.output)
+    else:
+        bundle = build_evidence_bundle(tier, args.output, tuple(args.artifact), tuple(args.gate))
     _print_json(
         {
             "bundle_id": bundle.bundle_id,
@@ -107,6 +114,20 @@ def _command_evidence_validate(args: argparse.Namespace) -> int:
     result = validate_evidence_bundle(args.bundle)
     _print_json(result)
     return 0 if result["valid"] else 2
+
+
+def _command_evidence_build_v0(args: argparse.Namespace) -> int:
+    bundle = build_v0_evidence_bundle(args.root, args.spec, args.output)
+    _print_json(
+        {
+            "bundle_id": bundle.bundle_id,
+            "tier": bundle.tier.value,
+            "path": str(bundle.path),
+            "sha256": bundle.sha256,
+            "artifact_count": len(bundle.artifacts),
+        }
+    )
+    return 0
 
 
 def _command_data_import(args: argparse.Namespace) -> int:
@@ -634,8 +655,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evidence_build.add_argument("--artifact", action="append", default=[], help="NAME=PATH")
     evidence_build.add_argument("--gate", action="append", default=[], help="NAME=true|false")
+    evidence_build.add_argument("--root", type=Path, default=default_data_root())
+    evidence_build.add_argument("--spec", type=Path, default=_default_dataset_spec())
     evidence_build.add_argument("--output", type=Path, required=True)
     evidence_build.set_defaults(func=_command_evidence_build)
+    evidence_build_v0 = evidence_commands.add_parser(
+        "build-v0", help="derive V0 gates from the canonical locked evidence artifacts"
+    )
+    evidence_build_v0.add_argument("--root", type=Path, default=default_data_root())
+    evidence_build_v0.add_argument("--spec", type=Path, default=_default_dataset_spec())
+    evidence_build_v0.add_argument("--output", type=Path, required=True)
+    evidence_build_v0.set_defaults(func=_command_evidence_build_v0)
     evidence_validate = evidence_commands.add_parser("validate")
     evidence_validate.add_argument("bundle", type=Path)
     evidence_validate.set_defaults(func=_command_evidence_validate)

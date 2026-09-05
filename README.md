@@ -94,9 +94,15 @@ Scientific tier claims require an immutable evidence bundle. A bundle cannot be 
 all registered gates for its requested tier are explicitly passed and every artifact is hashed:
 
 ```text
-flysim evidence build --tier V0 --artifact NAME=PATH --gate NAME=true --output PATH
+flysim evidence build-v0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json
+flysim evidence build --tier V0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json
 flysim evidence validate PATH
 ```
+
+`build-v0` is the release path for V0: it derives the gates from the canonical reports and clean
+rebuild manifests, re-hashes all seven raw artifacts and morphology canaries, and rejects a clean
+contact build that reached the 3-GiB RSS ceiling. The generic builder remains available for
+reviewed non-V0 tiers and test fixtures; manually supplied booleans are not sufficient for V0.
 
 `eon-malecns` and `full-vnc-walk` deliberately refuse to run until their numeric population,
 neural parity, sensory, and motor gates pass. There is no synthetic fallback hidden behind either
