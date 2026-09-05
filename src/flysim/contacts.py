@@ -20,7 +20,7 @@ import pyarrow.ipc as ipc
 import pyarrow.parquet as pq
 
 from flysim.datasets import sha256_file
-from flysim.errors import DatasetError
+from flysim.errors import ContactImportRecycle, DatasetError
 
 DEFAULT_MEMORY_LIMIT_GB = 3.0
 DEFAULT_MINIMUM_FREE_GB = 80.0
@@ -108,6 +108,7 @@ def import_contact_table(
     minimum_free_gb: float = DEFAULT_MINIMUM_FREE_GB,
     row_group_rows: int = DEFAULT_ROW_GROUP_ROWS,
     shard_rows: int = DEFAULT_SHARD_ROWS,
+    max_new_shards_per_process: int | None = None,
     expected_sha256: str | None = None,
     progress: Callable[[str], None] = lambda _: None,
 ) -> ContactImportResult:
@@ -116,6 +117,8 @@ def import_contact_table(
         raise DatasetError(f"Contact source is missing: {source}")
     if row_group_rows <= 0 or shard_rows <= 0 or shard_rows % row_group_rows:
         raise DatasetError("Shard rows must be a positive multiple of row-group rows")
+    if max_new_shards_per_process is not None and max_new_shards_per_process <= 0:
+        raise DatasetError("Maximum new shards per process must be positive when set")
     output.mkdir(parents=True, exist_ok=True)
     free_gb = shutil.disk_usage(output).free / (1024**3)
     if free_gb < minimum_free_gb:
@@ -204,6 +207,7 @@ def import_contact_table(
         logical_digest = hashlib.sha256()
         destination: Path | None = None
         temporary: Path | None = None
+        new_shards = 0
         for batch_index in range(next_batch, reader.num_record_batches):
             batch = _normalize_unsigned_ids(reader.get_batch(batch_index))
             row_group_batches.append(batch)
@@ -261,14 +265,18 @@ def import_contact_table(
             )
             checkpoint["next_batch"] = shard_last_batch + 1
             checkpoint["rows"] = int(checkpoint["rows"]) + shard_rows_written
-            checkpoint["peak_rss_bytes"] = _peak_rss_bytes()
+            process_peak_rss_bytes = _peak_rss_bytes()
+            checkpoint["peak_rss_bytes"] = max(
+                int(checkpoint.get("peak_rss_bytes", 0)), process_peak_rss_bytes
+            )
             _write_json_atomic(checkpoint_path, checkpoint)
             progress(
                 f"normalized {artifact_id}: {checkpoint['rows']:,} rows, "
                 f"{len(checkpoint['shards']):,} shards"
             )
-            if checkpoint["peak_rss_bytes"] > memory_limit_bytes:
+            if process_peak_rss_bytes > memory_limit_bytes:
                 raise DatasetError("Contact importer exceeded its peak RSS limit")
+            new_shards += 1
             shard_rows_written = 0
             logical_digest = hashlib.sha256()
             destination = None
@@ -276,6 +284,14 @@ def import_contact_table(
             del table
             gc.collect()
             pa.default_memory_pool().release_unused()
+            if (
+                max_new_shards_per_process is not None
+                and new_shards >= max_new_shards_per_process
+                and not is_last
+            ):
+                raise ContactImportRecycle(
+                    "Contact import checkpoint is safe; recycle the worker process"
+                )
 
     manifest = {
         **checkpoint,

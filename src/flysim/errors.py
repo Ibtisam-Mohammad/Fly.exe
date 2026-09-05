@@ -30,6 +30,13 @@ class DatasetError(FlySimError):
     default_code = "DATASET_ERROR"
 
 
+class ContactImportRecycle(DatasetError):
+    """A contact import checkpoint is safe and the worker should be recycled."""
+
+    default_code = "CONTACT_IMPORT_RECYCLE"
+    default_retryable = True
+
+
 class CausalityError(FlySimError):
     """A simulator component attempted to violate biological-time ordering."""
 

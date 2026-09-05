@@ -80,15 +80,21 @@ try {
         Write-FoundationLog "WARNING: Windows rejected the temporary sleep-prevention request."
     }
     Write-FoundationLog "Starting resumable bounded-memory contact normalization."
-    $importExit = Invoke-Flysim @(
-        "data", "import-contacts",
-        "--resume",
-        "--memory-limit-gb", "3",
-        "--threads", "2",
-        "--minimum-free-gb", "80",
-        "--root", $DatasetRoot,
-        "--spec", $DatasetSpec
-    )
+    do {
+        $importExit = Invoke-Flysim @(
+            "data", "import-contacts",
+            "--resume",
+            "--memory-limit-gb", "3",
+            "--threads", "2",
+            "--minimum-free-gb", "80",
+            "--max-new-shards-per-process", "48",
+            "--root", $DatasetRoot,
+            "--spec", $DatasetSpec
+        )
+        if ($importExit -eq 75) {
+            Write-FoundationLog "Contact checkpoint is safe; recycling the WSL worker."
+        }
+    } while ($importExit -eq 75)
     if ($importExit -ne 0) {
         throw "Contact import exited with code $importExit. Shards remain resumable."
     }

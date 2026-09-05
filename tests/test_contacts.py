@@ -4,9 +4,11 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.feather as feather
+import pytest
 
 from flysim.contacts import import_contact_table
 from flysim.datasets import sha256_file
+from flysim.errors import ContactImportRecycle
 
 
 def test_contact_import_is_sharded_lossless_and_idempotent(tmp_path: Path) -> None:
@@ -74,3 +76,35 @@ def test_logical_digest_is_stable_across_safe_input_batch_sizes(tmp_path: Path) 
         manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
         digest_sets.append([item["logical_sha256"] for item in manifest["shards"]])
     assert digest_sets[0] == digest_sets[1]
+
+
+def test_contact_import_can_recycle_at_a_verified_shard(tmp_path: Path) -> None:
+    source = tmp_path / "contacts.feather"
+    output = tmp_path / "derived"
+    feather.write_feather(pa.table({"point_id": range(12)}), source, chunksize=2)
+
+    with pytest.raises(ContactImportRecycle) as raised:
+        import_contact_table(
+            "syn-points",
+            source,
+            output,
+            memory_limit_gb=1.0,
+            minimum_free_gb=0.0,
+            row_group_rows=4,
+            shard_rows=4,
+            max_new_shards_per_process=1,
+        )
+    assert raised.value.retryable
+    checkpoint = json.loads((output / "import-checkpoint.json").read_text())
+    assert checkpoint["rows"] == 4
+
+    result = import_contact_table(
+        "syn-points",
+        source,
+        output,
+        memory_limit_gb=1.0,
+        minimum_free_gb=0.0,
+        row_group_rows=4,
+        shard_rows=4,
+    )
+    assert result.rows == 12

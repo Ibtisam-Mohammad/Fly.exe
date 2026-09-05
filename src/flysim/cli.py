@@ -191,6 +191,7 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
             resume=args.resume,
             memory_limit_gb=args.memory_limit_gb,
             minimum_free_gb=args.minimum_free_gb,
+            max_new_shards_per_process=args.max_new_shards_per_process,
             expected_sha256=lock["artifacts"][artifact.id]["sha256"],
             progress=_progress_jsonl,
         )
@@ -448,6 +449,11 @@ def build_parser() -> argparse.ArgumentParser:
     contacts.add_argument("--threads", type=int, default=2)
     contacts.add_argument("--minimum-free-gb", type=float, default=80.0)
     contacts.add_argument(
+        "--max-new-shards-per-process",
+        type=int,
+        help="checkpoint and request a clean worker after this many new shards",
+    )
+    contacts.add_argument(
         "--temporary-storage",
         type=Path,
         default=Path("/srv/flybrain-data/tmp/contact-audit"),
@@ -575,7 +581,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ),
             file=sys.stderr,
         )
-        return 2
+        return 75 if isinstance(exc, FlySimError) and exc.retryable else 2
 
 
 if __name__ == "__main__":
