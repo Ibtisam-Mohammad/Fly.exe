@@ -35,6 +35,7 @@ ENGINEERING_STATUS: zero-weight GeNN topology load, deterministic NumPy/Brian2/P
 NEXT_GATE: streaming contact/polyad audit -> body-universe sensitivity -> V0 review
 FOUNDATION_JOB: resumable bounded-memory contact normalization active with verified-shard worker recycling under Windows host supervision; strict contact audit follows
 NEURAL_PARITY: deterministic three-neuron fixture passes NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
+TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory

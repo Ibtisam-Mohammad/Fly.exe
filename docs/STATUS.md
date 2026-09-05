@@ -46,7 +46,9 @@ and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementa
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
-- DNa01/DNa02, MN9, and JO-F populations resolve from official annotations; oDN1, ethyl-acetate entry neurons, sucrose entry neurons, and the grooming descending population remain unresolved.
+- DNa01/DNa02, MN9, and JO-F populations resolve from official annotations. The sourced
+  oDN1-to-DNg97 crosswalk now resolves MaleCNS bodies `13805` and `230783`. Ethyl-acetate
+  entry neurons, sucrose entry neurons, and the grooming descending population remain unresolved.
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
 - No structural or physiological validation tier has passed yet.
 
