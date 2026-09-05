@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "registry_id": "eon-demo-populations-v0.1",
+  "registry_id": "eon-demo-populations-v0.2",
   "dataset_id": "male-cns:v1.0",
   "populations": [
     {
@@ -31,13 +31,20 @@
     },
     {
       "id": "forward-odn1",
-      "role": "Eon-style forward readout",
+      "role": "Eon-style forward readout through the oDN1 to DNg97 crosswalk",
       "combine": "any",
-      "queries": [{"field": "type", "operator": "exact", "value": "oDN1"}],
-      "expected_min": 1,
+      "queries": [{"field": "type", "operator": "exact", "value": "DNg97"}],
+      "expected_min": 2,
       "expected_max": 2,
-      "provenance": "P/E",
-      "fallback": "unresolved; no scientific fallback"
+      "provenance": "M/P",
+      "fallback": "none; fail closed if the versioned DNg97 query does not resolve",
+      "mapping_evidence": {
+        "source_name": "oDN1",
+        "target_type": "DNg97",
+        "source": "https://doi.org/10.1038/s41586-025-09554-2",
+        "independent_registry": "https://flybase.org/reports/FBbt:20007470.html",
+        "uncertainty": "cross-specimen type identity; not evidence that one DN alone specifies forward walking"
+      }
     },
     {
       "id": "feeding-mn9",
@@ -104,4 +111,3 @@
     }
   ]
 }
-

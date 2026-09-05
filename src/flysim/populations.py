@@ -27,6 +27,7 @@ class PopulationResult:
     rows: tuple[dict[str, Any], ...]
     provenance: str
     fallback: str
+    mapping_evidence: dict[str, Any] | None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -37,6 +38,7 @@ class PopulationResult:
             "rows": list(self.rows),
             "provenance": self.provenance,
             "fallback": self.fallback,
+            "mapping_evidence": self.mapping_evidence,
         }
 
 
@@ -118,6 +120,7 @@ def resolve_populations(
                 rows=rows,
                 provenance=provenance,
                 fallback=str(specification["fallback"]),
+                mapping_evidence=specification.get("mapping_evidence"),
             )
         )
 
@@ -135,4 +138,3 @@ def resolve_populations(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
-

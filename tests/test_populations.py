@@ -60,7 +60,7 @@ def test_population_resolution_distinguishes_resolved_and_unresolved(tmp_path: P
     result = resolve_populations(annotations, registry, output)
     assert result["populations"][0]["status"] == "resolved"
     assert result["populations"][0]["body_ids"] == [10]
+    assert result["populations"][0]["mapping_evidence"] is None
     assert result["populations"][1]["status"] == "unresolved"
     assert result["all_required_resolved"] is False
     assert output.exists()
-
