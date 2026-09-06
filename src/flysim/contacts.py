@@ -84,12 +84,21 @@ def _logical_table_sha256(table: pa.Table) -> str:
     return hashlib.sha256(sink.getvalue().to_pybytes()).hexdigest()
 
 
-def _validate_checkpoint_shards(output: Path, shards: list[dict[str, Any]]) -> None:
-    for shard in shards:
+def _validate_checkpoint_shards(
+    output: Path,
+    shards: list[dict[str, Any]],
+    *,
+    hash_all: bool = True,
+) -> None:
+    """Check every shard size and either every hash or the resumable tail hash."""
+    final_index = len(shards) - 1
+    for index, shard in enumerate(shards):
         path = output / str(shard["filename"])
         if not path.is_file():
             raise DatasetError(f"Verified contact shard is missing: {path}")
-        if path.stat().st_size != shard["bytes"] or sha256_file(path) != shard["sha256"]:
+        if path.stat().st_size != shard["bytes"]:
+            raise DatasetError(f"Verified contact shard changed: {path}")
+        if (hash_all or index == final_index) and sha256_file(path) != shard["sha256"]:
             raise DatasetError(f"Verified contact shard changed: {path}")
 
 
@@ -214,7 +223,9 @@ def import_contact_table(
             raise DatasetError("Contact import checkpoint uses a different row-group size")
         if checkpoint["shard_rows"] != shard_rows:
             raise DatasetError("Contact import checkpoint uses a different shard size")
-        _validate_checkpoint_shards(output, checkpoint["shards"])
+        # Each shard hash is recorded atomically when written. A recycled worker checks all
+        # sizes plus the last committed hash; final V0 comparisons independently scan all rows.
+        _validate_checkpoint_shards(output, checkpoint["shards"], hash_all=False)
 
     memory_limit_bytes = int(memory_limit_gb * 1024**3)
     with pa.memory_map(str(source), "r") as mapped:

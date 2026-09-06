@@ -7,12 +7,13 @@ import pyarrow.feather as feather
 import pytest
 
 from flysim.contacts import (
+    _validate_checkpoint_shards,
     audit_contact_derivatives,
     compare_contact_derivatives,
     import_contact_table,
 )
 from flysim.datasets import sha256_file
-from flysim.errors import ContactImportRecycle
+from flysim.errors import ContactImportRecycle, DatasetError
 
 
 def test_contact_import_is_sharded_lossless_and_idempotent(tmp_path: Path) -> None:
@@ -112,6 +113,26 @@ def test_contact_import_can_recycle_at_a_verified_shard(tmp_path: Path) -> None:
         shard_rows=4,
     )
     assert result.rows == 12
+
+
+def test_resume_validation_hashes_tail_and_sizes_all_shards(tmp_path: Path) -> None:
+    first = tmp_path / "part-000000.parquet"
+    second = tmp_path / "part-000001.parquet"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+    shards = [
+        {"filename": first.name, "bytes": first.stat().st_size, "sha256": sha256_file(first)},
+        {
+            "filename": second.name,
+            "bytes": second.stat().st_size,
+            "sha256": sha256_file(second),
+        },
+    ]
+
+    _validate_checkpoint_shards(tmp_path, shards, hash_all=False)
+    second.write_bytes(b"broken")
+    with pytest.raises(DatasetError, match="Verified contact shard changed"):
+        _validate_checkpoint_shards(tmp_path, shards, hash_all=False)
 
 
 def test_contact_rebuild_digest_ignores_row_group_size(tmp_path: Path) -> None:
