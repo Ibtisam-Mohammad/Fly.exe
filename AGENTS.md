@@ -1,9 +1,9 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.1
-Last evidence review: 2026-09-04  
-Last implementation audit: 2026-09-05
+Version: 1.2
+Last evidence review: 2026-09-06
+Last implementation audit: 2026-09-07
 Applies to: this repository and every subdirectory
 
 ## 1. Agent bootstrap
@@ -28,13 +28,13 @@ These stable keys are intended for agent search and handoff:
 PROJECT_GOAL: MaleCNS-constrained embodied adult-male sensorimotor model
 CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital twin
 CANONICAL_CONNECTOME: MaleCNS v1.0
-CURRENT_STAGE: Stage 0 — reproducible data foundation (active; exit gate not passed)
-DATA_STATUS: seven raw artifacts checksum-locked; four lossless contact derivatives normalized; strict structural audit active
-HIGHEST_VALIDATION_TIER: none (pre-V0)
+CURRENT_STAGE: Stage 1 — open-loop neural baseline (active; V0 Structural passed)
+DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
+HIGHEST_VALIDATION_TIER: V0 Structural
 ENGINEERING_STATUS: zero-weight GeNN topology load, deterministic NumPy/Brian2/PyGeNN parity, and controller-only/Eon-like scaffolds only
-NEXT_GATE: strict contact/polyad audit -> body-universe sensitivity -> independent dual-layout rebuild -> V0 review
-FOUNDATION_JOB: contact normalization complete; strict contact audit active under Windows host supervision; no tier awarded
-FOUNDATION_REBUILD: clean 262144-row-group and 131072-row-group rebuilds are queued behind the strict audit with logical-digest comparison
+NEXT_GATE: Stage 1 open-loop circuit reproduction -> shuffled-connectome and cell-type-only controls -> selected V3 review
+FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
+FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: deterministic three-neuron fixture passes NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
@@ -46,15 +46,12 @@ PLASTICITY_V1: disabled
 SUCCESS_RULE: behavioral resemblance alone is insufficient
 ```
 
-Operational checkpoint, 2026-09-05: the aggregate MaleCNS foundation is executable, but
-neither the zero-functional-weight GeNN load nor the controller-only and semantic-population
-demonstrations are biological validation. “Full profile” refers only to the seven registered
-flat-connectome artifacts; it does not include the skeleton collections, segmentation volumes,
-or neuPrint database. Download completion alone does not pass Stage 0 or V0.
-
-Morphology checkpoint, 2026-09-05: ten fixed bilateral descending, antennal-sensory,
-and motor SWC canaries are generation-pinned, checksum-locked, and structurally valid in 8-nm
-coordinates. This passes only the morphology-canary component of the future V0 evidence bundle.
+V0 checkpoint, 2026-09-06: evidence bundle `20260906T065413Z_V0` (SHA-256
+`d8a95e151daf3e2bb70b13052f52a2b794e9bf6887121d64d34727f37cccf0b0`) passes all twelve
+required structural gates. The full-profile boundary remains the seven registered flat-connectome
+artifacts; it excludes bulk skeleton collections, segmentation volumes, and the neuPrint database.
+Ten fixed bilateral descending, antennal-sensory, and motor SWC canaries provide lazy morphology
+coverage. V0 is structural evidence only: it validates neither neural dynamics nor behavior.
 
 Useful retrieval commands:
 

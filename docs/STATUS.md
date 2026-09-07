@@ -1,6 +1,6 @@
 # Implementation status
 
-Status date: 2026-09-05
+Status date: 2026-09-07
 
 ## Implemented
 
@@ -27,29 +27,25 @@ Status date: 2026-09-05
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
 - CLI surface for data, benchmarks, runs, rendering, and validation.
 - Checksum-locked official MaleCNS starter profile (annotations, transmitter predictions, body statistics, and aggregate segment weights).
-- Provisional `DATA-04` traced-neuron derivative: 165,122 bodies and 25,563,197 directed aggregate edges, with every excluded all-segment edge/contact counted in its manifest.
+- Accepted `DATA-04` traced-neuron derivative: 165,122 bodies and 25,563,197 directed aggregate edges, with every excluded all-segment edge/contact counted in its manifest.
 - Measured GeNN structural load tests at 1%, 10%, and 100%; the full graph used a 7,165 MiB GPU delta and left 3,775 MiB free during the measurement.
 - Controller-only NeuroMechFly baseline: 4,000 MuJoCo steps at 500 microseconds, deterministic 2-second video, and a separate `P/E` manifest.
 - Eon-like causal engineering storyboard with deterministic trace, ablation tests, and MP4; it remains a placeholder neural circuit.
+- Checksum-locked seven-artifact MaleCNS v1.0 flat-connectome profile with source byte counts,
+  SHA-256 hashes, Feather schemas, and pinned GCS generation/ETag/MD5/CRC32C identities.
+- Lossless contact derivative covering 357,489,383 points, 311,833,243 partner rows,
+  151,856,684 aggregate body-pair rows, and 45,656,140 T-bar transmitter rows.
+- Exact endpoint/body/kind/confidence joins, packed-point-ID bijection, polyadic fan-out,
+  transmitter probability, and partner-to-aggregate reconciliation audits with zero failures.
+- Two independent clean derivative rebuilds using 262,144- and 131,072-row Parquet groups.
+  Both match the canonical logical content and one another; every peak RSS was below 3 GiB.
+- Ten fixed 8-nm morphology canaries, body-universe sensitivity, exact annotation canaries,
+  source-paper count comparisons, full confidence-threshold sensitivity, and a pinned
+  MaleCNS-to-FlyWire central-brain comparison.
+- Immutable V0 evidence bundle `20260906T065413Z_V0`; all twelve required gates pass.
 
 ## Not implemented or not yet validated
 
-- All seven MaleCNS v1.0 flat-connectome artifacts are checksum-locked. All four lossless contact
-  derivatives are normalized; the final transmitter derivative contains 45,656,140 rows in 44
-  shards. Polyadic T-bar, coordinate, and complete Stage-0 motif audits have not passed yet.
-- The strict endpoint, polyad, transmitter, and aggregate-reconciliation audit is active under the
-  Windows host supervisor. The canonical resumed manifest retains the earlier 3.206 GB peak-RSS
-  failure; the queued clean rebuild must independently satisfy the under-3-GiB ingestion gate.
-- A second Windows-host supervisor is waiting on that strict-audit marker. It will independently
-  rebuild all four contact derivatives at 262,144- and 131,072-row Parquet group sizes, then require
-  layout-independent logical equality against the original and between both clean rebuilds.
-- Ten fixed 8-nm morphology canaries are generation-pinned, checksum-locked, and structurally
-  valid across bilateral descending, antennal sensory, and motor populations.
-
-Detailed integrity evidence: [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md)
-and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
-[LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
-[transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md).
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
@@ -60,19 +56,30 @@ and [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementa
   FAFB/FlyWire aDN1-3 identities, but no direct MaleCNS body-ID crosswalk, so the grooming-DN
   gate remains unresolved rather than being filled by a name guess.
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
-- No structural or physiological validation tier has passed yet.
+- No cellular, synaptic, circuit, brain-wide, motor-interface, embodied, behavioral, or
+  generalization tier has passed. V0 does not validate functional dynamics.
+
+Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
+[full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
+[morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
+[LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
+[transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md).
 
 ## Measured foundation results
 
 | Gate | Result |
 |---|---:|
 | Official all-segment aggregate rows | 151,856,684 |
-| Provisional traced neuron bodies | 165,122 |
+| Official point rows | 357,489,383 |
+| Official partner/contact rows | 311,833,243 |
+| Official presynaptic/T-bar rows | 45,656,140 |
+| Accepted traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| Automated tests | 42 passing |
+| V0 evidence gates | 12 of 12 passing |
+| Automated tests | 49 passing |
 
-The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) remain proposed until the status-universe sensitivity audit is reviewed.
+The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
 | GeNN structural scale | Edges | GPU delta | Load | One 0.1 ms step host call |
 |---:|---:|---:|---:|---:|
@@ -82,6 +89,7 @@ The GPU measurements are topology-allocation results, not biological-time perfor
 
 The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the required 1.5 GB headroom.
 
-Highest validation tier: **none (pre-V0)**. Dataset checksums, software tests,
-topology-allocation benchmarks, and engineering-demo completion are implementation evidence,
-not a scientific validation tier.
+Highest validation tier: **V0 Structural**. It establishes dataset identity, lossless structural
+transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
+cross-connectome comparison. It makes no physiological or behavioral claim. Stage 1 open-loop
+neural validation is now the active scientific gate.

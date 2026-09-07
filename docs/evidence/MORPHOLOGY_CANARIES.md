@@ -1,10 +1,10 @@
 # MaleCNS v1.0 morphology canaries
 
-Audit date: 2026-09-05  
+Audit date: 2026-09-06
 Source: official 8-nm SWC objects under `skeletons-malecns/skeletons-swc/`  
 Local manifest: `/srv/flybrain-data/derived/male-cns-v1.0/morphology-canaries/manifest.json`  
-Manifest SHA-256: `e033336551a4d8793f820261ace9592d4adb7813b167b095bf9f747b77c2f74f`  
-Validation tier: none; this supplies only the morphology-canary component of the V0 bundle
+Manifest SHA-256: `8a110f8a94897d50c3368516435e3ddb3e634ad40f60f5722d09843f91750028`
+Validation tier: V0 Structural; this supplies the morphology-canary gate within the immutable V0 bundle
 
 | Body ID | Identity | Side/role | Nodes | SHA-256 |
 |---:|---|---|---:|---|

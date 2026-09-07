@@ -1,9 +1,9 @@
 # MaleCNS v1.0 seven-artifact integrity record
 
-Audit date: 2026-09-05  
+Audit date: 2026-09-06
 Dataset: `male-cns:v1.0`  
 Scope: seven registered flat-connectome Feather tables only  
-Validation tier: none; this supplies the raw-profile-integrity component of a future V0 bundle
+Validation tier: V0 Structural; this supplies the raw-profile-integrity gate within bundle `20260906T065413Z_V0`
 
 The Windows-host supervisor completed local SHA-256 validation at
 `2026-09-05T12:17:37+05:30`. A separate `flysim data validate --profile full --remote --deep`

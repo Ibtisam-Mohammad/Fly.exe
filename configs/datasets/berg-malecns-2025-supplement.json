@@ -43,6 +43,6 @@
   ],
   "permitted_claim": "Supports structural count-definition and MaleCNS-to-FlyWire comparison gates within the paper's declared scope.",
   "forbidden_claim": "Does not establish physiological conservation, functional edge weights, or whole-CNS female equivalence.",
-  "status": "checksum-locked locally; V0 structural audit pending",
-  "last_reviewed": "2026-09-05"
+  "status": "checksum-locked locally; V0 structural audit passed in evidence bundle 20260906T065413Z_V0",
+  "last_reviewed": "2026-09-06"
 }
