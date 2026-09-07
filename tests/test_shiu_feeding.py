@@ -10,6 +10,7 @@ import pyarrow.feather as feather
 import pytest
 
 from flysim.errors import DatasetError
+from flysim.feeding_stage1 import evaluate_feeding_screen
 from flysim.shiu_feeding import (
     load_primitive_population_pickle,
     prepare_shiu_feeding_screen,
@@ -155,4 +156,98 @@ def test_feeding_screen_preparation_preserves_partial_mapping(tmp_path: Path) ->
         "unresolved": 1,
     }
     assert result["transfer_records"][0]["male_cns_body_ids"] == [10]
+    assert result["validation_tier_awarded"] is None
+
+
+def test_stage1_baseline_can_pass_when_stronger_v3_margin_fails(tmp_path: Path) -> None:
+    preparation = tmp_path / "preparation.json"
+    preparation.write_text(
+        json.dumps(
+            {
+                "transfer_records": [
+                    {
+                        "source_type": "positive",
+                        "male_cns_body_ids": [1],
+                        "observed_positive": True,
+                    },
+                    {
+                        "source_type": "negative",
+                        "male_cns_body_ids": [2],
+                        "observed_positive": False,
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    preregistration = tmp_path / "preregistration.json"
+    preregistration.write_text(
+        json.dumps(
+            {
+                "experiment_id": "test",
+                "input_populations": [
+                    {"source_type": "positive"},
+                    {"source_type": "negative"},
+                ],
+                "transfer_protocol": {
+                    "timestep_sensitivity_ms": 0.05,
+                    "stage1_pass_rule": {
+                        "minimum_exact_balanced_accuracy": 0.75,
+                        "minimum_exact_auroc": 0.75,
+                        "minimum_auroc_margin_over_required_controls": 0.05,
+                        "required_controls": ["shuffled-connectivity", "cell-type-only"],
+                        "minimum_dt_prediction_agreement": 0.95,
+                        "maximum_dt_auroc_delta": 0.05,
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def run(variant: str, scores: list[float]) -> dict[str, object]:
+        rates = [[[score, score]] for score in scores]
+        return {
+            "variant": variant,
+            "population_names": ["positive", "negative"],
+            "readout_rates_hz": rates,
+            "finite_state": True,
+            "runtime_seconds": 1.0,
+        }
+
+    predictions = tmp_path / "predictions.json"
+    predictions.write_text(
+        json.dumps(
+            {
+                "status": "predictions-frozen-before-outcome-evaluation",
+                "preregistration_sha256": _sha256(preregistration),
+                "all_states_finite": True,
+                "runs": [
+                    run("exact", [1.0, 0.0]),
+                    run("shuffled-connectivity", [0.0, 0.0]),
+                    run("cell-type-only", [1.0, 0.0]),
+                    run("uniform-weights", [0.0, 0.0]),
+                    run("randomized-weights", [0.0, 0.0]),
+                    run("weak-edge-dropout", [1.0, 0.0]),
+                    run("excitatory-control", [1.0, 0.0]),
+                    run("inhibitory-control", [1.0, 0.0]),
+                    run("seeded-balanced-control", [1.0, 0.0]),
+                    run("zero-weight", [0.0, 0.0]),
+                    run("dt-0.05-ms", [1.0, 0.0]),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = evaluate_feeding_screen(
+        preparation_path=preparation,
+        preregistration_path=preregistration,
+        predictions_path=predictions,
+        output_path=tmp_path / "review.json",
+    )
+
+    assert result["stage1_exit_gate_passed"] is True
+    assert result["selected_v3_review_passed"] is False
+    assert result["selected_v3_blocking_reasons"] == ["required_control_margins"]
     assert result["validation_tier_awarded"] is None

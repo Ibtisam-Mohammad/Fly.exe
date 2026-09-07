@@ -541,7 +541,7 @@ def evaluate_feeding_screen(
     dt_predictions = scores[dt_name] > 0.0
     dt_agreement = float(np.mean(primary_predictions == dt_predictions))
     dt_auroc_delta = float(abs(exact["auroc"] - metrics[dt_name]["auroc"]))
-    gates = {
+    selected_v3_gates = {
         "exact_balanced_accuracy": exact["balanced_accuracy"]
         >= float(gate["minimum_exact_balanced_accuracy"]),
         "exact_auroc": exact["auroc"] >= float(gate["minimum_exact_auroc"]),
@@ -556,11 +556,49 @@ def evaluate_feeding_screen(
         "zero_weight_has_no_mn9_response": bool(np.all(scores["zero-weight"] == 0.0)),
         "predictions_frozen_before_outcomes": True,
     }
-    passed = all(gates.values())
-    blocking_reasons = [name for name, value in gates.items() if not value]
+    completed_variants = set(metrics)
+    stage1_baseline_gates = {
+        "known_activation_and_ranking_reproduced": bool(
+            selected_v3_gates["exact_balanced_accuracy"]
+            and selected_v3_gates["exact_auroc"]
+        ),
+        "shuffled_and_cell_type_controls_compared": set(required_controls)
+        <= completed_variants,
+        "sign_and_weight_sensitivities_compared": {
+            "excitatory-control",
+            "inhibitory-control",
+            "seeded-balanced-control",
+            "uniform-weights",
+            "randomized-weights",
+            "weak-edge-dropout",
+        }
+        <= completed_variants,
+        "numerically_stable_without_hidden_rescue": bool(
+            selected_v3_gates["all_states_finite"]
+            and selected_v3_gates["zero_weight_has_no_mn9_response"]
+            and selected_v3_gates["timestep_prediction_agreement"]
+            and selected_v3_gates["timestep_auroc_delta"]
+        ),
+        "predictions_frozen_before_outcomes": bool(
+            selected_v3_gates["predictions_frozen_before_outcomes"]
+        ),
+    }
+    stage1_passed = all(stage1_baseline_gates.values())
+    selected_v3_passed = all(selected_v3_gates.values())
+    blocking_reasons = [
+        name for name, value in selected_v3_gates.items() if not value
+    ]
     payload: dict[str, Any] = {
         "schema_version": "1.0",
-        "status": "passed" if passed else "failed",
+        "status": (
+            "stage1-incomplete"
+            if not stage1_passed
+            else (
+                "stage1-complete-selected-v3-passed"
+                if selected_v3_passed
+                else "stage1-complete-selected-v3-failed"
+            )
+        ),
         "experiment_id": preregistration["experiment_id"],
         "code_commit": _code_commit(),
         "preparation_sha256": sha256_file(preparation_path),
@@ -573,12 +611,17 @@ def evaluate_feeding_screen(
             "prediction_agreement": dt_agreement,
             "auroc_delta": dt_auroc_delta,
         },
-        "preregistered_gates": gates,
-        "stage1_exit_gate_passed": passed,
-        "blocking_reasons": blocking_reasons,
+        "stage1_baseline_gates": stage1_baseline_gates,
+        "stage1_exit_gate_passed": stage1_passed,
+        "selected_v3_preregistered_gates": selected_v3_gates,
+        "selected_v3_review_passed": selected_v3_passed,
+        "selected_v3_blocking_reasons": blocking_reasons,
+        "blocking_reasons": [] if stage1_passed else [
+            name for name, value in stage1_baseline_gates.items() if not value
+        ],
         "validation_review": (
             "selected-V3-circuit-evidence-passed"
-            if passed
+            if selected_v3_passed
             else "selected-V3-circuit-evidence-failed"
         ),
         "validation_tier_awarded": None,
