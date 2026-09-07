@@ -80,6 +80,18 @@ def test_registry_resolves_known_and_explicit_unknown_types(tmp_path: Path) -> N
     assert len(registry.registry_sha256) == 64
 
 
+def test_stage2_registry_exposes_dm1_parameter_prior() -> None:
+    registry = DynamicsRegistry.load(
+        Path(__file__).parents[1] / "configs" / "neural" / "cell-dynamics-v0.2.json"
+    )
+
+    record = registry.resolve(("DM1_lPN",)).records[0]
+
+    assert record.signal_regime is SignalRegime.SPIKING
+    assert record.status == "proposed"
+    assert record.parameter_prior_id == "gouwens-wilson-2009-dm1-passive-priors-v1"
+
+
 def test_type_pair_scales_map_reversibly_to_edges() -> None:
     graph = _graph()
     cell_types = ("A", "B", "C")

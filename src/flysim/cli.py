@@ -48,6 +48,13 @@ from flysim.render import render_run
 from flysim.runs import attach_run_artifact, write_run
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.stage1 import run_shiu_malecns_transfer
+from flysim.stage2 import (
+    GOUWENS_MODELDB_COMMIT,
+    Stage2ExperimentSpec,
+    fit_projection_neuron_model,
+    import_gouwens_dm1_priors,
+    import_gugel_figure7,
+)
 from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
 from flysim.v0 import build_v0_evidence_bundle
@@ -96,6 +103,66 @@ def _command_data_status(args: argparse.Namespace) -> int:
     spec = DatasetSpec.load(args.spec)
     _print_json(dataset_status(spec, args.root, args.profile))
     return 0
+
+
+def _command_data_import_dm1_priors(args: argparse.Namespace) -> int:
+    payload = import_gouwens_dm1_priors(
+        args.source,
+        args.output,
+        expected_commit=args.expected_commit,
+    )
+    _print_json(
+        {
+            "artifact_id": payload["artifact_id"],
+            "output": str(args.output.resolve()),
+            "record_count": payload["record_count"],
+            "logical_sha256": payload["logical_sha256"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_data_import_gugel_figure7(args: argparse.Namespace) -> int:
+    payload = import_gugel_figure7(args.source, args.output)
+    _print_json(
+        {
+            "artifact_id": payload["artifact_id"],
+            "output": str(args.output.resolve()),
+            "artifacts": payload["artifacts"],
+            "logical_sha256": payload["logical_sha256"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_stage2_readiness(args: argparse.Namespace) -> int:
+    report = Stage2ExperimentSpec.load(args.experiment).readiness(args.root)
+    _print_json(report)
+    return 0 if report["fit_ready"] else 2
+
+
+def _command_stage2_fit_pn(args: argparse.Namespace) -> int:
+    result = fit_projection_neuron_model(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "acceptance": result["acceptance"],
+            "fi_model": result["fi_model"],
+            "uepsc_model": result["uepsc_model"],
+            "validation_tier_awarded": None,
+        }
+    )
+    required = (
+        "fi_pass",
+        "uepsc_pass",
+        "all_states_finite",
+        "no_continuous_fit_at_search_boundary",
+    )
+    return 0 if all(result["acceptance"][key] for key in required) else 2
 
 
 def _command_evidence_build(args: argparse.Namespace) -> int:
@@ -917,6 +984,23 @@ def build_parser() -> argparse.ArgumentParser:
     signs.add_argument("--seed", type=int, default=1)
     signs.set_defaults(func=_command_data_build_edge_signs)
 
+    dm1_priors = data_commands.add_parser(
+        "import-dm1-priors",
+        help="normalize the pinned Gouwens-Wilson DM1 passive-model fits",
+    )
+    dm1_priors.add_argument("--source", type=Path, required=True)
+    dm1_priors.add_argument("--output", type=Path, required=True)
+    dm1_priors.add_argument("--expected-commit", default=GOUWENS_MODELDB_COMMIT)
+    dm1_priors.set_defaults(func=_command_data_import_dm1_priors)
+
+    gugel_figure7 = data_commands.add_parser(
+        "import-gugel-figure7",
+        help="normalize the checksum-locked eLife Figure 7 DL5 physiology",
+    )
+    gugel_figure7.add_argument("--source", type=Path, required=True)
+    gugel_figure7.add_argument("--output", type=Path, required=True)
+    gugel_figure7.set_defaults(func=_command_data_import_gugel_figure7)
+
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     neural = benchmark_commands.add_parser("neural")
@@ -1042,6 +1126,30 @@ def build_parser() -> argparse.ArgumentParser:
     validate = commands.add_parser("validate")
     validate.add_argument("run_directory", type=Path)
     validate.set_defaults(func=_command_validate)
+
+    stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
+    stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
+    stage2_readiness = stage2_commands.add_parser(
+        "readiness", help="validate a preregistered physiology fit contract"
+    )
+    stage2_readiness.add_argument("--root", type=Path, default=default_data_root())
+    stage2_readiness.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-pn-physiology.json",
+    )
+    stage2_readiness.set_defaults(func=_command_stage2_readiness)
+    stage2_fit_pn = stage2_commands.add_parser(
+        "fit-pn", help="fit and freeze the preregistered projection-neuron family"
+    )
+    stage2_fit_pn.add_argument("--root", type=Path, default=default_data_root())
+    stage2_fit_pn.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-pn-physiology.json",
+    )
+    stage2_fit_pn.add_argument("--output", type=Path, required=True)
+    stage2_fit_pn.set_defaults(func=_command_stage2_fit_pn)
 
     evidence = commands.add_parser("evidence", help="Build and validate scientific evidence")
     evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)

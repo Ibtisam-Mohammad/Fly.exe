@@ -33,6 +33,7 @@ class CellDynamicsRecord:
     evidence_scope: str
     biological_mismatch: str | None
     alternatives: tuple[str, ...]
+    parameter_prior_id: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +46,7 @@ class CellDynamicsRecord:
             "evidence_scope": self.evidence_scope,
             "biological_mismatch": self.biological_mismatch,
             "alternatives": list(self.alternatives),
+            "parameter_prior_id": self.parameter_prior_id,
         }
 
 
@@ -115,6 +117,11 @@ class DynamicsRegistry:
                     else None
                 ),
                 alternatives=alternatives,
+                parameter_prior_id=(
+                    str(record["parameter_prior_id"])
+                    if record.get("parameter_prior_id") is not None
+                    else None
+                ),
             )
 
         default_record = parse_record(payload["default_record"])

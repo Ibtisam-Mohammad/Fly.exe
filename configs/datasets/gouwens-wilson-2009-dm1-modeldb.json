@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "gouwens-wilson-2009-modeldb-118662",
+  "title": "Signal propagation in Drosophila central neurons: published DM1 passive-model source",
+  "paper": "https://doi.org/10.1523/JNEUROSCI.0764-09.2009",
+  "source_repository": "https://github.com/ModelDBRepository/118662",
+  "source_commit": "cf5a57dee863cea502e78ef5bc481369253900d9",
+  "license": "ModelDB redistribution terms require verification; redistribution from this project is disabled",
+  "redistribute_with_gpl_release": false,
+  "artifacts": [
+    {
+      "filename": "figure_4a_cell1.hoc",
+      "sha256": "1a0a0426f55539fd12e004908e8e3c1e8bf206bac4f7d3d3d0ab14b631c8e4d1",
+      "role": "published cell-1 fitted Rm, Cm and Ri"
+    },
+    {
+      "filename": "figure_4a_cell2.hoc",
+      "sha256": "59e9c54089025001296c20111c5a9a2cb5d09cecb75e753301e1b0bb5aceb9fe",
+      "role": "published cell-2 fitted Rm, Cm and Ri"
+    },
+    {
+      "filename": "figure_4a_cell3.hoc",
+      "sha256": "b33d4bb4c17f0a7782e96f0449ade3de5ae84725304deb50da191abdbcf5e0c7",
+      "role": "published cell-3 fitted Rm, Cm and Ri"
+    },
+    {
+      "filename": "fit_params.hoc",
+      "sha256": "332bf222b366c6ca940c51b70defd6f0aaba560bffeda9ffcc0606744c1c5165",
+      "role": "source fitting/model parameter declarations"
+    }
+  ],
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "female",
+    "cell_type": "DM1 uniglomerular projection neuron",
+    "preparation": "in vivo electrophysiology registered to reconstructed morphology"
+  },
+  "units": "ohm*cm^2, uF/cm^2, ohm*cm, mV, and ms",
+  "fit_role": "population prior for passive DM1 projection-neuron parameters",
+  "held_out_role": "none; these published fits are not independent validation data",
+  "mismatches": [
+    "female source flies versus the five-day-old male target condition",
+    "published fitted model parameters rather than raw current-clamp traces",
+    "DM1 projection-neuron evidence cannot establish every MaleCNS neuron family"
+  ],
+  "permitted_claim": "Supports a labelled cross-specimen prior for DM1 passive parameters and reduced-compartment model construction.",
+  "forbidden_claim": "Does not earn V1, validate the MaleCNS donor, or establish brain-wide projection-neuron dynamics.",
+  "status": "repository checksum-locked locally; three fitted parameter records normalized",
+  "last_reviewed": "2026-09-07"
+}

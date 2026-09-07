@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-projection-neuron-physiology-v1",
+  "provenance": "P/F",
+  "assumption_ids": ["ND-01", "ND-02", "ND-05", "ND-09"],
+  "target": {
+    "primary_male_cns_type": "DM1_lPN",
+    "fitted_family": "uniglomerular-projection-neuron",
+    "prior_source_type": "DM1",
+    "response_source_type": "DL5",
+    "transfer_policy": "fit a shared PN-family distribution; never label DL5 response values as DM1 measurements"
+  },
+  "required_artifacts": [
+    {
+      "path": "derived/auxiliary/gouwens-wilson-2009/dm1-passive-priors.json",
+      "sha256": "24efca892ad197b258b414094ea7fdeb70b471132c699b26728e538689e1f7e3"
+    },
+    {
+      "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/manifest.json",
+      "sha256": "ed4be739277e8e9c34bdea03aa997ee66bc9cf1a826b3a43ae2133e37ea1a952"
+    },
+    {
+      "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-fi-curves.parquet",
+      "sha256": "6fe737e9eb7eb2b2f6ee3597a46af619a2414dd56dcd6378118467c0f77c672f"
+    },
+    {
+      "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-uepsc-traces.parquet",
+      "sha256": "4e9d363f3d404dfacec30f0dee4e3e8f52ee93a809e39fff206a94b82d6786b0"
+    }
+  ],
+  "split": {
+    "unit": "recorded-cell",
+    "fit_specimen_ids": [
+      "gugel-dl5-fi-solvent-01",
+      "gugel-dl5-fi-solvent-02",
+      "gugel-dl5-uepsc-solvent-01",
+      "gugel-dl5-uepsc-solvent-02",
+      "gugel-dl5-uepsc-solvent-03",
+      "gugel-dl5-uepsc-solvent-04"
+    ],
+    "held_out_specimen_ids": [
+      "gugel-dl5-fi-solvent-03",
+      "gugel-dl5-fi-solvent-04",
+      "gugel-dl5-uepsc-solvent-05",
+      "gugel-dl5-uepsc-solvent-06",
+      "gugel-dl5-uepsc-solvent-07"
+    ],
+    "excluded_condition": "chronic E2-hexenal exposure",
+    "frozen_before_fitting": true
+  },
+  "observables": [
+    {
+      "id": "dl5-current-firing-curve",
+      "signal_type": "firing-rate",
+      "input_units": "pA",
+      "value_units": "Hz",
+      "loss": "per-cell Huber loss over the complete registered current ramp",
+      "weight": 1.0,
+      "held_out_rule": "report RMSE, Huber loss, rheobase error and gain error for each held-out cell"
+    },
+    {
+      "id": "dl5-unitary-epsc-waveform",
+      "signal_type": "postsynaptic-current",
+      "time_units": "ms",
+      "value_units": "pA",
+      "loss": "per-cell baseline-corrected waveform Huber loss over 0-200 ms",
+      "weight": 1.0,
+      "held_out_rule": "report waveform RMSE plus peak-amplitude, peak-time and decay-time errors"
+    }
+  ],
+  "parameter_prior_policy": {
+    "dm1_passive_parameters": "sample the three published Gouwens-Wilson fits as a population prior",
+    "active_parameters": "fit only to registered fit cells",
+    "synaptic_parameters": "fit only to registered fit-cell uEPSC traces",
+    "held_out_access": "held-out cells are loaded only after parameter freeze"
+  },
+  "acceptance": {
+    "numerical": "finite trajectories without undocumented clipping or resets",
+    "cellular": "held-out error reported relative to fit-cohort-to-held-out biological error",
+    "synaptic": "held-out amplitude and timing reported separately; sign and kinetics cannot be inferred from topology alone",
+    "tier_policy": "readiness and fitting award no tier; V1/V2 require an immutable held-out evidence bundle"
+  },
+  "declared_blockers": [],
+  "claim_boundary": "Cross-specimen uniglomerular-PN parameter fitting using female DM1 priors and female DL5 recordings; not MaleCNS-donor physiology and not brain-wide validation."
+}

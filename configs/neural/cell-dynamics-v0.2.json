@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "male-cns-cell-dynamics-v0.2",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": ["ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-09"],
+  "default_record": {
+    "cell_type": "__unregistered__",
+    "signal_regime": "unresolved",
+    "model_family": "competing-spiking-or-passive-graded",
+    "provenance": "E",
+    "status": "proposed",
+    "source": null,
+    "evidence_scope": "No type-specific signaling evidence registered.",
+    "biological_mismatch": "A simulator fallback cannot establish whether an unregistered neuron spikes or signals with graded voltage.",
+    "alternatives": ["lif-spiking-fallback", "passive-graded-fallback"]
+  },
+  "records": [
+    {
+      "cell_type": "DM1_lPN",
+      "signal_regime": "spiking",
+      "model_family": "reduced-compartment-spiking-candidate",
+      "provenance": "P/F",
+      "status": "proposed",
+      "source": "https://doi.org/10.1523/JNEUROSCI.0764-09.2009",
+      "evidence_scope": "DM1 projection-neuron electrophysiology and three published fitted passive cable models.",
+      "biological_mismatch": "Female cross-specimen physiology; active spiking parameters remain unfitted and no MaleCNS DM1 recording exists.",
+      "alternatives": [],
+      "parameter_prior_id": "gouwens-wilson-2009-dm1-passive-priors-v1"
+    },
+    {
+      "cell_type": "DM4_adPN",
+      "signal_regime": "spiking",
+      "model_family": "projection-neuron-spiking-candidate",
+      "provenance": "P/F",
+      "status": "proposed",
+      "source": "https://doi.org/10.1016/j.neuron.2008.02.030",
+      "evidence_scope": "Identified DM4 projection-neuron whole-cell and ORN-to-PN synaptic physiology.",
+      "biological_mismatch": "Female cross-specimen physiology; DM4-specific active parameters are not yet fitted.",
+      "alternatives": [],
+      "parameter_prior_id": null
+    },
+    {
+      "cell_type": "DM4_vPN",
+      "signal_regime": "unresolved",
+      "model_family": "competing-spiking-or-passive-graded",
+      "provenance": "P/E",
+      "status": "proposed",
+      "source": null,
+      "evidence_scope": "The registered evidence does not distinguish the DM4 vPN signaling regime.",
+      "biological_mismatch": "adPN evidence must not be silently transferred to vPN.",
+      "alternatives": ["projection-neuron-spiking-candidate", "passive-graded-fallback"],
+      "parameter_prior_id": null
+    }
+  ],
+  "type_pair_policy": {
+    "formula": "contact_count * fitted_type_pair_scale",
+    "provenance": "M/F",
+    "fit_status": "First frozen fit evaluated: steady-state LIF F-I gate failed; uEPSC aggregate gate passed but awaits feature review",
+    "canonical_values": null
+  }
+}

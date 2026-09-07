@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "gugel-2023-elife-85443-source-data-v2",
+  "title": "Chronic odor exposure causes differential homeostatic adaptation in two classes of Drosophila projection neurons",
+  "paper": "https://doi.org/10.7554/eLife.85443",
+  "source_page": "https://datadryad.org/dataset/doi:10.5061/dryad.v15dv420q",
+  "source_url_template": "https://cdn.elifesciences.org/articles/85443/elife-85443-fig{figure}-data1-v2.xlsx",
+  "dryad_version": 5,
+  "license": "CC0 for the Dryad source-data release; preserve article and dataset attribution",
+  "redistribute_with_gpl_release": true,
+  "artifacts": [
+    {"filename": "elife-85443-fig2-data1-v2.xlsx", "bytes": 14013, "sha256": "bb4abdd811d0241ab58c3cdcc837df9c7b0d177d9e0bbde7199666f59c5928b4"},
+    {"filename": "elife-85443-fig3-data1-v2.xlsx", "bytes": 13165, "sha256": "6e967b817eca8724235f24530ea8bc7bdc64c255263fe7e2c5ab61266df10aed"},
+    {"filename": "elife-85443-fig4-data1-v2.xlsx", "bytes": 11739, "sha256": "945a9a8f80da37cd04fcb1242ca5eeff51479fd108920e6fde8bdc724cef664b"},
+    {"filename": "elife-85443-fig5-data1-v2.xlsx", "bytes": 9899, "sha256": "9bfa6f102f102d91e989b226af1cd8779bb5e7f874650f0f91c9aa9bd510f88c"},
+    {"filename": "elife-85443-fig6-data1-v2.xlsx", "bytes": 869340, "sha256": "f80438cff84668d9275c557516c5d84dbfbca3cd0a835657a9e0c6e5b130c700"},
+    {"filename": "elife-85443-fig7-data1-v2.xlsx", "bytes": 402813, "sha256": "a8ae6fcd3bf0d8effab7a0ecbfa88fccf192f134144072282758ca8125bd8c78"}
+  ],
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "female",
+    "age": "two days old",
+    "cell_types": ["DL5", "VM7", "VA6", "ab4a"],
+    "preparation": "in vivo whole-cell PN recording and peripheral extracellular recording",
+    "sampling": "one recorded projection neuron per brain"
+  },
+  "units": "pA, mV, ms, seconds, hertz, and log10 odor concentration",
+  "fit_role": "Figure 7 solvent-control DL5 recordings, split by recorded cell before fitting",
+  "held_out_role": "preregistered solvent-control recorded cells excluded from fitting",
+  "mismatches": [
+    "female two-day-old flies versus the five-day-old male target condition",
+    "DL5 projection neurons versus the DM1/DM4 Track A odor relays",
+    "isolated open-loop physiology versus behaving whole-CNS state"
+  ],
+  "permitted_claim": "Supports cross-specimen projection-neuron F-I and unitary-EPSC fitting and held-out evaluation with explicit mismatch.",
+  "forbidden_claim": "Does not validate MaleCNS specimen physiology, DM1/DM4 type-specific values, or whole-CNS dynamics.",
+  "status": "six official eLife source workbooks checksum-locked locally; Figure 7 normalized",
+  "last_reviewed": "2026-09-07"
+}

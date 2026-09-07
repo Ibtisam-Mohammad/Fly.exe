@@ -1,9 +1,9 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.6
+Version: 1.7
 Last evidence review: 2026-09-07
-Last implementation audit: 2026-09-07
+Last implementation audit: 2026-09-08
 Applies to: this repository and every subdirectory
 
 ## 1. Agent bootstrap
@@ -31,8 +31,8 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: Track A full-graph Eon-like offline prototype complete; 30/30 held-out-location runs and required controls pass; Stage 2 typed-dynamics hooks remain unfitted
-NEXT_GATE: choose and lock Stage 2 physiological train/held-out datasets and losses -> fit receptor-aware polarity/type-pair dynamics -> selected V1/V2/V3 review
+ENGINEERING_STATUS: first Stage 2 PN fit/evaluation complete; uEPSC kernel passes the normalized-error gate, steady-state LIF F-I transfer fails, and no V1/V2 tier is awarded
+NEXT_GATE: review uEPSC feature metrics -> lock new independent cellular holdout -> replace failed steady-state LIF family without reusing consumed held-out cells
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -43,6 +43,9 @@ STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
 TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 minimum/0.169 median vs 0.5 target; awards no tier
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
+STAGE2_DATA: Gouwens-Wilson DM1 passive priors plus Gugel-2023 DL5 F-I/uEPSC recordings locked; six fit and five held-out recordings
+STAGE2_READINESS: first data/loss contract passed with four artifact hashes; its held-out cells are now consumed
+STAGE2_FIT: frozen F-I ratio 1.228 fails <=1.2; baseline-corrected uEPSC ratio 1.105 passes; immutable result SHA-256 5ee63453c3c1; no tier awarded
 TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -99,6 +102,20 @@ the 0.5 target, so the milestone is an offline engineering prototype. It injects
 GNG588 central relays, applies a 10x entry-path gain, drives DNg97 with an odor-gated intent bias,
 uses explicit odor-gradient steering, and replays a published grooming trajectory through ideal
 joint actuators. It is not autonomous connectome-generated behavior and awards no validation tier.
+
+Stage 2 checkpoint, 2026-09-07: ADR-2026-004 locks the first projection-neuron physiology
+pack and a recorded-cell split. Three published DM1 passive cable fits are retained as `P/F`
+priors. Official Gugel et al. Figure 7 source data yield 7,280 DL5 F-I rows and 24,012 unitary-EPSC
+rows, split into six fit and five held-out recordings. The data/loss contract is fit-ready. This
+checkpoint established acquisition and preregistration. The subsequently frozen first fit selected a
+steady-state LIF family (31 pA rheobase, 30.6 ms membrane tau, 24 ms refractory) and a causal uEPSC
+kernel (47.25 ms onset, 0.75 ms rise tau, 15 ms decay tau). On held-out cells, the F-I normalized
+error ratio is 1.228 and fails the preregistered 1.2 limit; the baseline-corrected uEPSC ratio is
+1.105 and passes that
+one aggregate gate. No continuous parameter is on a search boundary. Result artifact
+`projection-neuron-fit-v3.json` has SHA-256
+`5ee63453c3c12d7ada3754245b93c172567e1ecaf6b0c4a4a51fec958a336780`. The held-out cells are
+now consumed and cannot validate a revised model. No V1/V2 tier is awarded.
 
 Useful retrieval commands:
 
@@ -502,13 +519,14 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-05 | Accept ADR-2026-003 for the contact-level storage and audit boundary. | Full contact tables remain immutable CPU-side evidence; bounded lossless derivatives support V0 without entering the GPU runtime graph. |
 | 2026-09-06 | Accept `status=Traced` as the production neural-body universe; retain Assign/Anchor and all-segment alternatives for sensitivity analyses. | Expanding through Anchor changed traced contacts by 0.12% and edges by 0.24%, while all fixed sensorimotor annotation canaries remained uniquely traced. |
 | 2026-09-07 | Accept the `foundation-v0.5` Track A full-graph engineering baseline and classify it as an offline prototype. | The 30-run matrix and required controls pass, but registered neural/body bridges remain non-biological and throughput misses the interactive target. |
+| 2026-09-07 | Accept ADR-2026-004 for the first Stage 2 projection-neuron physiology pack, recorded-cell split, and losses. | DM1 passive model fits and individual-cell DL5 F-I/uEPSC recordings provide complementary priors and held-out data while keeping sex, age, and cell-type transfer explicit. |
 
 ## 15. Unresolved project-level choices
 
 The following are deliberately not fixed yet. Agents may investigate them, but must not silently make them permanent:
 
 - cell-type spiking/graded classification registry;
-- physiological datasets and loss functions for parameter fitting;
+- physiological datasets and loss functions beyond the accepted first projection-neuron pack;
 - weak-edge uncertainty model;
 - male body scaling dataset;
 

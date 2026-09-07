@@ -1,0 +1,147 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+import json
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from flysim.datasets import sha256_file
+from flysim.errors import ConfigurationError, DatasetError
+from flysim.stage2 import (
+    Stage2ExperimentSpec,
+    import_gouwens_dm1_priors,
+    import_gugel_figure7,
+    lif_steady_state_rate_hz,
+)
+
+
+def _commit_fixture(path: Path) -> str:
+    subprocess.run(["git", "init", "-q", str(path)], check=True)
+    subprocess.run(["git", "-C", str(path), "config", "user.name", "Test"], check=True)
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "test@example.invalid"], check=True
+    )
+    subprocess.run(["git", "-C", str(path), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(path), "commit", "-qm", "fixture"], check=True)
+    return subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def test_gouwens_import_preserves_three_parameter_fits(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    values = ((8300, 2.57, 163.9), (20400, 1.50, 102.5), (20800, 0.79, 266.1))
+    for index, (rm, cm, ri) in enumerate(values, start=1):
+        (source / f"figure_4a_cell{index}.hoc").write_text(
+            f"Rm = {rm}\nCm = {cm}\nRi = {ri}\n", encoding="utf-8"
+        )
+    commit = _commit_fixture(source)
+    output = tmp_path / "priors.json"
+
+    payload = import_gouwens_dm1_priors(source, output, expected_commit=commit)
+
+    assert payload["record_count"] == 3
+    assert [
+        record["derived_specific_membrane_time_constant"]["value"]
+        for record in payload["records"]
+    ] == pytest.approx([21.331, 30.6, 16.432])
+    assert payload["provenance"] == "P/F"
+    assert payload["validation_tier_awarded"] is None
+    assert json.loads(output.read_text(encoding="utf-8"))["source_commit"] == commit
+
+
+def test_gouwens_import_rejects_dirty_source(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    for index in range(1, 4):
+        (source / f"figure_4a_cell{index}.hoc").write_text(
+            "Rm = 10000\nCm = 1\nRi = 100\n", encoding="utf-8"
+        )
+    commit = _commit_fixture(source)
+    (source / "figure_4a_cell1.hoc").write_text("Rm = 1\nCm = 1\nRi = 1\n", encoding="utf-8")
+
+    with pytest.raises(DatasetError, match="local changes"):
+        import_gouwens_dm1_priors(source, tmp_path / "out.json", expected_commit=commit)
+
+
+def _write_experiment(path: Path, artifact_sha256: str, *, overlap: bool = False) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "experiment_id": "test-stage2",
+                "provenance": "P/F",
+                "assumption_ids": ["ND-01", "ND-02", "ND-05"],
+                "required_artifacts": [
+                    {"path": "derived/test.json", "sha256": artifact_sha256}
+                ],
+                "split": {
+                    "unit": "recorded-cell",
+                    "fit_specimen_ids": ["cell-1"],
+                    "held_out_specimen_ids": ["cell-1" if overlap else "cell-2"],
+                },
+                "observables": [
+                    {
+                        "id": "firing-rate",
+                        "value_units": "Hz",
+                        "loss": "rmse",
+                        "weight": 1.0,
+                    }
+                ],
+                "declared_blockers": [],
+                "claim_boundary": "test only",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_stage2_readiness_requires_locked_artifacts_and_disjoint_cells(tmp_path: Path) -> None:
+    artifact = tmp_path / "derived" / "test.json"
+    artifact.parent.mkdir()
+    artifact.write_text("evidence\n", encoding="utf-8")
+    experiment = tmp_path / "experiment.json"
+    _write_experiment(experiment, sha256_file(artifact))
+
+    report = Stage2ExperimentSpec.load(experiment).readiness(tmp_path)
+
+    assert report["fit_ready"] is True
+    assert report["fit_specimen_count"] == 1
+    assert report["held_out_specimen_count"] == 1
+    artifact.write_text("changed\n", encoding="utf-8")
+    assert Stage2ExperimentSpec.load(experiment).readiness(tmp_path)["fit_ready"] is False
+
+    _write_experiment(experiment, sha256_file(artifact), overlap=True)
+    with pytest.raises(ConfigurationError, match="nonempty/disjoint"):
+        Stage2ExperimentSpec.load(experiment)
+
+
+def test_gugel_import_rejects_unlocked_workbook(tmp_path: Path) -> None:
+    source = tmp_path / "figure7.xlsx"
+    source.write_bytes(b"not the registered workbook")
+    with pytest.raises(DatasetError, match="SHA-256 mismatch"):
+        import_gugel_figure7(source, tmp_path / "out")
+
+
+def test_lif_current_rate_is_thresholded_monotonic_and_validated() -> None:
+    rates = lif_steady_state_rate_hz(
+        np.asarray([0.0, 10.0, 11.0, 20.0]),
+        rheobase_pa=10.0,
+        membrane_tau_ms=20.0,
+        refractory_ms=2.0,
+    )
+
+    assert rates[:2].tolist() == [0.0, 0.0]
+    assert 0.0 < rates[2] < rates[3]
+    with pytest.raises(ConfigurationError, match="must be positive"):
+        lif_steady_state_rate_hz(
+            np.asarray([1.0]),
+            rheobase_pa=0.0,
+            membrane_tau_ms=20.0,
+            refractory_ms=2.0,
+        )

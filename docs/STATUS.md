@@ -1,6 +1,6 @@
 # Implementation status
 
-Status date: 2026-09-07
+Status date: 2026-09-08
 
 ## Implemented
 
@@ -88,13 +88,25 @@ Status date: 2026-09-07
   source-paper count comparisons, full confidence-threshold sensitivity, and a pinned
   MaleCNS-to-FlyWire central-brain comparison.
 - Immutable V0 evidence bundle `20260906T065413Z_V0`; all twelve required gates pass.
+- Checksum-locked first Stage 2 projection-neuron physiology pack: three published DM1 passive
+  model fits plus six official Gugel et al. eLife source workbooks.
+- Lossless Figure 7 derivatives with 7,280 DL5 current/firing-rate rows and 24,012 unitary-EPSC
+  waveform rows. The split is frozen by recorded cell: six fit recordings and five held out.
+- `male-cns-cell-dynamics-v0.2` registers DM1 as a proposed reduced-compartment spiking candidate,
+  preserves DM4 vPN as unresolved, and links the DM1 passive prior without promoting it to V1.
+- `flysim stage2 readiness` validates four immutable artifact hashes, units, split separation,
+  loss definitions, and the scientific claim boundary; the first fit contract has zero blockers.
+- The first frozen Stage 2 fit has been evaluated. Its causal uEPSC kernel passes the aggregate
+  baseline-corrected normalized-error gate (1.105 <= 1.2), while the steady-state LIF F-I model fails narrowly
+  (1.228 > 1.2). No fitted continuous parameter lies on a search boundary.
 
 ## Not implemented or not yet validated
 
 - Track A's functional whole-graph dynamics are an explicit Shiu-style engineering regression, not
-  fitted whole-CNS physiology. Stage 2 fitted hybrid dynamics have not been implemented or validated.
-- The dynamics registry is an executable uncertainty boundary, not a fitted hybrid model.
-  Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
+  fitted whole-CNS physiology. The Stage 2 data foundation is implemented, but fitted hybrid
+  dynamics have not yet been implemented or validated.
+- The v0.2 dynamics registry is an executable uncertainty and prior boundary, not a fitted hybrid
+  model. Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
 - Track A is an offline prototype: observed throughput was 0.117 minimum and 0.169 median
   biological seconds per wall second, below the 0.5 interactive target.
 - Track A is not autonomous connectome-generated behavior. It injects central DM1/DM4 and GNG588
@@ -117,6 +129,10 @@ Status date: 2026-09-07
   wiring is not shown to add enough predictive value. No V1, V2, or V3 tier is awarded.
 - Receptor-aware polarity, fitted type-pair conductances/kinetics/delays, tonic drive, reduced
   compartments, and held-out cellular/synaptic physiology remain Stage 2 work.
+- The first Stage 2 PN model is fitted, frozen, and evaluated, but it is not accepted as a complete
+  cellular/synaptic model: the F-I gate fails and feature-level uEPSC review remains pending. The
+  original held-out cells are now consumed; a revised cellular family needs a new independent
+  holdout. V1 and V2 remain unawarded.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -126,6 +142,8 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md) and
 [Shiu feeding-screen execution and review](evidence/STAGE1_SHIU_FEEDING.md). Track A engineering
 evidence: [full-graph Eon-like demonstration](evidence/TRACK_A_EON_MALECNS.md).
+First Stage 2 data decision and evidence boundary: [ADR-2026-004](adr/ADR-2026-004-projection-neuron-physiology-pack.md)
+and [projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUNDATION.md).
 
 ## Measured foundation results
 
@@ -139,7 +157,7 @@ evidence: [full-graph Eon-like demonstration](evidence/TRACK_A_EON_MALECNS.md).
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 71 passing |
+| Automated tests | 77 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
