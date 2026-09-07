@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "review_id": "stage2-pn-dynamic-timestep-review-v1",
+  "provenance": "F/E",
+  "assumption_ids": ["ND-01", "ND-02", "NUM-01", "VAL-01"],
+  "frozen_holdout_result": {
+    "path": "evidence/stage2/projection-neuron-dynamic-condition-holdout-v1.json",
+    "sha256": "401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434"
+  },
+  "required_artifact": {
+    "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-fi-curves.parquet",
+    "sha256": "6fe737e9eb7eb2b2f6ee3597a46af619a2414dd56dcd6378118467c0f77c672f"
+  },
+  "reference_integration_step_us": 100,
+  "sensitivity_integration_step_us": 50,
+  "acceptance": {
+    "same_subgate_conclusion": true,
+    "all_sensitivity_predictions_finite": true
+  },
+  "tier_policy": "This is a numerical convergence review of an already consumed biological holdout. It cannot alter parameters, acceptance limits, or validation tier.",
+  "claim_boundary": "Tests whether halving the adaptive PN integration step preserves the frozen condition-shift F-I sub-gate; it is not new biological evidence."
+}

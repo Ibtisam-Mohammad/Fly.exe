@@ -976,12 +976,147 @@ def evaluate_dynamic_projection_neuron_holdout(
             f"expected {artifact_spec['sha256']}, observed {observed_artifact_sha256}"
         )
 
-    # Numeric held-out responses are opened only after both immutable identities pass.
-    table = pq.read_table(artifact_path)
     training_ids = tuple(str(value) for value in evaluation["training_specimen_ids"])
     held_out_ids = tuple(str(value) for value in evaluation["held_out_specimen_ids"])
     if not training_ids or not held_out_ids or set(training_ids) & set(held_out_ids):
         raise ConfigurationError("Dynamic PN holdout cell sets must be nonempty and disjoint")
+    metrics, all_predictions_finite = _dynamic_holdout_metrics(
+        fit,
+        artifact_path,
+        training_ids,
+        held_out_ids,
+        integration_step_us=int(fit["protocol"]["final_integration_step_us"]),
+    )
+    ratio_limit = float(evaluation["acceptance"]["normalized_error_ratio_max"])
+    normalized_ratio = float(metrics["normalized_error_ratio"])
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-pn-dynamic-chronic-condition-holdout-v1",
+        "evaluation_id": str(evaluation["evaluation_id"]),
+        "evaluation_sha256": sha256_json(evaluation),
+        "frozen_fit_path": str(fit_path),
+        "frozen_fit_sha256": observed_fit_sha256,
+        "held_out_opened_after_identity_checks": True,
+        "training_specimen_ids": list(training_ids),
+        "held_out_specimen_ids": list(held_out_ids),
+        "metrics": metrics,
+        "acceptance": {
+            "normalized_error_ratio_limit": ratio_limit,
+            "normalized_error_ratio_pass": normalized_ratio <= ratio_limit,
+            "all_predictions_finite": all_predictions_finite,
+            "cellular_fi_subgate_pass": normalized_ratio <= ratio_limit
+            and all_predictions_finite,
+        },
+        "tier_policy": evaluation["acceptance"]["tier_policy"],
+        "claim_boundary": str(evaluation["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
+
+
+def review_dynamic_projection_neuron_timestep(
+    review_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Review the frozen dynamic-PN holdout conclusion at a smaller timestep."""
+    review = load_json(review_path)
+    if review.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported dynamic PN timestep review schema")
+    parse_provenance(str(review["provenance"]))
+
+    result_spec = review["frozen_holdout_result"]
+    result_path = root / str(result_spec["path"])
+    observed_result_sha256 = sha256_file(result_path) if result_path.is_file() else None
+    if observed_result_sha256 != result_spec["sha256"]:
+        raise DatasetError(
+            "Frozen dynamic PN holdout result SHA-256 mismatch: "
+            f"expected {result_spec['sha256']}, observed {observed_result_sha256}"
+        )
+    frozen_result = load_json(result_path)
+    if frozen_result.get("validation_tier_awarded") is not None:
+        raise DatasetError("Dynamic PN timestep review cannot extend a tier-bearing result")
+
+    fit_path = Path(str(frozen_result["frozen_fit_path"]))
+    if not fit_path.is_absolute():
+        fit_path = root / fit_path
+    observed_fit_sha256 = sha256_file(fit_path) if fit_path.is_file() else None
+    if observed_fit_sha256 != frozen_result["frozen_fit_sha256"]:
+        raise DatasetError("Frozen dynamic PN fit changed after held-out evaluation")
+    fit = load_json(fit_path)
+    reference_step_us = int(review["reference_integration_step_us"])
+    if int(fit["protocol"]["final_integration_step_us"]) != reference_step_us:
+        raise DatasetError("Dynamic PN reference integration step does not match frozen fit")
+
+    artifact_spec = review["required_artifact"]
+    artifact_path = root / str(artifact_spec["path"])
+    observed_artifact_sha256 = sha256_file(artifact_path) if artifact_path.is_file() else None
+    if observed_artifact_sha256 != artifact_spec["sha256"]:
+        raise DatasetError("Dynamic PN timestep source artifact SHA-256 mismatch")
+
+    sensitivity_step_us = int(review["sensitivity_integration_step_us"])
+    if sensitivity_step_us <= 0 or sensitivity_step_us >= reference_step_us:
+        raise ConfigurationError("Sensitivity timestep must be positive and below the reference")
+    training_ids = tuple(str(value) for value in frozen_result["training_specimen_ids"])
+    held_out_ids = tuple(str(value) for value in frozen_result["held_out_specimen_ids"])
+    sensitivity_metrics, sensitivity_finite = _dynamic_holdout_metrics(
+        fit,
+        artifact_path,
+        training_ids,
+        held_out_ids,
+        integration_step_us=sensitivity_step_us,
+    )
+
+    ratio_limit = float(frozen_result["acceptance"]["normalized_error_ratio_limit"])
+    reference_ratio = float(frozen_result["metrics"]["normalized_error_ratio"])
+    sensitivity_ratio = float(sensitivity_metrics["normalized_error_ratio"])
+    reference_pass = bool(frozen_result["acceptance"]["cellular_fi_subgate_pass"])
+    sensitivity_pass = sensitivity_ratio <= ratio_limit and sensitivity_finite
+    conclusion_preserved = reference_pass == sensitivity_pass
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "review_id": str(review["review_id"]),
+        "review_sha256": sha256_json(review),
+        "frozen_holdout_result_path": str(result_path),
+        "frozen_holdout_result_sha256": observed_result_sha256,
+        "frozen_fit_sha256": observed_fit_sha256,
+        "parameters_changed": False,
+        "reference": {
+            "integration_step_us": reference_step_us,
+            "normalized_error_ratio": reference_ratio,
+            "cellular_fi_subgate_pass": reference_pass,
+        },
+        "sensitivity": {
+            "integration_step_us": sensitivity_step_us,
+            "metrics": sensitivity_metrics,
+            "all_predictions_finite": sensitivity_finite,
+            "cellular_fi_subgate_pass": sensitivity_pass,
+        },
+        "acceptance": {
+            "same_subgate_conclusion": conclusion_preserved,
+            "all_sensitivity_predictions_finite": sensitivity_finite,
+            "numerical_sensitivity_pass": conclusion_preserved and sensitivity_finite,
+        },
+        "tier_policy": str(review["tier_policy"]),
+        "claim_boundary": str(review["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
+
+
+def _dynamic_holdout_metrics(
+    fit: dict[str, Any],
+    artifact_path: Path,
+    training_ids: tuple[str, ...],
+    held_out_ids: tuple[str, ...],
+    *,
+    integration_step_us: int,
+) -> tuple[dict[str, Any], bool]:
+    table = pq.read_table(artifact_path)
     current_pa, training_curves = _group_curves(
         table, training_ids, "current_pa", "firing_rate_hz"
     )
@@ -1009,7 +1144,7 @@ def evaluate_dynamic_projection_neuron_holdout(
         current_pa,
         bank,
         np.arange(len(draws)),
-        integration_step_us=int(protocol["final_integration_step_us"]),
+        integration_step_us=integration_step_us,
         sample_interval_ms=float(protocol["sample_interval_ms"]),
         rate_window_ms=float(protocol["rate_window_ms"]),
         initial_voltage_phases=tuple(
@@ -1020,8 +1155,6 @@ def evaluate_dynamic_projection_neuron_holdout(
     biological_mean = np.mean(training_curves, axis=0)
     model_rmse = _rmse(held_out_curves, model_mean[None, :])
     biological_rmse = _rmse(held_out_curves, biological_mean[None, :])
-    normalized_ratio = model_rmse / biological_rmse
-
     active_ramp = current_pa > 0.0
 
     def response_features(curve: np.ndarray) -> dict[str, float | None]:
@@ -1034,67 +1167,38 @@ def evaluate_dynamic_projection_neuron_holdout(
 
     model_features = response_features(model_mean)
     held_out_response_features = [response_features(curve) for curve in held_out_curves]
-    held_out_features = [
-        {"specimen_id": specimen_id, **features}
-        for specimen_id, features in zip(
-            held_out_ids, held_out_response_features, strict=True
-        )
-    ]
     model_onset = model_features["response_onset_current_pa"]
-    onset_errors: list[float | None] = []
-    for features in held_out_response_features:
-        observed_onset = features["response_onset_current_pa"]
-        onset_errors.append(
-            None
-            if model_onset is None or observed_onset is None
-            else model_onset - observed_onset
-        )
+    onset_errors = [
+        None
+        if model_onset is None or features["response_onset_current_pa"] is None
+        else model_onset - features["response_onset_current_pa"]
+        for features in held_out_response_features
+    ]
     model_peak = model_features["peak_firing_rate_hz"]
-    if model_peak is None:
-        raise DatasetError("Dynamic PN model peak feature is unexpectedly missing")
-    peak_errors = []
-    for features in held_out_response_features:
-        observed_peak = features["peak_firing_rate_hz"]
-        if observed_peak is None:
-            raise DatasetError("Dynamic PN held-out peak feature is unexpectedly missing")
-        peak_errors.append(model_peak - observed_peak)
-    ratio_limit = float(evaluation["acceptance"]["normalized_error_ratio_max"])
-    result: dict[str, Any] = {
-        "schema_version": "1.0",
-        "result_id": "stage2-pn-dynamic-chronic-condition-holdout-v1",
-        "evaluation_id": str(evaluation["evaluation_id"]),
-        "evaluation_sha256": sha256_json(evaluation),
-        "frozen_fit_path": str(fit_path),
-        "frozen_fit_sha256": observed_fit_sha256,
-        "held_out_opened_after_identity_checks": True,
-        "training_specimen_ids": list(training_ids),
-        "held_out_specimen_ids": list(held_out_ids),
-        "metrics": {
+    peak_errors = [
+        None
+        if model_peak is None or features["peak_firing_rate_hz"] is None
+        else model_peak - features["peak_firing_rate_hz"]
+        for features in held_out_response_features
+    ]
+    return (
+        {
             "model_to_heldout_rmse_hz": model_rmse,
             "training_cohort_to_heldout_rmse_hz": biological_rmse,
-            "normalized_error_ratio": normalized_ratio,
-            "per_cell_rmse_hz": [
-                _rmse(curve, model_mean) for curve in held_out_curves
-            ],
+            "normalized_error_ratio": model_rmse / biological_rmse,
+            "per_cell_rmse_hz": [_rmse(curve, model_mean) for curve in held_out_curves],
             "model_features": model_features,
-            "held_out_features": held_out_features,
+            "held_out_features": [
+                {"specimen_id": specimen_id, **features}
+                for specimen_id, features in zip(
+                    held_out_ids, held_out_response_features, strict=True
+                )
+            ],
             "response_onset_current_errors_pa": onset_errors,
             "peak_firing_rate_errors_hz": peak_errors,
         },
-        "acceptance": {
-            "normalized_error_ratio_limit": ratio_limit,
-            "normalized_error_ratio_pass": normalized_ratio <= ratio_limit,
-            "all_predictions_finite": bool(np.all(np.isfinite(model_curves))),
-            "cellular_fi_subgate_pass": normalized_ratio <= ratio_limit
-            and bool(np.all(np.isfinite(model_curves))),
-        },
-        "tier_policy": evaluation["acceptance"]["tier_policy"],
-        "claim_boundary": str(evaluation["claim_boundary"]),
-        "validation_tier_awarded": None,
-    }
-    result["logical_sha256"] = sha256_json(result)
-    _atomic_json(output, result)
-    return result
+        bool(np.all(np.isfinite(model_curves))),
+    )
 
 
 def _huber_mean(residual: np.ndarray, delta: float) -> float:

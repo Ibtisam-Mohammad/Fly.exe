@@ -58,6 +58,7 @@ from flysim.stage2 import (
     import_gouwens_dm1_priors,
     import_gugel_figure7,
     import_nanami_pn_trace,
+    review_dynamic_projection_neuron_timestep,
     review_projection_neuron_fit,
 )
 from flysim.structural import audit_structural_references
@@ -222,6 +223,24 @@ def _command_stage2_evaluate_pn_dynamic(args: argparse.Namespace) -> int:
         }
     )
     return 0 if result["acceptance"]["cellular_fi_subgate_pass"] else 2
+
+
+def _command_stage2_review_pn_dynamic_timestep(args: argparse.Namespace) -> int:
+    result = review_dynamic_projection_neuron_timestep(
+        args.review, args.root, args.output
+    )
+    _print_json(
+        {
+            "review_id": result["review_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "reference": result["reference"],
+            "sensitivity": result["sensitivity"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if result["acceptance"]["numerical_sensitivity_pass"] else 2
 
 
 def _command_stage2_review_pn(args: argparse.Namespace) -> int:
@@ -1271,6 +1290,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_evaluate_pn_dynamic.add_argument("--output", type=Path, required=True)
     stage2_evaluate_pn_dynamic.set_defaults(func=_command_stage2_evaluate_pn_dynamic)
+    stage2_review_pn_dynamic_timestep = stage2_commands.add_parser(
+        "review-pn-dynamic-timestep",
+        help="review a frozen dynamic PN holdout conclusion at a smaller timestep",
+    )
+    stage2_review_pn_dynamic_timestep.add_argument(
+        "--root", type=Path, default=default_data_root()
+    )
+    stage2_review_pn_dynamic_timestep.add_argument(
+        "--review",
+        type=Path,
+        default=(
+            project_root()
+            / "configs"
+            / "experiments"
+            / "stage2-pn-dynamic-timestep-review.json"
+        ),
+    )
+    stage2_review_pn_dynamic_timestep.add_argument("--output", type=Path, required=True)
+    stage2_review_pn_dynamic_timestep.set_defaults(
+        func=_command_stage2_review_pn_dynamic_timestep
+    )
     stage2_review_pn = stage2_commands.add_parser(
         "review-pn", help="audit feature errors from an immutable frozen PN fit"
     )

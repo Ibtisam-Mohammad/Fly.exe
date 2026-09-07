@@ -17,6 +17,7 @@ from flysim.stage2 import (
     import_gugel_figure7,
     import_nanami_pn_trace,
     lif_steady_state_rate_hz,
+    review_dynamic_projection_neuron_timestep,
     review_projection_neuron_fit,
 )
 
@@ -271,3 +272,25 @@ def test_dynamic_holdout_rejects_wrong_frozen_fit_identity(tmp_path: Path) -> No
 
     with pytest.raises(DatasetError, match="Frozen dynamic PN fit SHA-256 mismatch"):
         evaluate_dynamic_projection_neuron_holdout(evaluation, tmp_path, tmp_path / "out.json")
+
+
+def test_dynamic_timestep_review_rejects_wrong_holdout_identity(tmp_path: Path) -> None:
+    review = tmp_path / "review.json"
+    review.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "review_id": "test",
+                "provenance": "F/E",
+                "frozen_holdout_result": {
+                    "path": "holdout.json",
+                    "sha256": "0" * 64,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "holdout.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(DatasetError, match="holdout result SHA-256 mismatch"):
+        review_dynamic_projection_neuron_timestep(review, tmp_path, tmp_path / "out.json")
