@@ -40,6 +40,8 @@ def _parameters() -> TransferLIFParameters:
         synaptic_mv_per_contact=0.275,
         tonic_drive_mv=0.0,
         reset_synaptic_state_on_spike=True,
+        state_updater="source-faithful-linear",
+        genn_precision="float64-reference",
     )
 
 
@@ -92,6 +94,12 @@ def test_numpy_circuit_is_deterministic() -> None:
     )["passed"]
 
 
+def test_source_faithful_linear_coefficients_are_bounded() -> None:
+    parameters = _parameters()
+    assert 0.0 < parameters.synapse_decay < parameters.membrane_decay < 1.0
+    assert parameters.synaptic_voltage_coefficient > 0.0
+
+
 def test_build_path_argument_is_a_path() -> None:
     assert isinstance(Path("build"), Path)
 
@@ -121,3 +129,32 @@ def test_backend_comparison_is_neuron_wise_and_timestep_tolerant() -> None:
 
     assert comparison["passed"]
     assert comparison["ordered_neuron_ids_match"]
+
+
+def test_backend_comparison_reports_per_neuron_count_difference() -> None:
+    reference = CircuitRun(
+        backend="numpy",
+        spike_times_ms=np.asarray([1.0, 2.0]),
+        spike_indices=np.asarray([0, 1], dtype=np.uint32),
+        readout_rates_hz=(1.0,),
+        schedule_sha256="a" * 64,
+    )
+    candidate = CircuitRun(
+        backend="brian2",
+        spike_times_ms=np.asarray([1.0, 2.0, 3.0]),
+        spike_indices=np.asarray([0, 1, 1], dtype=np.uint32),
+        readout_rates_hz=(2.0,),
+        schedule_sha256="a" * 64,
+    )
+
+    comparison = compare_backend_runs(
+        reference,
+        candidate,
+        spike_time_tolerance_ms=0.1,
+        rate_relative_tolerance=0.01,
+    )
+
+    assert not comparison["passed"]
+    assert comparison["per_neuron_count_differences"] == [
+        {"dense_index": 1, "reference_spikes": 1, "candidate_spikes": 2, "delta": 1}
+    ]

@@ -185,3 +185,43 @@ def build_shiu_figure5g_reference(
     temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(temporary, output_path)
     return {**payload, "output": str(output_path.resolve()), "sha256": sha256_file(output_path)}
+
+
+def load_or_build_shiu_figure5g_reference(
+    *,
+    source_root: Path,
+    dataset_card_path: Path,
+    output_path: Path,
+) -> dict[str, Any]:
+    """Reuse a verified reference only while its registered archive remains read-only."""
+    archive_path = source_root / "results.zip"
+    if output_path.is_file() and archive_path.is_file():
+        card = load_json(dataset_card_path)
+        registered = {str(item["filename"]): item for item in card["artifacts"]}[
+            "results.zip"
+        ]
+        cached = load_json(output_path)
+        archive_is_read_only = archive_path.stat().st_mode & 0o222 == 0
+        cache_matches = (
+            cached.get("status") == "raw-output-analysis-reproduced"
+            and cached.get("source_archive_bytes") == archive_path.stat().st_size
+            and cached.get("source_archive_bytes") == registered.get("bytes")
+            and cached.get("source_archive_md5") == registered.get("md5")
+            and cached.get("source_archive_sha256") == registered.get("sha256")
+            and len(cached.get("raw_members", [])) == 11
+        )
+        if archive_is_read_only and cache_matches:
+            return {
+                **cached,
+                "output": str(output_path.resolve()),
+                "sha256": sha256_file(output_path),
+                "cache_reused": True,
+            }
+    return {
+        **build_shiu_figure5g_reference(
+            source_root=source_root,
+            dataset_card_path=dataset_card_path,
+            output_path=output_path,
+        ),
+        "cache_reused": False,
+    }

@@ -7,12 +7,14 @@ import json
 import os
 import shutil
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from flysim.circuit import (
+    TransferLIFParameters,
     build_control_graph,
     compare_backend_runs,
     dataclass_payload,
@@ -30,7 +32,7 @@ from flysim.connectome import SparseConnectome
 from flysim.datasets import sha256_file
 from flysim.errors import DatasetError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
-from flysim.shiu_reference import build_shiu_figure5g_reference
+from flysim.shiu_reference import load_or_build_shiu_figure5g_reference
 
 
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
@@ -134,6 +136,136 @@ def _compare_reference_curve(
     }
 
 
+def _curve_metrics(
+    predicted_by_frequency: dict[float, float],
+    reference_by_frequency: dict[float, float],
+) -> dict[str, Any]:
+    frequencies = sorted(set(predicted_by_frequency) & set(reference_by_frequency))
+    predicted = np.asarray(
+        [predicted_by_frequency[frequency] for frequency in frequencies], dtype=np.float64
+    )
+    reference = np.asarray(
+        [reference_by_frequency[frequency] for frequency in frequencies], dtype=np.float64
+    )
+    errors = predicted - reference
+    reference_positive = reference > 0.0
+    predicted_positive_count = int(np.count_nonzero(predicted[reference_positive] > 0.0))
+    reference_positive_count = int(np.count_nonzero(reference_positive))
+    correlation: float | None = None
+    if frequencies and np.std(predicted) > 0.0 and np.std(reference) > 0.0:
+        correlation = float(np.corrcoef(predicted, reference)[0, 1])
+    return {
+        "frequencies_hz": frequencies,
+        "predicted_mean_rates_hz": predicted.tolist(),
+        "reference_mean_rates_hz": reference.tolist(),
+        "rmse_hz": float(np.sqrt(np.mean(np.square(errors)))) if frequencies else None,
+        "mae_hz": float(np.mean(np.abs(errors))) if frequencies else None,
+        "pearson_frequency_response": correlation,
+        "reference_positive_frequency_count": reference_positive_count,
+        "predicted_positive_on_reference_positive_count": predicted_positive_count,
+        "positive_response_coverage": (
+            float(predicted_positive_count / reference_positive_count)
+            if reference_positive_count
+            else None
+        ),
+    }
+
+
+def _fit_nd04_contact_scale(
+    *,
+    graph: SparseConnectome,
+    edge_signs: np.ndarray,
+    input_body_ids: tuple[int, ...],
+    readout_body_ids: tuple[int, ...],
+    parameters: TransferLIFParameters,
+    seeds: tuple[int, ...],
+    reference: dict[str, Any],
+    fit_protocol: dict[str, Any],
+) -> dict[str, Any]:
+    candidates = tuple(float(value) for value in fit_protocol["candidate_values_mv_per_contact"])
+    training = tuple(float(value) for value in fit_protocol["training_frequencies_hz"])
+    held_out = tuple(float(value) for value in fit_protocol["held_out_frequencies_hz"])
+    if not candidates or any(value <= 0.0 for value in candidates):
+        raise DatasetError("ND-04 fit candidates must be a non-empty positive grid")
+    if not training or not held_out or set(training) & set(held_out):
+        raise DatasetError("ND-04 training and held-out frequency sets must be non-empty/disjoint")
+    reference_rates = {
+        float(item["frequency_hz"]): float(item["mean_rate_hz"])
+        for item in reference["curve"]
+    }
+    missing = (set(training) | set(held_out)) - set(reference_rates)
+    if missing:
+        raise DatasetError(f"ND-04 fit frequencies absent from reference curve: {sorted(missing)}")
+
+    schedules = {
+        (frequency, seed): make_stimulus_schedule(
+            graph,
+            input_body_ids,
+            frequency_hz=frequency,
+            parameters=parameters,
+            seed=seed,
+        )
+        for frequency in (*training, *held_out)
+        for seed in seeds
+    }
+
+    def evaluate(scale: float, frequencies: tuple[float, ...]) -> dict[str, Any]:
+        fitted_parameters = replace(parameters, synaptic_mv_per_contact=scale)
+        predicted: dict[float, float] = {}
+        seed_rates: dict[str, list[float]] = {}
+        for frequency in frequencies:
+            values = []
+            for seed in seeds:
+                result = run_numpy_circuit(
+                    graph,
+                    edge_signs,
+                    schedules[(frequency, seed)],
+                    fitted_parameters,
+                    readout_body_ids,
+                )
+                values.append(float(np.mean(result.readout_rates_hz)))
+            predicted[frequency] = float(np.mean(values))
+            seed_rates[str(frequency)] = values
+        return {
+            **_curve_metrics(predicted, reference_rates),
+            "seed_mean_readout_rates_hz": seed_rates,
+        }
+
+    candidate_results: list[dict[str, Any]] = []
+    for scale in candidates:
+        metrics = evaluate(scale, training)
+        candidate_results.append(
+            {
+                "synaptic_mv_per_contact": scale,
+                "training": metrics,
+            }
+        )
+    winner = min(
+        candidate_results,
+        key=lambda item: (
+            float(item["training"]["rmse_hz"]),
+            float(item["synaptic_mv_per_contact"]),
+        ),
+    )
+    fitted_scale = float(winner["synaptic_mv_per_contact"])
+    return {
+        "status": "completed",
+        "assumption_id": "ND-04",
+        "parameter": "synaptic_mv_per_contact",
+        "units": "mV/contact",
+        "provenance": "F/E",
+        "objective": fit_protocol["objective"],
+        "tie_break": fit_protocol["tie_break"],
+        "candidate_results": candidate_results,
+        "selected_value": fitted_scale,
+        "training_metrics": winner["training"],
+        "held_out_metrics": evaluate(fitted_scale, held_out),
+        "frozen_before_held_out_evaluation": True,
+        "claim_boundary": fit_protocol["claim_boundary"],
+        "validation_tier_awarded": None,
+    }
+
+
 def run_shiu_malecns_transfer(
     *,
     root: Path,
@@ -151,7 +283,7 @@ def run_shiu_malecns_transfer(
     )
     reference: dict[str, Any] | None = None
     if (source_root / "results.zip").is_file():
-        reference = build_shiu_figure5g_reference(
+        reference = load_or_build_shiu_figure5g_reference(
             source_root=source_root,
             dataset_card_path=(
                 project_root() / "configs" / "datasets" / "shiu-2024-brain-model.json"
@@ -332,7 +464,9 @@ def run_shiu_malecns_transfer(
         [exact_graph.dense_index(body_id) for body_id in selected.readout_body_ids],
         dtype=np.uint32,
     )
-    backend_runs["numpy"] = numpy_run.as_dict(exact_graph, readout_indices)
+    backend_runs["numpy"] = numpy_run.as_dict(
+        exact_graph, readout_indices, include_trace=True
+    )
     comparisons: list[dict[str, Any]] = []
     if "brian2" in backends:
         brian2_run = run_brian2_circuit(
@@ -342,7 +476,9 @@ def run_shiu_malecns_transfer(
             parameters,
             selected.readout_body_ids,
         )
-        backend_runs["brian2"] = brian2_run.as_dict(exact_graph, readout_indices)
+        backend_runs["brian2"] = brian2_run.as_dict(
+            exact_graph, readout_indices, include_trace=True
+        )
         comparisons.append(
             compare_backend_runs(
                 numpy_run,
@@ -360,7 +496,9 @@ def run_shiu_malecns_transfer(
             selected.readout_body_ids,
             root / "cache" / "genn" / "stage1" / str(experiment["experiment_id"]),
         )
-        backend_runs["genn"] = genn_run.as_dict(exact_graph, readout_indices)
+        backend_runs["genn"] = genn_run.as_dict(
+            exact_graph, readout_indices, include_trace=True
+        )
         comparisons.append(
             compare_backend_runs(
                 numpy_run,
@@ -394,6 +532,71 @@ def run_shiu_malecns_transfer(
             }
         )
 
+    backend_parity_passed = (
+        all(bool(item["passed"]) for item in comparisons) if comparisons else None
+    )
+    fit_protocol = protocol.get("nd04_contact_scale_fit")
+    contact_scale_fit: dict[str, Any] | None = None
+    if fit_protocol is not None:
+        if reference is None:
+            contact_scale_fit = {
+                "status": "blocked",
+                "reason": "Checksum-locked published-output reference is unavailable",
+                "validation_tier_awarded": None,
+            }
+        elif backend_parity_passed is not True:
+            contact_scale_fit = {
+                "status": "blocked",
+                "reason": "Numerical backend parity must pass before ND-04 fitting",
+                "validation_tier_awarded": None,
+            }
+        else:
+            contact_scale_fit = _fit_nd04_contact_scale(
+                graph=exact_graph,
+                edge_signs=exact_signs,
+                input_body_ids=selected.input_body_ids,
+                readout_body_ids=selected.readout_body_ids,
+                parameters=parameters,
+                seeds=seeds,
+                reference=reference,
+                fit_protocol=fit_protocol,
+            )
+
+    completed_control_variants = {
+        str(item["variant"])
+        for item in control_runs
+        if item.get("status") == "completed"
+    }
+    required_structural_controls = {
+        "cell-type-only",
+        "shuffled-connectivity",
+        "uniform-weights",
+        "randomized-weights",
+        "weak-edge-dropout",
+    }
+    held_out_coverage = (
+        contact_scale_fit.get("held_out_metrics", {}).get("positive_response_coverage")
+        if contact_scale_fit is not None
+        else None
+    )
+    stage1_gate_assessment = {
+        "numerical_backend_parity": backend_parity_passed,
+        "all_11_reference_frequencies_executed": len(frequencies) == 11,
+        "required_structural_controls_completed": required_structural_controls
+        <= completed_control_variants,
+        "held_out_positive_response_coverage": held_out_coverage,
+        "transferred_causal_silencing_control": "available" if silencers else "unavailable",
+        "independent_biological_experiment": "pending",
+        "stage1_exit_gate_passed": False,
+        "blocking_reasons": [
+            "The one-parameter ND-04 fit does not generalize across held-out frequencies.",
+            "The mapped CB0496 silencing population is unavailable in MaleCNS v1.0.",
+            "This reference is archived FlyWire simulation output, not biological response data.",
+            "A second independent biologically anchored circuit experiment is pending.",
+        ],
+        "validation_tier_awarded": None,
+    }
+
     base.update(
         {
             "status": "completed",
@@ -408,15 +611,15 @@ def run_shiu_malecns_transfer(
             },
             "backend_runs": backend_runs,
             "backend_comparisons": comparisons,
-            "backend_parity_passed": (
-                all(bool(item["passed"]) for item in comparisons) if comparisons else None
-            ),
+            "backend_parity_passed": backend_parity_passed,
             "sign_controls": sign_controls,
             "reference_comparison": (
                 _compare_reference_curve(control_runs, reference)
                 if reference is not None
                 else None
             ),
+            "nd04_contact_scale_fit": contact_scale_fit,
+            "stage1_gate_assessment": stage1_gate_assessment,
         }
     )
     _atomic_json(output_path, base)

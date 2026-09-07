@@ -41,5 +41,6 @@ else
 fi
 
 actual_sha256="$(sha256sum "${final}" | cut -d ' ' -f 1)"
+chmod a-w "${final}"
 printf '{"bytes":%s,"file":"%s","md5":"%s","sha256":"%s","status":"ok"}\n' \
     "${actual_bytes}" "${final}" "${actual_md5}" "${actual_sha256}"

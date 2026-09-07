@@ -19,7 +19,7 @@ import pyarrow.feather as feather
 from flysim.connectome import SparseConnectome
 from flysim.errors import ConfigurationError, DatasetError, ReadinessError
 
-STAGE1_GENN_MODEL_VERSION = "2"
+STAGE1_GENN_MODEL_VERSION = "9"
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +63,8 @@ class TransferLIFParameters:
     synaptic_mv_per_contact: float
     tonic_drive_mv: float
     reset_synaptic_state_on_spike: bool
+    state_updater: str
+    genn_precision: str
 
     @property
     def steps(self) -> int:
@@ -90,6 +92,39 @@ class TransferLIFParameters:
             raise ConfigurationError("Stage 1 LIF time and scale parameters must be positive")
         if self.steps <= 0 or self.delay_steps <= 0:
             raise ConfigurationError("Stage 1 LIF schedule has no integration or delay steps")
+        if self.refractory_ms <= self.dt_ms:
+            raise ConfigurationError("Stage 1 refractory period must exceed one integration step")
+        if self.state_updater != "source-faithful-linear":
+            raise ConfigurationError(
+                f"Unsupported Stage 1 state updater: {self.state_updater!r}"
+            )
+        if self.genn_precision not in {"float32-production", "float64-reference"}:
+            raise ConfigurationError(
+                f"Unsupported Stage 1 GeNN precision: {self.genn_precision!r}"
+            )
+
+    @property
+    def membrane_decay(self) -> float:
+        return float(np.exp(-self.dt_ms / self.membrane_tau_ms))
+
+    @property
+    def synapse_decay(self) -> float:
+        return float(np.exp(-self.dt_ms / self.synapse_tau_ms))
+
+    @property
+    def synaptic_voltage_coefficient(self) -> float:
+        if np.isclose(self.synapse_tau_ms, self.membrane_tau_ms):
+            return self.dt_ms * self.membrane_decay / self.membrane_tau_ms
+        return float(
+            self.synapse_tau_ms
+            / (self.synapse_tau_ms - self.membrane_tau_ms)
+            * (self.synapse_decay - self.membrane_decay)
+        )
+
+    @property
+    def genn_refractory_ms(self) -> float:
+        """Compensate GeNN's countdown convention to match Brian2's tick boundary."""
+        return self.refractory_ms - self.dt_ms
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,8 +150,23 @@ class CircuitRun:
     spike_indices: np.ndarray
     readout_rates_hz: tuple[float, ...]
     schedule_sha256: str
+    readout_voltage_mv: np.ndarray | None = None
+    readout_synaptic_state_mv: np.ndarray | None = None
+    state_sample_dt_ms: float | None = None
 
-    def as_dict(self, graph: SparseConnectome, readout_indices: np.ndarray) -> dict[str, Any]:
+    def trace_sha256(self) -> str:
+        digest = hashlib.sha256()
+        digest.update(self.spike_times_ms.astype("<f8", copy=False).tobytes())
+        digest.update(self.spike_indices.astype("<u4", copy=False).tobytes())
+        return digest.hexdigest()
+
+    def as_dict(
+        self,
+        graph: SparseConnectome,
+        readout_indices: np.ndarray,
+        *,
+        include_trace: bool = False,
+    ) -> dict[str, Any]:
         first_spikes = [
             (
                 float(np.min(self.spike_times_ms[self.spike_indices == index]))
@@ -125,14 +175,36 @@ class CircuitRun:
             )
             for index in readout_indices
         ]
-        return {
+        payload: dict[str, Any] = {
             "backend": self.backend,
             "spike_count": int(self.spike_times_ms.size),
             "readout_body_ids": [graph.body_id(int(index)) for index in readout_indices],
             "readout_rates_hz": list(self.readout_rates_hz),
             "readout_first_spike_ms": first_spikes,
             "schedule_sha256": self.schedule_sha256,
+            "spike_trace_sha256": self.trace_sha256(),
         }
+        if include_trace:
+            payload["spike_trace"] = {
+                "times_ms": self.spike_times_ms.tolist(),
+                "dense_indices": self.spike_indices.tolist(),
+            }
+            if self.readout_voltage_mv is not None:
+                if self.state_sample_dt_ms is None:
+                    raise ConfigurationError("Readout state trace is missing its sample interval")
+                payload["readout_state_trace"] = {
+                    "sample_times_ms": (
+                        (np.arange(self.readout_voltage_mv.shape[0]) + 1)
+                        * self.state_sample_dt_ms
+                    ).tolist(),
+                    "voltage_mv": self.readout_voltage_mv.tolist(),
+                    "synaptic_state_mv": (
+                        self.readout_synaptic_state_mv.tolist()
+                        if self.readout_synaptic_state_mv is not None
+                        else None
+                    ),
+                }
+        return payload
 
 
 def _available_dense_indices(
@@ -435,7 +507,7 @@ def run_numpy_circuit(
     parameters: TransferLIFParameters,
     readout_body_ids: tuple[int, ...],
 ) -> CircuitRun:
-    """Run the explicit Stage 1 forward-Euler schedule."""
+    """Run the source-faithful linear update with an explicit causal schedule."""
     graph.validate()
     parameters.validate()
     if edge_signs.shape != graph.contact_counts.shape:
@@ -457,24 +529,33 @@ def run_numpy_circuit(
     edge_ends = np.searchsorted(sources, np.arange(graph.neuron_count), side="right")
     spike_times: list[float] = []
     spike_indices: list[int] = []
+    readouts = np.asarray(
+        [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32
+    )
+    readout_voltage = np.empty((parameters.steps, readouts.size), dtype=np.float64)
+    readout_synaptic_state = np.empty_like(readout_voltage)
     for step in range(parameters.steps):
         queue_slot = step % queue.shape[0]
-        synaptic_state += queue[queue_slot]
+        arrivals = queue[queue_slot].copy()
         queue[queue_slot].fill(0.0)
         active = refractory_until <= step
-        voltage[active] += (parameters.dt_ms / parameters.membrane_tau_ms) * (
-            parameters.resting_mv
-            - voltage[active]
-            + synaptic_state[active]
-            + parameters.tonic_drive_mv
+        active_synaptic_state = synaptic_state[active].copy()
+        baseline_mv = parameters.resting_mv + parameters.tonic_drive_mv
+        voltage[active] = (
+            baseline_mv
+            + (voltage[active] - baseline_mv) * parameters.membrane_decay
+            + active_synaptic_state * parameters.synaptic_voltage_coefficient
         )
-        synaptic_state[active] += (
-            -synaptic_state[active] / parameters.synapse_tau_ms
-        ) * parameters.dt_ms
+        synaptic_state[active] = active_synaptic_state * parameters.synapse_decay
         voltage[~active] = parameters.reset_mv
         spikes = active & (voltage > parameters.threshold_mv)
         forced_indices = schedule.input_indices[schedule.forced_spikes[step]]
         spikes[forced_indices] = True
+        # Brian2's default schedule applies delayed on_pre events after the
+        # state and threshold updates, but before reset processing.
+        # Brian2's ``unless refractory`` flag also guards synaptic writes to
+        # the marked state variable, so arrivals to refractory cells are lost.
+        synaptic_state[active] += arrivals[active]
         current = np.flatnonzero(spikes).astype(np.uint32)
         if current.size:
             end_time = (step + 1) * parameters.dt_ms
@@ -491,17 +572,19 @@ def run_numpy_circuit(
                 synaptic_state[current] = 0.0
             refractory_until[current] = step + parameters.refractory_steps
             refractory_until[forced_indices] = step
+        readout_voltage[step] = voltage[readouts]
+        readout_synaptic_state[step] = synaptic_state[readouts]
     times = np.asarray(spike_times, dtype=np.float64)
     indices = np.asarray(spike_indices, dtype=np.uint32)
-    readouts = np.asarray(
-        [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32
-    )
     return CircuitRun(
         backend="numpy",
         spike_times_ms=times,
         spike_indices=indices,
         readout_rates_hz=_readout_rates(indices, readouts, parameters.duration_ms),
         schedule_sha256=schedule.identity(),
+        readout_voltage_mv=readout_voltage,
+        readout_synaptic_state_mv=readout_synaptic_state,
+        state_sample_dt_ms=parameters.dt_ms,
     )
 
 
@@ -526,6 +609,9 @@ def run_brian2_circuit(
     b2.prefs.codegen.target = "numpy"
     b2.defaultclock.dt = parameters.dt_ms * b2.ms
     stimulus = b2.TimedArray(forced, dt=parameters.dt_ms * b2.ms)
+    reset_rule = "v = reset; g = 0 * volt"
+    if not parameters.reset_synaptic_state_on_spike:
+        reset_rule = "v = reset"
     neurons = b2.NeuronGroup(
         graph.neuron_count,
         """
@@ -534,9 +620,9 @@ def run_brian2_circuit(
         rfc : second
         """,
         threshold="(v > threshold) or (stimulus(t, i) > 0.5)",
-        reset="v = reset; g = 0 * volt",
+        reset=reset_rule,
         refractory="rfc",
-        method="euler",
+        method="linear",
         namespace={
             "rest": parameters.resting_mv * b2.mV,
             "reset": parameters.reset_mv * b2.mV,
@@ -564,18 +650,29 @@ def run_brian2_circuit(
     )
     synapses.delay = parameters.synaptic_delay_ms * b2.ms
     monitor = b2.SpikeMonitor(neurons)
-    b2.run(parameters.duration_ms * b2.ms)
-    times = np.asarray(monitor.t / b2.ms, dtype=np.float64) + parameters.dt_ms
-    indices = np.asarray(monitor.i, dtype=np.uint32)
     readouts = np.asarray(
         [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32
     )
+    state_monitor = b2.StateMonitor(
+        neurons,
+        ("v", "g"),
+        record=readouts.astype(np.int64, copy=False),
+        when="end",
+    )
+    b2.run(parameters.duration_ms * b2.ms)
+    times = np.asarray(monitor.t / b2.ms, dtype=np.float64) + parameters.dt_ms
+    indices = np.asarray(monitor.i, dtype=np.uint32)
     return CircuitRun(
         backend="brian2",
         spike_times_ms=times,
         spike_indices=indices,
         readout_rates_hz=_readout_rates(indices, readouts, parameters.duration_ms),
         schedule_sha256=schedule.identity(),
+        readout_voltage_mv=np.asarray(state_monitor.v / b2.mV, dtype=np.float64).T,
+        readout_synaptic_state_mv=np.asarray(
+            state_monitor.g / b2.mV, dtype=np.float64
+        ).T,
+        state_sample_dt_ms=parameters.dt_ms,
     )
 
 
@@ -599,9 +696,24 @@ def run_genn_circuit(
     parameters.validate()
     if edge_signs.shape != graph.contact_counts.shape:
         raise ConfigurationError("edge_signs must align with circuit edges")
+    reset_code = "V = Vreset; RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;"
+    if parameters.reset_synaptic_state_on_spike:
+        reset_code = (
+            "V = Vreset; G = 0.0; "
+            "RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;"
+        )
     neuron_model = create_neuron_model(
         "MaleCNSStage1LIF",
-        params=("TauM", "TauSyn", "Vrest", "Vreset", "Vthresh", "TauRefrac", "Tonic"),
+        params=(
+            "MembraneDecay",
+            "SynapseDecay",
+            "SynapticVoltageCoefficient",
+            "Vrest",
+            "Vreset",
+            "Vthresh",
+            "TauRefrac",
+            "Tonic",
+        ),
         vars=(
             ("V", "scalar"),
             ("G", "scalar"),
@@ -610,18 +722,21 @@ def run_genn_circuit(
             ("InputCell", "scalar"),
         ),
         sim_code="""
-        G += Isyn;
         if (RefracTime > 0.0) {
             RefracTime -= dt;
             V = Vreset;
         }
         else {
-            V += (dt / TauM) * (Vrest - V + G + Tonic);
-            G += (dt / TauSyn) * (-G);
+            const scalar oldG = G;
+            const scalar baseline = Vrest + Tonic;
+            V = baseline + ((V - baseline) * MembraneDecay)
+                + (oldG * SynapticVoltageCoefficient);
+            G = oldG * SynapseDecay;
+            G += Isyn;
         }
         """,
         threshold_condition_code="Forced > 0.5 || (RefracTime <= 0.0 && V > Vthresh)",
-        reset_code="V = Vreset; G = 0.0; RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;",
+        reset_code=reset_code,
     )
     if "CUDA_PATH" not in os.environ:
         nvcc = shutil.which("nvcc")
@@ -634,21 +749,24 @@ def run_genn_circuit(
     identity.update(
         json.dumps(asdict(parameters), sort_keys=True, separators=(",", ":")).encode()
     )
-    model = GeNNModel("float", f"stage1_{identity.hexdigest()[:12]}", backend="cuda")
+    scalar_type = "double" if parameters.genn_precision == "float64-reference" else "float"
+    numpy_dtype = np.float64 if scalar_type == "double" else np.float32
+    model = GeNNModel(scalar_type, f"stage1_{identity.hexdigest()[:12]}", backend="cuda")
     model.dt = parameters.dt_ms
-    input_cells = np.zeros(graph.neuron_count, dtype=np.float32)
+    input_cells = np.zeros(graph.neuron_count, dtype=numpy_dtype)
     input_cells[schedule.input_indices] = 1.0
     population = model.add_neuron_population(
         "neurons",
         graph.neuron_count,
         neuron_model,
         {
-            "TauM": parameters.membrane_tau_ms,
-            "TauSyn": parameters.synapse_tau_ms,
+            "MembraneDecay": parameters.membrane_decay,
+            "SynapseDecay": parameters.synapse_decay,
+            "SynapticVoltageCoefficient": parameters.synaptic_voltage_coefficient,
             "Vrest": parameters.resting_mv,
             "Vreset": parameters.reset_mv,
             "Vthresh": parameters.threshold_mv,
-            "TauRefrac": parameters.refractory_ms,
+            "TauRefrac": parameters.genn_refractory_ms,
             "Tonic": parameters.tonic_drive_mv,
         },
         {
@@ -661,9 +779,9 @@ def run_genn_circuit(
     )
     population.spike_recording_enabled = True
     weights = (
-        graph.contact_counts.astype(np.float32)
-        * edge_signs.astype(np.float32)
-        * np.float32(parameters.synaptic_mv_per_contact)
+        graph.contact_counts.astype(numpy_dtype)
+        * edge_signs.astype(numpy_dtype)
+        * numpy_dtype(parameters.synaptic_mv_per_contact)
     )
     synapses = model.add_synapse_population(
         "edges",
@@ -690,7 +808,7 @@ def run_genn_circuit(
         raise RuntimeError(f"Expected one GeNN recording batch, got {len(recorded)}")
     times, indices = recorded[0]
     model.unload()
-    spike_times = np.asarray(times, dtype=np.float64) + parameters.dt_ms
+    spike_times = np.asarray(times, dtype=np.float64)
     spike_indices = np.asarray(indices, dtype=np.uint32)
     readouts = np.asarray(
         [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32
@@ -711,6 +829,20 @@ def compare_backend_runs(
     spike_time_tolerance_ms: float,
     rate_relative_tolerance: float,
 ) -> dict[str, Any]:
+    reference_counts = np.bincount(reference.spike_indices.astype(np.int64))
+    candidate_counts = np.bincount(candidate.spike_indices.astype(np.int64))
+    count_size = max(reference_counts.size, candidate_counts.size)
+    reference_counts = np.pad(reference_counts, (0, count_size - reference_counts.size))
+    candidate_counts = np.pad(candidate_counts, (0, count_size - candidate_counts.size))
+    count_differences = [
+        {
+            "dense_index": int(index),
+            "reference_spikes": int(reference_counts[index]),
+            "candidate_spikes": int(candidate_counts[index]),
+            "delta": int(candidate_counts[index] - reference_counts[index]),
+        }
+        for index in np.flatnonzero(reference_counts != candidate_counts)
+    ]
     same_count = reference.spike_indices.size == candidate.spike_indices.size
     reference_order = np.lexsort((reference.spike_times_ms, reference.spike_indices))
     candidate_order = np.lexsort((candidate.spike_times_ms, candidate.spike_indices))
@@ -764,6 +896,7 @@ def compare_backend_runs(
         "reference_backend": reference.backend,
         "candidate_backend": candidate.backend,
         "same_spike_count": same_count,
+        "per_neuron_count_differences": count_differences,
         "ordered_neuron_ids_match": same_ids,
         "maximum_spike_time_error_ms": maximum_time_error_ms,
         "maximum_signed_spike_time_delta_ms": maximum_signed_time_delta_ms,
@@ -791,6 +924,8 @@ def parameters_from_experiment(experiment: dict[str, Any]) -> TransferLIFParamet
         synaptic_mv_per_contact=float(published["synaptic_mv_per_contact"]),
         tonic_drive_mv=float(published["tonic_drive_mv"]),
         reset_synaptic_state_on_spike=bool(published["reset_synaptic_state_on_spike"]),
+        state_updater=str(published["transfer_state_updater"]),
+        genn_precision=str(published["transfer_genn_precision"]),
     )
     result.validate()
     return result
