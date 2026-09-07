@@ -40,6 +40,13 @@ Status date: 2026-09-07
 - Checksum-locked Shiu Figure 2 Supplementary Table 3 and its 106-type source population map.
   The source behavioral screen confusion matrix is reproduced exactly, and the transfer audit
   records 63 fully mapped, 38 partially mapped and 5 unresolved MaleCNS type populations.
+- Frozen, label-blind Figure 2 MaleCNS screen over all 101 mapped types and 30 trials per type,
+  using a bounded 2,714-neuron/258,586-edge circuit and direct batched PyGeNN. Exact,
+  shuffled-connectivity, cell-type-only, uniform/randomized-weight, weak-edge, four sign-policy,
+  zero-weight, and 50-microsecond timestep conditions are immutable and resumable.
+- Stage 1 baseline exit gate passed: exact balanced accuracy/AUROC are both 0.8077, shuffled
+  connectivity is 0.5, all states are finite, zero weights yield no MN9 response, and timestep
+  classifications agree 100%.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -82,9 +89,13 @@ Status date: 2026-09-07
   response amplitude with the source fallback scale. Numerical backend parity now passes.
   A preregistered global `ND-04` fit selects 0.075 mV/contact but produces zero responses on all
   eight positive held-out frequencies. The mapped `CB0496` silencing population is also absent
-  from MaleCNS annotations. Stage 1 therefore remains active and no V3 evidence is awarded.
-- The independent Figure 2 biological screen is prepared but its 101 mapped MaleCNS populations
-  have not been simulated. The biological labels are reserved for held-out evaluation.
+  from MaleCNS annotations. This remains a negative transfer result and awards no V3 evidence.
+- The Figure 2 screen passes the Stage 1 baseline but fails its stronger preregistered V3
+  specificity gate: the exact-graph AUROC exceeds cell-type-only by only 0.0105, below 0.05.
+  Population-level topology is supported over shuffled connectivity, but individual MaleCNS
+  wiring is not shown to add enough predictive value. No V1, V2, or V3 tier is awarded.
+- Receptor-aware polarity, fitted type-pair conductances/kinetics/delays, tonic drive, reduced
+  compartments, and held-out cellular/synaptic physiology remain Stage 2 work.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -92,7 +103,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
 [transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md). First Stage 1 experiment:
 [Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md) and
-[Shiu feeding-screen preparation](evidence/STAGE1_SHIU_FEEDING.md).
+[Shiu feeding-screen execution and review](evidence/STAGE1_SHIU_FEEDING.md).
 
 ## Measured foundation results
 
@@ -106,7 +117,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 65 passing |
+| Automated tests | 67 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
@@ -120,5 +131,5 @@ The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the 
 
 Highest validation tier: **V0 Structural**. It establishes dataset identity, lossless structural
 transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
-cross-connectome comparison. It makes no physiological or behavioral claim. Stage 1 open-loop
-neural validation is now the active scientific gate.
+cross-connectome comparison. It makes no physiological or behavioral claim. Stage 1's deliberately
+simple open-loop baseline is complete; Stage 2 fitted neural dynamics is now active.

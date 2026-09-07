@@ -1,7 +1,7 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.4
+Version: 1.5
 Last evidence review: 2026-09-07
 Last implementation audit: 2026-09-07
 Applies to: this repository and every subdirectory
@@ -28,11 +28,11 @@ These stable keys are intended for agent search and handoff:
 PROJECT_GOAL: MaleCNS-constrained embodied adult-male sensorimotor model
 CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital twin
 CANONICAL_CONNECTOME: MaleCNS v1.0
-CURRENT_STAGE: Stage 1 — open-loop neural baseline (active; V0 Structural passed)
+CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: zero-weight whole-graph load; source-faithful 41-neuron backend parity; typed-dynamics registry/runtime hooks; controller-only/Eon-like scaffolds
-NEXT_GATE: preregister and execute the mapped Figure 2 feeding screen without label fitting -> structural/sign controls -> Stage 1 review
+ENGINEERING_STATUS: zero-weight whole-graph load; source-faithful backend parity; 101-type/30-trial MaleCNS feeding screen and controls; typed-dynamics hooks; controller-only/Eon-like scaffolds
+NEXT_GATE: choose and lock Stage 2 physiological train/held-out datasets and losses -> fit receptor-aware polarity/type-pair dynamics -> selected V1/V2/V3 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -40,7 +40,7 @@ NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explici
 STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
-STAGE1_SECOND_CIRCUIT: Figure 2 source screen locked; 106 source types, 63 fully mapped, 38 partially mapped, 5 unresolved; MaleCNS simulation not run
+STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -73,12 +73,17 @@ bodies receive a class-level spiking prior and both `SAD093` readouts remain exp
 spiking-versus-graded alternatives. Per-edge type-pair scale hooks exist in NumPy, Brian2 and
 PyGeNN, but no typed scales are fitted or enabled.
 
-The next independent biological screen is also prepared. Shiu Figure 2 and Supplementary
-Table 3 contain 106 SEZ cell types with optogenetic rostrum-extension labels. The locked source
-confusion matrix is 10 true positives, 1 false positive, 91 true negatives and 4 false negatives.
-The paper-author crosswalk yields 63 fully mapped, 38 partially mapped and 5 unresolved MaleCNS
-type populations. This is mapping readiness only; the MaleCNS screen has not run and awards no
-new tier.
+Stage 1 completion checkpoint, 2026-09-07: the label-blind Figure 2 preregistration is locked at
+SHA-256 `51635491cb9384240f5d6b83a8e2161ef5b0f46da21646a85330758a48cdbfc2`, followed by
+an immutable prediction artifact and review
+`shiu-feeding-screen-stage1-review-3da6ffefaf9bdc6d.json` (SHA-256
+`3da6ffefaf9bdc6d753b0341612bd195af3d093a4033b9b3944f47840f7db927`). The complete
+101-mapped-type by 30-trial screen used a 2,714-neuron, 258,586-edge bounded MaleCNS circuit.
+Exact balanced accuracy and AUROC are both 0.8077; shuffled connectivity falls to 0.5, while
+cell-type-only remains 0.7972. All states are finite, the 50-microsecond sensitivity run gives
+identical classifications/AUROC, and zero weights give no MN9 response. These results pass the
+Stage 1 baseline exit gate. They fail the frozen 0.05 AUROC margin over cell-type-only (observed
+margin 0.0105), so they do not establish individual-connectome specificity and award no V3 tier.
 
 Useful retrieval commands:
 

@@ -1,53 +1,59 @@
-# Stage 1 Shiu feeding-screen preparation
+# Stage 1 Shiu feeding-screen execution
 
-- Implementation commit: `2e909709b0c05d4f9ab023fd27693a36252bc3dc`
-- Preparation report: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-preparation.json`
-- Preparation report SHA-256: `f32fb88863630cfcaf208b08439a2613a6605b3a7e1d610b344b530f7e4b8559`
+- Label-blind preregistration: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-preregistration-51635491cb938424.json`
+- Preregistration SHA-256: `51635491cb9384240f5d6b83a8e2161ef5b0f46da21646a85330758a48cdbfc2`
+- Frozen predictions: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-predictions-1cc35c1dfbb94aae.json`
+- Predictions SHA-256: `1cc35c1dfbb94aae6cfa953ea5e11d973fb06a15bd31527a0116cef859edc78a`
+- Final review: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-stage1-review-3da6ffefaf9bdc6d.json`
+- Review SHA-256: `3da6ffefaf9bdc6d753b0341612bd195af3d093a4033b9b3944f47840f7db927`
+- Stage 1 baseline exit: **passed**
+- Selected V3 specificity review: **failed**
 - Validation tier awarded: **none; V0 Structural remains the project maximum**
 
-## Source result locked
+## Frozen evaluation design
 
-The source repository remains pinned at commit
-`91bdd1e7dcf193f3e7ca5a8933497fcef63b7960`. Its primitive `sez_neurons.pickle` artifact is
-checksum-locked and read by a restricted unpickler that cannot import executable globals.
-The peer-reviewed Supplementary Tables workbook is locked at 2,539,037 bytes and SHA-256
-`6922e16825aa0c92a28e2a634b073dcad7641e9c9283c4b9d8ee1e34e6d9b8d9`.
+The source Figure 2 screen contains 106 SEZ cell types and independent optogenetic
+rostrum-extension outcomes. The paper-author crosswalk resolves 101 types to 430 traced MaleCNS
+bodies; five source types remain unresolved and were not guessed. Before simulation, the 101
+mapped populations, bilateral MN9 IDs, source LIF parameters, 30 trial labels, prediction rule,
+controls, timestep test, and acceptance thresholds were written to an immutable preregistration.
+Per-population outcome and source-prediction fields were absent from that artifact.
 
-Supplementary Table 3 supplies the model's bilateral MN9 rates and the independent
-optogenetic rostrum-extension fraction for 106 SEZ cell types. Using the paper's 50-Hz rule,
-with both bilateral MN9 rates required to be positive, the local extraction reproduces the
-source confusion matrix exactly:
+The bounded union of every mapped input body's shortest directed paths to either MN9 readout
+contains 2,714 neurons and 258,586 induced edges. Direct PyGeNN executed 101 types by 30 trials
+for every condition. CUDA batches were split into three deterministic ten-trial chunks without
+changing the frozen sample count. Each condition has a validated, label-blind checkpoint.
 
-| Source Figure 2 result | Count |
-|---|---:|
-| True positive | 10 |
-| False positive | 1 |
-| True negative | 91 |
-| False negative | 4 |
+## Results
 
-This reproduces a published table and acceptance rule. It does not yet evaluate a MaleCNS
-simulation.
+| Condition | Balanced accuracy | AUROC | TP / FP / TN / FN |
+|---|---:|---:|---:|
+| Exact MaleCNS | 0.8077 | 0.8077 | 8 / 0 / 88 / 5 |
+| Shuffled connectivity | 0.5000 | 0.5000 | 0 / 0 / 88 / 13 |
+| Cell-type-only | 0.7963 | 0.7972 | 8 / 2 / 86 / 5 |
+| Uniform weights | 0.5000 | 0.5000 | 0 / 0 / 88 / 13 |
+| Randomized weights | 0.5000 | 0.5000 | 0 / 0 / 88 / 13 |
+| Weak-edge dropout | 0.8077 | 0.8077 | 8 / 0 / 88 / 5 |
+| Zero weight | 0.5000 | 0.5000 | 0 / 0 / 88 / 13 |
+| 0.05-ms timestep | 0.8077 | 0.8077 | 8 / 0 / 88 / 5 |
 
-## MaleCNS transfer boundary
+All neural states were finite. Halving the neural timestep from 0.1 ms to 0.05 ms produced
+100% classification agreement and zero AUROC change. Zero synaptic weight produced no bilateral
+MN9 response. Excitatory, inhibitory, and seeded-balanced unresolved-sign alternatives were also
+executed and retained in the review artifact.
 
-The 372 FlyWire identities belonging to the 106 screened types are transferred through the
-paper-author MaleCNS/FlyWire mapping. Every target label is then resolved against both the
-`type` and `flywireType` fields of the traced MaleCNS annotations.
+## Scientific interpretation
 
-| Mapping status | Screened types |
-|---|---:|
-| Every source identity mapped | 63 |
-| At least one, but not every, source identity mapped | 38 |
-| No source identity mapped | 5 |
+The exact graph clears the frozen 0.75 balanced-accuracy and AUROC thresholds and substantially
+outperforms shuffled connectivity. Together with completed controls and numerical stability, this
+passes the deliberately simple Stage 1 baseline exit gate.
 
-All 101 types with at least one crosswalk label resolve to one or more traced MaleCNS bodies.
-The preparation report preserves every source identity, target label, target body ID, partial
-mapping and missing mapping. It does not guess replacements.
+It does not clear the stronger selected-V3 specificity gate. Exact AUROC exceeds cell-type-only
+by 0.0105, below the preregistered 0.05 margin. The result supports useful signal in population-
+level MaleCNS topology, but does not show that individual-neuron wiring contributes enough beyond
+cell-type structure for this transferred task. No V3 bundle is issued, and the repository's V1
+and V2 prerequisites remain unpassed.
 
-## Next executable gate
-
-The next step is to freeze the 101-type mapped subset and the bilateral MN9 decision rule before
-running MaleCNS. Exact-graph predictions must be compared with shuffled-connectivity,
-cell-type-only and sign alternatives. The optogenetic labels cannot be used for parameter
-fitting; they remain the held-out biological evaluation. Until those runs complete, the
-simulation status is `not-run`, Stage 1 remains active, and no V3 evidence is awarded.
+Stage 2 must now fit receptor-aware signs, type-pair conductances, kinetics, delays, tonic drive,
+and selected graded/spiking families against declared training physiology before new held-out
+cellular, synaptic, or circuit claims are reviewed.
