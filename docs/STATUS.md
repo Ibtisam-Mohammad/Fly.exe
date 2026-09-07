@@ -22,6 +22,12 @@ Status date: 2026-09-07
   float32 PyGeNN 5.4.0; all 14 ordered spikes match within the 100-microsecond gate.
 - Executable Shiu transmitter-only sign regression with named zero, excitatory, inhibitory,
   and seeded-balanced unresolved-sign policies. None is the physiological default.
+- Pinned Shiu et al. FlyWire v630 repository and 4.5-GB archived output dataset, including
+  source MD5/local SHA-256 identity and a resumable-download repair for ignored HTTP ranges.
+- Figure 5g JON-F-to-aBN1 published-output analysis reproduction and an evidence-backed
+  FlyWire-to-MaleCNS crosswalk. The transferred circuit resolves 41 neurons and 129 edges.
+- `flysim benchmark circuit --experiment shiu-antennal-grooming`, with NumPy, Brian2 and
+  direct PyGeNN execution plus cell-type, connectivity, weight, weak-edge and sign controls.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -58,12 +64,17 @@ Status date: 2026-09-07
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
 - No cellular, synaptic, circuit, brain-wide, motor-interface, embodied, behavioral, or
   generalization tier has passed. V0 does not validate functional dynamics.
+- The first Shiu transfer preserves the rising frequency-response direction but overpredicts
+  response amplitude. NumPy-to-GeNN passes the 0.1-ms gate; the transferred Brian2 comparison
+  fails the 1% rate gate at 9.09%, and the mapped `CB0496` silencing population is absent from
+  MaleCNS annotations. Stage 1 therefore remains active and no V3 evidence is awarded.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
 [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
 [LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
-[transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md).
+[transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md). First Stage 1 experiment:
+[Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md).
 
 ## Measured foundation results
 
@@ -77,7 +88,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 49 passing |
+| Automated tests | 55 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 

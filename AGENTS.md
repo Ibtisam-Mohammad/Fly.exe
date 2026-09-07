@@ -31,12 +31,14 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 1 — open-loop neural baseline (active; V0 Structural passed)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: zero-weight GeNN topology load, deterministic NumPy/Brian2/PyGeNN parity, and controller-only/Eon-like scaffolds only
-NEXT_GATE: Stage 1 open-loop circuit reproduction -> shuffled-connectome and cell-type-only controls -> selected V3 review
+ENGINEERING_STATUS: zero-weight GeNN topology load; deterministic small-fixture parity; first bounded Shiu circuit transfer and controls complete but three-backend transfer parity failed
+NEXT_GATE: reconcile Shiu Brian2 solver semantics -> fit amplitude without hiding mismatch -> reproduce a second biologically anchored circuit -> selected V3 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: deterministic three-neuron fixture passes NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
+STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
+STAGE1_SHIU_TRANSFER: 41 neurons, 129 edges; rising response direction transfers but amplitude and Brian2 parity fail; no V3 awarded
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -52,6 +54,12 @@ required structural gates. The full-profile boundary remains the seven registere
 artifacts; it excludes bulk skeleton collections, segmentation volumes, and the neuPrint database.
 Ten fixed bilateral descending, antennal-sensory, and motor SWC canaries provide lazy morphology
 coverage. V0 is structural evidence only: it validates neither neural dynamics nor behavior.
+
+Stage 1 checkpoint, 2026-09-07: the first Shiu Figure 5g transfer report is immutable at
+`/srv/flybrain-data/evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-30e3e5c6eec6fa62.json`
+(SHA-256 `30e3e5c6eec6fa62a727e8ce77790c7958bbda0e0c5cbfe1be73019f6e72fcf0`).
+It reproduces the archived raw-output analysis and executes the bounded MaleCNS circuit and
+controls. It does not pass the three-backend parity or amplitude gates and awards no new tier.
 
 Useful retrieval commands:
 
