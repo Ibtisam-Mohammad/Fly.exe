@@ -1,8 +1,8 @@
 # Stage 1 Shiu antennal-grooming transfer
 
-- Implementation commit: `2960bd4095358f26e4d5056d34755869fb8cb199`
-- Immutable transfer report: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-5030d977b1ac76a7.json`
-- Transfer report SHA-256: `5030d977b1ac76a71d7be4c59797e3b497a7c1bd12a1fa351c762186fdd73eca`
+- Implementation commit: `2e909709b0c05d4f9ab023fd27693a36252bc3dc`
+- Immutable transfer report: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-1290b8d717eaff49.json`
+- Transfer report SHA-256: `1290b8d717eaff4956fa90f0e5fe233a5ab25022e4a72d1de5165ead3d9aa577`
 - Published-output reference: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-figure5g-reference.json`
 - Reference report SHA-256: `c8a8a26682f58a1dc7b084a610f47db1013bfbf3ec75f66249da27dcb5ff409b`
 - Validation tier awarded: **none; V0 Structural remains the project maximum**
@@ -73,6 +73,12 @@ has identical identities, counts, and rates, with a maximum difference of one 0.
 Whole-CNS production remains float32; float64 is used here only to make the small-circuit
 numerical oracle deterministic.
 
+The report now embeds the versioned `male-cns-cell-dynamics-v0.1` registry. It assigns a
+class-level spiking prior to the 39 selected JO-F bodies and preserves both `SAD093` readouts as
+unresolved LIF-versus-passive-graded alternatives. The report also enumerates all 13 observed
+type-pair edge classes. The source-faithful LIF regression remains active for this result;
+typed hybrid execution and type-pair scales are not fitted or enabled.
+
 The preregistered `ND-04` fit searched 11 nonnegative global contact scales using only 20, 100,
 and 220 Hz. It selected 0.075 mV/contact with a training RMSE of 2.259 Hz. After freezing that
 value, all eight held-out frequencies from 40 through 200 Hz produced zero bilateral readout
@@ -87,6 +93,6 @@ This work completes the first bounded Stage 1 experiment, its crosswalk, source-
 parity, 11-frequency sweep, controls, held-out fit test, and immutable report. It does not pass
 the Stage 1 exit gate and awards no V1, V2, or V3 evidence. The blockers are now explicit: the
 global `ND-04` scale fails held-out transfer, mapped `CB0496` silencing is unavailable, and the
-reference is simulation output rather than biological response data. The next gate is a
-preregistered typed-dynamics replacement plus a second independent circuit with biological
-stimulation or silencing evidence before any selected V3 review.
+reference is simulation output rather than biological response data. The next gate is
+preregistered execution of the prepared Figure 2 feeding screen, using its biological labels
+only for held-out evaluation, before any selected V3 review.

@@ -1,8 +1,8 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.3
-Last evidence review: 2026-09-06
+Version: 1.4
+Last evidence review: 2026-09-07
 Last implementation audit: 2026-09-07
 Applies to: this repository and every subdirectory
 
@@ -31,14 +31,16 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 1 — open-loop neural baseline (active; V0 Structural passed)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: zero-weight whole-graph load; source-faithful 41-neuron NumPy/Brian2/PyGeNN circuit parity; controller-only/Eon-like scaffolds
-NEXT_GATE: replace failed global ND-04 scale with preregistered typed dynamics -> reproduce a second biologically anchored circuit -> selected V3 review
+ENGINEERING_STATUS: zero-weight whole-graph load; source-faithful 41-neuron backend parity; typed-dynamics registry/runtime hooks; controller-only/Eon-like scaffolds
+NEXT_GATE: preregister and execute the mapped Figure 2 feeding screen without label fitting -> structural/sign controls -> Stage 1 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
 STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
-STAGE1_SHIU_TRANSFER: 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
+STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
+STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
+STAGE1_SECOND_CIRCUIT: Figure 2 source screen locked; 106 source types, 63 fully mapped, 38 partially mapped, 5 unresolved; MaleCNS simulation not run
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -56,14 +58,27 @@ Ten fixed bilateral descending, antennal-sensory, and motor SWC canaries provide
 coverage. V0 is structural evidence only: it validates neither neural dynamics nor behavior.
 
 Stage 1 checkpoint, 2026-09-07: immutable transfer report
-`shiu-antennal-grooming-transfer-5030d977b1ac76a7.json` (SHA-256
-`5030d977b1ac76a71d7be4c59797e3b497a7c1bd12a1fa351c762186fdd73eca`) executes all
+`shiu-antennal-grooming-transfer-1290b8d717eaff49.json` (SHA-256
+`1290b8d717eaff4956fa90f0e5fe233a5ab25022e4a72d1de5165ead3d9aa577`) executes all
 11 Figure 5g frequencies and five structural controls. NumPy, Brian2 and float64 reference GeNN
 pass the registered spike-count/rate/timing parity gate. A preregistered one-parameter `ND-04`
 fit selected 0.075 mV/contact but produced zero positive responses at all eight held-out
 frequencies. This is a recorded negative cross-connectome result: Stage 1 remains active and no
 V1, V2 or V3 tier is awarded. Whole-CNS production precision remains float32; float64 GeNN is
 used only for this bounded numerical oracle.
+
+The versioned `male-cns-cell-dynamics-v0.1` registry now resolves the selected circuit's
+class-level signaling evidence without changing its source-faithful LIF execution: 39 JO-F
+bodies receive a class-level spiking prior and both `SAD093` readouts remain explicit
+spiking-versus-graded alternatives. Per-edge type-pair scale hooks exist in NumPy, Brian2 and
+PyGeNN, but no typed scales are fitted or enabled.
+
+The next independent biological screen is also prepared. Shiu Figure 2 and Supplementary
+Table 3 contain 106 SEZ cell types with optogenetic rostrum-extension labels. The locked source
+confusion matrix is 10 true positives, 1 false positive, 91 true negatives and 4 false negatives.
+The paper-author crosswalk yields 63 fully mapped, 38 partially mapped and 5 unresolved MaleCNS
+type populations. This is mapping readiness only; the MaleCNS screen has not run and awards no
+new tier.
 
 Useful retrieval commands:
 

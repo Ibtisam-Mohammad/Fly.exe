@@ -77,6 +77,6 @@
   ],
   "permitted_claim": "Supports reproduction of the published Shiu LIF computation and a labelled cross-connectome MaleCNS transfer benchmark.",
   "forbidden_claim": "Does not validate MaleCNS physiology, receptor-dependent sign, whole-CNS dynamics, grooming behavior, or source-fly state.",
-  "status": "repository inputs and results.zip checksum-locked",
+  "status": "repository inputs, results.zip, and Figure 2 supplementary workbook checksum-locked",
   "last_reviewed": "2026-09-07"
 }

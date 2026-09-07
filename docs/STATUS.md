@@ -34,6 +34,12 @@ Status date: 2026-09-07
 - All 11 Figure 5g frequencies, an explicit three-frequency `ND-04` training split, and an
   eight-frequency held-out split. The frozen global scale fails held-out activation, and that
   negative result is retained in the immutable report.
+- Versioned `male-cns-cell-dynamics-v0.1` registry plus NumPy, Brian2 and PyGeNN per-edge
+  type-pair scale hooks. In the first circuit, 39 JO-F bodies have class-level spiking priors
+  and both `SAD093` readouts remain explicit spiking-versus-graded alternatives.
+- Checksum-locked Shiu Figure 2 Supplementary Table 3 and its 106-type source population map.
+  The source behavioral screen confusion matrix is reproduced exactly, and the transfer audit
+  records 63 fully mapped, 38 partially mapped and 5 unresolved MaleCNS type populations.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -59,6 +65,8 @@ Status date: 2026-09-07
 ## Not implemented or not yet validated
 
 - The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
+- The dynamics registry is an executable uncertainty boundary, not a fitted hybrid model.
+  Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
 - FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
 - The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
 - DNa01/DNa02, MN9, and JO-F populations resolve from official annotations. The sourced
@@ -75,13 +83,16 @@ Status date: 2026-09-07
   A preregistered global `ND-04` fit selects 0.075 mV/contact but produces zero responses on all
   eight positive held-out frequencies. The mapped `CB0496` silencing population is also absent
   from MaleCNS annotations. Stage 1 therefore remains active and no V3 evidence is awarded.
+- The independent Figure 2 biological screen is prepared but its 101 mapped MaleCNS populations
+  have not been simulated. The biological labels are reserved for held-out evaluation.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
 [morphology canaries](evidence/MORPHOLOGY_CANARIES.md). Numerical implementation evidence:
 [LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
 [transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md). First Stage 1 experiment:
-[Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md).
+[Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md) and
+[Shiu feeding-screen preparation](evidence/STAGE1_SHIU_FEEDING.md).
 
 ## Measured foundation results
 
@@ -95,7 +106,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 58 passing, 1 optional skipped |
+| Automated tests | 65 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
