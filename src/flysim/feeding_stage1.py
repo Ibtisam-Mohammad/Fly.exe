@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import gc
+import hashlib
 import json
 import os
 import shutil
@@ -107,6 +109,76 @@ def _run_chunked_screen(
         "execution_chunks": len(results),
         "maximum_seeds_per_chunk": _MAX_SEEDS_PER_GENN_BATCH,
     }
+
+
+def _cached_screen_run(
+    *,
+    cache_path: Path,
+    preregistration_sha256: str,
+    family: str,
+    variant: str,
+    graph: SparseConnectome,
+    edge_signs: np.ndarray,
+    populations: dict[str, tuple[int, ...]],
+    parameters: Any,
+    readouts: tuple[int, ...],
+    frequency_hz: float,
+    seed_labels: tuple[int, ...],
+    master_seed: int,
+    build_path: Path,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    sign_digest = hashlib.sha256(
+        np.asarray(edge_signs, dtype="<f4").tobytes()
+    ).hexdigest()
+    identity = {
+        "preregistration_sha256": preregistration_sha256,
+        "family": family,
+        "variant": variant,
+        "graph_sha256": graph.source_sha256,
+        "edge_signs_sha256": sign_digest,
+        "dt_ms": float(parameters.dt_ms),
+        "duration_ms": float(parameters.duration_ms),
+        "frequency_hz": frequency_hz,
+        "seed_labels": list(seed_labels),
+        "master_seed": master_seed,
+    }
+    if cache_path.exists():
+        cached = load_json(cache_path)
+        if cached.get("identity") != identity:
+            raise DatasetError(f"Refusing mismatched feeding-screen checkpoint: {cache_path}")
+        return dict(cached["run"])
+    result = _run_chunked_screen(
+        graph=graph,
+        edge_signs=edge_signs,
+        populations=populations,
+        parameters=parameters,
+        readouts=readouts,
+        frequency_hz=frequency_hz,
+        seed_labels=seed_labels,
+        master_seed=master_seed,
+        build_path=build_path,
+    )
+    record = {
+        "family": family,
+        "variant": variant,
+        "graph_sha256": graph.source_sha256,
+        "neurons": graph.neuron_count,
+        "edges": graph.edge_count,
+        **(extra or {}),
+        **result,
+    }
+    _atomic_json(
+        cache_path,
+        {
+            "schema_version": "1.0",
+            "status": "completed-label-blind-condition",
+            "identity": identity,
+            "run": record,
+        },
+    )
+    gc.collect()
+    return record
 
 
 def preregister_feeding_screen(
@@ -242,6 +314,10 @@ def execute_feeding_screen(
         unresolved_policy=UnresolvedSignPolicy.ZERO,
         seed=master_seed,
     )
+    preregistration_sha256 = sha256_file(preregistration_path)
+    checkpoint_root = (
+        root / "evidence" / "male-cns-v1.0" / "stage1-feeding-screen-runs"
+    )
     runs: list[dict[str, Any]] = []
     for variant in protocol["structural_controls"]:
         control_graph = build_control_graph(
@@ -257,7 +333,11 @@ def execute_feeding_screen(
             unresolved_policy=UnresolvedSignPolicy.ZERO,
             seed=master_seed,
         )
-        run = _run_chunked_screen(
+        run = _cached_screen_run(
+            cache_path=checkpoint_root / f"structural-{variant}.json",
+            preregistration_sha256=preregistration_sha256,
+            family="structural-control",
+            variant=str(variant),
             graph=control_graph,
             edge_signs=signs.edge_signs,
             populations=selected_populations,
@@ -271,18 +351,9 @@ def execute_feeding_screen(
             / "genn"
             / "stage1-feeding"
             / f"{variant}-{control_graph.source_sha256[:12]}",
+            extra={"unresolved_sign_policy": UnresolvedSignPolicy.ZERO.value},
         )
-        runs.append(
-            {
-                "family": "structural-control",
-                "variant": variant,
-                "graph_sha256": control_graph.source_sha256,
-                "neurons": control_graph.neuron_count,
-                "edges": control_graph.edge_count,
-                "unresolved_sign_policy": UnresolvedSignPolicy.ZERO.value,
-                **run,
-            }
-        )
+        runs.append(run)
 
     for policy_name in protocol["sign_controls"]:
         policy = UnresolvedSignPolicy(str(policy_name))
@@ -294,7 +365,11 @@ def execute_feeding_screen(
             unresolved_policy=policy,
             seed=master_seed,
         )
-        run = _run_chunked_screen(
+        run = _cached_screen_run(
+            cache_path=checkpoint_root / f"sign-{policy.value}.json",
+            preregistration_sha256=preregistration_sha256,
+            family="sign-sensitivity",
+            variant=policy.value,
             graph=selection.graph,
             edge_signs=signs.edge_signs,
             populations=selected_populations,
@@ -308,20 +383,15 @@ def execute_feeding_screen(
             / "genn"
             / "stage1-feeding"
             / f"sign-{policy.value}-{selection.graph.source_sha256[:12]}",
+            extra={"unresolved_sign_policy": policy.value},
         )
-        runs.append(
-            {
-                "family": "sign-sensitivity",
-                "variant": policy.value,
-                "graph_sha256": selection.graph.source_sha256,
-                "neurons": selection.graph.neuron_count,
-                "edges": selection.graph.edge_count,
-                "unresolved_sign_policy": policy.value,
-                **run,
-            }
-        )
+        runs.append(run)
 
-    zero_run = _run_chunked_screen(
+    zero_run = _cached_screen_run(
+        cache_path=checkpoint_root / "negative-zero-weight.json",
+        preregistration_sha256=preregistration_sha256,
+        family="negative-control",
+        variant="zero-weight",
         graph=selection.graph,
         edge_signs=np.zeros(selection.graph.edge_count, dtype=np.float32),
         populations=selected_populations,
@@ -336,21 +406,16 @@ def execute_feeding_screen(
         / "stage1-feeding"
         / f"zero-weight-{selection.graph.source_sha256[:12]}",
     )
-    runs.append(
-        {
-            "family": "negative-control",
-            "variant": "zero-weight",
-            "graph_sha256": selection.graph.source_sha256,
-            "neurons": selection.graph.neuron_count,
-            "edges": selection.graph.edge_count,
-            **zero_run,
-        }
-    )
+    runs.append(zero_run)
 
     sensitivity_parameters = replace(
         parameters, dt_ms=float(protocol["timestep_sensitivity_ms"])
     )
-    dt_run = _run_chunked_screen(
+    dt_run = _cached_screen_run(
+        cache_path=checkpoint_root / f"sensitivity-dt-{sensitivity_parameters.dt_ms}.json",
+        preregistration_sha256=preregistration_sha256,
+        family="numerical-sensitivity",
+        variant=f"dt-{sensitivity_parameters.dt_ms}-ms",
         graph=selection.graph,
         edge_signs=base_signs.edge_signs,
         populations=selected_populations,
@@ -365,23 +430,14 @@ def execute_feeding_screen(
         / "stage1-feeding"
         / f"dt-{sensitivity_parameters.dt_ms}-{selection.graph.source_sha256[:12]}",
     )
-    runs.append(
-        {
-            "family": "numerical-sensitivity",
-            "variant": f"dt-{sensitivity_parameters.dt_ms}-ms",
-            "graph_sha256": selection.graph.source_sha256,
-            "neurons": selection.graph.neuron_count,
-            "edges": selection.graph.edge_count,
-            **dt_run,
-        }
-    )
+    runs.append(dt_run)
     payload: dict[str, Any] = {
         "schema_version": "1.0",
         "status": "predictions-frozen-before-outcome-evaluation",
         "experiment_id": preregistration["experiment_id"],
         "code_commit": _code_commit(),
         "preregistration_path": str(preregistration_path.resolve()),
-        "preregistration_sha256": sha256_file(preregistration_path),
+        "preregistration_sha256": preregistration_sha256,
         "selection": selection.as_dict(),
         "parameters": {
             "primary_dt_ms": parameters.dt_ms,
