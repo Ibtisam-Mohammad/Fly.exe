@@ -24,6 +24,8 @@ def test_project_assumptions_are_complete_and_unique() -> None:
         "ND-07",
         "ND-08",
         "ND-09",
+        "ND-LIF-01",
+        "TRACKA-01",
         "SENS-01",
         "SENS-02",
         "SENS-03",
@@ -39,8 +41,10 @@ def test_project_assumptions_are_complete_and_unique() -> None:
         "LEARN-01",
         "NUM-01",
         "VAL-01",
+        "BENCH-01",
+        "DEMO-01",
     )
-    assert registry.assumption_set_id == "foundation-v0.3"
+    assert registry.assumption_set_id == "foundation-v0.5"
     assert registry.sha256
 
 

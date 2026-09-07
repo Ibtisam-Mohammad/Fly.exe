@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.3",
+  "assumption_set_id": "foundation-v0.5",
   "records": [
     {
       "id": "DATA-01",
@@ -136,6 +136,21 @@
       "validation": "interface and causal-ablation tests only",
       "owner": "neural",
       "last_reviewed": "2026-09-04"
+    },
+    {
+      "id": "TRACKA-01",
+      "name": "full-graph Eon-like engineering baseline",
+      "value": {"neural_dt_us": 100, "resting_mv": -52.0, "reset_mv": -52.0, "threshold_mv": -45.0, "membrane_tau_ms": 20.0, "synapse_tau_ms": 5.0, "refractory_ms": 2.2, "synaptic_delay_ms": 0.1, "synaptic_mv_per_contact": 0.275, "central_entry_outgoing_gain": 10.0, "forward_intent_rate_hz": 20.0, "tonic_drive_mv": 0.0, "reset_synaptic_state_on_spike": true, "unresolved_sign_policy": "zero", "odor_max_rate_hz": 1000.0, "contamination_max_rate_hz": 1000.0, "sucrose_rate_hz": 1000.0},
+      "units": "microseconds, milliseconds, millivolts, hertz, and contact-count scale",
+      "provenance": "M/P/E",
+      "applies_to": "Track A direct-PyGeNN full aggregate graph only",
+      "source": "https://doi.org/10.1038/s41586-024-07763-9",
+      "biological_mismatch": "Global LIF values and transmitter-only signs are transferred from a female FlyWire model; central DM1/DM4 PN and GNG588 inputs bypass absent peripheral receptors, their 1-kHz ceiling is a circuit stress-drive, the 10x central-entry outgoing gain stands in for omitted amplification, and DNg97 receives a 20-Hz odor-gated intent bias because the fallback graph does not recruit it autonomously.",
+      "uncertainty": "Track A uses the minimum one-step uniform delay and Shiu screen frequency range to keep the sparse central-relay paths executable; receptor-aware signs, type-pair strengths, path-length delays, tonic drive, and hybrid cell families remain Stage 2 work.",
+      "status": "accepted",
+      "validation": "numeric population resolution, full-edge execution, causal ablations, structural controls, and Track A seed/location acceptance suite",
+      "owner": "track-a",
+      "last_reviewed": "2026-09-07"
     },
     {
       "id": "ND-03",
@@ -290,7 +305,7 @@
     {
       "id": "SENS-04",
       "name": "dust and contact transduction scaffold",
-      "value": {"dust_deposition_per_s": 1.2, "dust_exposure_cap": 0.5, "single_dust_exposure": true, "groom_removal_per_s": 1.8, "contamination_trigger": 0.5, "contamination_release": 0.15, "food_contact_radius_mm": 0.45},
+      "value": {"dust_deposition_per_s": 4.0, "dust_exposure_cap": 0.5, "single_dust_exposure": true, "groom_removal_per_s": 1.8, "contamination_trigger": 0.5, "contamination_release": 0.15, "food_contact_radius_mm": 1.0},
       "units": "normalized load per second and mm",
       "provenance": "E",
       "applies_to": "reference world/body sensors",
@@ -319,18 +334,18 @@
     },
     {
       "id": "BODY-01",
-      "name": "reference body and arena geometry",
-      "value": {"initial_x_mm": 0.0, "initial_y_mm": 0.0, "initial_heading_rad": 0.0, "food_x_mm": 8.0, "food_y_mm": 1.0, "dust_x_mm": 3.0, "dust_y_mm": 0.35, "dust_radius_mm": 0.8},
+      "name": "FlyGym body prior and Track A arena geometry",
+      "value": {"initial_x_mm": 0.0, "initial_y_mm": 0.0, "initial_heading_rad": 0.0, "spawn_height_mm": 0.5, "food_x_mm": 8.0, "food_y_mm": 1.0, "dust_x_mm": 2.0, "dust_y_mm": 0.0, "dust_radius_mm": 1.5},
       "units": "mm and radians",
-      "provenance": "E",
-      "applies_to": "kinematic preview body",
-      "source": "local engineering scaffold",
-      "biological_mismatch": "Point-body preview; FlyGym/NeuroMechFly replacement required.",
-      "uncertainty": null,
+      "provenance": "P/E",
+      "applies_to": "FlyGym/NeuroMechFly Track A body and reference kinematic control",
+      "source": "https://doi.org/10.1038/s41592-024-02497-y",
+      "biological_mismatch": "Published female body, ideal joint actuators, and controller dynamics are not the MaleCNS donor's body or muscles.",
+      "uncertainty": "Male scaling and actuator replacement remain unresolved; the kinematic point body remains a controller-only regression adapter.",
       "status": "accepted",
-      "validation": "BODY-01 FlyGym replacement gate",
+      "validation": "FlyGym execution, deterministic state transitions, contact traces, and controller-only comparison",
       "owner": "body",
-      "last_reviewed": "2026-09-04"
+      "last_reviewed": "2026-09-07"
     },
     {
       "id": "BODY-02",
@@ -380,17 +395,17 @@
     {
       "id": "MOTOR-03",
       "name": "demo neural-readout actuator decoder",
-      "value": {"max_forward_mm_s": 2.2, "yaw_gain_rad_s_per_hz": 0.16, "max_yaw_rad_s": 2.5, "forward_half_rate_hz": 12.0, "groom_bout_min_us": 300000, "groom_refractory_us": 500000, "feed_extension_us": 1000000, "trigger_sigma": 3.0, "release_sigma": 1.0, "threshold_sd_floor_hz": 0.5, "baseline_window_us": 100000, "readout_window_us": 100000},
+      "value": {"max_forward_mm_s": 2.2, "yaw_gain_rad_s_per_hz": 0.005, "odor_gradient_yaw_gain_rad_s": 30.0, "max_yaw_rad_s": 2.5, "forward_half_rate_hz": 12.0, "groom_bout_min_us": 3000000, "groom_refractory_us": 500000, "feed_extension_us": 1000000, "feed_min_evoked_rate_hz": 50.0, "feed_rostrum_extension_rad": 0.6, "feed_haustellum_extension_rad": 0.8, "trigger_sigma": 3.0, "release_sigma": 1.0, "threshold_sd_floor_hz": 0.5, "baseline_window_us": 100000, "readout_window_us": 100000},
       "units": "mixed; keys include units",
       "provenance": "E",
-      "applies_to": "Track A reference controller",
+      "applies_to": "Track A reference and full-graph actuator controllers",
       "source": "Eon-inspired but independently implemented scaffold",
       "biological_mismatch": "Descending readouts control kinematics and grooming pose rather than the complete VNC/muscle hierarchy.",
       "uncertainty": "controller gains require sensitivity sweeps",
       "status": "accepted",
       "validation": "controller-only and neural-ablation controls",
       "owner": "motor",
-      "last_reviewed": "2026-09-04"
+      "last_reviewed": "2026-09-07"
     },
     {
       "id": "STATE-01",

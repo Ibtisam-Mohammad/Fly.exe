@@ -17,6 +17,8 @@ from flysim.engines.reference import (
     OUTPUT_FORWARD,
     OUTPUT_GROOM,
     SENSOR_CONTAMINATION,
+    SENSOR_ODOR_L,
+    SENSOR_ODOR_R,
     SENSOR_SUCROSE,
 )
 
@@ -33,11 +35,13 @@ class DemoState(StrEnum):
 class ControllerParameters:
     max_forward_mm_s: float
     yaw_gain_rad_s_per_hz: float
+    odor_gradient_yaw_gain_rad_s: float
     max_yaw_rad_s: float
     forward_half_rate_hz: float
     groom_bout_min_us: int
     groom_refractory_us: int
     feed_extension_us: int
+    feed_min_evoked_rate_hz: float
     trigger_sigma: float
     release_sigma: float
     threshold_sd_floor_hz: float
@@ -170,6 +174,7 @@ class EonDemoController:
                 self.state == DemoState.SEEK_RESUME
                 and baseline_complete
                 and sucrose > 0.0
+                and feed_rate >= self.parameters.feed_min_evoked_rate_hz
                 and feed_rate > self.feed_threshold.trigger
             ):
                 self._transition(t_us, DemoState.FEED_INITIATION, "sucrose-and-MN9-readout")
@@ -199,7 +204,13 @@ class EonDemoController:
             )
             left_rate = neural.value_for(OUTPUT_DNA_L)
             right_rate = neural.value_for(OUTPUT_DNA_R)
-            raw_yaw = self.parameters.yaw_gain_rad_s_per_hz * (left_rate - right_rate)
+            odor_left = sensors.value_for(SENSOR_ODOR_L)
+            odor_right = sensors.value_for(SENSOR_ODOR_R)
+            raw_yaw = (
+                self.parameters.yaw_gain_rad_s_per_hz * (left_rate - right_rate)
+                + self.parameters.odor_gradient_yaw_gain_rad_s
+                * (odor_left - odor_right)
+            )
             yaw = min(self.parameters.max_yaw_rad_s, max(-self.parameters.max_yaw_rad_s, raw_yaw))
         elif self.state == DemoState.GROOM:
             grooming = 1.0
@@ -222,11 +233,13 @@ def controller_parameters(motor: dict[str, Any], sensory: dict[str, Any]) -> Con
     return ControllerParameters(
         max_forward_mm_s=float(motor["max_forward_mm_s"]),
         yaw_gain_rad_s_per_hz=float(motor["yaw_gain_rad_s_per_hz"]),
+        odor_gradient_yaw_gain_rad_s=float(motor["odor_gradient_yaw_gain_rad_s"]),
         max_yaw_rad_s=float(motor["max_yaw_rad_s"]),
         forward_half_rate_hz=float(motor["forward_half_rate_hz"]),
         groom_bout_min_us=int(motor["groom_bout_min_us"]),
         groom_refractory_us=int(motor["groom_refractory_us"]),
         feed_extension_us=int(motor["feed_extension_us"]),
+        feed_min_evoked_rate_hz=float(motor["feed_min_evoked_rate_hz"]),
         trigger_sigma=float(motor["trigger_sigma"]),
         release_sigma=float(motor["release_sigma"]),
         threshold_sd_floor_hz=float(motor["threshold_sd_floor_hz"]),

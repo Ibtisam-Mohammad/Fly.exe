@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "eon-malecns-v0.2",
+  "track": "A",
+  "assumption_set": "foundation-v0.5",
+  "required_assumptions": ["DATA-01", "DATA-03", "DATA-04", "NUM-01", "ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-06", "ND-07", "ND-08", "TRACKA-01", "SENS-03", "SENS-04", "BODY-01", "BODY-02", "MOTOR-03", "STATE-01", "DEMO-01"],
+  "neural_backend": "direct-pygenn-5.4-full-aggregate-graph",
+  "body_backend": "FlyGym-2.1-MuJoCo-3.9",
+  "graph_requirement": "complete status=Traced MaleCNS v1.0 aggregate graph",
+  "claim_boundary": "Full-graph Eon-like engineering demonstration with central sensory relays, direct DNg97 intent drive, odor-gradient steering, and actuator controllers; it is not autonomous connectome-generated behavior and awards no neural, motor-interface, embodied, or behavioral validation tier.",
+  "scaffolds": ["Shiu transmitter-only LIF regression", "one-step uniform synaptic delay", "10x outgoing gain at injected central entries", "DM1/DM4 PN odor relay bypass", "GNG588/Fdg sucrose relay bypass", "odor-gated direct DNg97 forward-intent drive", "DNa readout plus odor-gradient steering controller", "Ozdil-2026 kinematic grooming replay", "joint-actuated feeding initiation"],
+  "omissions": ["peripheral Or42b and Gr5a/Gr64f neurons", "receptor-aware polarity", "fitted hybrid dynamics", "biological VNC grooming execution", "NMJ and muscles", "ingestion and metabolism", "causal vision"]
+}

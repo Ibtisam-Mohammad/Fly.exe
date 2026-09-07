@@ -47,7 +47,7 @@ flysim data validate --root /srv/flybrain-data
 flysim data import-aggregate --root /srv/flybrain-data
 flysim benchmark neural --scales 0.01 0.1 1.0 --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
 flysim run eon-demo --seed 1 --headless
-flysim run eon-malecns --graph /srv/flybrain-data/derived/male-cns-v1.0/graph --headless
+flysim run eon-malecns --root /srv/flybrain-data --graph /srv/flybrain-data/derived/male-cns-v1.0/graph --output-root /srv/flybrain-data/runs --seed 1 --headless
 flysim run full-vnc-walk --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
 ```
 
@@ -106,9 +106,26 @@ rebuild manifests, re-hashes all seven raw artifacts and morphology canaries, an
 contact build that reached the 3-GiB RSS ceiling. The generic builder remains available for
 reviewed non-V0 tiers and test fixtures; manually supplied booleans are not sufficient for V0.
 
-`eon-malecns` and `full-vnc-walk` deliberately refuse to run until their numeric population,
-neural parity, sensory, and motor gates pass. There is no synthetic fallback hidden behind either
-scientific command. `eon-demo` remains the semantic engineering storyboard.
+Track A's full-graph `eon-malecns` gate is now open. It uses numeric MaleCNS populations, direct
+PyGeNN, the full traced aggregate graph, FlyGym, and the checksum-locked Ozdil grooming trajectory.
+To render the physical run, add `--render`; the final MP4 and checksum are recorded in the run
+manifest. Its central sensory relays, direct DNg97 intent drive, odor-gradient steering and joint
+controllers are visibly registered engineering scaffolds, so this is an offline engineering
+prototype rather than autonomous connectome-generated behavior.
+
+The preregistered Track A matrix and controls are resumable:
+
+```text
+python scripts/run_track_a_acceptance.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-acceptance-v2 --output /srv/flybrain-data/runs/track-a-acceptance-v2/primary-progress.json
+python scripts/run_track_a_controls.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-controls-v2 --primary-progress /srv/flybrain-data/runs/track-a-acceptance-v2/primary-progress.json --output /srv/flybrain-data/evidence/male-cns-v1.0/track-a-controls-v2.json
+```
+
+All 30 primary runs and every required control passed, but measured throughput remained below the
+0.5 biological-seconds-per-wall-second target. See
+[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) and the local
+[physical MP4](artifacts/track-a/final-run/flygym.mp4). `full-vnc-walk` remains gated;
+there is no synthetic fallback hidden behind that scientific command. `eon-demo` remains the
+semantic engineering storyboard and neural-bypass control.
 
 ## Data and credentials
 

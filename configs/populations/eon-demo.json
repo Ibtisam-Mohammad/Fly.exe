@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "registry_id": "eon-demo-populations-v0.2",
+  "registry_id": "eon-demo-populations-v0.3",
   "dataset_id": "male-cns:v1.0",
   "populations": [
     {
@@ -73,41 +73,66 @@
     {
       "id": "grooming-descending-readout",
       "role": "antennal grooming action initiator",
-      "combine": "any",
+      "combine": "all",
       "queries": [
-        {"field": "type", "operator": "regex", "value": "groom.*DN"},
-        {"field": "instance", "operator": "regex", "value": "groom.*DN"}
+        {"field": "type", "operator": "regex", "value": "^(DNg62|DNge078|DNg21)$"},
+        {"field": "status", "operator": "exact", "value": "Traced"}
       ],
-      "expected_min": 1,
-      "expected_max": 20,
-      "provenance": "P/E",
-      "fallback": "unresolved; no scientific fallback"
+      "expected_min": 6,
+      "expected_max": 6,
+      "provenance": "M/P",
+      "fallback": "none; fail closed if the six bilateral MaleCNS candidates do not resolve",
+      "mapping_evidence": {
+        "source_names": ["aDN1", "aDN2", "aDN3"],
+        "source_flywire_ids": [720575940624319124, 720575940616185531, 720575940636308075, 720575940629806974, 720575940612376805, 720575940634229871],
+        "target_types": ["DNg62", "DNge078", "DNg21"],
+        "source": "https://doi.org/10.1038/s41467-026-72152-x",
+        "crosswalk_artifact": "mcns_fw_edge_comp_mappings.json@67767d2233657983993ff6c2be48e836a935863c",
+        "uncertainty": "cross-specimen FlyWire-to-MaleCNS type identity; candidate recruitment does not validate grooming execution"
+      }
     },
     {
       "id": "ethyl-acetate-receptor-entry",
-      "role": "first odor sensory entry",
-      "combine": "any",
+      "role": "bilateral DM1 and DM4 projection-neuron relays for the first odor input",
+      "combine": "all",
       "queries": [
-        {"field": "type", "operator": "regex", "value": "^Or42b$"},
-        {"field": "receptorType", "operator": "regex", "value": "^Or42b$"}
+        {"field": "type", "operator": "regex", "value": "^(DM1_lPN|DM4_(adPN|vPN))$"},
+        {"field": "status", "operator": "exact", "value": "Traced"}
       ],
-      "expected_min": 1,
-      "expected_max": 100,
+      "expected_min": 6,
+      "expected_max": 6,
       "provenance": "P/E",
-      "fallback": "unresolved; require peripheral-to-CNS registration"
+      "fallback": "explicit central-relay injection; Or42b peripheral receptor and antennal-lobe local circuitry are bypassed",
+      "mapping_evidence": {
+        "source_receptor": "Or42b/ab1A and Or59b/ab2A",
+        "target_glomerulus": "DM1 and DM4",
+        "target_type": "DM1_lPN, DM4_adPN, and DM4_vPN",
+        "sources": ["https://doi.org/10.1038/srep21841", "https://doi.org/10.1038/s41467-019-09069-1"],
+        "uncertainty": "ethyl acetate activates multiple channels and the normalized plume is not a measured dose-response; this is a central-relay engineering bypass"
+      }
     },
     {
       "id": "sucrose-receptor-entry",
-      "role": "sweet contact sensory entry",
-      "combine": "any",
+      "role": "bilateral GNG588/Fdg central relay for sweet-contact input",
+      "combine": "all",
       "queries": [
-        {"field": "type", "operator": "regex", "value": "^(Gr5a|Gr64f)$"},
-        {"field": "receptorType", "operator": "regex", "value": "^(Gr5a|Gr64f)$"}
+        {"field": "type", "operator": "exact", "value": "GNG588"},
+        {"field": "status", "operator": "exact", "value": "Traced"}
       ],
-      "expected_min": 1,
-      "expected_max": 200,
+      "expected_min": 2,
+      "expected_max": 2,
       "provenance": "P/E",
-      "fallback": "unresolved; require gustatory crosswalk"
+      "fallback": "explicit central-relay injection; Gr5a/Gr64f receptor neurons and upstream gustatory layers are bypassed",
+      "mapping_evidence": {
+        "source_name": "Fdg",
+        "source_flywire_ids": [720575940647030324, 720575940631997032],
+        "crosswalk_label": "CB0038",
+        "target_type": "GNG588",
+        "target_body_ids": [12617, 14321],
+        "source": "https://doi.org/10.1038/s41586-024-07763-9",
+        "local_evidence": "shiu-feeding-screen-preparation.json",
+        "uncertainty": "Fdg is a central feeding relay transferred across specimens, not a sucrose receptor; the project feeding screen reproduced MN9 recruitment but did not earn V3"
+      }
     }
   ]
 }

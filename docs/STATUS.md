@@ -6,6 +6,8 @@ Status date: 2026-09-07
 
 - Dedicated Ubuntu 24.04 WSL2 distribution `FlyBrain` at `D:\WSL\FlyBrain`, with data, environments, and compiler caches under `/srv/flybrain-data`.
 - Verified 8 GiB WSL swap at `D:\WSL\FlyBrain\wsl-swap.vhdx`; the obsolete `F:` swap was removed only after the new device was active.
+- After streaming ingestion completed, the production WSL memory cap was raised to 16 GiB;
+  current WSL reports 15 GiB usable RAM and 8 GiB swap on `D:`.
 - Python 3.12 production environment with FlyGym 2.1.0, MuJoCo 3.9.0, Brian2 2.10.1, and pinned GeNN/PyGeNN 5.4.0.
 - CUDA 12.0 compilation and execution on the RTX 3060; a GeNN LIF smoke model advances on device 0.
 - GPL project and reproducible Python package foundation.
@@ -49,6 +51,24 @@ Status date: 2026-09-07
   classifications agree 100%.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
+- Full-graph Track A runtime over all 165,122 traced bodies and 25,563,197 aggregate edges.
+  Its exact nine-bucket/81-projection GeNN layout retains every logical edge while reducing sparse
+  row padding from about 1.849 billion to 128,941,699 slots.
+- Numeric Track A populations for DNa01/DNa02, DNg97, MN9, JO-F, the bilateral
+  DNg62/DNge078/DNg21 grooming candidates, bilateral DM1/DM4 projection-neuron odor relays, and
+  bilateral GNG588/Fdg sweet relays.
+- Checksum-locked Ozdil et al. Figure 1 panel C grooming trajectory converted to a portable
+  300-sample, 2.99-second, 21-signal radian derivative and replayed through FlyGym position
+  actuators.
+- Causal full-graph FlyGym sequence: seek, antennal contamination, groom, resume seeking, reach
+  food, and initiate rostrum/haustellum extension.
+- Track A acceptance matrix: all 10 preregistered seeds passed at each of three held-out food
+  positions (30/30), exceeding the required 8/10 per position.
+- Required Track A controls pass: contamination-input, grooming-readout, sucrose-input and MN9
+  ablations block their transitions; zero-weight and shuffled-connectome controls do not complete;
+  controller-only and neural-bypass conditions are recorded.
+- A physical FlyGym MP4 was produced. Viewer and headless runs have identical transition identities
+  and reasons; feed and completion occur 30 ms earlier in the viewer trace.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
 - CLI surface for data, benchmarks, runs, rendering, and validation.
 - Checksum-locked official MaleCNS starter profile (annotations, transmitter predictions, body statistics, and aggregate segment weights).
@@ -71,17 +91,18 @@ Status date: 2026-09-07
 
 ## Not implemented or not yet validated
 
-- The measured GeNN graph load uses zero functional weights; fitted whole-CNS neural dynamics have not been implemented or validated.
+- Track A's functional whole-graph dynamics are an explicit Shiu-style engineering regression, not
+  fitted whole-CNS physiology. Stage 2 fitted hybrid dynamics have not been implemented or validated.
 - The dynamics registry is an executable uncertainty boundary, not a fitted hybrid model.
   Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
-- FlyGym is proven as a controller-only baseline, but the Eon-like scenario still uses its kinematic preview body and has not been ported into NeuroMechFly.
-- The current demo circuit uses semantic placeholder populations, not resolved MaleCNS body IDs.
-- DNa01/DNa02, MN9, and JO-F populations resolve from official annotations. The sourced
-  oDN1-to-DNg97 crosswalk now resolves MaleCNS bodies `13805` and `230783`. Ethyl-acetate
-  entry neurons, sucrose entry neurons, and the grooming descending population remain unresolved.
-- Özdil et al. Supplementary Data 1 is locally checksum-locked with a dataset card. It supplies
-  FAFB/FlyWire aDN1-3 identities, but no direct MaleCNS body-ID crosswalk, so the grooming-DN
-  gate remains unresolved rather than being filled by a name guess.
+- Track A is an offline prototype: observed throughput was 0.117 minimum and 0.169 median
+  biological seconds per wall second, below the 0.5 interactive target.
+- Track A is not autonomous connectome-generated behavior. It injects central DM1/DM4 and GNG588
+  relays, applies a 10x entry-path gain, drives DNg97 with a 20-Hz odor-gated intent scaffold, and
+  combines DNa activity with an explicit odor-gradient steering controller.
+- Grooming and feeding execution use joint-position controllers. They do not preserve the complete
+  biological VNC, motor-neuron, NMJ, muscle, or tendon pathway. The FlyGym body is a female-body
+  prior with ideal joint actuators.
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
 - No cellular, synaptic, circuit, brain-wide, motor-interface, embodied, behavioral, or
   generalization tier has passed. V0 does not validate functional dynamics.
@@ -103,7 +124,8 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [LIF backend parity](evidence/LIF_BACKEND_PARITY.md) and
 [transmitter-only sign control](evidence/TRANSMITTER_SIGN_CONTROL.md). First Stage 1 experiment:
 [Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md) and
-[Shiu feeding-screen execution and review](evidence/STAGE1_SHIU_FEEDING.md).
+[Shiu feeding-screen execution and review](evidence/STAGE1_SHIU_FEEDING.md). Track A engineering
+evidence: [full-graph Eon-like demonstration](evidence/TRACK_A_EON_MALECNS.md).
 
 ## Measured foundation results
 
@@ -117,7 +139,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 67 passing |
+| Automated tests | 71 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
@@ -132,4 +154,5 @@ The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the 
 Highest validation tier: **V0 Structural**. It establishes dataset identity, lossless structural
 transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
 cross-connectome comparison. It makes no physiological or behavioral claim. Stage 1's deliberately
-simple open-loop baseline is complete; Stage 2 fitted neural dynamics is now active.
+simple open-loop baseline is complete; Track A is complete as an offline engineering prototype;
+Stage 2 fitted neural dynamics is now active.

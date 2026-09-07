@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from flysim.factory import build_reference_demo
-from flysim.runs import write_run
+from flysim.runs import attach_run_artifact, write_run
 from flysim.validation import validate_run
 
 
@@ -70,3 +70,31 @@ def test_validation_tier_without_evidence_bundle_is_rejected(tmp_path: Path) -> 
     report = validate_run(written.directory)
     assert not report["valid"]
     assert any("requires an evidence_bundle" in failure for failure in report["failures"])
+
+
+def test_generated_artifact_is_checksummed_into_manifest(tmp_path: Path) -> None:
+    demo = build_reference_demo(seed=1)
+    result = demo.scheduler.run_until(demo.duration_us)
+    written = write_run(
+        result,
+        demo.scenario,
+        demo.registry,
+        seed=1,
+        output_root=tmp_path,
+        ablated_inputs=(),
+        ablated_outputs=(),
+    )
+    video = written.directory / "preview.mp4"
+    video.write_bytes(b"generated-video-fixture")
+
+    record = attach_run_artifact(written, "preview_video", video)
+    manifest = json.loads(written.manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["artifacts"]["preview_video"] == "preview.mp4"
+    assert manifest["artifacts"]["preview_video_sha256"] == record["sha256"]
+    assert validate_run(written.directory)["valid"]
+
+    video.write_bytes(b"mutated")
+    report = validate_run(written.directory)
+    assert not report["valid"]
+    assert any("preview_video checksum mismatch" in item for item in report["failures"])

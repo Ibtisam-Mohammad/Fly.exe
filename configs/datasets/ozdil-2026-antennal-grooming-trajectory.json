@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "ozdil-2026-antennal-grooming-fig1-panel-c",
+  "title": "Centralized brain networks controlling antennal grooming coordination - Figure 1 panel C trajectory",
+  "paper": "https://doi.org/10.1038/s41467-026-72152-x",
+  "collection": "https://doi.org/10.7910/DVN/N8ITTG",
+  "source_datafile_id": 10810237,
+  "local_filename": "Fig1_panelC.pkl",
+  "bytes": 3494410,
+  "sha256": "89826e646018a5184f13b2ccbdcb4f7713ed26deab98f84fcddf8e237a55892e",
+  "license": "publisher data terms; verify before redistribution",
+  "redistribute_with_gpl_release": false,
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "paper-specific experimental cohort; not the MaleCNS donor",
+    "age": "paper-specific; not the MaleCNS donor",
+    "strain": "paper-specific",
+    "preparation": "tethered, elicited antennal grooming"
+  },
+  "sampling_rate_hz": 100.0,
+  "source_units": "degrees",
+  "role": "engineering grooming-controller trajectory; never neural fitting or validation",
+  "derivative": {
+    "path": "/srv/flybrain-data/derived/auxiliary/ozdil-2026-antennal-grooming/track-a-grooming-trajectory.npz",
+    "sha256": "1766a6f15cc7e79c9740552a7bc801081e20b9893d8f922d140147c4ea2380dc",
+    "samples": 300,
+    "duration_s": 2.99,
+    "signals": 21,
+    "units": "radians",
+    "selection": "first contiguous bilateral JO-F optogenetic stimulus interval"
+  },
+  "mismatches": [
+    "cross-animal trajectory versus the MaleCNS male specimen",
+    "tethered elicited grooming versus free closed-loop behavior",
+    "joint-position replay versus biological VNC, motor-neuron, muscle, and contact execution"
+  ],
+  "permitted_claim": "Provides a checksum-locked published trajectory for a visibly labelled Track A position controller.",
+  "forbidden_claim": "Does not demonstrate that MaleCNS generated the movement or validate neural, muscle, or embodied dynamics.",
+  "status": "source checksum-locked; portable derivative checksum-locked and used by Track A",
+  "last_reviewed": "2026-09-07"
+}

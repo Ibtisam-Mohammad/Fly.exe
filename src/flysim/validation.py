@@ -55,6 +55,29 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
             failures.append(f"trace checksum mismatch: expected {expected}, got {observed}")
         trace = read_trace(run_directory)
 
+    artifacts = manifest.get("artifacts", {})
+    for artifact_id, relative_path in artifacts.items():
+        if artifact_id == "trace" or artifact_id.endswith("_sha256"):
+            continue
+        artifact_path = (run_directory / str(relative_path)).resolve()
+        try:
+            artifact_path.relative_to(run_directory.resolve())
+        except ValueError:
+            failures.append(f"artifact {artifact_id} escapes the run directory")
+            continue
+        if not artifact_path.is_file():
+            failures.append(f"artifact {artifact_id} is missing")
+            continue
+        expected = artifacts.get(f"{artifact_id}_sha256")
+        if not expected:
+            failures.append(f"artifact {artifact_id} lacks a checksum")
+            continue
+        observed = _sha256_file(artifact_path)
+        if observed != expected:
+            failures.append(
+                f"artifact {artifact_id} checksum mismatch: expected {expected}, got {observed}"
+            )
+
     previous_t = -1
     for index, record in enumerate(trace):
         if not isinstance(record, dict) or "t_us" not in record:

@@ -1,8 +1,10 @@
 # MaleCNS v1.0 metadata audit
 
-Audit date: 2026-09-04  
-Source: official `male-cns:v1.0` bulk artifacts  
-Validation tier: not yet V0; starter artifacts and provisional runtime derivative only
+Audit date: 2026-09-07
+
+Source: official `male-cns:v1.0` bulk artifacts
+
+Validation tier: V0 Structural; population mappings below are Track A readiness evidence only
 
 ## Locked artifacts
 
@@ -23,12 +25,14 @@ These are locally observed hashes because the official page does not publish SHA
 | DNa02 left/right | `523769` left, `10360` right |
 | MN9 left/right | `10331` left, `16949` right |
 | JO-F grooming sensory population | 64 exact `JO-F*` rows: 60 JO-FV and 4 JO-FD1; one additional `JO-unclear` row has grooming subclass but is deliberately excluded |
-| oDN1 | unresolved; no exact v1.0 type match |
-| Or42b | unresolved; no exact type or receptorType match |
-| Gr5a / Gr64f | unresolved; no exact type or receptorType match |
-| antennal-grooming descending readout | unresolved from current exact annotation queries |
+| oDN1 | no exact name match; sourced oDN1-to-DNg97 crosswalk resolves `13805`, `230783` |
+| Or42b / Or59b | no exact type or receptorType match; Track A explicitly bypasses to bilateral `DM1_lPN`, `DM4_adPN`, and `DM4_vPN` (`10176`, `10208`, `10613`, `10670`, `71476`, `73492`) |
+| Gr5a / Gr64f | no exact type or receptorType match; Track A explicitly bypasses to bilateral `GNG588/Fdg` (`12617`, `14321`) |
+| antennal-grooming descending readout | aDN1/aDN2/aDN3 crosswalk resolves bilateral `DNg62`, `DNge078`, and `DNg21`: `13624`, `14537`, `15148`, `15825`, `16221`, `36541` |
 
-An unresolved annotation is not evidence that the biological neuron or pathway is absent. It means the proposed interface cannot currently be assigned a MaleCNS body ID without a sourced crosswalk. Engineering demos retain semantic placeholders and report them as `E`; scientific runs are blocked.
+An absent exact receptor annotation is not evidence that the biological neuron or pathway is
+absent. Track A uses sourced cross-specimen central-relay mappings and labels the omitted
+peripheral layers as `P/E`; it does not treat those relays as measured receptors.
 
 ## Body-universe finding
 

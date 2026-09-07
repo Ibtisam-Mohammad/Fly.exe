@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "track-a-eon-malecns-acceptance-v2",
+  "scenario_id": "eon-malecns-v0.2",
+  "assumption_set": "foundation-v0.5",
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "held_out_food_positions_mm": [
+    {"id": "left", "x": 8.0, "y": -1.0},
+    {"id": "center", "x": 8.0, "y": 0.0},
+    {"id": "right", "x": 8.0, "y": 1.0}
+  ],
+  "duration_us": 12000000,
+  "minimum_successes_per_position": 8,
+  "minimum_biological_seconds_per_wall_second": 0.5,
+  "required_sequence": ["GROOM", "SEEK_RESUME", "FEED_INITIATION", "COMPLETE"],
+  "required_controls": [
+    "contamination-input-ablation",
+    "groom-readout-ablation",
+    "sucrose-input-ablation",
+    "mn9-readout-ablation",
+    "zero-weight",
+    "shuffled-connectome",
+    "controller-only",
+    "neural-bypass",
+    "headless-viewer-equivalence"
+  ],
+  "claim_boundary": "Engineering integration acceptance only; awards no validation tier."
+}

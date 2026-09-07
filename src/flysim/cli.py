@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -32,18 +33,19 @@ from flysim.evidence import (
     build_evidence_bundle,
     validate_evidence_bundle,
 )
-from flysim.factory import build_reference_demo
+from flysim.factory import build_reference_demo, build_track_a_demo
 from flysim.feeding_stage1 import (
     evaluate_feeding_screen,
     execute_feeding_screen,
     preregister_feeding_screen,
 )
+from flysim.grooming import import_grooming_trajectory
 from flysim.morphology import sync_morphology_canaries
 from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
 from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
-from flysim.runs import write_run
+from flysim.runs import attach_run_artifact, write_run
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.structural import audit_structural_references
@@ -196,6 +198,26 @@ def _command_data_resolve_populations(args: argparse.Namespace) -> int:
         }
     )
     return 0 if payload["all_required_resolved"] else 2
+
+
+def _command_data_import_grooming(args: argparse.Namespace) -> int:
+    source = args.source or (
+        args.root
+        / "raw"
+        / "auxiliary"
+        / "ozdil-2026-antennal-grooming"
+        / "Fig1_panelC.pkl"
+    )
+    output = args.output or (
+        args.root
+        / "derived"
+        / "auxiliary"
+        / "ozdil-2026-antennal-grooming"
+        / "track-a-grooming-trajectory.npz"
+    )
+    payload = import_grooming_trajectory(source, output)
+    _print_json(payload)
+    return 0
 
 
 def _command_data_build_edge_signs(args: argparse.Namespace) -> int:
@@ -574,6 +596,10 @@ def _command_run_full_vnc(args: argparse.Namespace) -> int:
 
 
 def _command_run_eon_malecns(args: argparse.Namespace) -> int:
+    if args.headless:
+        os.environ.setdefault("MUJOCO_GL", "osmesa")
+    if (args.food_x_mm is None) != (args.food_y_mm is None):
+        raise ValidationError("--food-x-mm and --food-y-mm must be supplied together")
     missing: list[str] = []
     if not args.graph.exists():
         missing.append("imported MaleCNS aggregate graph")
@@ -591,12 +617,131 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
                 if item.get("status") != "resolved"
             ]
             missing.append(f"resolved numeric populations: {unresolved}")
+    transmitter_path = (
+        args.root
+        / "raw"
+        / "male-cns-v1.0"
+        / "body-neurotransmitters-male-cns-v1.0.feather"
+    )
+    trajectory_path = (
+        args.root
+        / "derived"
+        / "auxiliary"
+        / "ozdil-2026-antennal-grooming"
+        / "track-a-grooming-trajectory.npz"
+    )
+    if not transmitter_path.is_file():
+        missing.append("MaleCNS body transmitter predictions")
+    if not trajectory_path.is_file():
+        missing.append("checksum-locked Ozdil grooming trajectory derivative")
+    try:
+        __import__("pygenn")
+    except ImportError:
+        missing.append("PyGeNN 5.4 production backend")
+    try:
+        __import__("flygym")
+    except ImportError:
+        missing.append("FlyGym 2.1 body backend")
     if missing:
         raise ReadinessError("eon-malecns is scientifically gated; missing: " + ", ".join(missing))
-    raise ReadinessError(
-        "The graph and population gate passed, but the direct PyGeNN Track A dynamics adapter "
-        "has not passed NumPy/Brian2/GeNN parity."
+    import time
+
+    ablated_inputs = _split_ids(args.ablate_input)
+    ablated_outputs = _split_ids(args.ablate_output)
+    food_position = (
+        (float(args.food_x_mm), float(args.food_y_mm))
+        if args.food_x_mm is not None and args.food_y_mm is not None
+        else None
     )
+    build_path = (
+        args.root
+        / "cache"
+        / "genn"
+        / "track-a"
+        / args.control
+    )
+    started = time.perf_counter()
+    demo = build_track_a_demo(
+        seed=args.seed,
+        graph_path=args.graph,
+        population_resolution_path=population_path,
+        transmitter_path=transmitter_path,
+        grooming_trajectory_path=trajectory_path,
+        build_path=build_path,
+        variant=args.control,
+        ablated_inputs=ablated_inputs,
+        ablated_outputs=ablated_outputs,
+        food_position_mm=food_position,
+        render=args.render,
+        fps=args.fps,
+    )
+    try:
+        duration = args.duration_us or demo.duration_us
+        result = demo.scheduler.run_until(duration)
+        wall_seconds = time.perf_counter() - started
+        written = write_run(
+            result=result,
+            scenario=demo.scenario,
+            registry=demo.registry,
+            seed=args.seed,
+            output_root=args.output_root,
+            ablated_inputs=tuple(sorted(ablated_inputs)),
+            ablated_outputs=tuple(sorted(ablated_outputs)),
+            connectome_metadata={
+                "canonical_release": demo.registry.records["DATA-01"].value,
+                "graph_used": True,
+                "resolved_body_ids": True,
+                "graph_path": str(args.graph.resolve()),
+                "graph_source_sha256": demo.graph.source_sha256,
+                "neurons": demo.graph.neuron_count,
+                "aggregate_edges": demo.graph.edge_count,
+                "threshold_applied": False,
+                "population_registry_id": demo.populations.registry_id,
+                "population_resolution_sha256": demo.populations.resolution_sha256,
+                "control_variant": demo.variant,
+            },
+            run_metadata={
+                "engineering_track": "A",
+                "project_structural_tier": "V0",
+                "tier_awarded_by_this_run": None,
+                "wall_seconds": wall_seconds,
+                "biological_seconds": result.final_t_us / 1_000_000.0,
+                "biological_seconds_per_wall_second": (
+                    result.final_t_us / 1_000_000.0 / wall_seconds
+                ),
+                "food_position_mm": list(food_position) if food_position else None,
+                "central_relay_bypasses": ["DM1_lPN", "GNG588/Fdg"],
+            },
+        )
+        video: str | None = None
+        video_sha256: str | None = None
+        if args.render:
+            video_path = demo.body.save_video(written.directory / "flygym.mp4")
+            video_record = attach_run_artifact(written, "flygym_video", video_path)
+            video = video_record["path"]
+            video_sha256 = video_record["sha256"]
+        validation = validate_run(written.directory)
+    finally:
+        demo.neural.close()
+    _print_json(
+        {
+            "run_id": written.run_id,
+            "run_directory": str(written.directory),
+            "completed": result.completed,
+            "final_state": result.final_state.value,
+            "control_variant": demo.variant,
+            "wall_seconds": wall_seconds,
+            "biological_seconds_per_wall_second": (
+                result.final_t_us / 1_000_000.0 / wall_seconds
+            ),
+            "validation": validation,
+            "video": video,
+            "video_sha256": video_sha256,
+            "claim": demo.scenario.claim_boundary,
+            "highest_validation_tier": "V0 Structural (project foundation only)",
+        }
+    )
+    return 0 if validation["valid"] and result.completed else 2
 
 
 def _command_render(args: argparse.Namespace) -> int:
@@ -750,6 +895,15 @@ def build_parser() -> argparse.ArgumentParser:
     resolver.add_argument("--output", type=Path)
     resolver.set_defaults(func=_command_data_resolve_populations)
 
+    grooming = data_commands.add_parser(
+        "import-grooming-trajectory",
+        help="convert the checksum-locked Ozdil Figure 1 trajectory to portable NPZ",
+    )
+    grooming.add_argument("--root", type=Path, default=default_data_root())
+    grooming.add_argument("--source", type=Path)
+    grooming.add_argument("--output", type=Path)
+    grooming.set_defaults(func=_command_data_import_grooming)
+
     signs = data_commands.add_parser("build-edge-signs")
     signs.add_argument("--root", type=Path, default=default_data_root())
     signs.add_argument("--graph", type=Path, required=True)
@@ -864,7 +1018,20 @@ def build_parser() -> argparse.ArgumentParser:
     eon_malecns.add_argument("--seed", type=int, default=1)
     eon_malecns.add_argument("--graph", type=Path, required=True)
     eon_malecns.add_argument("--root", type=Path, default=default_data_root())
+    eon_malecns.add_argument("--duration-us", type=int)
+    eon_malecns.add_argument("--output-root", type=Path, default=Path("runs"))
+    eon_malecns.add_argument("--ablate-input", action="append", default=[])
+    eon_malecns.add_argument("--ablate-output", action="append", default=[])
+    eon_malecns.add_argument(
+        "--control",
+        choices=("exact", "zero-weight", "shuffled-connectome"),
+        default="exact",
+    )
+    eon_malecns.add_argument("--food-x-mm", type=float)
+    eon_malecns.add_argument("--food-y-mm", type=float)
     eon_malecns.add_argument("--headless", action="store_true")
+    eon_malecns.add_argument("--render", action="store_true")
+    eon_malecns.add_argument("--fps", type=int, default=30)
     eon_malecns.set_defaults(func=_command_run_eon_malecns)
 
     render = commands.add_parser("render")

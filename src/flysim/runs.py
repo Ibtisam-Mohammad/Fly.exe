@@ -67,6 +67,8 @@ def write_run(
     output_root: Path,
     ablated_inputs: tuple[str, ...],
     ablated_outputs: tuple[str, ...],
+    connectome_metadata: dict[str, Any] | None = None,
+    run_metadata: dict[str, Any] | None = None,
 ) -> WrittenRun:
     timestamp = datetime.now(UTC)
     run_id = f"{timestamp.strftime('%Y%m%dT%H%M%SZ')}_{scenario.scenario_id}_seed-{seed}"
@@ -96,7 +98,7 @@ def write_run(
         "random_seed": seed,
         "initial_physiological_state": registry.records["STATE-01"].value,
         "backends": {"neural": scenario.neural_backend, "body": scenario.body_backend},
-        "connectome": {
+        "connectome": connectome_metadata or {
             "canonical_release": registry.records["DATA-01"].value,
             "graph_used": False,
             "resolved_body_ids": False,
@@ -125,6 +127,7 @@ def write_run(
             "neuprint_used": False,
             "secret_values_recorded": False,
         },
+        "run_metadata": run_metadata or {},
     }
     manifest_path = directory / "manifest.json"
     manifest_path.write_text(
@@ -136,6 +139,35 @@ def write_run(
         manifest_path=manifest_path.resolve(),
         trace_path=trace_path.resolve(),
     )
+
+
+def attach_run_artifact(written: WrittenRun, artifact_id: str, path: Path) -> dict[str, str]:
+    """Finalize a generated artifact into an existing run manifest.
+
+    Some backends, notably FlyGym's renderer, can only emit their artifact after the
+    simulation trace and run directory exist. This function records the final relative
+    path and checksum before the run is presented to the caller.
+    """
+    if not artifact_id or not artifact_id.replace("_", "").isalnum():
+        raise ValueError("artifact_id must contain only letters, numbers, and underscores")
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(written.directory)
+    except ValueError as exc:
+        raise ValueError("run artifacts must be inside the run directory") from exc
+    if not resolved.is_file():
+        raise FileNotFoundError(resolved)
+    manifest = json.loads(written.manifest_path.read_text(encoding="utf-8"))
+    artifacts = manifest.setdefault("artifacts", {})
+    artifacts[artifact_id] = relative.as_posix()
+    artifacts[f"{artifact_id}_sha256"] = _sha256_file(resolved)
+    written.manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {
+        "path": str(resolved),
+        "sha256": str(artifacts[f"{artifact_id}_sha256"]),
+    }
 
 
 def read_trace(run_directory: Path) -> list[dict[str, Any]]:

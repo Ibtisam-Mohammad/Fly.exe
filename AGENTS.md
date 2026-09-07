@@ -1,7 +1,7 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.5
+Version: 1.6
 Last evidence review: 2026-09-07
 Last implementation audit: 2026-09-07
 Applies to: this repository and every subdirectory
@@ -31,7 +31,7 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: zero-weight whole-graph load; source-faithful backend parity; 101-type/30-trial MaleCNS feeding screen and controls; typed-dynamics hooks; controller-only/Eon-like scaffolds
+ENGINEERING_STATUS: Track A full-graph Eon-like offline prototype complete; 30/30 held-out-location runs and required controls pass; Stage 2 typed-dynamics hooks remain unfitted
 NEXT_GATE: choose and lock Stage 2 physiological train/held-out datasets and losses -> fit receptor-aware polarity/type-pair dynamics -> selected V1/V2/V3 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
@@ -41,7 +41,9 @@ STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
-TRACK_A_POPULATIONS: DNa01/DNa02, DNg97 via oDN1 crosswalk, MN9, and JO-F resolve numerically; grooming DN, odor entry, and sucrose entry unresolved
+TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 minimum/0.169 median vs 0.5 target; awards no tier
+TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
+TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory
@@ -63,7 +65,7 @@ Stage 1 checkpoint, 2026-09-07: immutable transfer report
 11 Figure 5g frequencies and five structural controls. NumPy, Brian2 and float64 reference GeNN
 pass the registered spike-count/rate/timing parity gate. A preregistered one-parameter `ND-04`
 fit selected 0.075 mV/contact but produced zero positive responses at all eight held-out
-frequencies. This is a recorded negative cross-connectome result: Stage 1 remains active and no
+frequencies. This is a recorded negative cross-connectome result from the first experiment; no
 V1, V2 or V3 tier is awarded. Whole-CNS production precision remains float32; float64 GeNN is
 used only for this bounded numerical oracle.
 
@@ -84,6 +86,19 @@ cell-type-only remains 0.7972. All states are finite, the 50-microsecond sensiti
 identical classifications/AUROC, and zero weights give no MN9 response. These results pass the
 Stage 1 baseline exit gate. They fail the frozen 0.05 AUROC margin over cell-type-only (observed
 margin 0.0105), so they do not establish individual-connectome specificity and award no V3 tier.
+
+Track A checkpoint, 2026-09-07: the full 165,122-body, 25,563,197-edge traced graph executes in
+direct PyGeNN through an exact degree-bucketed sparse layout and a FlyGym 2.1/MuJoCo 3.9 body.
+All ten seeds completed the required sequence at each of three held-out food positions (30/30).
+The contamination/grooming and sucrose/MN9 ablations block their respective transitions;
+zero-weight, shuffled-connectome, controller-only and neural-bypass controls are recorded. The
+primary matrix is SHA-256 `6fb57a6fe536ed559360bb91c1b41554cbab0056d2aae22a1df17ae35caeaa57` and
+the controls bundle is SHA-256 `65250db0fc473b9011a3fd25e116752135419b2ec009b8a75478d9b03a352731`.
+Observed throughput is 0.117 minimum and 0.169 median biological seconds per wall second, below
+the 0.5 target, so the milestone is an offline engineering prototype. It injects DM1/DM4 and
+GNG588 central relays, applies a 10x entry-path gain, drives DNg97 with an odor-gated intent bias,
+uses explicit odor-gradient steering, and replays a published grooming trajectory through ideal
+joint actuators. It is not autonomous connectome-generated behavior and awards no validation tier.
 
 Useful retrieval commands:
 
@@ -211,6 +226,7 @@ These are current starting decisions, not claims that the biology is solved.
 | `ND-07` | Electrical synapses | Omit globally at first, curate established pairs, and run omission sensitivity. | `P/E` | Paired recordings, innexin evidence and circuit perturbations. |
 | `ND-08` | Baseline and noise | Fit type/region/state-conditioned tonic drive; separate structural, membrane, vesicle and observation noise. | `F/E` | Resting and behaving activity with a measurement model. |
 | `ND-09` | Morphology | Whole-CNS point/reduced models first; retain skeleton/site data and upgrade behavior-critical cells to compartments. | `M/F/E` | Compartmental physiology and subcellular response timing. |
+| `TRACKA-01` | Eon-like baseline | Run the complete traced aggregate graph with the named Shiu-style, central-relay, intent-drive and controller scaffolds recorded in `foundation-v0.5`. | `M/P/E` | Track A controls only; replace with Stage 2 dynamics and Track B sensory/motor pathways before scientific claims. |
 | `STATE-01` | Initial condition | Default short-run state: awake, fed, water-replete, unmated, daytime, artificial laboratory-naive memory. | `E/I` | Explicit experiment-specific state or user decision. |
 | `STATE-02` | Slow modulation | Freeze most peptide/endocrine variables in v1; later add only sourced ligand–receptor pathways. | `P/E` | State-dependent neural and behavioral recordings. |
 | `LEARN-01` | Long-term learning | Disabled in v1. Later restrict first plasticity to experimentally supported dopamine-gated mushroom-body compartments. | `P/E` | Acquisition, recall, extinction and intervention datasets. |
@@ -485,6 +501,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-04 | Accept ADR-2026-001 for the initial local runtime and data stack. | The approved implementation plan fixes Python 3.12, direct PyGeNN/GeNN 5.4, official Feather to loss-aware sparse derivatives, FlyGym 2.1, ethyl acetate, local RTX 3060 execution and initial validation tolerances. |
 | 2026-09-05 | Accept ADR-2026-003 for the contact-level storage and audit boundary. | Full contact tables remain immutable CPU-side evidence; bounded lossless derivatives support V0 without entering the GPU runtime graph. |
 | 2026-09-06 | Accept `status=Traced` as the production neural-body universe; retain Assign/Anchor and all-segment alternatives for sensitivity analyses. | Expanding through Anchor changed traced contacts by 0.12% and edges by 0.24%, while all fixed sensorimotor annotation canaries remained uniquely traced. |
+| 2026-09-07 | Accept the `foundation-v0.5` Track A full-graph engineering baseline and classify it as an offline prototype. | The 30-run matrix and required controls pass, but registered neural/body bridges remain non-biological and throughput misses the interactive target. |
 
 ## 15. Unresolved project-level choices
 
