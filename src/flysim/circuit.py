@@ -1174,9 +1174,12 @@ def run_genn_population_screen(
             model.step_time()
         for name in ("SpikeCount", "V", "G"):
             population.vars[name].pull_from_device()
-        counts = np.asarray(population.vars["SpikeCount"].view, dtype=np.float64)
-        voltage = np.asarray(population.vars["V"].view)
-        synaptic_state = np.asarray(population.vars["G"].view)
+        # GeNN owns these host views; detach every array before ``unload`` frees
+        # the backing allocation. Counts already change dtype, but keep the copy
+        # explicit so a future precision change cannot reintroduce a dangling view.
+        counts = np.array(population.vars["SpikeCount"].view, dtype=np.float64, copy=True)
+        voltage = np.array(population.vars["V"].view, copy=True)
+        synaptic_state = np.array(population.vars["G"].view, copy=True)
     finally:
         model.unload()
     runtime_seconds = time.perf_counter() - started
