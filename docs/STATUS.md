@@ -118,6 +118,8 @@ Status date: 2026-09-08
   exposure DL5 cells exactly once. The adaptive population mean achieves 13.174 Hz held-out RMSE
   versus a 12.376 Hz training-cohort biological baseline, normalized ratio 1.064, and passes the
   preregistered 1.2 F-I sub-gate. The result remains below a complete V1 tier.
+- A separately preregistered 100-to-50-us review preserves that sub-gate: normalized ratio changes
+  from 1.064444 to 1.064332 and all predictions remain finite. No parameters or limits changed.
 
 ## Not implemented or not yet validated
 
@@ -181,7 +183,7 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 82 passing |
+| Automated tests | 83 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 

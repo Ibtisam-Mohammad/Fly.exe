@@ -1,7 +1,7 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.10
+Version: 1.11
 Last evidence review: 2026-09-08
 Last implementation audit: 2026-09-08
 Applies to: this repository and every subdirectory
@@ -31,8 +31,8 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064; it is not complete V1 and no V1/V2 tier is awarded
-NEXT_GATE: run 100-to-50-us sensitivity and lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
+ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064 and preserves it at 50 us; it is not complete V1 and no V1/V2 tier is awarded
+NEXT_GATE: lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -45,7 +45,7 @@ TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 mini
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
 STAGE2_DATA: Gouwens-Wilson DM1 priors and Gugel DL5 F-I/uEPSC data locked; one external Nanami PN trace is normalized and reserved but is not population evidence
 STAGE2_READINESS: dynamic revision contract 8ddb0b77770d passes four hashes; two original Gugel cells are training-only, four chronic-condition cells are now consumed holdouts, and the Nanami cell remains unscored
-STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; adaptive distribution training RMSE 7.630 vs 15.528 baseline and chronic-condition held-out ratio 1.064 passes; no tier awarded
+STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; adaptive distribution training RMSE 7.630 vs 15.528 baseline, chronic-condition held-out ratio 1.064 passes, and 100-to-50-us conclusion is stable; no tier awarded
 TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -148,6 +148,13 @@ normalized ratio of 1.064 and passing the 1.2 F-I sub-gate. The immutable result
 consumed. The same-paper, chronic-condition result is not an independent-laboratory population
 validation and lacks the resting-voltage, membrane-time-constant, and adaptation evidence required
 for complete V1, so the awarded project tier remains V0 Structural.
+
+The preregistered numerical review then halved adaptive-model integration from 100 to 50 us
+without changing parameters or acceptance limits. The normalized ratio changes from 1.064444 to
+1.064332, all predictions remain finite, and the F-I sub-gate conclusion is preserved. Immutable
+review `projection-neuron-dynamic-timestep-review-v1.json` has SHA-256
+`5fa0f39fe15e239d441c57a16b4d2cb1c76c2175c7fe50e65c475fc4b5e088b8`. This closes a
+numerical-sensitivity check only and does not add biological evidence or award a tier.
 
 Useful retrieval commands:
 

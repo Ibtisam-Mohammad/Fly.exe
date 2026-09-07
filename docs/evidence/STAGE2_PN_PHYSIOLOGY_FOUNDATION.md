@@ -124,3 +124,16 @@ This passes one selected cellular F-I test, not V1. The holdout comes from the s
 chronic odor-exposure condition, and the current evidence set does not independently validate
 resting voltage, membrane time constants, or adaptation distributions. The project tier therefore
 remains V0 Structural.
+
+## Numerical timestep review
+
+The 100-to-50-us sensitivity was configured and committed before execution. At 50 us the normalized
+error ratio is 1.064332, compared with 1.064444 at 100 us; all predictions are finite and the frozen
+F-I sub-gate conclusion is unchanged. Parameters, observation rules, cells, and the 1.2 limit were
+not altered.
+
+The immutable review `projection-neuron-dynamic-timestep-review-v1.json` has SHA-256
+`5fa0f39fe15e239d441c57a16b4d2cb1c76c2175c7fe50e65c475fc4b5e088b8` and logical SHA-256
+`b2f998787fadafab3177ef15cce36eb58a075bad51d6697a7189d1febac3917f`. This is numerical
+robustness evidence for the already consumed biological holdout, not another cellular validation
+dataset, and it awards no tier.
