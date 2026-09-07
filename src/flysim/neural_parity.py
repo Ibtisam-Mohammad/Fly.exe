@@ -76,7 +76,7 @@ def run_numpy(circuit: ParityCircuit) -> tuple[np.ndarray, np.ndarray]:
 
 def run_brian2(circuit: ParityCircuit) -> tuple[np.ndarray, np.ndarray]:
     """Run the same fixture in Brian2's NumPy runtime."""
-    import brian2 as b2  # type: ignore[import-untyped]
+    import brian2 as b2
 
     b2.start_scope()
     b2.prefs.codegen.target = "numpy"
@@ -116,7 +116,7 @@ def run_brian2(circuit: ParityCircuit) -> tuple[np.ndarray, np.ndarray]:
 
 def run_genn(circuit: ParityCircuit, build_path: Path) -> tuple[np.ndarray, np.ndarray]:
     """Run the fixture with a direct custom PyGeNN model on CUDA."""
-    from pygenn import (  # type: ignore[import-untyped]
+    from pygenn import (
         GeNNModel,
         create_neuron_model,
         init_postsynaptic,

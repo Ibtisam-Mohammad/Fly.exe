@@ -39,6 +39,7 @@ from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
 from flysim.runs import write_run
+from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
 from flysim.v0 import build_v0_evidence_bundle
@@ -377,6 +378,49 @@ def _command_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_benchmark_circuit(args: argparse.Namespace) -> int:
+    experiment_path = args.experiment
+    if str(experiment_path) == "shiu-antennal-grooming":
+        experiment_path = (
+            project_root() / "configs" / "experiments" / "shiu-antennal-grooming.json"
+        )
+    population_path = args.populations or (
+        args.root
+        / "derived"
+        / "male-cns-v1.0"
+        / "shiu-antennal-grooming-populations.json"
+    )
+    output = args.output or (
+        args.root
+        / "evidence"
+        / "male-cns-v1.0"
+        / "shiu-antennal-grooming-transfer.json"
+    )
+    result = run_shiu_malecns_transfer(
+        root=args.root,
+        graph_path=args.graph,
+        experiment_path=experiment_path,
+        population_resolution_path=population_path,
+        output_path=output,
+        backends=tuple(args.backend),
+        prepare_only=args.prepare_only,
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "status": result["status"],
+            "selection": result["selection"],
+            "silencing_control": result["silencing_control"],
+            "backend_parity_passed": result.get("backend_parity_passed"),
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "immutable_snapshot": result.get("immutable_snapshot"),
+            "validation_tier_awarded": result["validation_tier_awarded"],
+        }
+    )
+    return 0
+
+
 def _split_ids(values: Sequence[str]) -> frozenset[str]:
     return frozenset(item for value in values for item in value.split(",") if item)
 
@@ -656,6 +700,31 @@ def build_parser() -> argparse.ArgumentParser:
     neural.add_argument("--output", type=Path)
     neural.add_argument("--build-root", type=Path)
     neural.set_defaults(func=_command_benchmark)
+
+    circuit = benchmark_commands.add_parser("circuit")
+    circuit.add_argument(
+        "--experiment",
+        type=Path,
+        default=Path("shiu-antennal-grooming"),
+        help="experiment key or JSON specification",
+    )
+    circuit.add_argument("--root", type=Path, default=default_data_root())
+    circuit.add_argument(
+        "--graph",
+        type=Path,
+        default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
+    )
+    circuit.add_argument("--populations", type=Path)
+    circuit.add_argument("--output", type=Path)
+    circuit.add_argument(
+        "--backend",
+        action="append",
+        choices=("numpy", "brian2", "genn"),
+        default=[],
+        help="additional parity backend; NumPy controls always run",
+    )
+    circuit.add_argument("--prepare-only", action="store_true")
+    circuit.set_defaults(func=_command_benchmark_circuit)
 
     run = commands.add_parser("run")
     run_commands = run.add_subparsers(dest="run_command", required=True)

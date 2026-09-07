@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "shiu-antennal-grooming-v0.1",
+  "dataset_id": "male-cns:v1.0",
+  "mapping_source": {
+    "artifact": "berg-malecns-2025-supplement/mcns_fw_edge_comp_mappings.json",
+    "sha256": "94aaadbefedcc314c69fb8ad62a07361c1f78ee39424bad38ac1a6d7ca4d0a12",
+    "source_commit": "67767d2233657983993ff6c2be48e836a935863c"
+  },
+  "populations": [
+    {
+      "id": "shiu-jon-f-input",
+      "role": "MaleCNS homologues of the mapped Figure 5g JON-F input population",
+      "combine": "any",
+      "queries": [{"field": "type", "operator": "regex", "value": "^(JO-FV|JO-FD1|JO-FD2)$"}],
+      "expected_min": 1,
+      "expected_max": 200,
+      "provenance": "M/P",
+      "fallback": "none; two source JON-F cells remain explicitly unmapped",
+      "mapping_evidence": {
+        "source": "berg-malecns-paper-supplement-67767d2",
+        "mapped_source_cells": 58,
+        "unmapped_source_cells": 2,
+        "source_type_counts": {"JO-FV": 47, "JO-FD1": 5, "JO-FD2": 6}
+      }
+    },
+    {
+      "id": "shiu-abn1-readout",
+      "role": "MaleCNS homologue population for FlyWire aBN1 readout 720575940630907434",
+      "combine": "any",
+      "queries": [{"field": "type", "operator": "exact", "value": "SAD093"}],
+      "expected_min": 1,
+      "expected_max": 10,
+      "provenance": "M/P",
+      "fallback": "none",
+      "mapping_evidence": {
+        "source": "berg-malecns-paper-supplement-67767d2",
+        "source_body_id": 720575940630907434,
+        "target_type": "SAD093"
+      }
+    },
+    {
+      "id": "shiu-inhibitory-control",
+      "role": "Mapped MaleCNS homologues for two of the three Figure S5 inhibitory cells",
+      "combine": "any",
+      "queries": [{"field": "type", "operator": "exact", "value": "CB0496"}],
+      "expected_min": 1,
+      "expected_max": 20,
+      "provenance": "M/P",
+      "fallback": "one of three source silencing identities remains explicitly unmapped",
+      "mapping_evidence": {
+        "source": "berg-malecns-paper-supplement-67767d2",
+        "mapped_source_cells": [720575940609957315, 720575940624986407],
+        "unmapped_source_cells": [720575940636066222],
+        "target_type": "CB0496"
+      }
+    }
+  ]
+}

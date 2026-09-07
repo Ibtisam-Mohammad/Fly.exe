@@ -70,7 +70,7 @@ strict = true
 packages = ["flysim"]
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
+module = ["pyarrow", "pyarrow.*", "brian2", "brian2.*", "pygenn", "pygenn.*"]
 ignore_missing_imports = true
 
 [tool.flysim.native-dependencies]

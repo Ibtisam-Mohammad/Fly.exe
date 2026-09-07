@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "shiu-2024-drosophila-brain-model-v630",
+  "title": "Drosophila brain model code, FlyWire v630 inputs, and archived simulation outputs",
+  "paper": "https://doi.org/10.1038/s41586-024-07763-9",
+  "source_repository": "https://github.com/philshiu/Drosophila_brain_model",
+  "source_commit": "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960",
+  "source_archive": "https://doi.org/10.17617/3.CZODIW",
+  "archive_dataset_version": "3.0",
+  "archive_datafile_id": 223847,
+  "license": "MIT for the author repository and Edmond dataset version 3.0",
+  "redistribute_with_gpl_release": false,
+  "artifacts": [
+    {
+      "filename": "2023_03_23_connectivity_630_final.parquet",
+      "bytes": 86630944,
+      "sha256": "94db8c650533bc36ffa3223f2e62325d5648b8d6bd31c3a4e1c804628c7557b3",
+      "archive_md5": "3b42c0fc2cc525bd9784e38c05f9d79d",
+      "role": "FlyWire v630 aggregate connectivity used by the published model"
+    },
+    {
+      "filename": "2023_03_23_completeness_630_final.csv",
+      "bytes": 3057611,
+      "sha256": "e6b71e17671a9bdb05f55e4bc6774640a1418cb7a05125e0fc994ad40f9bfdfb",
+      "archive_md5": "0dc6b58650bd3cd3a2661773d9228e78",
+      "role": "FlyWire v630 neuron-index and transmitter-sign table"
+    },
+    {
+      "filename": "model.py",
+      "bytes": 11900,
+      "sha256": "fc45837d7122c6ce2a7f3f2f23c515992e4b232aadb919efabb72337fac88e4e",
+      "role": "author Brian2 implementation at the pinned repository commit"
+    },
+    {
+      "filename": "figures.ipynb",
+      "bytes": 33229,
+      "sha256": "33cd73c0b4b4a291c51b7bab639c4fa28978e49e111ff0d6adbca5687addb84c",
+      "role": "author experiment definitions, including Figure 5g and Supplementary Figure 5"
+    },
+    {
+      "filename": "results.zip",
+      "bytes": 4499610373,
+      "md5": "f6f2e314821fa6a4196214e3b2b14bc4",
+      "sha256": "f757c8e18e3826c89ba12f930bee455bb6dc22f28403a27161e9b9d9f0a65e93",
+      "role": "archived raw spike outputs; locally checksum-lock SHA-256 after resumable acquisition"
+    }
+  ],
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "female FAFB/FlyWire specimen",
+    "age": "not the MaleCNS five-day-old donor condition",
+    "preparation": "connectome-constrained LIF simulation with comparisons to published stimulation and behavior experiments",
+    "connectome": "FlyWire materialization 630 used by the paper"
+  },
+  "units": "milliseconds, millivolts, hertz, spike events, and aggregate synapse counts",
+  "sampling_rate": "event timestamps; model integration schedule is defined by Brian2 and the source notebook",
+  "fit_role": "none; published parameters are a transferred regression baseline",
+  "held_out_role": "archived Figure 5g outputs are immutable reference outputs, not held-out biological recordings",
+  "mismatches": [
+    "female brain-only FlyWire v630 topology versus the male brain-neck-VNC MaleCNS v1.0 topology",
+    "global point-neuron LIF dynamics versus the project's hybrid graded/spiking target",
+    "transmitter-only presynaptic sign versus receptor-dependent functional polarity",
+    "published simulation output is not independent physiology"
+  ],
+  "permitted_claim": "Supports reproduction of the published Shiu LIF computation and a labelled cross-connectome MaleCNS transfer benchmark.",
+  "forbidden_claim": "Does not validate MaleCNS physiology, receptor-dependent sign, whole-CNS dynamics, grooming behavior, or source-fly state.",
+  "status": "repository inputs and results.zip checksum-locked",
+  "last_reviewed": "2026-09-07"
+}

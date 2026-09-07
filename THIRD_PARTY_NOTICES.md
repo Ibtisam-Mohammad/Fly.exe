@@ -9,6 +9,6 @@ This file records provenance and license boundaries. It does not relicense third
 | FlyGym / NeuroMechFly | Initial body and physics substrate | Apache-2.0; https://github.com/NeLy-EPFL/flygym |
 | GeNN / PyGeNN | Production sparse GPU neural engine | See upstream license; https://github.com/genn-team/genn |
 | Brian2 | Small-circuit numerical oracle | CeCILL-2.1; https://github.com/brian-team/brian2 |
+| Shiu et al. brain model and archived outputs | Stage 1 Brian2/FlyWire regression reference | MIT; https://github.com/philshiu/Drosophila_brain_model and https://doi.org/10.17617/3.CZODIW |
 
 Downloaded research datasets must retain their original citation, version, checksum, and license metadata in the dataset lock.
-
