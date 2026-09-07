@@ -11,6 +11,7 @@ from flysim.circuit import (
     compare_backend_runs,
     make_stimulus_schedule,
     run_numpy_circuit,
+    select_population_path_circuit,
     select_shortest_path_circuit,
 )
 from flysim.connectome import SparseConnectome
@@ -53,6 +54,17 @@ def test_shortest_path_selection_excludes_longer_branch() -> None:
     assert selected.graph.body_ids.tolist() == [10, 50]
     assert selected.graph.contact_counts.tolist() == [1]
     assert selected.input_body_ids == (10,)
+    assert selected.no_path_input_body_ids == ()
+
+
+def test_population_path_selection_keeps_sources_at_different_distances() -> None:
+    selected = select_population_path_circuit(
+        _graph(), {"direct": (10,), "two-hop": (20,)}, (50,), maximum_hops=4
+    )
+
+    assert selected.shortest_path_hops == 2
+    assert selected.input_body_ids == (10, 20)
+    assert selected.graph.body_ids.tolist() == [10, 20, 40, 50]
     assert selected.no_path_input_body_ids == ()
 
 

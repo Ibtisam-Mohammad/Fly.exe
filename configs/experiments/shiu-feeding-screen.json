@@ -30,6 +30,48 @@
     "observed_positive": "supplementary-table optogenetic rostrum-extension fraction is greater than zero",
     "expected_confusion_matrix": {"true_positive": 10, "false_positive": 1, "true_negative": 91, "false_negative": 4}
   },
+  "published_parameters": {
+    "resting_mv": -52.0,
+    "reset_mv": -52.0,
+    "threshold_mv": -45.0,
+    "membrane_tau_ms": 20.0,
+    "synapse_tau_ms": 5.0,
+    "refractory_ms": 2.2,
+    "synaptic_delay_ms": 1.8,
+    "synaptic_mv_per_contact": 0.275,
+    "tonic_drive_mv": 0.0,
+    "reset_synaptic_state_on_spike": true,
+    "transfer_state_updater": "source-faithful-linear",
+    "transfer_genn_precision": "float32-production"
+  },
+  "reference": {
+    "duration_ms": 1000.0,
+    "trials": 30
+  },
+  "transfer_protocol": {
+    "circuit_selection": "induced subgraph over the union of every mapped source body's shortest directed paths to either MaleCNS MN9 readout",
+    "maximum_path_hops": 8,
+    "input_frequency_hz": 50.0,
+    "neural_dt_ms": 0.1,
+    "seed_labels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    "master_seed": 20260907,
+    "structural_controls": ["exact", "shuffled-connectivity", "cell-type-only", "uniform-weights", "randomized-weights", "weak-edge-dropout"],
+    "weak_edge_max_contacts": 2,
+    "sign_controls": ["zero", "excitatory-control", "inhibitory-control", "seeded-balanced-control"],
+    "prediction_rule": "positive only when both bilateral MN9 mean rates across preregistered trials are greater than zero",
+    "ranking_score": "minimum of the two bilateral MN9 mean rates",
+    "stage1_pass_rule": {
+      "minimum_exact_balanced_accuracy": 0.75,
+      "minimum_exact_auroc": 0.75,
+      "minimum_auroc_margin_over_required_controls": 0.05,
+      "required_controls": ["shuffled-connectivity", "cell-type-only"],
+      "minimum_dt_prediction_agreement": 0.95,
+      "maximum_dt_auroc_delta": 0.05,
+      "all_states_finite": true
+    },
+    "timestep_sensitivity_ms": 0.05,
+    "claim_boundary": "Frozen label-blind MaleCNS transfer; thresholds are engineering acceptance criteria and are not fitted to the optogenetic outcomes."
+  },
   "transfer_policy": "Transfer source FlyWire identities through the paper-author crosswalk labels, then resolve every label against traced MaleCNS type or flywireType annotations; retain partial and missing mappings explicitly.",
   "claim_boundary": "Preparation and crosswalk coverage for an independent behavioral screen. No MaleCNS circuit prediction, V1, V2, or V3 evidence is awarded until the preregistered transfer runs and controls pass."
 }

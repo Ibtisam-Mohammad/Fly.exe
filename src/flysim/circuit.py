@@ -7,6 +7,8 @@ import hashlib
 import json
 import os
 import shutil
+import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -207,6 +209,34 @@ class CircuitRun:
         return payload
 
 
+@dataclass(frozen=True, slots=True)
+class PopulationScreenRun:
+    """Readout rates from one batched, label-blind population screen."""
+
+    population_names: tuple[str, ...]
+    seed_labels: tuple[int, ...]
+    readout_body_ids: tuple[int, ...]
+    readout_rates_hz: np.ndarray
+    total_spike_counts: np.ndarray
+    finite_state: bool
+    master_seed: int
+    runtime_seconds: float
+    model_identity: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "population_names": list(self.population_names),
+            "seed_labels": list(self.seed_labels),
+            "readout_body_ids": list(self.readout_body_ids),
+            "readout_rates_hz": self.readout_rates_hz.tolist(),
+            "total_spike_counts": self.total_spike_counts.tolist(),
+            "finite_state": self.finite_state,
+            "master_seed": self.master_seed,
+            "runtime_seconds": self.runtime_seconds,
+            "model_identity": self.model_identity,
+        }
+
+
 def _available_dense_indices(
     graph: SparseConnectome, body_ids: tuple[int, ...]
 ) -> tuple[np.ndarray, tuple[int, ...]]:
@@ -341,6 +371,123 @@ def select_shortest_path_circuit(
             body_id for body_id in present_readout_ids if body_id not in available_readout_ids
         ),
         shortest_path_hops=len(layers) - 1,
+        full_graph_dense_indices=tuple(int(value) for value in sorted_full_dense),
+    )
+
+
+def select_population_path_circuit(
+    graph: SparseConnectome,
+    input_populations: Mapping[str, tuple[int, ...]],
+    readout_body_ids: tuple[int, ...],
+    *,
+    maximum_hops: int,
+) -> CircuitSelection:
+    """Select the union of each input body's shortest paths to either readout.
+
+    Unlike :func:`select_shortest_path_circuit`, this does not stop when the first
+    source reaches a readout. That distinction is required for a population screen
+    whose source types sit at different graph distances.
+    """
+    graph.validate()
+    if maximum_hops <= 0:
+        raise ConfigurationError("maximum_hops must be positive")
+    requested_inputs = tuple(
+        sorted({body_id for values in input_populations.values() for body_id in values})
+    )
+    inputs, unavailable_inputs = _available_dense_indices(graph, requested_inputs)
+    readouts, unavailable_readouts = _available_dense_indices(graph, readout_body_ids)
+    if inputs.size == 0 or readouts.size == 0:
+        raise ReadinessError("Population screen inputs or readouts are absent from the graph")
+
+    reverse_distance = np.full(graph.neuron_count, maximum_hops + 1, dtype=np.int16)
+    reverse_distance[readouts] = 0
+    frontier = np.zeros(graph.neuron_count, dtype=np.bool_)
+    frontier[readouts] = True
+    for hop in range(1, maximum_hops + 1):
+        edge_mask = frontier[graph.target_indices] & (
+            reverse_distance[graph.source_indices] == maximum_hops + 1
+        )
+        sources = np.unique(graph.source_indices[edge_mask])
+        if sources.size == 0:
+            break
+        reverse_distance[sources] = hop
+        frontier.fill(False)
+        frontier[sources] = True
+
+    reachable_inputs = inputs[reverse_distance[inputs] <= maximum_hops]
+    if reachable_inputs.size == 0:
+        raise ReadinessError(
+            f"No population-screen input reaches a readout within {maximum_hops} hops"
+        )
+    selected = np.zeros(graph.neuron_count, dtype=np.bool_)
+    selected[readouts] = True
+    selected[reachable_inputs] = True
+    frontier.fill(False)
+    frontier[reachable_inputs] = True
+    maximum_distance = int(reverse_distance[reachable_inputs].max())
+    for distance in range(maximum_distance, 0, -1):
+        layer_sources = np.flatnonzero(
+            frontier & (reverse_distance == distance)
+        ).astype(np.uint32)
+        if layer_sources.size == 0:
+            continue
+        edge_mask = np.isin(graph.source_indices, layer_sources) & (
+            reverse_distance[graph.target_indices] == distance - 1
+        )
+        targets = np.unique(graph.target_indices[edge_mask])
+        selected[targets] = True
+        frontier[targets] = True
+
+    full_dense = np.flatnonzero(selected).astype(np.uint32)
+    induced_edges = selected[graph.source_indices] & selected[graph.target_indices]
+    old_sources = graph.source_indices[induced_edges]
+    old_targets = graph.target_indices[induced_edges]
+    old_counts = graph.contact_counts[induced_edges]
+    selected_body_ids = graph.body_ids[full_dense]
+    body_order = np.argsort(selected_body_ids)
+    sorted_full_dense = full_dense[body_order]
+    sorted_body_ids = selected_body_ids[body_order].astype(np.uint64, copy=False)
+    old_to_new = np.full(graph.neuron_count, np.iinfo(np.uint32).max, dtype=np.uint32)
+    old_to_new[sorted_full_dense] = np.arange(sorted_full_dense.size, dtype=np.uint32)
+    new_sources = old_to_new[old_sources]
+    new_targets = old_to_new[old_targets]
+    edge_order = np.lexsort((new_targets, new_sources))
+    identity = hashlib.sha256()
+    identity.update(graph.source_sha256.encode())
+    identity.update(sorted_body_ids.astype("<u8", copy=False).tobytes())
+    identity.update(str(maximum_hops).encode())
+    circuit = SparseConnectome(
+        body_ids=sorted_body_ids,
+        source_indices=new_sources[edge_order].astype(np.uint32, copy=False),
+        target_indices=new_targets[edge_order].astype(np.uint32, copy=False),
+        contact_counts=old_counts[edge_order].astype(np.uint32, copy=False),
+        source_release=f"{graph.source_release}:population-shortest-path-union",
+        source_sha256=identity.hexdigest(),
+    )
+    circuit.validate()
+    reachable_set = set(int(value) for value in reachable_inputs)
+    present_inputs = tuple(
+        body_id for body_id in requested_inputs if body_id not in unavailable_inputs
+    )
+    return CircuitSelection(
+        graph=circuit,
+        input_body_ids=tuple(
+            body_id
+            for body_id in present_inputs
+            if graph.dense_index(body_id) in reachable_set
+        ),
+        readout_body_ids=tuple(
+            body_id for body_id in readout_body_ids if body_id not in unavailable_readouts
+        ),
+        unavailable_input_body_ids=unavailable_inputs,
+        unavailable_readout_body_ids=unavailable_readouts,
+        no_path_input_body_ids=tuple(
+            body_id
+            for body_id in present_inputs
+            if graph.dense_index(body_id) not in reachable_set
+        ),
+        no_path_readout_body_ids=(),
+        shortest_path_hops=maximum_distance,
         full_graph_dense_indices=tuple(int(value) for value in sorted_full_dense),
     )
 
@@ -854,6 +1001,201 @@ def run_genn_circuit(
         spike_indices=spike_indices,
         readout_rates_hz=_readout_rates(spike_indices, readouts, parameters.duration_ms),
         schedule_sha256=schedule.identity(),
+    )
+
+
+def run_genn_population_screen(
+    graph: SparseConnectome,
+    edge_signs: np.ndarray,
+    input_populations: Mapping[str, tuple[int, ...]],
+    parameters: TransferLIFParameters,
+    readout_body_ids: tuple[int, ...],
+    *,
+    frequency_hz: float,
+    seed_labels: tuple[int, ...],
+    master_seed: int,
+    build_path: Path,
+) -> PopulationScreenRun:
+    """Execute all source populations and trials in one direct-PyGeNN batch.
+
+    Source labels and biological outcomes are deliberately absent from this
+    interface. GeNN gives every batch/neuron pair an independent RNG stream rooted
+    in ``master_seed``; ``seed_labels`` are stable trial identifiers and ordering.
+    """
+    from pygenn import (
+        GeNNModel,
+        VarAccess,
+        create_neuron_model,
+        init_postsynaptic,
+        init_weight_update,
+    )
+
+    graph.validate()
+    parameters.validate()
+    if not input_populations or not seed_labels:
+        raise ConfigurationError("Population screen requires populations and seed labels")
+    if not 0.0 < frequency_hz <= 1000.0 / parameters.dt_ms:
+        raise ConfigurationError("Population-screen input frequency is invalid")
+    if edge_signs.shape != (graph.edge_count,):
+        raise ConfigurationError("Population-screen edge signs do not align with the graph")
+
+    population_names = tuple(input_populations)
+    batch_size = len(population_names) * len(seed_labels)
+    input_mask = np.zeros((batch_size, graph.neuron_count), dtype=np.float32)
+    for population_index, name in enumerate(population_names):
+        indices = np.asarray(
+            [graph.dense_index(body_id) for body_id in input_populations[name]],
+            dtype=np.uint32,
+        )
+        for seed_index in range(len(seed_labels)):
+            batch = population_index * len(seed_labels) + seed_index
+            input_mask[batch, indices] = 1.0
+
+    reset_code = (
+        "V = Vreset; SpikeCount += 1.0; "
+        "RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;"
+    )
+    if parameters.reset_synaptic_state_on_spike:
+        reset_code = (
+            "V = Vreset; G = 0.0; SpikeCount += 1.0; "
+            "RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;"
+        )
+    neuron_model = create_neuron_model(
+        "MaleCNSStage1BatchedLIF",
+        params=(
+            "MembraneDecay",
+            "SynapseDecay",
+            "SynapticVoltageCoefficient",
+            "Vrest",
+            "Vreset",
+            "Vthresh",
+            "TauRefrac",
+            "Tonic",
+            "InputProbability",
+        ),
+        vars=(
+            ("V", "scalar"),
+            ("G", "scalar"),
+            ("RefracTime", "scalar"),
+            ("SpikeCount", "scalar"),
+            ("InputCell", "scalar", VarAccess.READ_ONLY_DUPLICATE),
+        ),
+        sim_code="""
+        if (RefracTime > 0.0) {
+            RefracTime -= dt;
+            V = Vreset;
+        }
+        else {
+            const scalar oldG = G;
+            const scalar baseline = Vrest + Tonic;
+            V = baseline + ((V - baseline) * MembraneDecay)
+                + (oldG * SynapticVoltageCoefficient);
+            G = oldG * SynapseDecay;
+            G += Isyn;
+        }
+        """,
+        threshold_condition_code=(
+            "(InputCell > 0.5 && gennrand_uniform() < InputProbability) || "
+            "(RefracTime <= 0.0 && V > Vthresh)"
+        ),
+        reset_code=reset_code,
+    )
+    if "CUDA_PATH" not in os.environ:
+        nvcc = shutil.which("nvcc")
+        if nvcc is not None:
+            os.environ["CUDA_PATH"] = str(Path(nvcc).resolve().parent.parent)
+    identity = hashlib.sha256()
+    identity.update((STAGE1_GENN_MODEL_VERSION + ":population-screen-v1").encode())
+    identity.update(graph.source_sha256.encode())
+    identity.update(np.asarray(edge_signs, dtype="<f4").tobytes())
+    identity.update(json.dumps(population_names, separators=(",", ":")).encode())
+    identity.update(np.packbits(input_mask > 0.5, axis=None).tobytes())
+    identity.update(json.dumps(seed_labels, separators=(",", ":")).encode())
+    identity.update(
+        json.dumps(asdict(parameters), sort_keys=True, separators=(",", ":")).encode()
+    )
+    identity.update(f"{frequency_hz}:{master_seed}".encode())
+    model_identity = identity.hexdigest()
+    scalar_type = "double" if parameters.genn_precision == "float64-reference" else "float"
+    numpy_dtype = np.float64 if scalar_type == "double" else np.float32
+    model = GeNNModel(
+        scalar_type, f"stage1_screen_{model_identity[:12]}", backend="cuda"
+    )
+    model.dt = parameters.dt_ms
+    model.batch_size = batch_size
+    model.seed = master_seed
+    population = model.add_neuron_population(
+        "neurons",
+        graph.neuron_count,
+        neuron_model,
+        {
+            "MembraneDecay": parameters.membrane_decay,
+            "SynapseDecay": parameters.synapse_decay,
+            "SynapticVoltageCoefficient": parameters.synaptic_voltage_coefficient,
+            "Vrest": parameters.resting_mv,
+            "Vreset": parameters.reset_mv,
+            "Vthresh": parameters.threshold_mv,
+            "TauRefrac": parameters.genn_refractory_ms,
+            "Tonic": parameters.tonic_drive_mv,
+            "InputProbability": frequency_hz * parameters.dt_ms / 1000.0,
+        },
+        {
+            "V": parameters.resting_mv,
+            "G": 0.0,
+            "RefracTime": 0.0,
+            "SpikeCount": 0.0,
+            "InputCell": input_mask.astype(numpy_dtype, copy=False),
+        },
+    )
+    weights = _functional_edge_weights(
+        graph, edge_signs, parameters, None, dtype=np.dtype(numpy_dtype)
+    )
+    synapses = model.add_synapse_population(
+        "edges",
+        "SPARSE",
+        population,
+        population,
+        init_weight_update("StaticPulse", {}, {"g": weights}),
+        init_postsynaptic("DeltaCurr"),
+    )
+    synapses.set_sparse_connections(graph.source_indices, graph.target_indices)
+    synapses.axonal_delay_steps = parameters.delay_steps
+    build_path.mkdir(parents=True, exist_ok=True)
+    started = time.perf_counter()
+    model.build(path_to_model=str(build_path), always_rebuild=False)
+    model.load()
+    try:
+        for _ in range(parameters.steps):
+            model.step_time()
+        for name in ("SpikeCount", "V", "G"):
+            population.vars[name].pull_from_device()
+        counts = np.asarray(population.vars["SpikeCount"].view, dtype=np.float64)
+        voltage = np.asarray(population.vars["V"].view)
+        synaptic_state = np.asarray(population.vars["G"].view)
+    finally:
+        model.unload()
+    runtime_seconds = time.perf_counter() - started
+    readout_indices = np.asarray(
+        [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32
+    )
+    readout_counts = counts[:, readout_indices]
+    rates = readout_counts / (parameters.duration_ms / 1000.0)
+    rates = rates.reshape(len(population_names), len(seed_labels), len(readout_body_ids))
+    total_counts = counts.sum(axis=1).reshape(len(population_names), len(seed_labels))
+    return PopulationScreenRun(
+        population_names=population_names,
+        seed_labels=seed_labels,
+        readout_body_ids=readout_body_ids,
+        readout_rates_hz=rates,
+        total_spike_counts=total_counts,
+        finite_state=bool(
+            np.all(np.isfinite(counts))
+            and np.all(np.isfinite(voltage))
+            and np.all(np.isfinite(synaptic_state))
+        ),
+        master_seed=master_seed,
+        runtime_seconds=runtime_seconds,
+        model_identity=model_identity,
     )
 
 

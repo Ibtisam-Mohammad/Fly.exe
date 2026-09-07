@@ -33,6 +33,11 @@ from flysim.evidence import (
     validate_evidence_bundle,
 )
 from flysim.factory import build_reference_demo
+from flysim.feeding_stage1 import (
+    evaluate_feeding_screen,
+    execute_feeding_screen,
+    preregister_feeding_screen,
+)
 from flysim.morphology import sync_morphology_canaries
 from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
 from flysim.populations import resolve_populations
@@ -430,27 +435,70 @@ def _command_benchmark_feeding_screen(args: argparse.Namespace) -> int:
         / "male-cns-v1.0"
         / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
     )
-    output = args.output or (
-        args.root / "evidence" / "male-cns-v1.0" / "shiu-feeding-screen-preparation.json"
+    evidence_root = args.root / "evidence" / "male-cns-v1.0"
+    preparation = args.preparation or evidence_root / "shiu-feeding-screen-preparation.json"
+    preregistration = (
+        args.preregistration or evidence_root / "shiu-feeding-screen-preregistration.json"
     )
-    result = prepare_shiu_feeding_screen(
-        root=args.root,
-        annotations_path=annotations,
-        experiment_path=args.experiment,
-        output_path=output,
+    predictions = args.predictions or evidence_root / "shiu-feeding-screen-predictions.json"
+    population_resolution = args.population_resolution or (
+        args.root / "derived" / "male-cns-v1.0" / "population-resolution.json"
     )
+    graph = args.graph or args.root / "derived" / "male-cns-v1.0" / "graph"
+    if args.phase == "prepare-source":
+        output = args.output or preparation
+        result = prepare_shiu_feeding_screen(
+            root=args.root,
+            annotations_path=annotations,
+            experiment_path=args.experiment,
+            output_path=output,
+        )
+    elif args.phase == "preregister":
+        output = args.output or preregistration
+        result = preregister_feeding_screen(
+            preparation_path=preparation,
+            experiment_path=args.experiment,
+            population_resolution_path=population_resolution,
+            graph_path=graph,
+            output_path=output,
+        )
+    elif args.phase == "execute":
+        output = args.output or predictions
+        transmitter = args.transmitters or (
+            args.root
+            / "raw"
+            / "male-cns-v1.0"
+            / "body-neurotransmitters-male-cns-v1.0.feather"
+        )
+        result = execute_feeding_screen(
+            root=args.root,
+            preregistration_path=preregistration,
+            annotations_path=annotations,
+            transmitter_path=transmitter,
+            output_path=output,
+        )
+    else:
+        output = args.output or evidence_root / "shiu-feeding-screen-stage1-review.json"
+        result = evaluate_feeding_screen(
+            preparation_path=preparation,
+            preregistration_path=preregistration,
+            predictions_path=predictions,
+            output_path=output,
+        )
     _print_json(
         {
             "experiment_id": result["experiment_id"],
             "status": result["status"],
-            "source_screen": result["source_screen"],
-            "male_cns_transfer_readiness": result["male_cns_transfer_readiness"],
+            "phase": args.phase,
+            "stage1_exit_gate_passed": result.get("stage1_exit_gate_passed"),
+            "blocking_reasons": result.get("blocking_reasons"),
             "output": result["output"],
             "sha256": result["sha256"],
+            "immutable_snapshot": result.get("immutable_snapshot"),
             "validation_tier_awarded": result["validation_tier_awarded"],
         }
     )
-    return 0
+    return 2 if args.phase == "evaluate" and not result["stage1_exit_gate_passed"] else 0
 
 
 def _split_ids(values: Sequence[str]) -> frozenset[str]:
@@ -769,6 +817,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     feeding_screen.add_argument("--root", type=Path, default=default_data_root())
     feeding_screen.add_argument(
+        "--phase",
+        choices=("prepare-source", "preregister", "execute", "evaluate"),
+        default="prepare-source",
+    )
+    feeding_screen.add_argument(
         "--annotations",
         type=Path,
     )
@@ -778,6 +831,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=project_root() / "configs" / "experiments" / "shiu-feeding-screen.json",
     )
     feeding_screen.add_argument("--output", type=Path)
+    feeding_screen.add_argument("--preparation", type=Path)
+    feeding_screen.add_argument("--preregistration", type=Path)
+    feeding_screen.add_argument("--predictions", type=Path)
+    feeding_screen.add_argument("--population-resolution", type=Path)
+    feeding_screen.add_argument("--graph", type=Path)
+    feeding_screen.add_argument("--transmitters", type=Path)
     feeding_screen.set_defaults(func=_command_benchmark_feeding_screen)
 
     run = commands.add_parser("run")
