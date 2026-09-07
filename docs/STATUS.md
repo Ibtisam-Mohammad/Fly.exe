@@ -28,6 +28,12 @@ Status date: 2026-09-07
   FlyWire-to-MaleCNS crosswalk. The transferred circuit resolves 41 neurons and 129 edges.
 - `flysim benchmark circuit --experiment shiu-antennal-grooming`, with NumPy, Brian2 and
   direct PyGeNN execution plus cell-type, connectivity, weight, weak-edge and sign controls.
+- Source-faithful linear state/event semantics for the 41-neuron transfer: NumPy and Brian2
+  match to numerical precision, while float64 reference GeNN matches spike identity/count/rate
+  and remains within the registered 0.1-ms timing step.
+- All 11 Figure 5g frequencies, an explicit three-frequency `ND-04` training split, and an
+  eight-frequency held-out split. The frozen global scale fails held-out activation, and that
+  negative result is retained in the immutable report.
 - Kinematic body/world engine for the first controller-only storyboard.
 - Eon-like engineering state machine and causal ablation hooks.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
@@ -64,10 +70,11 @@ Status date: 2026-09-07
 - Track B full-VNC walking is readiness-gated and cannot be claimed.
 - No cellular, synaptic, circuit, brain-wide, motor-interface, embodied, behavioral, or
   generalization tier has passed. V0 does not validate functional dynamics.
-- The first Shiu transfer preserves the rising frequency-response direction but overpredicts
-  response amplitude. NumPy-to-GeNN passes the 0.1-ms gate; the transferred Brian2 comparison
-  fails the 1% rate gate at 9.09%, and the mapped `CB0496` silencing population is absent from
-  MaleCNS annotations. Stage 1 therefore remains active and no V3 evidence is awarded.
+- The first Shiu transfer preserves a rising frequency-response direction but overpredicts
+  response amplitude with the source fallback scale. Numerical backend parity now passes.
+  A preregistered global `ND-04` fit selects 0.075 mV/contact but produces zero responses on all
+  eight positive held-out frequencies. The mapped `CB0496` silencing population is also absent
+  from MaleCNS annotations. Stage 1 therefore remains active and no V3 evidence is awarded.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -88,7 +95,7 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 55 passing |
+| Automated tests | 58 passing, 1 optional skipped |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
