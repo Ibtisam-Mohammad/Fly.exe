@@ -99,6 +99,9 @@ Status date: 2026-09-08
 - The first frozen Stage 2 fit has been evaluated. Its causal uEPSC kernel passes the aggregate
   baseline-corrected normalized-error gate (1.105 <= 1.2), while the steady-state LIF F-I model fails narrowly
   (1.228 > 1.2). No fitted continuous parameter lies on a search boundary.
+- A checksum-gated post-freeze uEPSC feature review changes no parameter. It reports held-out peak
+  amplitude, peak-time, and one-over-e decay errors and records the missing failure-probability and
+  short-term-plasticity evidence that still blocks V2.
 
 ## Not implemented or not yet validated
 
@@ -157,7 +160,7 @@ and [projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUN
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 77 passing |
+| Automated tests | 78 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 

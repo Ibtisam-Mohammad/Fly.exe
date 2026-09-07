@@ -54,6 +54,7 @@ from flysim.stage2 import (
     fit_projection_neuron_model,
     import_gouwens_dm1_priors,
     import_gugel_figure7,
+    review_projection_neuron_fit,
 )
 from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
@@ -163,6 +164,29 @@ def _command_stage2_fit_pn(args: argparse.Namespace) -> int:
         "no_continuous_fit_at_search_boundary",
     )
     return 0 if all(result["acceptance"][key] for key in required) else 2
+
+
+def _command_stage2_review_pn(args: argparse.Namespace) -> int:
+    review = review_projection_neuron_fit(
+        args.fit_result,
+        args.root,
+        args.output,
+        expected_fit_sha256=args.expected_fit_sha256,
+    )
+    _print_json(
+        {
+            "review_id": review["review_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": review["logical_sha256"],
+            "parameters_changed": review["parameters_changed"],
+            "model_features": review["model_features"],
+            "feature_errors": review["feature_errors"],
+            "v2_coverage": review["v2_coverage"],
+            "tier_blockers": review["tier_blockers"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
 
 
 def _command_evidence_build(args: argparse.Namespace) -> int:
@@ -1150,6 +1174,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_fit_pn.add_argument("--output", type=Path, required=True)
     stage2_fit_pn.set_defaults(func=_command_stage2_fit_pn)
+    stage2_review_pn = stage2_commands.add_parser(
+        "review-pn", help="audit feature errors from an immutable frozen PN fit"
+    )
+    stage2_review_pn.add_argument("--root", type=Path, default=default_data_root())
+    stage2_review_pn.add_argument("--fit-result", type=Path, required=True)
+    stage2_review_pn.add_argument("--expected-fit-sha256", required=True)
+    stage2_review_pn.add_argument("--output", type=Path, required=True)
+    stage2_review_pn.set_defaults(func=_command_stage2_review_pn)
 
     evidence = commands.add_parser("evidence", help="Build and validate scientific evidence")
     evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)

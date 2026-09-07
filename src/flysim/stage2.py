@@ -661,3 +661,113 @@ def fit_projection_neuron_model(
     result["logical_sha256"] = sha256_json(result)
     _atomic_json(output, result)
     return result
+
+
+def _epsc_features(time_ms: np.ndarray, trace_pa: np.ndarray) -> dict[str, float]:
+    baseline = float(np.mean(trace_pa[time_ms < 40.0]))
+    inward = baseline - trace_pa
+    peak_index = int(np.argmax(inward))
+    peak = float(inward[peak_index])
+    peak_time = float(time_ms[peak_index])
+    target = peak / math.e
+    after_peak = np.flatnonzero(
+        (np.arange(len(time_ms)) > peak_index) & (inward <= target)
+    )
+    decay_ms = (
+        float(time_ms[int(after_peak[0])] - peak_time) if len(after_peak) else math.nan
+    )
+    return {
+        "baseline_pa": baseline,
+        "peak_inward_amplitude_pa": peak,
+        "peak_time_ms": peak_time,
+        "peak_to_one_over_e_ms": decay_ms,
+    }
+
+
+def review_projection_neuron_fit(
+    fit_result_path: Path,
+    root: Path,
+    output: Path,
+    *,
+    expected_fit_sha256: str,
+) -> dict[str, Any]:
+    """Audit frozen held-out features without changing or refitting any parameter."""
+    observed_sha256 = sha256_file(fit_result_path)
+    if observed_sha256 != expected_fit_sha256:
+        raise DatasetError(
+            f"Frozen Stage 2 fit SHA-256 mismatch: expected {expected_fit_sha256}, "
+            f"observed {observed_sha256}"
+        )
+    fit_result = load_json(fit_result_path)
+    if fit_result.get("frozen_before_held_out_evaluation") is not True:
+        raise DatasetError("Stage 2 review requires a frozen fit result")
+    epsc_parameters = fit_result["uepsc_model"]["parameters"]
+    held_out_ids = tuple(
+        str(value)
+        for value in fit_result["held_out_specimen_ids"]
+        if "-uepsc-" in str(value)
+    )
+    table = pq.read_table(
+        root
+        / "derived"
+        / "auxiliary"
+        / "gugel-2023-elife-85443"
+        / "figure7"
+        / "dl5-uepsc-traces.parquet"
+    )
+    time_ms, held_out_curves = _group_curves(table, held_out_ids, "time_ms", "current_pa")
+    observed_features: list[dict[str, Any]] = [
+        {"specimen_id": specimen_id, **_epsc_features(time_ms, curve)}
+        for specimen_id, curve in zip(held_out_ids, held_out_curves, strict=True)
+    ]
+
+    elapsed = np.maximum(0.0, time_ms - float(epsc_parameters["onset_ms"]))
+    kernel = np.exp(-elapsed / float(epsc_parameters["decay_tau_ms"])) - np.exp(
+        -elapsed / float(epsc_parameters["rise_tau_ms"])
+    )
+    kernel[time_ms < float(epsc_parameters["onset_ms"])] = 0.0
+    kernel /= np.max(kernel)
+    model_trace = -float(epsc_parameters["population_amplitude_pa"]) * kernel
+    model_features = _epsc_features(time_ms, model_trace)
+
+    def errors(key: str) -> list[float]:
+        return [
+            float(model_features[key] - float(specimen[key])) for specimen in observed_features
+        ]
+
+    review: dict[str, Any] = {
+        "schema_version": "1.0",
+        "review_id": "stage2-projection-neuron-frozen-feature-review-v1",
+        "frozen_fit_path": str(fit_result_path),
+        "frozen_fit_sha256": observed_sha256,
+        "parameters_changed": False,
+        "held_out_specimen_ids": list(held_out_ids),
+        "model_features": model_features,
+        "held_out_features": observed_features,
+        "feature_errors": {
+            "peak_amplitude_error_pa": errors("peak_inward_amplitude_pa"),
+            "peak_time_error_ms": errors("peak_time_ms"),
+            "peak_to_one_over_e_error_ms": errors("peak_to_one_over_e_ms"),
+        },
+        "interpretation": (
+            "Descriptive post-freeze feature audit. The experiment registered these feature "
+            "categories, but no numeric feature thresholds were preregistered."
+        ),
+        "v2_coverage": {
+            "sign": "covered for the registered inward-current waveforms",
+            "unitary_amplitude": "covered for three held-out recordings",
+            "kinetics": "covered for three held-out recordings",
+            "failure_probability": "missing",
+            "short_term_plasticity": "missing",
+        },
+        "validation_tier_awarded": None,
+        "tier_blockers": [
+            "No preregistered feature-level acceptance thresholds",
+            "No held-out release-failure distribution",
+            "No held-out short-term-plasticity protocol",
+            "Cross-specimen female DL5 evidence is not MaleCNS DM1/DM4 physiology",
+        ],
+    }
+    review["logical_sha256"] = sha256_json(review)
+    _atomic_json(output, review)
+    return review

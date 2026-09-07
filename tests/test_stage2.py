@@ -13,6 +13,7 @@ from flysim.stage2 import (
     import_gouwens_dm1_priors,
     import_gugel_figure7,
     lif_steady_state_rate_hz,
+    review_projection_neuron_fit,
 )
 
 
@@ -144,4 +145,17 @@ def test_lif_current_rate_is_thresholded_monotonic_and_validated() -> None:
             rheobase_pa=0.0,
             membrane_tau_ms=20.0,
             refractory_ms=2.0,
+        )
+
+
+def test_frozen_fit_review_rejects_wrong_result_identity(tmp_path: Path) -> None:
+    result = tmp_path / "fit.json"
+    result.write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(DatasetError, match="fit SHA-256 mismatch"):
+        review_projection_neuron_fit(
+            result,
+            tmp_path,
+            tmp_path / "review.json",
+            expected_fit_sha256="0" * 64,
         )

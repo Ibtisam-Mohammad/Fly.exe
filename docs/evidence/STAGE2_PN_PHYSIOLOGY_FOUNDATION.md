@@ -67,6 +67,12 @@ run used a truncated refractory search range, and v2 used an asymmetric baseline
 are superseded and are not evidence.
 
 No V1 or V2 evidence has been awarded. The F-I failure blocks V1. The uEPSC aggregate result still
-needs preregistered peak/timing/decay feature review before a selected V2 decision. Because the
-held-out cells have now been inspected, any revised active-cell family must be tested on a new
-independent holdout rather than retuned against these recordings.
+needed a post-freeze feature review. That review changed no parameter: the population kernel
+underpredicts the three held-out peak amplitudes by 31.323, 4.807, and 11.584 pA; predicts each peak
+0.300 ms early; and has one-over-e decay-time errors of -1.200, -3.300, and +5.000 ms. The review is
+immutable at SHA-256 `9cec459676980403ecf4bc95438fbe53514a2fd77da5de7403dde343123c20d0`.
+
+These descriptive features still do not earn V2: their numeric thresholds were not preregistered,
+and the required release-failure and short-term-plasticity evidence is absent. Because the held-out
+cells have now been inspected, any revised active-cell family must be tested on a new independent
+holdout rather than retuned against these recordings.

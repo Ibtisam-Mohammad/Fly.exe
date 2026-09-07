@@ -1,7 +1,7 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.7
+Version: 1.8
 Last evidence review: 2026-09-07
 Last implementation audit: 2026-09-08
 Applies to: this repository and every subdirectory
@@ -32,7 +32,7 @@ CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline comp
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
 ENGINEERING_STATUS: first Stage 2 PN fit/evaluation complete; uEPSC kernel passes the normalized-error gate, steady-state LIF F-I transfer fails, and no V1/V2 tier is awarded
-NEXT_GATE: review uEPSC feature metrics -> lock new independent cellular holdout -> replace failed steady-state LIF family without reusing consumed held-out cells
+NEXT_GATE: lock new independent cellular holdout -> replace failed steady-state LIF family; source release-failure/STP evidence before any V2 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -45,7 +45,7 @@ TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 mini
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
 STAGE2_DATA: Gouwens-Wilson DM1 passive priors plus Gugel-2023 DL5 F-I/uEPSC recordings locked; six fit and five held-out recordings
 STAGE2_READINESS: first data/loss contract passed with four artifact hashes; its held-out cells are now consumed
-STAGE2_FIT: frozen F-I ratio 1.228 fails <=1.2; baseline-corrected uEPSC ratio 1.105 passes; immutable result SHA-256 5ee63453c3c1; no tier awarded
+STAGE2_FIT: frozen F-I ratio 1.228 fails <=1.2; baseline-corrected uEPSC ratio 1.105 passes; fit SHA-256 5ee63453c3c1; feature review SHA-256 9cec45967698; no tier awarded
 TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -116,6 +116,14 @@ one aggregate gate. No continuous parameter is on a search boundary. Result arti
 `projection-neuron-fit-v3.json` has SHA-256
 `5ee63453c3c12d7ada3754245b93c172567e1ecaf6b0c4a4a51fec958a336780`. The held-out cells are
 now consumed and cannot validate a revised model. No V1/V2 tier is awarded.
+
+The post-freeze uEPSC feature audit changes no parameter. Its population kernel underpredicts the
+three held-out peak amplitudes by 31.323, 4.807, and 11.584 pA; peak time is 0.300 ms early for all
+three, and one-over-e decay errors are -1.200, -3.300, and +5.000 ms. Sign, amplitude, and kinetics
+are descriptively covered, but numeric feature thresholds were not preregistered and release-failure
+and short-term-plasticity evidence are missing. Review artifact
+`projection-neuron-feature-review-v1.json` has SHA-256
+`9cec459676980403ecf4bc95438fbe53514a2fd77da5de7403dde343123c20d0`; no V2 tier is awarded.
 
 Useful retrieval commands:
 
