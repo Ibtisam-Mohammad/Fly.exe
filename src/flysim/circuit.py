@@ -1104,22 +1104,27 @@ def run_genn_population_screen(
         nvcc = shutil.which("nvcc")
         if nvcc is not None:
             os.environ["CUDA_PATH"] = str(Path(nvcc).resolve().parent.parent)
+    build_identity = hashlib.sha256()
+    build_identity.update((STAGE1_GENN_MODEL_VERSION + ":population-screen-v1").encode())
+    build_identity.update(graph.source_sha256.encode())
+    build_identity.update(np.asarray(edge_signs, dtype="<f4").tobytes())
+    build_identity.update(str(batch_size).encode())
+    build_identity.update(
+        json.dumps(asdict(parameters), sort_keys=True, separators=(",", ":")).encode()
+    )
     identity = hashlib.sha256()
-    identity.update((STAGE1_GENN_MODEL_VERSION + ":population-screen-v1").encode())
-    identity.update(graph.source_sha256.encode())
-    identity.update(np.asarray(edge_signs, dtype="<f4").tobytes())
+    identity.update(build_identity.digest())
     identity.update(json.dumps(population_names, separators=(",", ":")).encode())
     identity.update(np.packbits(input_mask > 0.5, axis=None).tobytes())
     identity.update(json.dumps(seed_labels, separators=(",", ":")).encode())
-    identity.update(
-        json.dumps(asdict(parameters), sort_keys=True, separators=(",", ":")).encode()
-    )
     identity.update(f"{frequency_hz}:{master_seed}".encode())
     model_identity = identity.hexdigest()
     scalar_type = "double" if parameters.genn_precision == "float64-reference" else "float"
     numpy_dtype = np.float64 if scalar_type == "double" else np.float32
     model = GeNNModel(
-        scalar_type, f"stage1_screen_{model_identity[:12]}", backend="cuda"
+        scalar_type,
+        f"stage1_screen_{build_identity.hexdigest()[:12]}",
+        backend="cuda",
     )
     model.dt = parameters.dt_ms
     model.batch_size = batch_size

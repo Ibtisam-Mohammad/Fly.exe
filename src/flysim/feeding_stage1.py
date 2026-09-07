@@ -26,6 +26,8 @@ from flysim.datasets import sha256_file
 from flysim.errors import DatasetError, ReadinessError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
 
+_MAX_SEEDS_PER_GENN_BATCH = 10
+
 
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +56,57 @@ def _code_commit() -> str:
         text=True,
         cwd=project_root(),
     ).stdout.strip()
+
+
+def _run_chunked_screen(
+    *,
+    graph: SparseConnectome,
+    edge_signs: np.ndarray,
+    populations: dict[str, tuple[int, ...]],
+    parameters: Any,
+    readouts: tuple[int, ...],
+    frequency_hz: float,
+    seed_labels: tuple[int, ...],
+    master_seed: int,
+    build_path: Path,
+) -> dict[str, Any]:
+    """Respect GeNN's CUDA batch-axis bound without changing trial coverage."""
+    chunks = [
+        seed_labels[index : index + _MAX_SEEDS_PER_GENN_BATCH]
+        for index in range(0, len(seed_labels), _MAX_SEEDS_PER_GENN_BATCH)
+    ]
+    results = [
+        run_genn_population_screen(
+            graph,
+            edge_signs,
+            populations,
+            parameters,
+            readouts,
+            frequency_hz=frequency_hz,
+            seed_labels=chunk,
+            master_seed=master_seed + int(chunk[0]),
+            build_path=build_path,
+        )
+        for chunk in chunks
+    ]
+    return {
+        "population_names": list(results[0].population_names),
+        "seed_labels": [seed for result in results for seed in result.seed_labels],
+        "readout_body_ids": list(results[0].readout_body_ids),
+        "readout_rates_hz": np.concatenate(
+            [result.readout_rates_hz for result in results], axis=1
+        ).tolist(),
+        "total_spike_counts": np.concatenate(
+            [result.total_spike_counts for result in results], axis=1
+        ).tolist(),
+        "finite_state": all(result.finite_state for result in results),
+        "master_seed": master_seed,
+        "chunk_master_seeds": [result.master_seed for result in results],
+        "runtime_seconds": float(sum(result.runtime_seconds for result in results)),
+        "model_identities": [result.model_identity for result in results],
+        "execution_chunks": len(results),
+        "maximum_seeds_per_chunk": _MAX_SEEDS_PER_GENN_BATCH,
+    }
 
 
 def preregister_feeding_screen(
@@ -204,12 +257,12 @@ def execute_feeding_screen(
             unresolved_policy=UnresolvedSignPolicy.ZERO,
             seed=master_seed,
         )
-        run = run_genn_population_screen(
-            control_graph,
-            signs.edge_signs,
-            selected_populations,
-            parameters,
-            readouts,
+        run = _run_chunked_screen(
+            graph=control_graph,
+            edge_signs=signs.edge_signs,
+            populations=selected_populations,
+            parameters=parameters,
+            readouts=readouts,
             frequency_hz=frequency,
             seed_labels=seed_labels,
             master_seed=master_seed,
@@ -227,7 +280,7 @@ def execute_feeding_screen(
                 "neurons": control_graph.neuron_count,
                 "edges": control_graph.edge_count,
                 "unresolved_sign_policy": UnresolvedSignPolicy.ZERO.value,
-                **run.as_dict(),
+                **run,
             }
         )
 
@@ -241,12 +294,12 @@ def execute_feeding_screen(
             unresolved_policy=policy,
             seed=master_seed,
         )
-        run = run_genn_population_screen(
-            selection.graph,
-            signs.edge_signs,
-            selected_populations,
-            parameters,
-            readouts,
+        run = _run_chunked_screen(
+            graph=selection.graph,
+            edge_signs=signs.edge_signs,
+            populations=selected_populations,
+            parameters=parameters,
+            readouts=readouts,
             frequency_hz=frequency,
             seed_labels=seed_labels,
             master_seed=master_seed,
@@ -264,16 +317,16 @@ def execute_feeding_screen(
                 "neurons": selection.graph.neuron_count,
                 "edges": selection.graph.edge_count,
                 "unresolved_sign_policy": policy.value,
-                **run.as_dict(),
+                **run,
             }
         )
 
-    zero_run = run_genn_population_screen(
-        selection.graph,
-        np.zeros(selection.graph.edge_count, dtype=np.float32),
-        selected_populations,
-        parameters,
-        readouts,
+    zero_run = _run_chunked_screen(
+        graph=selection.graph,
+        edge_signs=np.zeros(selection.graph.edge_count, dtype=np.float32),
+        populations=selected_populations,
+        parameters=parameters,
+        readouts=readouts,
         frequency_hz=frequency,
         seed_labels=seed_labels,
         master_seed=master_seed,
@@ -290,19 +343,19 @@ def execute_feeding_screen(
             "graph_sha256": selection.graph.source_sha256,
             "neurons": selection.graph.neuron_count,
             "edges": selection.graph.edge_count,
-            **zero_run.as_dict(),
+            **zero_run,
         }
     )
 
     sensitivity_parameters = replace(
         parameters, dt_ms=float(protocol["timestep_sensitivity_ms"])
     )
-    dt_run = run_genn_population_screen(
-        selection.graph,
-        base_signs.edge_signs,
-        selected_populations,
-        sensitivity_parameters,
-        readouts,
+    dt_run = _run_chunked_screen(
+        graph=selection.graph,
+        edge_signs=base_signs.edge_signs,
+        populations=selected_populations,
+        parameters=sensitivity_parameters,
+        readouts=readouts,
         frequency_hz=frequency,
         seed_labels=seed_labels,
         master_seed=master_seed,
@@ -319,7 +372,7 @@ def execute_feeding_screen(
             "graph_sha256": selection.graph.source_sha256,
             "neurons": selection.graph.neuron_count,
             "edges": selection.graph.edge_count,
-            **dt_run.as_dict(),
+            **dt_run,
         }
     )
     payload: dict[str, Any] = {
