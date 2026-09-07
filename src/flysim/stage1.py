@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,7 @@ from flysim.circuit import (
 from flysim.config import load_json, project_root, sha256_json
 from flysim.connectome import SparseConnectome
 from flysim.datasets import sha256_file
+from flysim.dynamics import DynamicsRegistry, edge_type_pair_keys
 from flysim.errors import DatasetError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
 from flysim.shiu_reference import load_or_build_shiu_figure5g_reference
@@ -272,6 +274,7 @@ def run_shiu_malecns_transfer(
     graph_path: Path,
     experiment_path: Path,
     population_resolution_path: Path,
+    dynamics_registry_path: Path,
     output_path: Path,
     backends: tuple[str, ...],
     prepare_only: bool,
@@ -317,6 +320,9 @@ def run_shiu_malecns_transfer(
         / "body-neurotransmitters-male-cns-v1.0.feather"
     )
     cell_types = load_cell_types(annotations, selected.graph.body_ids)
+    dynamics_registry = DynamicsRegistry.load(dynamics_registry_path)
+    dynamics_resolution = dynamics_registry.resolve(cell_types)
+    type_pair_counts = Counter(edge_type_pair_keys(selected.graph, cell_types))
     parameters = parameters_from_experiment(experiment)
     population_status = _population_resolution_status(population_resolution_path)
     base: dict[str, Any] = {
@@ -335,6 +341,19 @@ def run_shiu_malecns_transfer(
         "circuit_sha256": selected.graph.source_sha256,
         "cell_type_counts": {
             value or "untyped": cell_types.count(value) for value in sorted(set(cell_types))
+        },
+        "dynamics_registry_path": str(dynamics_registry_path.resolve()),
+        "dynamics_registry_file_sha256": sha256_file(dynamics_registry_path),
+        "dynamics_resolution": dynamics_resolution.as_dict(),
+        "type_pair_edge_counts": dict(sorted(type_pair_counts.items())),
+        "typed_dynamics_execution": {
+            "status": "registry-resolved-not-enabled",
+            "reason": (
+                "The Stage 1 regression remains the source-faithful LIF baseline. "
+                "Hybrid spiking/graded execution and fitted type-pair scales require "
+                "independent training and validation evidence."
+            ),
+            "validation_tier_awarded": None,
         },
         "parameters": dataclass_payload(parameters),
         "assumption_ids": experiment["assumption_ids"],

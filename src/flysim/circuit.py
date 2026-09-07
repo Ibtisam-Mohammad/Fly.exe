@@ -500,28 +500,57 @@ def _readout_rates(
     )
 
 
+def _functional_edge_weights(
+    graph: SparseConnectome,
+    edge_signs: np.ndarray,
+    parameters: TransferLIFParameters,
+    edge_scale_multipliers: np.ndarray | None,
+    *,
+    dtype: np.dtype[Any],
+) -> np.ndarray:
+    if edge_signs.shape != graph.contact_counts.shape:
+        raise ConfigurationError("edge_signs must align with circuit edges")
+    multipliers = (
+        np.ones(graph.edge_count, dtype=np.float64)
+        if edge_scale_multipliers is None
+        else np.asarray(edge_scale_multipliers, dtype=np.float64)
+    )
+    if multipliers.shape != graph.contact_counts.shape:
+        raise ConfigurationError("edge_scale_multipliers must align with circuit edges")
+    if np.any(~np.isfinite(multipliers)) or np.any(multipliers < 0.0):
+        raise ConfigurationError("edge_scale_multipliers must be finite and nonnegative")
+    return np.asarray(
+        graph.contact_counts.astype(dtype)
+        * edge_signs.astype(dtype)
+        * multipliers.astype(dtype)
+        * parameters.synaptic_mv_per_contact,
+        dtype=dtype,
+    )
+
+
 def run_numpy_circuit(
     graph: SparseConnectome,
     edge_signs: np.ndarray,
     schedule: StimulusSchedule,
     parameters: TransferLIFParameters,
     readout_body_ids: tuple[int, ...],
+    edge_scale_multipliers: np.ndarray | None = None,
 ) -> CircuitRun:
     """Run the source-faithful linear update with an explicit causal schedule."""
     graph.validate()
     parameters.validate()
-    if edge_signs.shape != graph.contact_counts.shape:
-        raise ConfigurationError("edge_signs must align with circuit edges")
     if schedule.forced_spikes.shape != (parameters.steps, schedule.input_indices.size):
         raise ConfigurationError("Stimulus schedule shape does not match the experiment")
     voltage = np.full(graph.neuron_count, parameters.resting_mv, dtype=np.float64)
     synaptic_state = np.zeros(graph.neuron_count, dtype=np.float64)
     refractory_until = np.zeros(graph.neuron_count, dtype=np.int64)
     queue = np.zeros((parameters.delay_steps + 1, graph.neuron_count), dtype=np.float64)
-    weights = (
-        graph.contact_counts.astype(np.float64)
-        * edge_signs
-        * parameters.synaptic_mv_per_contact
+    weights = _functional_edge_weights(
+        graph,
+        edge_signs,
+        parameters,
+        edge_scale_multipliers,
+        dtype=np.dtype(np.float64),
     )
     sources = np.asarray(graph.source_indices)
     targets = np.asarray(graph.target_indices)
@@ -594,14 +623,13 @@ def run_brian2_circuit(
     schedule: StimulusSchedule,
     parameters: TransferLIFParameters,
     readout_body_ids: tuple[int, ...],
+    edge_scale_multipliers: np.ndarray | None = None,
 ) -> CircuitRun:
     """Run the transferred circuit with Brian2 using the same forced-spike schedule."""
     import brian2 as b2
 
     graph.validate()
     parameters.validate()
-    if edge_signs.shape != graph.contact_counts.shape:
-        raise ConfigurationError("edge_signs must align with circuit edges")
     brian_input_indices = schedule.input_indices.astype(np.int64, copy=False)
     forced = np.zeros((parameters.steps, graph.neuron_count), dtype=np.float64)
     forced[:, brian_input_indices] = schedule.forced_spikes
@@ -643,9 +671,13 @@ def run_brian2_circuit(
         j=graph.target_indices.astype(np.int64, copy=False),
     )
     synapses.w = (
-        graph.contact_counts.astype(np.float64)
-        * edge_signs.astype(np.float64)
-        * parameters.synaptic_mv_per_contact
+        _functional_edge_weights(
+            graph,
+            edge_signs,
+            parameters,
+            edge_scale_multipliers,
+            dtype=np.dtype(np.float64),
+        )
         * b2.mV
     )
     synapses.delay = parameters.synaptic_delay_ms * b2.ms
@@ -683,6 +715,7 @@ def run_genn_circuit(
     parameters: TransferLIFParameters,
     readout_body_ids: tuple[int, ...],
     build_path: Path,
+    edge_scale_multipliers: np.ndarray | None = None,
 ) -> CircuitRun:
     """Run the transferred circuit with direct PyGeNN on CUDA."""
     from pygenn import (
@@ -694,8 +727,6 @@ def run_genn_circuit(
 
     graph.validate()
     parameters.validate()
-    if edge_signs.shape != graph.contact_counts.shape:
-        raise ConfigurationError("edge_signs must align with circuit edges")
     reset_code = "V = Vreset; RefracTime = InputCell > 0.5 ? 0.0 : TauRefrac;"
     if parameters.reset_synaptic_state_on_spike:
         reset_code = (
@@ -749,6 +780,8 @@ def run_genn_circuit(
     identity.update(
         json.dumps(asdict(parameters), sort_keys=True, separators=(",", ":")).encode()
     )
+    if edge_scale_multipliers is not None:
+        identity.update(np.asarray(edge_scale_multipliers, dtype="<f8").tobytes())
     scalar_type = "double" if parameters.genn_precision == "float64-reference" else "float"
     numpy_dtype = np.float64 if scalar_type == "double" else np.float32
     model = GeNNModel(scalar_type, f"stage1_{identity.hexdigest()[:12]}", backend="cuda")
@@ -778,10 +811,12 @@ def run_genn_circuit(
         },
     )
     population.spike_recording_enabled = True
-    weights = (
-        graph.contact_counts.astype(numpy_dtype)
-        * edge_signs.astype(numpy_dtype)
-        * numpy_dtype(parameters.synaptic_mv_per_contact)
+    weights = _functional_edge_weights(
+        graph,
+        edge_signs,
+        parameters,
+        edge_scale_multipliers,
+        dtype=np.dtype(numpy_dtype),
     )
     synapses = model.add_synapse_population(
         "edges",

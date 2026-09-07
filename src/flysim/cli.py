@@ -39,6 +39,7 @@ from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
 from flysim.runs import write_run
+from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
@@ -401,6 +402,7 @@ def _command_benchmark_circuit(args: argparse.Namespace) -> int:
         graph_path=args.graph,
         experiment_path=experiment_path,
         population_resolution_path=population_path,
+        dynamics_registry_path=args.dynamics_registry,
         output_path=output,
         backends=tuple(args.backend),
         prepare_only=args.prepare_only,
@@ -415,6 +417,36 @@ def _command_benchmark_circuit(args: argparse.Namespace) -> int:
             "output": result["output"],
             "sha256": result["sha256"],
             "immutable_snapshot": result.get("immutable_snapshot"),
+            "validation_tier_awarded": result["validation_tier_awarded"],
+        }
+    )
+    return 0
+
+
+def _command_benchmark_feeding_screen(args: argparse.Namespace) -> int:
+    annotations = args.annotations or (
+        args.root
+        / "raw"
+        / "male-cns-v1.0"
+        / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+    )
+    output = args.output or (
+        args.root / "evidence" / "male-cns-v1.0" / "shiu-feeding-screen-preparation.json"
+    )
+    result = prepare_shiu_feeding_screen(
+        root=args.root,
+        annotations_path=annotations,
+        experiment_path=args.experiment,
+        output_path=output,
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "status": result["status"],
+            "source_screen": result["source_screen"],
+            "male_cns_transfer_readiness": result["male_cns_transfer_readiness"],
+            "output": result["output"],
+            "sha256": result["sha256"],
             "validation_tier_awarded": result["validation_tier_awarded"],
         }
     )
@@ -715,6 +747,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
     )
     circuit.add_argument("--populations", type=Path)
+    circuit.add_argument(
+        "--dynamics-registry",
+        type=Path,
+        default=project_root() / "configs" / "neural" / "cell-dynamics-v0.1.json",
+    )
     circuit.add_argument("--output", type=Path)
     circuit.add_argument(
         "--backend",
@@ -725,6 +762,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     circuit.add_argument("--prepare-only", action="store_true")
     circuit.set_defaults(func=_command_benchmark_circuit)
+
+    feeding_screen = benchmark_commands.add_parser(
+        "feeding-screen",
+        help="prepare the independent Shiu Figure 2 behavioral-screen transfer",
+    )
+    feeding_screen.add_argument("--root", type=Path, default=default_data_root())
+    feeding_screen.add_argument(
+        "--annotations",
+        type=Path,
+    )
+    feeding_screen.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "shiu-feeding-screen.json",
+    )
+    feeding_screen.add_argument("--output", type=Path)
+    feeding_screen.set_defaults(func=_command_benchmark_feeding_screen)
 
     run = commands.add_parser("run")
     run_commands = run.add_subparsers(dest="run_command", required=True)

@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from flysim.circuit import (
     CircuitRun,
@@ -13,6 +14,7 @@ from flysim.circuit import (
     select_shortest_path_circuit,
 )
 from flysim.connectome import SparseConnectome
+from flysim.errors import ConfigurationError
 
 
 def _graph() -> SparseConnectome:
@@ -92,6 +94,35 @@ def test_numpy_circuit_is_deterministic() -> None:
         spike_time_tolerance_ms=0.1,
         rate_relative_tolerance=0.01,
     )["passed"]
+
+
+def test_numpy_circuit_applies_edge_scale_multipliers() -> None:
+    graph = _graph()
+    parameters = _parameters()
+    schedule = make_stimulus_schedule(
+        graph, (10,), frequency_hz=200.0, parameters=parameters, seed=3
+    )
+    signs = np.ones(graph.edge_count, dtype=np.float32)
+
+    zeroed = run_numpy_circuit(
+        graph,
+        signs,
+        schedule,
+        parameters,
+        (50,),
+        edge_scale_multipliers=np.zeros(graph.edge_count),
+    )
+
+    assert zeroed.readout_rates_hz == (0.0,)
+    with pytest.raises(ConfigurationError, match="finite and nonnegative"):
+        run_numpy_circuit(
+            graph,
+            signs,
+            schedule,
+            parameters,
+            (50,),
+            edge_scale_multipliers=np.full(graph.edge_count, -1.0),
+        )
 
 
 def test_source_faithful_linear_coefficients_are_bounded() -> None:

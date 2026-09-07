@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "shiu-figure-2-sez-mn9-screen",
+  "title": "SEZ cell-type activation to MN9 with optogenetic rostrum-extension validation",
+  "source_paper": "https://doi.org/10.1038/s41586-024-07763-9",
+  "source_figure": "Figure 2 and Supplementary Table 3",
+  "source_repository_commit": "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960",
+  "assumption_ids": ["DATA-03", "ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-08", "VAL-01"],
+  "provenance": "M/P/E",
+  "source_artifacts": {
+    "screen_populations": {
+      "filename": "sez_neurons.pickle",
+      "sha256": "2bc5a2a8289924f2de39a8e68bdc07025cb6d6c6c6ddc83a973c0cace7cec2ce"
+    },
+    "supplementary_workbook": {
+      "filename": "41586_2024_7763_MOESM2_ESM.xlsx",
+      "sha256": "6922e16825aa0c92a28e2a634b073dcad7641e9c9283c4b9d8ee1e34e6d9b8d9",
+      "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11446845/supplementaryFiles",
+      "sheet": "Sup Table 3 Predicted MN9 vs. o"
+    },
+    "crosswalk": {
+      "filename": "mcns_fw_edge_comp_mappings.json",
+      "sha256": "94aaadbefedcc314c69fb8ad62a07361c1f78ee39424bad38ac1a6d7ca4d0a12",
+      "source_commit": "67767d2233657983993ff6c2be48e836a935863c"
+    }
+  },
+  "reference_rule": {
+    "input_frequency_hz": 50,
+    "predicted_positive": "both bilateral MN9 rates are greater than zero",
+    "observed_positive": "supplementary-table optogenetic rostrum-extension fraction is greater than zero",
+    "expected_confusion_matrix": {"true_positive": 10, "false_positive": 1, "true_negative": 91, "false_negative": 4}
+  },
+  "transfer_policy": "Transfer source FlyWire identities through the paper-author crosswalk labels, then resolve every label against traced MaleCNS type or flywireType annotations; retain partial and missing mappings explicitly.",
+  "claim_boundary": "Preparation and crosswalk coverage for an independent behavioral screen. No MaleCNS circuit prediction, V1, V2, or V3 evidence is awarded until the preregistered transfer runs and controls pass."
+}

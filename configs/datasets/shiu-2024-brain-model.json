@@ -43,6 +43,19 @@
       "md5": "f6f2e314821fa6a4196214e3b2b14bc4",
       "sha256": "f757c8e18e3826c89ba12f930bee455bb6dc22f28403a27161e9b9d9f0a65e93",
       "role": "archived raw spike outputs; locally checksum-lock SHA-256 after resumable acquisition"
+    },
+    {
+      "filename": "sez_neurons.pickle",
+      "bytes": 5114,
+      "sha256": "2bc5a2a8289924f2de39a8e68bdc07025cb6d6c6c6ddc83a973c0cace7cec2ce",
+      "role": "primitive source dictionary mapping the 106 Figure 2 SEZ types to FlyWire identities"
+    },
+    {
+      "filename": "41586_2024_7763_MOESM2_ESM.xlsx",
+      "bytes": 2539037,
+      "sha256": "6922e16825aa0c92a28e2a634b073dcad7641e9c9283c4b9d8ee1e34e6d9b8d9",
+      "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11446845/supplementaryFiles",
+      "role": "Supplementary Tables 1-12, including the independent Figure 2 optogenetic screen labels"
     }
   ],
   "biological_context": {

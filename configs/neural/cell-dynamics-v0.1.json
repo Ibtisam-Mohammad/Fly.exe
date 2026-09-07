@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "male-cns-cell-dynamics-v0.1",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": ["ND-01", "ND-02", "ND-03", "ND-04", "ND-05"],
+  "default_record": {
+    "cell_type": "__unregistered__",
+    "signal_regime": "unresolved",
+    "model_family": "competing-spiking-or-passive-graded",
+    "provenance": "E",
+    "status": "proposed",
+    "source": null,
+    "evidence_scope": "No type-specific signaling evidence registered.",
+    "biological_mismatch": "A simulator fallback cannot establish whether an unregistered neuron spikes or signals with graded voltage.",
+    "alternatives": ["lif-spiking-fallback", "passive-graded-fallback"]
+  },
+  "records": [
+    {
+      "cell_type": "JO-FV",
+      "signal_regime": "spiking",
+      "model_family": "lif-spiking-fallback",
+      "provenance": "P/E",
+      "status": "accepted",
+      "source": "https://doi.org/10.1016/j.cub.2013.10.006",
+      "evidence_scope": "Johnston-organ receptor neurons generate propagated action potentials; this is class-level rather than JO-FV type-resolved evidence.",
+      "biological_mismatch": "The registered LIF parameters are not measured from MaleCNS JO-FV cells.",
+      "alternatives": []
+    },
+    {
+      "cell_type": "JO-FD1",
+      "signal_regime": "spiking",
+      "model_family": "lif-spiking-fallback",
+      "provenance": "P/E",
+      "status": "accepted",
+      "source": "https://doi.org/10.1016/j.cub.2013.10.006",
+      "evidence_scope": "Johnston-organ receptor neurons generate propagated action potentials; this is class-level rather than JO-FD1 type-resolved evidence.",
+      "biological_mismatch": "The registered LIF parameters are not measured from MaleCNS JO-FD1 cells.",
+      "alternatives": []
+    },
+    {
+      "cell_type": "JO-FD2",
+      "signal_regime": "spiking",
+      "model_family": "lif-spiking-fallback",
+      "provenance": "P/E",
+      "status": "accepted",
+      "source": "https://doi.org/10.1016/j.cub.2013.10.006",
+      "evidence_scope": "Johnston-organ receptor neurons generate propagated action potentials; this is class-level rather than JO-FD2 type-resolved evidence.",
+      "biological_mismatch": "The registered LIF parameters are not measured from MaleCNS JO-FD2 cells.",
+      "alternatives": []
+    },
+    {
+      "cell_type": "SAD093",
+      "signal_regime": "unresolved",
+      "model_family": "competing-spiking-or-passive-graded",
+      "provenance": "P/E",
+      "status": "proposed",
+      "source": "https://doi.org/10.1038/s41586-024-07763-9",
+      "evidence_scope": "The source simulation treats aBN1/SAD093 as LIF; no type-resolved physiological signaling measurement is registered.",
+      "biological_mismatch": "A source-model formalism is not a measurement of SAD093 membrane dynamics.",
+      "alternatives": ["lif-spiking-fallback", "passive-graded-fallback"]
+    }
+  ],
+  "type_pair_policy": {
+    "formula": "contact_count * fitted_type_pair_scale",
+    "units": "mV/contact for the Stage 1 voltage-jump family",
+    "provenance": "M/F",
+    "canonical_values": null,
+    "fit_status": "not-fitted",
+    "validation_policy": "Do not reuse the exposed Figure 5g frequency split as independent held-out evidence for a replacement model."
+  }
+}
