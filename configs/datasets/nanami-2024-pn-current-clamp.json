@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "nanami-2024-pn-current-clamp-v1",
+  "title": "A lightweight data-driven spiking neuronal network model of Drosophila olfactory nervous system with dedicated hardware support",
+  "paper": "https://doi.org/10.3389/fnins.2024.1384336",
+  "source_repository": "https://github.com/tnanami/fly-olfactory-network-fpga",
+  "source_commit": "c064f47da7a1f8c4e9137c09b5e327d1a38ab9f4",
+  "license": "MIT repository license; preserve paper and repository attribution",
+  "redistribute_with_gpl_release": true,
+  "artifacts": [
+    {
+      "path": "invivo_results/PN/PN_160310_5_03_v.txt",
+      "bytes": 2374151,
+      "sha256": "8566550bc6f7cb97410f81483f90166646cdc9bcde276eb748413a9717759255"
+    },
+    {
+      "path": "02_plot_figs/analyze_PQNtest.ipynb",
+      "bytes": 802547,
+      "sha256": "55b010987019ccb826b44be275f650168272abb40140798f94160934667f0de6"
+    }
+  ],
+  "biological_context": {
+    "species": "Drosophila melanogaster",
+    "sex": "female",
+    "age": "three days post eclosion",
+    "cell_class": "olfactory projection neuron",
+    "driver": "VT033006-Gal4",
+    "preparation": "in vivo whole-cell current clamp",
+    "sampling_rate_hz": 10000,
+    "recorded_cell_count": 1
+  },
+  "fit_role": "none",
+  "held_out_role": "sealed external single-cell time-domain challenge only",
+  "mismatches": [
+    "female three-day-old fly versus the five-day-old male target condition",
+    "driver-defined PN population versus a MaleCNS-resolved DM1 or DM4 type",
+    "one recorded cell cannot characterize population uncertainty",
+    "absolute stimulus-current units are not stated in the repository analysis code",
+    "stimulus alignment is reconstructed by a spike-triggered notebook heuristic"
+  ],
+  "permitted_claim": "Tests time-domain PN response shape in one external cell after model freeze.",
+  "forbidden_claim": "Does not support PN population validation, MaleCNS-donor physiology, absolute current calibration, or a V1 award by itself.",
+  "status": "source commit and two required files checksum-locked; 200000-sample trace normalized losslessly to Parquet",
+  "last_reviewed": "2026-09-08"
+}

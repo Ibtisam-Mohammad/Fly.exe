@@ -50,10 +50,13 @@ from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
+    NANAMI_REPOSITORY_COMMIT,
     Stage2ExperimentSpec,
+    fit_dynamic_projection_neuron_model,
     fit_projection_neuron_model,
     import_gouwens_dm1_priors,
     import_gugel_figure7,
+    import_nanami_pn_trace,
     review_projection_neuron_fit,
 )
 from flysim.structural import audit_structural_references
@@ -138,6 +141,25 @@ def _command_data_import_gugel_figure7(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_data_import_nanami_pn(args: argparse.Namespace) -> int:
+    payload = import_nanami_pn_trace(
+        args.source,
+        args.output,
+        expected_commit=args.expected_commit,
+    )
+    _print_json(
+        {
+            "artifact_id": payload["artifact_id"],
+            "output": str(args.output.resolve()),
+            "source_commit": payload["source_commit"],
+            "normalized_artifact": payload["normalized_artifact"],
+            "logical_sha256": payload["logical_sha256"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
 def _command_stage2_readiness(args: argparse.Namespace) -> int:
     report = Stage2ExperimentSpec.load(args.experiment).readiness(args.root)
     _print_json(report)
@@ -163,6 +185,24 @@ def _command_stage2_fit_pn(args: argparse.Namespace) -> int:
         "all_states_finite",
         "no_continuous_fit_at_search_boundary",
     )
+    return 0 if all(result["acceptance"][key] for key in required) else 2
+
+
+def _command_stage2_fit_pn_dynamic(args: argparse.Namespace) -> int:
+    result = fit_dynamic_projection_neuron_model(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "family": result["family"],
+            "parameter_distribution": result["parameter_distribution"],
+            "training": result["training"],
+            "external_evaluation_pending": True,
+            "validation_tier_awarded": None,
+        }
+    )
+    required = ("all_states_finite", "dynamic_improves_training_rmse")
     return 0 if all(result["acceptance"][key] for key in required) else 2
 
 
@@ -1025,6 +1065,15 @@ def build_parser() -> argparse.ArgumentParser:
     gugel_figure7.add_argument("--output", type=Path, required=True)
     gugel_figure7.set_defaults(func=_command_data_import_gugel_figure7)
 
+    nanami_pn = data_commands.add_parser(
+        "import-nanami-pn",
+        help="normalize the pinned external Nanami PN current-clamp trace",
+    )
+    nanami_pn.add_argument("--source", type=Path, required=True)
+    nanami_pn.add_argument("--output", type=Path, required=True)
+    nanami_pn.add_argument("--expected-commit", default=NANAMI_REPOSITORY_COMMIT)
+    nanami_pn.set_defaults(func=_command_data_import_nanami_pn)
+
     benchmark = commands.add_parser("benchmark")
     benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
     neural = benchmark_commands.add_parser("neural")
@@ -1174,6 +1223,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_fit_pn.add_argument("--output", type=Path, required=True)
     stage2_fit_pn.set_defaults(func=_command_stage2_fit_pn)
+    stage2_fit_pn_dynamic = stage2_commands.add_parser(
+        "fit-pn-dynamic",
+        help="fit and freeze the ramp-aware PN family without opening its external trace",
+    )
+    stage2_fit_pn_dynamic.add_argument("--root", type=Path, default=default_data_root())
+    stage2_fit_pn_dynamic.add_argument(
+        "--experiment",
+        type=Path,
+        default=(
+            project_root() / "configs" / "experiments" / "stage2-pn-dynamic-revision.json"
+        ),
+    )
+    stage2_fit_pn_dynamic.add_argument("--output", type=Path, required=True)
+    stage2_fit_pn_dynamic.set_defaults(func=_command_stage2_fit_pn_dynamic)
     stage2_review_pn = stage2_commands.add_parser(
         "review-pn", help="audit feature errors from an immutable frozen PN fit"
     )

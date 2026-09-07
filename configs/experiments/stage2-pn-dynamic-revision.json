@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-projection-neuron-dynamic-revision-v1",
+  "provenance": "P/F/E",
+  "assumption_ids": ["ND-01", "ND-02", "ND-05", "ND-08"],
+  "target": {
+    "family": "ramp-aware adaptive leaky integrate-and-fire",
+    "equations": [
+      "dv/dt = (-v + I/rheobase - w) / membrane_tau",
+      "dw/dt = -w / adaptation_tau",
+      "on v >= 1: emit spike, v = 0, w += adaptation_increment"
+    ],
+    "gugel_protocol": {
+      "kind": "triangular-current-ramp",
+      "ramp_rate_pa_per_s": 4.5,
+      "sample_interval_ms": 25.0,
+      "rate_window_ms": 50.0,
+      "rate_window_overlap_ms": 25.0
+    },
+    "integration_step_us": 100,
+    "candidate_search_step_us": 500,
+    "candidate_bank_size": 768,
+    "candidate_bank_seed": 20260908,
+    "final_rerank_count": 24,
+    "observation_model": "mean of three 50 ms spike-count windows; three-trial count is inferred from the published 6.6667 Hz quantization and remains F/E",
+    "population_model": "fit one parameter draw per registered training cell and retain both draws as an empirical PN-family distribution",
+    "selection_reason": "the failed model evaluated a time-varying ramp as independent steady-state points"
+  },
+  "required_artifacts": [
+    {
+      "path": "derived/auxiliary/gouwens-wilson-2009/dm1-passive-priors.json",
+      "sha256": "24efca892ad197b258b414094ea7fdeb70b471132c699b26728e538689e1f7e3"
+    },
+    {
+      "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-fi-curves.parquet",
+      "sha256": "6fe737e9eb7eb2b2f6ee3597a46af619a2414dd56dcd6378118467c0f77c672f"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-pn-current-clamp/manifest.json",
+      "sha256": "3de84305b56f29a0207634f7dbd04a0e85266b84b7883851bad8ac59c4ada329"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-pn-current-clamp/pn-voltage-trace.parquet",
+      "sha256": "be1ace41668a7238759f406f289c5f9ff091887b7d7d4ab33d2109f7e0cb03c0"
+    }
+  ],
+  "split": {
+    "unit": "recorded-cell",
+    "fit_specimen_ids": [
+      "gugel-dl5-fi-solvent-01",
+      "gugel-dl5-fi-solvent-02"
+    ],
+    "held_out_specimen_ids": [
+      "nanami-vt033006-pn-160310-5-03"
+    ],
+    "consumed_not_reusable": [
+      "gugel-dl5-fi-solvent-03",
+      "gugel-dl5-fi-solvent-04"
+    ],
+    "frozen_before_fitting": true
+  },
+  "parameter_policy": {
+    "membrane_tau_ms": [16.432, 21.331, 30.6],
+    "rheobase_pa_range": [1.0, 80.0],
+    "refractory_ms_range": [1.0, 30.0],
+    "adaptation_tau_ms_range": [50.0, 2000.0],
+    "adaptation_increment_range": [0.0, 0.2],
+    "trial_initial_voltage_phases": [0.0, 0.3333333333333333, 0.6666666666666666],
+    "training_only": "select every per-cell parameter draw using only its registered Gugel fit curve",
+    "external_trace_policy": "no parameter or threshold may change after quantitative Nanami scoring"
+  },
+  "observables": [
+    {
+      "id": "gugel-ramp-firing-rate",
+      "signal_type": "firing-rate",
+      "input_units": "pA",
+      "value_units": "Hz",
+      "loss": "mean per-fit-cell Huber loss over the complete reconstructed triangular ramp",
+      "weight": 1.0,
+      "held_out_rule": "training and leave-one-fit-cell-out diagnostics only; consumed Gugel held-out cells remain inaccessible"
+    },
+    {
+      "id": "nanami-normalized-step-response",
+      "signal_type": "spike-event",
+      "input_units": "ordered source-code stimulus level",
+      "value_units": "normalized spike count and seconds",
+      "loss": "normalized eight-level spike-count RMSE plus within-step adaptation error",
+      "weight": 1.0,
+      "held_out_rule": "one sealed score after model freeze; report all metrics even if they fail"
+    }
+  ],
+  "external_acceptance": {
+    "normalized_spike_count_rmse_max": 0.15,
+    "current_level_onset_index_error_max": 1,
+    "adaptation_index_absolute_error_max": 0.2,
+    "baseline_comparison": "the dynamic family must outperform the frozen steady-state LIF on at least two of three metrics",
+    "tier_policy": "passing is a model-selection result only; one cell and unresolved stimulus units cannot award V1"
+  },
+  "declared_blockers": [],
+  "claim_boundary": "Cross-specimen PN-family dynamic-model selection using two female DL5 fit cells and one external female driver-defined PN challenge; not a population validation and not MaleCNS-donor physiology."
+}

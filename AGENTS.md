@@ -1,8 +1,8 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.8
-Last evidence review: 2026-09-07
+Version: 1.9
+Last evidence review: 2026-09-08
 Last implementation audit: 2026-09-08
 Applies to: this repository and every subdirectory
 
@@ -31,8 +31,8 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: first Stage 2 PN fit/evaluation complete; uEPSC kernel passes the normalized-error gate, steady-state LIF F-I transfer fails, and no V1/V2 tier is awarded
-NEXT_GATE: lock new independent cellular holdout -> replace failed steady-state LIF family; source release-failure/STP evidence before any V2 review
+ENGINEERING_STATUS: ramp-aware adaptive PN distribution is frozen and halves training RMSE versus the failed shared steady-state LIF; its external cell remains unscored and no V1/V2 tier is awarded
+NEXT_GATE: resolve the external trace's current-unit ambiguity or acquire a multi-animal PN holdout -> run one sealed dynamic evaluation; source release-failure/STP evidence before any V2 review
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -43,9 +43,9 @@ STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
 TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 minimum/0.169 median vs 0.5 target; awards no tier
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
-STAGE2_DATA: Gouwens-Wilson DM1 passive priors plus Gugel-2023 DL5 F-I/uEPSC recordings locked; six fit and five held-out recordings
-STAGE2_READINESS: first data/loss contract passed with four artifact hashes; its held-out cells are now consumed
-STAGE2_FIT: frozen F-I ratio 1.228 fails <=1.2; baseline-corrected uEPSC ratio 1.105 passes; fit SHA-256 5ee63453c3c1; feature review SHA-256 9cec45967698; no tier awarded
+STAGE2_DATA: Gouwens-Wilson DM1 priors and Gugel DL5 F-I/uEPSC data locked; one external Nanami PN trace is normalized and reserved but is not population evidence
+STAGE2_READINESS: dynamic revision contract 8ddb0b77770d passes four hashes; two original Gugel fit cells remain training-only, consumed Gugel holdouts are excluded, and the Nanami cell is unscored
+STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; replacement adaptive distribution training RMSE 7.630 vs 15.528 shared-LIF baseline; external evaluation pending; no tier awarded
 TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -124,6 +124,21 @@ are descriptively covered, but numeric feature thresholds were not preregistered
 and short-term-plasticity evidence are missing. Review artifact
 `projection-neuron-feature-review-v1.json` has SHA-256
 `9cec459676980403ecf4bc95438fbe53514a2fd77da5de7403dde343123c20d0`; no V2 tier is awarded.
+
+Stage 2 dynamic-revision checkpoint, 2026-09-08: ADR-2026-005 reserves the pinned Nanami et al.
+PN recording as a strictly external challenge. The source contains one 200,000-sample, 10-kHz
+current-clamp trace from a three-day-old female driver-defined PN. It is normalized losslessly, but
+the repository code leaves the physical units of stimulus levels 3 through 10 unstated and derives
+step alignment with a voltage-threshold heuristic. It cannot award V1 or characterize a population.
+
+Before quantitative external scoring, experiment contract
+`stage2-projection-neuron-dynamic-revision-v1` froze a 100-us ramp-aware adaptive LIF family and
+prevented reuse of the consumed Gugel held-out cells. Two per-training-cell parameter draws reduce
+training RMSE from 15.528 Hz for the original shared steady-state LIF to 7.630 Hz. This is a fitting
+result, not held-out validation. Frozen result `projection-neuron-dynamic-fit-v5.json` has SHA-256
+`8d97c40c094bbc06df9d83aa7b9cc057ef89cfb46b8162d806a9c134ba5f4bac`; the external trace remains
+unscored pending unit resolution or a better independent multi-animal source. No V1/V2 tier is
+awarded.
 
 Useful retrieval commands:
 
@@ -528,6 +543,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-06 | Accept `status=Traced` as the production neural-body universe; retain Assign/Anchor and all-segment alternatives for sensitivity analyses. | Expanding through Anchor changed traced contacts by 0.12% and edges by 0.24%, while all fixed sensorimotor annotation canaries remained uniquely traced. |
 | 2026-09-07 | Accept the `foundation-v0.5` Track A full-graph engineering baseline and classify it as an offline prototype. | The 30-run matrix and required controls pass, but registered neural/body bridges remain non-biological and throughput misses the interactive target. |
 | 2026-09-07 | Accept ADR-2026-004 for the first Stage 2 projection-neuron physiology pack, recorded-cell split, and losses. | DM1 passive model fits and individual-cell DL5 F-I/uEPSC recordings provide complementary priors and held-out data while keeping sex, age, and cell-type transfer explicit. |
+| 2026-09-08 | Accept ADR-2026-005 and freeze the ramp-aware PN revision before external scoring. | Reusing the consumed Gugel holdouts would leak validation; the single external Nanami trace is useful as a challenge but its unresolved current units and sample size prevent a V1 claim. |
 
 ## 15. Unresolved project-level choices
 

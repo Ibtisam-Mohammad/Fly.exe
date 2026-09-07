@@ -4,14 +4,17 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+import pyarrow.parquet as pq
 import pytest
 
 from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
 from flysim.stage2 import (
     Stage2ExperimentSpec,
+    adaptive_lif_ramp_rate_hz,
     import_gouwens_dm1_priors,
     import_gugel_figure7,
+    import_nanami_pn_trace,
     lif_steady_state_rate_hz,
     review_projection_neuron_fit,
 )
@@ -129,6 +132,55 @@ def test_gugel_import_rejects_unlocked_workbook(tmp_path: Path) -> None:
         import_gugel_figure7(source, tmp_path / "out")
 
 
+def test_nanami_import_locks_source_and_preserves_raw_samples(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    trace = source / "invivo_results" / "PN" / "PN_160310_5_03_v.txt"
+    notebook = source / "02_plot_figs" / "analyze_PQNtest.ipynb"
+    trace.parent.mkdir(parents=True)
+    notebook.parent.mkdir(parents=True)
+    trace.write_text("-50.0\n-49.5\n-49.0\n", encoding="ascii")
+    notebook.write_text("{}\n", encoding="utf-8")
+    commit = _commit_fixture(source)
+    output = tmp_path / "normalized"
+
+    payload = import_nanami_pn_trace(
+        source,
+        output,
+        expected_commit=commit,
+        expected_trace_sha256=sha256_file(trace),
+        expected_analysis_sha256=sha256_file(notebook),
+        expected_sample_count=3,
+    )
+
+    table = pq.read_table(output / "pn-voltage-trace.parquet")
+    assert table.column("t_us").to_pylist() == [0, 100, 200]
+    assert table.column("membrane_voltage_mv").to_pylist() == [-50.0, -49.5, -49.0]
+    assert payload["biological_context"]["recorded_cell_count"] == 1
+    assert payload["protocol_reconstruction"]["step_level_units"].startswith("unresolved")
+    assert payload["validation_tier_awarded"] is None
+
+
+def test_nanami_import_rejects_unlocked_trace(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    trace = source / "invivo_results" / "PN" / "PN_160310_5_03_v.txt"
+    notebook = source / "02_plot_figs" / "analyze_PQNtest.ipynb"
+    trace.parent.mkdir(parents=True)
+    notebook.parent.mkdir(parents=True)
+    trace.write_text("-50.0\n", encoding="ascii")
+    notebook.write_text("{}\n", encoding="utf-8")
+    commit = _commit_fixture(source)
+
+    with pytest.raises(DatasetError, match="trace SHA-256 mismatch"):
+        import_nanami_pn_trace(
+            source,
+            tmp_path / "out",
+            expected_commit=commit,
+            expected_trace_sha256="0" * 64,
+            expected_analysis_sha256="0" * 64,
+            expected_sample_count=1,
+        )
+
+
 def test_lif_current_rate_is_thresholded_monotonic_and_validated() -> None:
     rates = lif_steady_state_rate_hz(
         np.asarray([0.0, 10.0, 11.0, 20.0]),
@@ -145,6 +197,42 @@ def test_lif_current_rate_is_thresholded_monotonic_and_validated() -> None:
             rheobase_pa=0.0,
             membrane_tau_ms=20.0,
             refractory_ms=2.0,
+        )
+
+
+def test_adaptive_lif_replays_windows_and_adaptation_reduces_rate() -> None:
+    current = np.asarray([0.0, 20.0, 20.0, 20.0, 20.0])
+    without_adaptation = adaptive_lif_ramp_rate_hz(
+        current,
+        rheobase_pa=10.0,
+        membrane_tau_ms=20.0,
+        refractory_ms=2.0,
+        adaptation_tau_ms=100.0,
+        adaptation_increment=0.0,
+        integration_step_us=500,
+    )
+    with_adaptation = adaptive_lif_ramp_rate_hz(
+        current,
+        rheobase_pa=10.0,
+        membrane_tau_ms=20.0,
+        refractory_ms=2.0,
+        adaptation_tau_ms=100.0,
+        adaptation_increment=0.2,
+        integration_step_us=500,
+    )
+
+    assert without_adaptation[0] == 0.0
+    assert np.any(without_adaptation[1:] > 0.0)
+    assert np.sum(with_adaptation) < np.sum(without_adaptation)
+    with pytest.raises(ConfigurationError, match="must divide"):
+        adaptive_lif_ramp_rate_hz(
+            current,
+            rheobase_pa=10.0,
+            membrane_tau_ms=20.0,
+            refractory_ms=2.0,
+            adaptation_tau_ms=100.0,
+            adaptation_increment=0.1,
+            integration_step_us=333,
         )
 
 

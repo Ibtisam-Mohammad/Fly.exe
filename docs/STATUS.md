@@ -102,6 +102,18 @@ Status date: 2026-09-08
 - A checksum-gated post-freeze uEPSC feature review changes no parameter. It reports held-out peak
   amplitude, peak-time, and one-over-e decay errors and records the missing failure-probability and
   short-term-plasticity evidence that still blocks V2.
+- Pinned Nanami et al. 2024 PN source at commit `c064f47da7a1f8c4e9137c09b5e327d1a38ab9f4`;
+  its one 200,000-sample, 10-kHz voltage trace and protocol-analysis notebook are checksum-locked.
+- `flysim data import-nanami-pn` produces a lossless float64 voltage Parquet derivative and a
+  manifest that preserves the female/age/type mismatch, single-cell limit, unresolved current
+  units, and source notebook's threshold-based timing reconstruction.
+- Accepted ADR-2026-005 reserves the Nanami cell as an external challenge only. It cannot be used
+  for fitting, model-family selection, or retrospective acceptance-threshold changes.
+- A second Stage 2 contract freezes a 100-us ramp-aware adaptive LIF family before external
+  scoring and excludes the consumed Gugel held-out cells. Its four artifact hashes pass readiness.
+- The fitted active-cell object is now an empirical two-draw PN-family distribution rather than
+  one identical neuron. On its two training cells it reduces RMSE from 15.528 Hz for the original
+  shared steady-state LIF to 7.630 Hz. This is training evidence only; the external cell is unscored.
 
 ## Not implemented or not yet validated
 
@@ -133,9 +145,12 @@ Status date: 2026-09-08
 - Receptor-aware polarity, fitted type-pair conductances/kinetics/delays, tonic drive, reduced
   compartments, and held-out cellular/synaptic physiology remain Stage 2 work.
 - The first Stage 2 PN model is fitted, frozen, and evaluated, but it is not accepted as a complete
-  cellular/synaptic model: the F-I gate fails and feature-level uEPSC review remains pending. The
-  original held-out cells are now consumed; a revised cellular family needs a new independent
-  holdout. V1 and V2 remain unawarded.
+  cellular/synaptic model: its F-I gate fails, while its uEPSC aggregate passes but lacks
+  preregistered feature, failure-probability, and short-term-plasticity evidence.
+- The ramp-aware adaptive replacement currently passes only an internal training comparison. Its
+  single external cell remains unscored because the published repository does not state the
+  physical units of the stimulus levels. A multi-animal, type-resolved independent PN holdout is
+  still required before V1 can be considered. V1 and V2 remain unawarded.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -145,8 +160,9 @@ Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [Shiu antennal-grooming transfer](evidence/STAGE1_SHIU_GROOMING.md) and
 [Shiu feeding-screen execution and review](evidence/STAGE1_SHIU_FEEDING.md). Track A engineering
 evidence: [full-graph Eon-like demonstration](evidence/TRACK_A_EON_MALECNS.md).
-First Stage 2 data decision and evidence boundary: [ADR-2026-004](adr/ADR-2026-004-projection-neuron-physiology-pack.md)
-and [projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUNDATION.md).
+First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-004-projection-neuron-physiology-pack.md),
+[ADR-2026-005](adr/ADR-2026-005-independent-pn-trace-challenge.md), and
+[projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUNDATION.md).
 
 ## Measured foundation results
 
@@ -160,7 +176,7 @@ and [projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUN
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 78 passing |
+| Automated tests | 81 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 

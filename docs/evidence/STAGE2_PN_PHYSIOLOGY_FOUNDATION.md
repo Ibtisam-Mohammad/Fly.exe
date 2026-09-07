@@ -76,3 +76,33 @@ These descriptive features still do not earn V2: their numeric thresholds were n
 and the required release-failure and short-term-plasticity evidence is absent. Because the held-out
 cells have now been inspected, any revised active-cell family must be tested on a new independent
 holdout rather than retuned against these recordings.
+
+## Independent dynamic challenge locked
+
+The Nanami et al. 2024 repository is pinned at commit
+`c064f47da7a1f8c4e9137c09b5e327d1a38ab9f4`. Its single 200,000-sample PN current-clamp trace and
+the analysis notebook that reconstructs its protocol are checksum-locked. The lossless normalized
+trace contains 100-us timestamps and float64 membrane voltage; its Parquet SHA-256 is
+`be1ace41668a7238759f406f289c5f9ff091887b7d7d4ab33d2109f7e0cb03c0`.
+
+ADR-2026-005 reserves this cell as an external challenge only. It is never a fit or model-selection
+source, and the already consumed Gugel held-out cells remain unavailable to the revision. The new
+experiment contract fixes a ramp-aware adaptive LIF family, its 100-us integration step, parameter
+ranges, diagnostics, and external metrics before quantitative scoring.
+
+The trace is genuinely external to the first fit but not sufficient for V1. It represents one
+three-day-old female, is driver-defined rather than MaleCNS-type-resolved, and its repository code
+does not state a physical unit for stimulus levels 3 through 10. The published notebook also aligns
+the eight steps with a threshold-crossing heuristic rather than stored stimulus timestamps. Those
+limitations remain explicit in the manifest and revision contract.
+
+The frozen replacement fits one adaptive-LIF parameter draw to each of the two original Gugel
+training cells, retaining both as an empirical PN-family distribution. At 100 us it reduces the
+training RMSE from 15.528 Hz for the original shared steady-state LIF to 7.630 Hz. The immutable
+result `projection-neuron-dynamic-fit-v5.json` has SHA-256
+`8d97c40c094bbc06df9d83aa7b9cc057ef89cfb46b8162d806a9c134ba5f4bac`.
+
+This improvement is not a validation result: each draw was evaluated on the same cell that selected
+it, only two cells form the distribution, and no external response value was scored. The first two
+dynamic-fit attempts used a shared parameter draw, failed to improve training RMSE, and are
+superseded exploratory artifacts rather than evidence.

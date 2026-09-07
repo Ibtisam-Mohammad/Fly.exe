@@ -25,6 +25,9 @@ from flysim.provenance import parse_provenance
 
 GOUWENS_MODELDB_COMMIT = "cf5a57dee863cea502e78ef5bc481369253900d9"
 GUGEL_FIGURE7_SHA256 = "a8ae6fcd3bf0d8effab7a0ecbfa88fccf192f134144072282758ca8125bd8c78"
+NANAMI_REPOSITORY_COMMIT = "c064f47da7a1f8c4e9137c09b5e327d1a38ab9f4"
+NANAMI_PN_TRACE_SHA256 = "8566550bc6f7cb97410f81483f90166646cdc9bcde276eb748413a9717759255"
+NANAMI_ANALYSIS_SHA256 = "55b010987019ccb826b44be275f650168272abb40140798f94160934667f0de6"
 
 _GOUWENS_FILES = tuple(f"figure_4a_cell{index}.hoc" for index in range(1, 4))
 _PARAMETER_PATTERN = re.compile(r"^\s*(Rm|Cm|Ri)\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*$")
@@ -341,6 +344,139 @@ def import_gugel_figure7(source: Path, output_directory: Path) -> dict[str, Any]
     return manifest
 
 
+def import_nanami_pn_trace(
+    source: Path,
+    output_directory: Path,
+    *,
+    expected_commit: str = NANAMI_REPOSITORY_COMMIT,
+    expected_trace_sha256: str = NANAMI_PN_TRACE_SHA256,
+    expected_analysis_sha256: str = NANAMI_ANALYSIS_SHA256,
+    expected_sample_count: int = 200_000,
+) -> dict[str, Any]:
+    """Normalize the single published Nanami PN trace without deriving outcomes."""
+    head, dirty = _git_identity(source)
+    if head != expected_commit:
+        raise DatasetError(
+            f"Nanami repository commit mismatch: expected {expected_commit}, observed {head}"
+        )
+    if dirty:
+        raise DatasetError(
+            "Nanami repository checkout has local changes; refusing an unlocked import"
+        )
+
+    trace_path = source / "invivo_results" / "PN" / "PN_160310_5_03_v.txt"
+    analysis_path = source / "02_plot_figs" / "analyze_PQNtest.ipynb"
+    observed_trace_sha256 = sha256_file(trace_path) if trace_path.is_file() else None
+    observed_analysis_sha256 = sha256_file(analysis_path) if analysis_path.is_file() else None
+    if observed_trace_sha256 != expected_trace_sha256:
+        raise DatasetError(
+            "Nanami PN trace SHA-256 mismatch: "
+            f"expected {expected_trace_sha256}, observed {observed_trace_sha256}"
+        )
+    if observed_analysis_sha256 != expected_analysis_sha256:
+        raise DatasetError(
+            "Nanami analysis-notebook SHA-256 mismatch: "
+            f"expected {expected_analysis_sha256}, observed {observed_analysis_sha256}"
+        )
+
+    values: list[float] = []
+    with trace_path.open("r", encoding="ascii") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            try:
+                value = float(line.strip())
+            except ValueError as exc:
+                raise DatasetError(
+                    f"Non-numeric Nanami PN voltage at source line {line_number}"
+                ) from exc
+            if not math.isfinite(value):
+                raise DatasetError(
+                    f"Nonfinite Nanami PN voltage at source line {line_number}"
+                )
+            values.append(value)
+    if len(values) != expected_sample_count:
+        raise DatasetError(
+            f"Nanami PN sample-count mismatch: expected {expected_sample_count}, "
+            f"observed {len(values)}"
+        )
+
+    normalized_path = output_directory / "pn-voltage-trace.parquet"
+    _write_parquet_atomic(
+        pa.table(
+            {
+                "sample_index": pa.array(range(len(values)), type=pa.uint32()),
+                "t_us": pa.array((index * 100 for index in range(len(values))), type=pa.uint64()),
+                "membrane_voltage_mv": pa.array(values, type=pa.float64()),
+            }
+        ),
+        normalized_path,
+    )
+    manifest: dict[str, Any] = {
+        "schema_version": "1.0",
+        "artifact_id": "nanami-2024-pn-current-clamp-trace-v1",
+        "source_repository": "https://github.com/tnanami/fly-olfactory-network-fpga",
+        "source_commit": head,
+        "paper": "https://doi.org/10.3389/fnins.2024.1384336",
+        "provenance": "P",
+        "assumption_ids": ["ND-01", "ND-02", "ND-05"],
+        "source_artifacts": [
+            {
+                "path": "invivo_results/PN/PN_160310_5_03_v.txt",
+                "bytes": trace_path.stat().st_size,
+                "sha256": observed_trace_sha256,
+            },
+            {
+                "path": "02_plot_figs/analyze_PQNtest.ipynb",
+                "bytes": analysis_path.stat().st_size,
+                "sha256": observed_analysis_sha256,
+                "role": "protocol-reconstruction code only; notebook outputs are not evidence",
+            },
+        ],
+        "normalized_artifact": {
+            "path": normalized_path.name,
+            "rows": len(values),
+            "sha256": sha256_file(normalized_path),
+            "units": {"t_us": "us", "membrane_voltage_mv": "mV"},
+        },
+        "biological_context": {
+            "species": "Drosophila melanogaster",
+            "sex": "female",
+            "age": "three days post eclosion",
+            "cell_class": "olfactory projection neuron",
+            "driver": "VT033006-Gal4",
+            "preparation": "in vivo whole-cell current clamp from a PN soma",
+            "recorded_cell_count": 1,
+            "sampling_rate_hz": 10_000,
+        },
+        "protocol_reconstruction": {
+            "status": "partially reconstructed from the pinned analysis notebook",
+            "step_levels": [3, 4, 5, 6, 7, 8, 9, 10],
+            "step_level_units": "unresolved source-code units; do not assume pA",
+            "step_duration_ms": 1_000,
+            "interpulse_interval_ms": 1_000,
+            "alignment_threshold_mv": -55.0,
+            "alignment_search_after_ms": 4_000.0,
+            "extraction_start_relative_to_first_crossing_ms": -306.5,
+            "source_alignment_rule": (
+                "The published notebook locates the first voltage crossing above -55 mV after "
+                "4 s, starts extraction 306.5 ms before that crossing, and extracts eight 1 s "
+                "windows every 2 s."
+            ),
+        },
+        "validation_role": (
+            "Sealed external single-cell time-domain challenge for a model fitted without this "
+            "trace; never a training or parameter-selection source."
+        ),
+        "claim_boundary": (
+            "One female PN trace with source-code-reconstructed stimulus alignment and unresolved "
+            "absolute current units cannot establish a PN population distribution or award V1."
+        ),
+        "validation_tier_awarded": None,
+    }
+    manifest["logical_sha256"] = sha256_json(manifest)
+    _atomic_json(output_directory / "manifest.json", manifest)
+    return manifest
+
+
 @dataclass(frozen=True, slots=True)
 class Stage2ExperimentSpec:
     experiment_id: str
@@ -442,6 +578,368 @@ def lif_steady_state_rate_hz(
     interval_ms = refractory_ms + membrane_tau_ms * np.log(ratio / (ratio - 1.0))
     rate[active] = 1_000.0 / interval_ms
     return rate
+
+
+def adaptive_lif_ramp_rate_hz(
+    current_pa: np.ndarray,
+    *,
+    rheobase_pa: float,
+    membrane_tau_ms: float,
+    refractory_ms: float,
+    adaptation_tau_ms: float,
+    adaptation_increment: float,
+    integration_step_us: int = 100,
+    sample_interval_ms: float = 25.0,
+    rate_window_ms: float = 50.0,
+) -> np.ndarray:
+    """Replay a current protocol through a dimensionless adaptive LIF point neuron."""
+    parameters = (
+        rheobase_pa,
+        membrane_tau_ms,
+        refractory_ms,
+        adaptation_tau_ms,
+        adaptation_increment,
+    )
+    if any(not math.isfinite(value) for value in parameters):
+        raise ConfigurationError("Adaptive LIF parameters must be finite")
+    if (
+        rheobase_pa <= 0.0
+        or membrane_tau_ms <= 0.0
+        or refractory_ms < 0.0
+        or adaptation_tau_ms <= 0.0
+        or adaptation_increment < 0.0
+    ):
+        raise ConfigurationError(
+            "Adaptive LIF time/scale parameters must be positive (refractory and adaptation "
+            "increment may be zero)"
+        )
+    if integration_step_us <= 0:
+        raise ConfigurationError("Adaptive LIF integration step must be positive")
+    dt_ms = integration_step_us / 1_000.0
+    steps_per_sample = sample_interval_ms / dt_ms
+    samples_per_window = rate_window_ms / sample_interval_ms
+    if (
+        not steps_per_sample.is_integer()
+        or not samples_per_window.is_integer()
+    ):
+        raise ConfigurationError(
+            "Adaptive LIF steps must divide the source interval and rate window exactly"
+        )
+    current = np.asarray(current_pa, dtype=np.float64)
+    if current.ndim != 1 or not np.all(np.isfinite(current)):
+        raise ConfigurationError("Adaptive LIF current protocol must be one-dimensional and finite")
+
+    v = 0.0
+    adaptation = 0.0
+    refractory_remaining_ms = 0.0
+    spikes_per_sample = np.zeros(len(current), dtype=np.int32)
+    for sample_index, injected_current in enumerate(current):
+        spike_count = 0
+        for _ in range(int(steps_per_sample)):
+            adaptation += -adaptation * dt_ms / adaptation_tau_ms
+            if refractory_remaining_ms > 0.0:
+                refractory_remaining_ms = max(0.0, refractory_remaining_ms - dt_ms)
+                continue
+            v += (
+                -v + injected_current / rheobase_pa - adaptation
+            ) * dt_ms / membrane_tau_ms
+            if v >= 1.0:
+                spike_count += 1
+                v = 0.0
+                adaptation += adaptation_increment
+                refractory_remaining_ms = refractory_ms
+        spikes_per_sample[sample_index] = spike_count
+
+    window_samples = int(samples_per_window)
+    cumulative = np.concatenate(([0], np.cumsum(spikes_per_sample, dtype=np.int64)))
+    rates = np.empty(len(current), dtype=np.float64)
+    for index in range(len(current)):
+        start = max(0, index + 1 - window_samples)
+        count = cumulative[index + 1] - cumulative[start]
+        observed_window_ms = (index + 1 - start) * sample_interval_ms
+        rates[index] = count * 1_000.0 / observed_window_ms
+    return rates
+
+
+def _adaptive_candidate_bank(
+    size: int,
+    seed: int,
+    *,
+    membrane_taus_ms: tuple[float, ...],
+    rheobase_range_pa: tuple[float, float],
+    refractory_range_ms: tuple[float, float],
+    adaptation_tau_range_ms: tuple[float, float],
+    adaptation_increment_range: tuple[float, float],
+) -> dict[str, np.ndarray]:
+    if size < 24:
+        raise ConfigurationError("Adaptive LIF candidate bank must contain at least 24 models")
+    generator = np.random.default_rng(seed)
+    membrane_taus = np.asarray(membrane_taus_ms, dtype=np.float64)
+    bank = {
+        "rheobase_pa": generator.uniform(*rheobase_range_pa, size),
+        "membrane_tau_ms": generator.choice(membrane_taus, size=size),
+        "refractory_ms": generator.uniform(*refractory_range_ms, size),
+        "adaptation_tau_ms": np.exp(
+            generator.uniform(
+                math.log(adaptation_tau_range_ms[0]),
+                math.log(adaptation_tau_range_ms[1]),
+                size,
+            )
+        ),
+        "adaptation_increment": generator.uniform(*adaptation_increment_range, size),
+    }
+    # Preserve an explicit no-adaptation comparison inside the same candidate bank.
+    bank["adaptation_increment"][: len(membrane_taus)] = 0.0
+    bank["membrane_tau_ms"][: len(membrane_taus)] = membrane_taus
+    return bank
+
+
+def _simulate_adaptive_bank(
+    current_pa: np.ndarray,
+    bank: dict[str, np.ndarray],
+    indices: np.ndarray,
+    *,
+    integration_step_us: int,
+    sample_interval_ms: float,
+    rate_window_ms: float,
+    initial_voltage_phases: tuple[float, ...],
+) -> np.ndarray:
+    """Vectorized candidate simulation used only for bounded model fitting."""
+    rheobase = bank["rheobase_pa"][indices]
+    membrane_tau = bank["membrane_tau_ms"][indices]
+    refractory = bank["refractory_ms"][indices]
+    adaptation_tau = bank["adaptation_tau_ms"][indices]
+    adaptation_increment = bank["adaptation_increment"][indices]
+    if integration_step_us <= 0:
+        raise ConfigurationError("Candidate integration step must be positive")
+    dt_ms = integration_step_us / 1_000.0
+    steps_per_sample_float = sample_interval_ms / dt_ms
+    if not steps_per_sample_float.is_integer():
+        raise ConfigurationError("Candidate integration step must divide sample interval exactly")
+    steps_per_sample = int(steps_per_sample_float)
+
+    trial_count = len(initial_voltage_phases)
+    if trial_count < 1:
+        raise ConfigurationError("At least one observation-model trial phase is required")
+    v = np.broadcast_to(
+        np.asarray(initial_voltage_phases, dtype=np.float64),
+        (len(indices), trial_count),
+    ).copy()
+    adaptation = np.zeros((len(indices), trial_count), dtype=np.float64)
+    refractory_remaining = np.zeros((len(indices), trial_count), dtype=np.float64)
+    spike_bins = np.zeros((len(indices), len(current_pa)), dtype=np.int16)
+    for sample_index, injected_current in enumerate(current_pa):
+        counts = np.zeros((len(indices), trial_count), dtype=np.int16)
+        for _ in range(steps_per_sample):
+            adaptation += -adaptation * dt_ms / adaptation_tau[:, None]
+            available = refractory_remaining <= 0.0
+            refractory_remaining = np.maximum(0.0, refractory_remaining - dt_ms)
+            v[available] += (
+                -v[available]
+                + np.broadcast_to(injected_current / rheobase[:, None], v.shape)[available]
+                - adaptation[available]
+            ) * dt_ms / np.broadcast_to(membrane_tau[:, None], v.shape)[available]
+            spiking = available & (v >= 1.0)
+            counts[spiking] += 1
+            v[spiking] = 0.0
+            adaptation[spiking] += np.broadcast_to(
+                adaptation_increment[:, None], v.shape
+            )[spiking]
+            refractory_remaining[spiking] = np.broadcast_to(
+                refractory[:, None], v.shape
+            )[spiking]
+        spike_bins[:, sample_index] = np.sum(counts, axis=1)
+    window_samples_float = rate_window_ms / sample_interval_ms
+    if not window_samples_float.is_integer():
+        raise ConfigurationError("Rate window must contain an integer number of source samples")
+    window_samples = int(window_samples_float)
+    cumulative = np.pad(np.cumsum(spike_bins, axis=1, dtype=np.int64), ((0, 0), (1, 0)))
+    rates = np.empty_like(spike_bins, dtype=np.float64)
+    for sample_index in range(len(current_pa)):
+        start = max(0, sample_index + 1 - window_samples)
+        counts = cumulative[:, sample_index + 1] - cumulative[:, start]
+        observed_window_ms = (sample_index + 1 - start) * sample_interval_ms
+        rates[:, sample_index] = counts * 1_000.0 / (observed_window_ms * trial_count)
+    return rates
+
+
+def fit_dynamic_projection_neuron_model(
+    experiment_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Fit and freeze the ramp-aware PN family without opening the external trace."""
+    experiment = Stage2ExperimentSpec.load(experiment_path)
+    readiness = experiment.readiness(root)
+    if not readiness["fit_ready"]:
+        raise DatasetError(f"Stage 2 dynamic fit contract is not ready: {readiness['blockers']}")
+    if any(not specimen.startswith("gugel-dl5-fi-") for specimen in experiment.fit_specimen_ids):
+        raise ConfigurationError("Dynamic PN fit accepts only registered Gugel F-I training cells")
+    if any(not specimen.startswith("nanami-") for specimen in experiment.held_out_specimen_ids):
+        raise ConfigurationError("Dynamic PN fit requires the reserved Nanami external challenge")
+
+    raw_experiment = load_json(experiment_path)
+    target = raw_experiment["target"]
+    parameter_policy = raw_experiment["parameter_policy"]
+    protocol = target["gugel_protocol"]
+    bank_size = int(target["candidate_bank_size"])
+    bank_seed = int(target["candidate_bank_seed"])
+    rerank_count = int(target["final_rerank_count"])
+    search_step_us = int(target["candidate_search_step_us"])
+    final_step_us = int(target["integration_step_us"])
+    sample_interval_ms = float(protocol["sample_interval_ms"])
+    rate_window_ms = float(protocol["rate_window_ms"])
+    initial_voltage_phases = tuple(
+        float(value) for value in parameter_policy["trial_initial_voltage_phases"]
+    )
+
+    table = pq.read_table(
+        root
+        / "derived"
+        / "auxiliary"
+        / "gugel-2023-elife-85443"
+        / "figure7"
+        / "dl5-fi-curves.parquet"
+    )
+    current_pa, fit_curves = _group_curves(
+        table, experiment.fit_specimen_ids, "current_pa", "firing_rate_hz"
+    )
+    bank = _adaptive_candidate_bank(
+        bank_size,
+        bank_seed,
+        membrane_taus_ms=tuple(
+            float(value) for value in parameter_policy["membrane_tau_ms"]
+        ),
+        rheobase_range_pa=tuple(parameter_policy["rheobase_pa_range"]),
+        refractory_range_ms=tuple(parameter_policy["refractory_ms_range"]),
+        adaptation_tau_range_ms=tuple(parameter_policy["adaptation_tau_ms_range"]),
+        adaptation_increment_range=tuple(parameter_policy["adaptation_increment_range"]),
+    )
+    all_indices = np.arange(bank_size)
+    search_rates = _simulate_adaptive_bank(
+        current_pa,
+        bank,
+        all_indices,
+        integration_step_us=search_step_us,
+        sample_interval_ms=sample_interval_ms,
+        rate_window_ms=rate_window_ms,
+        initial_voltage_phases=initial_voltage_phases,
+    )
+    search_losses_by_cell = np.mean(
+        np.where(
+            np.abs(search_rates[:, None, :] - fit_curves[None, :, :]) <= 5.0,
+            0.5 * (search_rates[:, None, :] - fit_curves[None, :, :]) ** 2,
+            5.0 * (np.abs(search_rates[:, None, :] - fit_curves[None, :, :]) - 2.5),
+        ),
+        axis=2,
+    )
+    rerank_indices = np.unique(
+        np.concatenate(
+            [
+                np.argsort(search_losses_by_cell[:, cell_index])[:rerank_count]
+                for cell_index in range(fit_curves.shape[0])
+            ]
+        )
+    )
+    final_rates = _simulate_adaptive_bank(
+        current_pa,
+        bank,
+        rerank_indices,
+        integration_step_us=final_step_us,
+        sample_interval_ms=sample_interval_ms,
+        rate_window_ms=rate_window_ms,
+        initial_voltage_phases=initial_voltage_phases,
+    )
+    final_losses_by_cell = np.mean(
+        np.where(
+            np.abs(final_rates[:, None, :] - fit_curves[None, :, :]) <= 5.0,
+            0.5 * (final_rates[:, None, :] - fit_curves[None, :, :]) ** 2,
+            5.0 * (np.abs(final_rates[:, None, :] - fit_curves[None, :, :]) - 2.5),
+        ),
+        axis=2,
+    )
+    selected_positions = np.argmin(final_losses_by_cell, axis=0)
+    selected_indices = [int(rerank_indices[position]) for position in selected_positions]
+    parameter_draws = [
+        {
+            "fit_specimen_id": specimen_id,
+            "candidate_index": selected_index,
+            "parameters": {
+                key: float(values[selected_index]) for key, values in bank.items()
+            },
+        }
+        for specimen_id, selected_index in zip(
+            experiment.fit_specimen_ids, selected_indices, strict=True
+        )
+    ]
+    selected_predictions = np.stack(
+        [final_rates[position] for position in selected_positions]
+    )
+    selected_losses = np.asarray(
+        [
+            final_losses_by_cell[position, cell_index]
+            for cell_index, position in enumerate(selected_positions)
+        ]
+    )
+
+    steady_parameters = {"rheobase_pa": 31.0, "membrane_tau_ms": 30.6, "refractory_ms": 24.0}
+    steady_prediction = lif_steady_state_rate_hz(current_pa, **steady_parameters)
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-projection-neuron-dynamic-fit-v5",
+        "experiment_id": experiment.experiment_id,
+        "experiment_sha256": experiment.sha256,
+        "provenance": "P/F/E",
+        "fit_specimen_ids": list(experiment.fit_specimen_ids),
+        "reserved_external_specimen_ids": list(experiment.held_out_specimen_ids),
+        "external_trace_opened": False,
+        "frozen_before_external_evaluation": True,
+        "family": "ramp-aware dimensionless adaptive LIF",
+        "protocol": {
+            "current_ramp_pa_per_s": float(protocol["ramp_rate_pa_per_s"]),
+            "sample_interval_ms": sample_interval_ms,
+            "rate_window_ms": rate_window_ms,
+            "rate_window_overlap_ms": float(protocol["rate_window_overlap_ms"]),
+            "trial_average_count": len(initial_voltage_phases),
+            "trial_initial_voltage_phases": list(initial_voltage_phases),
+            "trial_count_inference": (
+                "F/E inference from 6.6667 Hz source quantization under the published 50 ms window"
+            ),
+            "candidate_search_step_us": search_step_us,
+            "final_integration_step_us": final_step_us,
+        },
+        "candidate_bank": {
+            "size": bank_size,
+            "seed": bank_seed,
+            "final_rerank_count": len(rerank_indices),
+            "selected_indices": selected_indices,
+        },
+        "parameter_distribution": {
+            "kind": "empirical per-training-cell draws",
+            "draw_count": len(parameter_draws),
+            "draws": parameter_draws,
+        },
+        "training": {
+            "per_cell_huber_hz2": [float(value) for value in selected_losses],
+            "huber_hz2": float(np.mean(selected_losses)),
+            "rmse_hz": _rmse(fit_curves, selected_predictions),
+            "steady_state_lif_rmse_hz": _rmse(fit_curves, steady_prediction[None, :]),
+            "dynamic_improves_training_rmse": _rmse(fit_curves, selected_predictions)
+            < _rmse(fit_curves, steady_prediction[None, :]),
+        },
+        "acceptance": {
+            "all_states_finite": bool(np.all(np.isfinite(selected_predictions))),
+            "dynamic_improves_training_rmse": _rmse(fit_curves, selected_predictions)
+            < _rmse(fit_curves, steady_prediction[None, :]),
+            "external_evaluation_pending": True,
+            "validation_tier_awarded": None,
+        },
+        "claim_boundary": experiment.claim_boundary,
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
 
 
 def _huber_mean(residual: np.ndarray, delta: float) -> float:
