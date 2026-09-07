@@ -52,6 +52,7 @@ from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
     NANAMI_REPOSITORY_COMMIT,
     Stage2ExperimentSpec,
+    evaluate_dynamic_projection_neuron_holdout,
     fit_dynamic_projection_neuron_model,
     fit_projection_neuron_model,
     import_gouwens_dm1_priors,
@@ -204,6 +205,23 @@ def _command_stage2_fit_pn_dynamic(args: argparse.Namespace) -> int:
     )
     required = ("all_states_finite", "dynamic_improves_training_rmse")
     return 0 if all(result["acceptance"][key] for key in required) else 2
+
+
+def _command_stage2_evaluate_pn_dynamic(args: argparse.Namespace) -> int:
+    result = evaluate_dynamic_projection_neuron_holdout(
+        args.evaluation, args.root, args.output
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "metrics": result["metrics"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if result["acceptance"]["cellular_fi_subgate_pass"] else 2
 
 
 def _command_stage2_review_pn(args: argparse.Namespace) -> int:
@@ -1237,6 +1255,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_fit_pn_dynamic.add_argument("--output", type=Path, required=True)
     stage2_fit_pn_dynamic.set_defaults(func=_command_stage2_fit_pn_dynamic)
+    stage2_evaluate_pn_dynamic = stage2_commands.add_parser(
+        "evaluate-pn-dynamic",
+        help="evaluate a frozen dynamic PN distribution on excluded recorded cells",
+    )
+    stage2_evaluate_pn_dynamic.add_argument(
+        "--root", type=Path, default=default_data_root()
+    )
+    stage2_evaluate_pn_dynamic.add_argument(
+        "--evaluation",
+        type=Path,
+        default=(
+            project_root() / "configs" / "experiments" / "stage2-pn-condition-holdout.json"
+        ),
+    )
+    stage2_evaluate_pn_dynamic.add_argument("--output", type=Path, required=True)
+    stage2_evaluate_pn_dynamic.set_defaults(func=_command_stage2_evaluate_pn_dynamic)
     stage2_review_pn = stage2_commands.add_parser(
         "review-pn", help="audit feature errors from an immutable frozen PN fit"
     )

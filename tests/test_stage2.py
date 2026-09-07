@@ -12,6 +12,7 @@ from flysim.errors import ConfigurationError, DatasetError
 from flysim.stage2 import (
     Stage2ExperimentSpec,
     adaptive_lif_ramp_rate_hz,
+    evaluate_dynamic_projection_neuron_holdout,
     import_gouwens_dm1_priors,
     import_gugel_figure7,
     import_nanami_pn_trace,
@@ -247,3 +248,26 @@ def test_frozen_fit_review_rejects_wrong_result_identity(tmp_path: Path) -> None
             tmp_path / "review.json",
             expected_fit_sha256="0" * 64,
         )
+
+
+def test_dynamic_holdout_rejects_wrong_frozen_fit_identity(tmp_path: Path) -> None:
+    evaluation = tmp_path / "evaluation.json"
+    evaluation.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "evaluation_id": "test",
+                "provenance": "P/F/E",
+                "frozen_fit": {
+                    "path": "fit.json",
+                    "sha256": "0" * 64,
+                    "experiment_sha256": "1" * 64,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "fit.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(DatasetError, match="Frozen dynamic PN fit SHA-256 mismatch"):
+        evaluate_dynamic_projection_neuron_holdout(evaluation, tmp_path, tmp_path / "out.json")

@@ -942,6 +942,161 @@ def fit_dynamic_projection_neuron_model(
     return result
 
 
+def evaluate_dynamic_projection_neuron_holdout(
+    evaluation_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Evaluate a frozen dynamic PN distribution on previously excluded recorded cells."""
+    evaluation = load_json(evaluation_path)
+    if evaluation.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported dynamic PN holdout schema")
+    parse_provenance(str(evaluation["provenance"]))
+    frozen_spec = evaluation["frozen_fit"]
+    fit_path = root / str(frozen_spec["path"])
+    expected_fit_sha256 = str(frozen_spec["sha256"])
+    observed_fit_sha256 = sha256_file(fit_path) if fit_path.is_file() else None
+    if observed_fit_sha256 != expected_fit_sha256:
+        raise DatasetError(
+            "Frozen dynamic PN fit SHA-256 mismatch: "
+            f"expected {expected_fit_sha256}, observed {observed_fit_sha256}"
+        )
+    fit = load_json(fit_path)
+    if fit.get("frozen_before_external_evaluation") is not True:
+        raise DatasetError("Dynamic PN holdout evaluation requires a pre-frozen fit")
+    if fit.get("experiment_sha256") != frozen_spec["experiment_sha256"]:
+        raise DatasetError("Frozen dynamic PN fit experiment identity mismatch")
+
+    artifact_spec = evaluation["required_artifact"]
+    artifact_path = root / str(artifact_spec["path"])
+    observed_artifact_sha256 = sha256_file(artifact_path) if artifact_path.is_file() else None
+    if observed_artifact_sha256 != artifact_spec["sha256"]:
+        raise DatasetError(
+            "Dynamic PN holdout artifact SHA-256 mismatch: "
+            f"expected {artifact_spec['sha256']}, observed {observed_artifact_sha256}"
+        )
+
+    # Numeric held-out responses are opened only after both immutable identities pass.
+    table = pq.read_table(artifact_path)
+    training_ids = tuple(str(value) for value in evaluation["training_specimen_ids"])
+    held_out_ids = tuple(str(value) for value in evaluation["held_out_specimen_ids"])
+    if not training_ids or not held_out_ids or set(training_ids) & set(held_out_ids):
+        raise ConfigurationError("Dynamic PN holdout cell sets must be nonempty and disjoint")
+    current_pa, training_curves = _group_curves(
+        table, training_ids, "current_pa", "firing_rate_hz"
+    )
+    held_current_pa, held_out_curves = _group_curves(
+        table, held_out_ids, "current_pa", "firing_rate_hz"
+    )
+    if not np.array_equal(current_pa, held_current_pa):
+        raise DatasetError("Dynamic PN training and held-out current grids differ")
+
+    draws = fit["parameter_distribution"]["draws"]
+    bank: dict[str, np.ndarray] = {
+        key: np.asarray(
+            [float(draw["parameters"][key]) for draw in draws], dtype=np.float64
+        )
+        for key in (
+            "rheobase_pa",
+            "membrane_tau_ms",
+            "refractory_ms",
+            "adaptation_tau_ms",
+            "adaptation_increment",
+        )
+    }
+    protocol = fit["protocol"]
+    model_curves = _simulate_adaptive_bank(
+        current_pa,
+        bank,
+        np.arange(len(draws)),
+        integration_step_us=int(protocol["final_integration_step_us"]),
+        sample_interval_ms=float(protocol["sample_interval_ms"]),
+        rate_window_ms=float(protocol["rate_window_ms"]),
+        initial_voltage_phases=tuple(
+            float(value) for value in protocol["trial_initial_voltage_phases"]
+        ),
+    )
+    model_mean = np.mean(model_curves, axis=0)
+    biological_mean = np.mean(training_curves, axis=0)
+    model_rmse = _rmse(held_out_curves, model_mean[None, :])
+    biological_rmse = _rmse(held_out_curves, biological_mean[None, :])
+    normalized_ratio = model_rmse / biological_rmse
+
+    active_ramp = current_pa > 0.0
+
+    def response_features(curve: np.ndarray) -> dict[str, float | None]:
+        active_indices = np.flatnonzero(active_ramp & (curve > 0.0))
+        onset = float(current_pa[int(active_indices[0])]) if len(active_indices) else None
+        return {
+            "response_onset_current_pa": onset,
+            "peak_firing_rate_hz": float(np.max(curve[active_ramp])),
+        }
+
+    model_features = response_features(model_mean)
+    held_out_response_features = [response_features(curve) for curve in held_out_curves]
+    held_out_features = [
+        {"specimen_id": specimen_id, **features}
+        for specimen_id, features in zip(
+            held_out_ids, held_out_response_features, strict=True
+        )
+    ]
+    model_onset = model_features["response_onset_current_pa"]
+    onset_errors: list[float | None] = []
+    for features in held_out_response_features:
+        observed_onset = features["response_onset_current_pa"]
+        onset_errors.append(
+            None
+            if model_onset is None or observed_onset is None
+            else model_onset - observed_onset
+        )
+    model_peak = model_features["peak_firing_rate_hz"]
+    if model_peak is None:
+        raise DatasetError("Dynamic PN model peak feature is unexpectedly missing")
+    peak_errors = []
+    for features in held_out_response_features:
+        observed_peak = features["peak_firing_rate_hz"]
+        if observed_peak is None:
+            raise DatasetError("Dynamic PN held-out peak feature is unexpectedly missing")
+        peak_errors.append(model_peak - observed_peak)
+    ratio_limit = float(evaluation["acceptance"]["normalized_error_ratio_max"])
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-pn-dynamic-chronic-condition-holdout-v1",
+        "evaluation_id": str(evaluation["evaluation_id"]),
+        "evaluation_sha256": sha256_json(evaluation),
+        "frozen_fit_path": str(fit_path),
+        "frozen_fit_sha256": observed_fit_sha256,
+        "held_out_opened_after_identity_checks": True,
+        "training_specimen_ids": list(training_ids),
+        "held_out_specimen_ids": list(held_out_ids),
+        "metrics": {
+            "model_to_heldout_rmse_hz": model_rmse,
+            "training_cohort_to_heldout_rmse_hz": biological_rmse,
+            "normalized_error_ratio": normalized_ratio,
+            "per_cell_rmse_hz": [
+                _rmse(curve, model_mean) for curve in held_out_curves
+            ],
+            "model_features": model_features,
+            "held_out_features": held_out_features,
+            "response_onset_current_errors_pa": onset_errors,
+            "peak_firing_rate_errors_hz": peak_errors,
+        },
+        "acceptance": {
+            "normalized_error_ratio_limit": ratio_limit,
+            "normalized_error_ratio_pass": normalized_ratio <= ratio_limit,
+            "all_predictions_finite": bool(np.all(np.isfinite(model_curves))),
+            "cellular_fi_subgate_pass": normalized_ratio <= ratio_limit
+            and bool(np.all(np.isfinite(model_curves))),
+        },
+        "tier_policy": evaluation["acceptance"]["tier_policy"],
+        "claim_boundary": str(evaluation["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
+
+
 def _huber_mean(residual: np.ndarray, delta: float) -> float:
     absolute = np.abs(residual)
     loss = np.where(absolute <= delta, 0.5 * residual**2, delta * (absolute - 0.5 * delta))

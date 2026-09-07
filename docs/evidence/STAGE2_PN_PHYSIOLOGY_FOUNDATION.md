@@ -106,3 +106,21 @@ This improvement is not a validation result: each draw was evaluated on the same
 it, only two cells form the distribution, and no external response value was scored. The first two
 dynamic-fit attempts used a shared parameter draw, failed to improve training RMSE, and are
 superseded exploratory artifacts rather than evidence.
+
+## Chronic-condition held-out result
+
+After freezing the adaptive distribution, four previously excluded E2-hexenal-exposure DL5 cells
+were opened under `stage2-pn-dynamic-chronic-condition-holdout-v1`. The population-mean prediction
+has 13.174 Hz RMSE versus 12.376 Hz for the training-cohort mean, producing a normalized error ratio
+of 1.064. It passes the preregistered 1.2 F-I sub-gate with finite predictions. Per-cell RMSEs are
+8.270, 18.439, 7.942, and 14.924 Hz.
+
+The immutable result `projection-neuron-dynamic-condition-holdout-v1.json` has SHA-256
+`401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434`. These four cells are now
+consumed and cannot be used to alter the family, parameter ranges, observation model, or acceptance
+thresholds.
+
+This passes one selected cellular F-I test, not V1. The holdout comes from the same paper under a
+chronic odor-exposure condition, and the current evidence set does not independently validate
+resting voltage, membrane time constants, or adaptation distributions. The project tier therefore
+remains V0 Structural.

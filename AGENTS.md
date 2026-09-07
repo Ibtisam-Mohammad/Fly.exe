@@ -1,7 +1,7 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.9
+Version: 1.10
 Last evidence review: 2026-09-08
 Last implementation audit: 2026-09-08
 Applies to: this repository and every subdirectory
@@ -31,8 +31,8 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural
-ENGINEERING_STATUS: ramp-aware adaptive PN distribution is frozen and halves training RMSE versus the failed shared steady-state LIF; its external cell remains unscored and no V1/V2 tier is awarded
-NEXT_GATE: resolve the external trace's current-unit ambiguity or acquire a multi-animal PN holdout -> run one sealed dynamic evaluation; source release-failure/STP evidence before any V2 review
+ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064; it is not complete V1 and no V1/V2 tier is awarded
+NEXT_GATE: run 100-to-50-us sensitivity and lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
 FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -44,8 +44,8 @@ STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 
 TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 minimum/0.169 median vs 0.5 target; awards no tier
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
 STAGE2_DATA: Gouwens-Wilson DM1 priors and Gugel DL5 F-I/uEPSC data locked; one external Nanami PN trace is normalized and reserved but is not population evidence
-STAGE2_READINESS: dynamic revision contract 8ddb0b77770d passes four hashes; two original Gugel fit cells remain training-only, consumed Gugel holdouts are excluded, and the Nanami cell is unscored
-STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; replacement adaptive distribution training RMSE 7.630 vs 15.528 shared-LIF baseline; external evaluation pending; no tier awarded
+STAGE2_READINESS: dynamic revision contract 8ddb0b77770d passes four hashes; two original Gugel cells are training-only, four chronic-condition cells are now consumed holdouts, and the Nanami cell remains unscored
+STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; adaptive distribution training RMSE 7.630 vs 15.528 baseline and chronic-condition held-out ratio 1.064 passes; no tier awarded
 TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
@@ -139,6 +139,15 @@ result, not held-out validation. Frozen result `projection-neuron-dynamic-fit-v5
 `8d97c40c094bbc06df9d83aa7b9cc057ef89cfb46b8162d806a9c134ba5f4bac`; the external trace remains
 unscored pending unit resolution or a better independent multi-animal source. No V1/V2 tier is
 awarded.
+
+The adaptive distribution was then evaluated once on four previously excluded chronic-exposure DL5
+cells under preregistered contract `stage2-pn-dynamic-chronic-condition-holdout-v1`. Population-mean
+model RMSE is 13.174 Hz versus 12.376 Hz for the training-cohort biological baseline, giving a
+normalized ratio of 1.064 and passing the 1.2 F-I sub-gate. The immutable result SHA-256 is
+`401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434`. These cells are now
+consumed. The same-paper, chronic-condition result is not an independent-laboratory population
+validation and lacks the resting-voltage, membrane-time-constant, and adaptation evidence required
+for complete V1, so the awarded project tier remains V0 Structural.
 
 Useful retrieval commands:
 

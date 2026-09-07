@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "evaluation_id": "stage2-pn-dynamic-chronic-condition-holdout-v1",
+  "provenance": "P/F/E",
+  "assumption_ids": ["ND-01", "ND-02", "ND-08", "VAL-01"],
+  "frozen_fit": {
+    "path": "evidence/stage2/projection-neuron-dynamic-fit-v5.json",
+    "sha256": "8d97c40c094bbc06df9d83aa7b9cc057ef89cfb46b8162d806a9c134ba5f4bac",
+    "experiment_sha256": "8ddb0b77770d11cc4422e97ead796d07aea443f3809418cc41aabc1cec7f1ac1"
+  },
+  "required_artifact": {
+    "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-fi-curves.parquet",
+    "sha256": "6fe737e9eb7eb2b2f6ee3597a46af619a2414dd56dcd6378118467c0f77c672f"
+  },
+  "training_specimen_ids": [
+    "gugel-dl5-fi-solvent-01",
+    "gugel-dl5-fi-solvent-02"
+  ],
+  "held_out_specimen_ids": [
+    "gugel-dl5-fi-exposed-01",
+    "gugel-dl5-fi-exposed-02",
+    "gugel-dl5-fi-exposed-03",
+    "gugel-dl5-fi-exposed-04"
+  ],
+  "held_out_access_policy": "load numeric held-out responses only after frozen fit and source checksums pass",
+  "metrics": [
+    "population-mean model-to-heldout RMSE",
+    "training-cohort-mean-to-heldout biological RMSE",
+    "normalized error ratio",
+    "per-cell RMSE",
+    "response-onset current error",
+    "peak firing-rate error"
+  ],
+  "acceptance": {
+    "normalized_error_ratio_max": 1.2,
+    "all_predictions_finite": true,
+    "tier_policy": "a pass is one condition-shift F-I sub-gate only; it cannot award V1 without independent resting-voltage, membrane-time-constant, and adaptation evidence"
+  },
+  "known_nonblind_information": "The paper reports no aggregate intrinsic-excitability change after chronic exposure; cell-level model errors have not been inspected.",
+  "claim_boundary": "Tests transfer from two solvent-control DL5 training cells to four different chronic-exposure DL5 cells in the same paper; not an independent laboratory, male, DM1/DM4, or complete cellular validation."
+}

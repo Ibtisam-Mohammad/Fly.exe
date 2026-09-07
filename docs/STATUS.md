@@ -114,6 +114,10 @@ Status date: 2026-09-08
 - The fitted active-cell object is now an empirical two-draw PN-family distribution rather than
   one identical neuron. On its two training cells it reduces RMSE from 15.528 Hz for the original
   shared steady-state LIF to 7.630 Hz. This is training evidence only; the external cell is unscored.
+- A separately frozen condition-shift contract then opened four previously excluded chronic-
+  exposure DL5 cells exactly once. The adaptive population mean achieves 13.174 Hz held-out RMSE
+  versus a 12.376 Hz training-cohort biological baseline, normalized ratio 1.064, and passes the
+  preregistered 1.2 F-I sub-gate. The result remains below a complete V1 tier.
 
 ## Not implemented or not yet validated
 
@@ -148,9 +152,10 @@ Status date: 2026-09-08
   cellular/synaptic model: its F-I gate fails, while its uEPSC aggregate passes but lacks
   preregistered feature, failure-probability, and short-term-plasticity evidence.
 - The ramp-aware adaptive replacement currently passes only an internal training comparison. Its
-  single external cell remains unscored because the published repository does not state the
-  physical units of the stimulus levels. A multi-animal, type-resolved independent PN holdout is
-  still required before V1 can be considered. V1 and V2 remain unawarded.
+  chronic-condition F-I holdout sub-gate passes, but this is the same source paper and state-shifted
+  cohort. The separate Nanami cell remains unscored because the repository does not state the
+  physical units of the stimulus levels. Independent resting-voltage, membrane-time-constant, and
+  adaptation evidence remains necessary for complete V1. V1 and V2 remain unawarded.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -176,7 +181,7 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
 | V0 evidence gates | 12 of 12 passing |
-| Automated tests | 81 passing |
+| Automated tests | 82 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
 
