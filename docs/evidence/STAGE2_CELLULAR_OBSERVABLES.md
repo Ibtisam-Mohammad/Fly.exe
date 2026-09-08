@@ -1,9 +1,35 @@
 # Stage 2 cellular observables and heterogeneous-cell execution
 
-Status: first measured cellular observables recorded; V1 remains blocked
+Status: first measured cellular observables recorded; V1 remains blocked; two registered
+values shown to depend on their measurement rule (ADR-2026-009)
 Date: 2026-09-08
-Immutable results: `cellular-observables-v1.json` logical SHA-256 `4796191ebd8c1ecd…`; `projection-neuron-ensemble-v1.json` logical SHA-256 `8759a6dd9f991255…`
+Immutable results: `cellular-observables-v1.json` logical SHA-256 `4796191ebd8c1ecd…`;
+`cellular-observables-v2.json` logical SHA-256 `d6dc1c03331c814f…` (file
+`7cbacca867818a39…`); `projection-neuron-ensemble-v1.json` logical SHA-256 `8759a6dd9f991255…`
 Highest project validation tier: V0 Structural
+
+## Corrections from the 2026-09-08 review
+
+The independent review (ADR-2026-009) reissued the measurement contract as
+`stage2-cellular-observables-v2`. It reproduces every v1 value exactly and adds three
+diagnostics that expose what the primary values assume. The v1 table below is left as written;
+read it with these corrections.
+
+| Value | v1 (primary rule) | Under the alternative rule | What the difference is |
+|---|---|---|---|
+| Membrane time constant | 32.566 ms, asymptote pinned to the pre-step baseline −57.58 mV | **47.6 ms**, free asymptote settles at −60.16 mV, R² 0.881 | the pre-step baselines span 5.7 mV across sweeps, so the pin is an assumption; honest value is a 33 to 48 ms bracket |
+| Spike threshold | −38.402 mV at a 10 mV/ms upstroke criterion | **−41.838 mV** at 10% of each spike's peak slope | median peak upstroke is 10.03 mV/ms, so only 51% of spikes reach the criterion and those that do reach it near their steepest point |
+| Spike counts 2 to 10 pA | 1, 10, 17, 21, 24 (10 mV prominence) | 0, 10, 15, 23, 30 (−35 mV crossing); 1, 21, 26, 29, 40 (5 mV) | spikes are 8.9 to 13.8 mV high, so the detector is marginal; v1 called the first two "agreeing" |
+| Shortest interspike interval | 15.8 ms | 14.4 ms | detector-dependent; and it is an upper bound on refractoriness, registered as a value |
+| LN resting potential, four animals | −50.789 mV median, whole-trace masked median | **−49.02 mV** median before the first spike (−47.55, −48.38, −50.59, −49.67) | every trial carries an unpublished stimulus from about 1 to 4 s and ten seconds of after-hyperpolarization, and the whole-trace median is that post-stimulus level |
+
+The 20 mV sensitivity block reports a 28.1 ms charging constant and a 2360 MΩ input resistance.
+Those are artifacts: at 20 mV prominence the detector misses every spike and the code then fits
+sweeps with 24 to 33 mV deflections as passive. v2 reports the deflection beside them. Neither
+number may be quoted.
+
+None of this changes `cell-dynamics-v0.3`; what a v0.4 should carry is listed in ADR-2026-009
+and AGENTS section 15.
 
 ## What changed
 

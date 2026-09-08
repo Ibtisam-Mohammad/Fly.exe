@@ -1,10 +1,23 @@
 # ADR-2026-008 — Synaptic-tier evidence and an executable Stage 2 exit gate
 
-Status: accepted
+Status: accepted; four statements corrected by
+[ADR-2026-009](ADR-2026-009-stage2-independent-review.md) on the same day
 
 Date: 2026-09-08
 
 Changes assumptions: none
+
+> **Corrections (ADR-2026-009).** The text below is kept as written. The independent review
+> withdrew or corrected these parts of it: (1) the ND-06 short-term-depression hypothesis in the
+> contact-scale section is a category error, since the reference is a whole-brain static
+> simulation and the circuit a one-hop subgraph; (2) the uEPSC peak-time and sign criteria were
+> uninformative on peak-aligned, inward-by-selection traces, and the amplitude exclusion rested
+> on a premise the source paper contradicts, so the kernel is wrong in decay and amplitude;
+> (3) the synaptic-structure contract cited `10.1016/j.neuron.2008.04.024`, which is Kruglikov
+> and Rudy 2008, not Kazama and Wilson 2008 (`10.1016/j.neuron.2008.02.030`), and stated the
+> published claim with the wrong sign; (4) "nothing lockable" for ND-06 overlooks the paper's
+> release probability 0.79, 51 release sites and depression onset near 50 spikes/s. The exit-gate
+> cellular pass is also recorded there as weaker than a cohort-mean predictor.
 
 ```yaml
 decision_id: ADR-2026-008

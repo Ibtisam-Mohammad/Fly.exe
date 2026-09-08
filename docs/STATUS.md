@@ -148,8 +148,19 @@ Status date: 2026-09-08
   because no graded transmission model is registered.
 
 - The Stage 2 exit gate is an executable contract that reads each leg from a checksum-pinned
-  artifact. One leg of four passes: the cellular F-I sub-gate. Synaptic, circuit and ensemble
-  fail, and Stage 2 does not exit.
+  artifact. One leg of four passes: the cellular F-I sub-gate, at a normalized error ratio of
+  1.064 that a two-cell training mean satisfies better. Synaptic, circuit and ensemble fail,
+  and Stage 2 does not exit. `stage2-exit-gate-v2` carries the review caveats.
+- An independent review (ADR-2026-009) recomputed every Stage 2 number and verified every
+  hash. It withdrew the ND-06 depression hypothesis for the contact-scale conflict as a
+  category error, recorded the uEPSC peak-time and sign criteria as vacuous on peak-aligned
+  traces and the kernel as wrong in decay and amplitude, corrected the synaptic-structure
+  contract's citation and claim in a v2, and added contract-gated diagnostics that show the
+  MBON07 time constant moving from 32.6 to 47.6 ms with a free asymptote and the threshold
+  from -38.4 to -41.8 mV under a fraction-of-slope rule.
+- The heterogeneous GeNN kernel is executed on the full graph. With the fallback set on every
+  neuron it is bit-identical to the homogeneous kernel; with cell-dynamics-v0.3 the four
+  MBON07 neurons drop from 68/64/65/70 to 13/13/13/13 spikes in 300 ms.
 - A second one-step GeNN defect is fixed. GeNN labels a spike with the start of the integration
   interval while NumPy and Brian2 label it with the end, and the Stage 1 adapter lacked the
   correction the parity harness already had. It had been cancelling the axonal-delay defect at
@@ -228,8 +239,12 @@ Status date: 2026-09-08
   all. Both the synaptic and ensemble exit legs now need new data, not new code.
 - Receptor-aware polarity has no source. The MaleCNS `receptorType` column is gustatory receptor
   identity, not postsynaptic receptor expression, and no connectome-mapped receptor resource
-  exists. Release-failure and short-term-plasticity evidence is described qualitatively in the
-  literature but is not deposited in any lockable form.
+  exists. For release and short-term plasticity Kazama and Wilson 2008 publish point
+  estimates (release probability 0.79, 51 sites per connection, depression above about
+  50 spikes/s), registered in `stage2-synaptic-structure-v2`, but no trace is deposited.
+- The MBON07 parameter set in `cell-dynamics-v0.3` carries values that depend on their
+  measurement rule by 15 ms and 3.4 mV, and a refractory period that is an upper bound used
+  as a value. A v0.4 revision is an open decision (AGENTS section 15).
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -245,6 +260,8 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 Cellular-tier sources, the Nanami stimulus resolution, and heterogeneous-cell execution:
 [ADR-2026-007](adr/ADR-2026-007-cellular-tier-sources.md) and
 [Stage 2 cellular observables](evidence/STAGE2_CELLULAR_OBSERVABLES.md).
+The independent Stage 2 review and its corrections:
+[ADR-2026-009](adr/ADR-2026-009-stage2-independent-review.md).
 Synaptic-tier evidence and the executable exit gate:
 [ADR-2026-008](adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md) and
 [Stage 2 synaptic tier](evidence/STAGE2_SYNAPTIC_TIER.md).

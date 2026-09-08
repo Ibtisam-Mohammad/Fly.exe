@@ -1,7 +1,7 @@
 # Stage 2 synaptic tier and the exit gate
 
-Status: two V2 legs evaluated, one passing; Stage 2 does not exit
-Date: 2026-09-08
+Status: two V2 legs evaluated, neither informative-and-passing; Stage 2 does not exit
+Date: 2026-09-08, corrected the same day by ADR-2026-009
 Highest project validation tier: V0 Structural
 
 Immutable results:
@@ -9,10 +9,35 @@ Immutable results:
 | Artifact | Logical SHA-256 |
 |---|---|
 | `synaptic-structure-v1.json` | `545b8b34a6b17cacda076d09f725f18768eed5d64c667bbb323291117e79627a` |
+| `synaptic-structure-v2.json` | `4a18b4a7857af142d08405367784262da561f7b085567e8fb932df4f5478b99c` |
 | `uepsc-kinetics-holdout-v1.json` | `e5a68e2cf17b37cfd3048252cccf15a44e3be321da9b5f2347b9102cdd12b2ed` |
 | `exit-gate-v1.json` | `e2a559476c70962ef31555e16a528820cfbe6b20b14fbe853e2fe92d7be6caf9` |
+| `exit-gate-v2.json` | `901354be3adc140c796232e65f31ee91e1e954975b93252a466b0ba1e1a78f34` |
 
-See [ADR-2026-008](../adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md).
+See [ADR-2026-008](../adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md) and the
+corrections in [ADR-2026-009](../adr/ADR-2026-009-stage2-independent-review.md).
+
+## Corrections from the 2026-09-08 review
+
+The independent review (ADR-2026-009) recomputed every number in this document and read the two
+source papers. The v1 artifacts are unchanged; the following statements are corrected.
+
+1. **The ND-06 depression hypothesis is withdrawn.** The reference is a whole-brain static LIF
+   simulation and the transferred circuit is a one-hop 41-neuron subgraph; a mechanism absent
+   from both cannot explain their disagreement. See the rewritten section below.
+2. **The uEPSC peak-time and sign criteria carried no information.** All twelve source traces
+   are peak-aligned by the authors, and were published as inward currents. Only decay tested the
+   kernel, and it failed. The amplitude exclusion rested on a state-confound the source paper
+   contradicts, so the 13.6 pA median underprediction is a model error too.
+3. **The published claim behind the structure test was misstated and mis-cited.** Kazama and
+   Wilson 2008 is `10.1016/j.neuron.2008.02.030`, not `...2008.04.024`, and it reports unitary
+   current rising with glomerular volume and ORN number, not falling. `synaptic-structure-v2`
+   restates and reruns the test; the connected-definition statistics are unchanged and the
+   conclusion sharpens.
+4. **The cellular leg pass is weaker than a cohort-mean predictor** (ratio 1.064). Recorded in
+   `exit-gate-v2`.
+5. **ND-06 has published point estimates**: release probability 0.79, 51 release sites per
+   connection, depression above about 50 spikes/s. "Nothing lockable" was an overstatement.
 
 ## A second one-step GeNN defect
 
@@ -32,16 +57,27 @@ and its numbers are unchanged.
 
 ## Can contact number carry the ND-04 type-pair scale?
 
-Tested across **50 glomeruli and 265 projection neurons** against the published claim that
-ORN-to-PN connections are homeostatically matched.
+Tested across **50 glomeruli and 265 projection neurons**. The v1 contract stated the published
+claim as "glomeruli with fewer converging ORNs have stronger unitary connections"; Kazama and
+Wilson 2008 (`10.1016/j.neuron.2008.02.030`) actually report that **unitary EPSC amplitude rises
+with the glomerular volume the PN dendrite occupies** (r = 0.75, n = 39), that volume rises
+linearly with ORN number, and that unitary depolarization is roughly uniform at 6.19 ± 0.45 mV.
+`synaptic-structure-v2` restates the test with that direction. The statistics are identical; the
+reading changes.
 
-| Hypothesis | Observed | Supports structural matching |
-|---|---|---|
-| H1 total contacts per PN vary less than converging ORN count | CV 0.695 vs 0.603 | no |
-| H2 contacts per connection fall as ORN count rises | Spearman rho −0.232 | weakly yes |
-| H3 contacts per connection are "several dozen" (24–100) | median of medians 43 | consistent |
+| Statistic | Connected ORNs | All typed ORN bodies | Reading under the corrected claim |
+|---|---|---|---|
+| CV of ORN count across glomeruli | 0.603 | 0.687 | descriptive only; the source makes no total-drive claim |
+| CV of total ORN contacts per PN | 0.695 | 0.695 | total contacts vary about as much as anatomical ORN number |
+| rho, ORN count vs contacts per connection | −0.232 | −0.456 | **opposite sign** to the published unitary-current scaling |
+| rho, ORN count vs total contacts per PN | +0.243 | +0.040 | total structural drive per PN is nearly flat across glomeruli |
+| median contacts per connection | 43 | 43 | 0.84 of the published 51 release sites |
 
-The extremes show the partial compensation directly:
+Contacts per connection fall as ORN number rises while the published unitary current rises with
+it, so **contact number does not implement the published scaling**; per-contact efficacy would
+have to rise with ORN number to reproduce it. The type-name rule drops VM6 (`ORN_VM6l/m/v`
+against `VM6_*PN`) and the VP glomeruli, which v2 names. The extremes show the structural
+pattern directly:
 
 ```
 glomerulus   converging ORNs   median contacts/connection   total contacts/PN
@@ -55,14 +91,16 @@ VA1d                    92.0                         12.5                1410
 DA1                    150.5                         11.0                2134
 ```
 
-The direction is right — the high-convergence pheromone glomeruli DA1, VA1d and VA1v have the
-fewest contacts per connection — but total drive per PN still varies more across glomeruli than
-ORN number does. **Contact number alone does not implement the matching.** If the published
-matching is real it must be carried by release probability or receptor density, which is exactly
-what `ND-04` already asserts. The assertion now has evidence behind it rather than none.
+The high-convergence pheromone glomeruli DA1, VA1d and VA1v have the fewest contacts per
+connection, and total contacts per PN come out nearly flat across glomeruli. That is the
+opposite of what the published unitary current does, so whatever carries the published scaling
+is not contact number. It must be carried by release probability, receptor density or per-site
+efficacy, which is what `ND-04` asserts; the assertion now has evidence behind it rather than
+none.
 
-H3 is the first quantitative agreement between MaleCNS structure and an independent
-physiological measurement anywhere in this project.
+The 43 contacts per connection against the published mean of 51 release sites is the first
+quantitative agreement between MaleCNS structure and an independent physiological measurement
+anywhere in this project.
 
 ## The first physically grounded per-contact scale
 
@@ -95,16 +133,25 @@ unconsumed chronic-exposure cells were opened.
 | Peak time, median absolute error | ≤ 1.0 ms | 0.300 ms | pass |
 | Decay time, median absolute fractional error | ≤ 0.30 | **0.463** | **fail** |
 
-Per-cell decay errors: 0.463, 0.881, 0.519, 0.350, 0.282 — four of five over the limit. The
-kernel gets polarity and timing right and the decay wrong by about half again.
+Per-cell decay errors: 0.463, 0.881, 0.519, 0.350, 0.282 — four of five over the limit.
 
-Peak amplitude was preregistered as reported-but-not-gated: the source paper's whole subject is
-that chronic exposure changes this synapse, so an amplitude mismatch on exposure-state cells
-cannot separate model error from a real state difference. For the record the kernel underpredicts
-all five cells, by 3.2 to 25.8 pA, median 13.6 pA.
+**Correction (ADR-2026-009).** The sentence that stood here, "the kernel gets polarity and timing
+right", is withdrawn. All twelve source waveforms peak on sample 499, because the authors
+*"aligned [them] by their peaks and averaged"*; the peak-time criterion measured that alignment
+and the kernel's own onset, and the identical 0.300 ms error on every cell is the proof. The
+sign criterion was satisfied by selection. Only the decay criterion tested anything.
 
-Both limits came from the 0.1 ms measurement grid and the 15 ms fitted decay constant, not from
-the model errors already observed on the consumed solvent cells.
+Peak amplitude was preregistered as reported-but-not-gated on the argument that exposure changes
+this synapse. The source paper reports that *"average DL5 uEPSC amplitudes and response kinetics
+were indistinguishable between solvent and E2-hexenal exposed flies."* The exclusion therefore
+rested on a premise the source contradicts, and the underprediction of all five cells, by 3.2 to
+25.8 pA and 13.6 pA at the median against a published mean near 40 pA, is a model error. So is
+the decay failure: the 15 ms fitted decay overshoots the published half-decay of about 7 ms. The
+kernel is wrong in decay and amplitude and right only in a sign it could not have got wrong.
+
+The test is not re-run and not re-gated; the five cells were opened once under the preregistered
+rule. Both limits came from the 0.1 ms measurement grid and the 15 ms fitted decay constant, not
+from the model errors already observed on the consumed solvent cells.
 
 ## Two V2 requirements have no registered source
 
@@ -116,10 +163,13 @@ literature states that the available predictions "lack neuropeptide predictions 
 expression data, an important gap given that neurotransmitters such as glutamate can be
 excitatory or inhibitory." Polarity therefore stays transmitter-only, labelled as a regression.
 
-**Release failure and short-term plasticity, `ND-06`.** The published description of this synapse
-gives high release probability and strong short-term depression qualitatively. No paired-pulse
-ratio, failure distribution or recovery time constant is published in a checksum-lockable form,
-and no dataset is deposited.
+**Release failure and short-term plasticity, `ND-06`.** No trace, paired-pulse series or recovery
+time constant is deposited. Kazama and Wilson 2008 do publish point estimates, though: release
+probability 0.79 and a mean of 51 release sites per connection from quantal analysis, with
+depression appearing above about 50 spikes per second. `synaptic-structure-v2` registers them as
+the values a future ND-06 model is tested against; they are of the same standing as the 5 to 7 mV
+unitary amplitude this tier already uses. The v1 statement that nothing lockable exists was an
+overstatement.
 
 ## The Stage 2 exit gate
 
@@ -135,14 +185,21 @@ it cannot drift from the evidence and flips on its own when the evidence arrives
 
 **One leg of four. Stage 2 does not exit.** A partial pass is recorded so the remaining work
 stays visible, not so the stage can be declared complete. The one passing leg carries its own
-caveat: it scores firing rate only, on state-shifted cells from the same paper, using a model
-that predicts no resting voltage, time constant or adaptation at all.
+caveats, extended in `stage2-exit-gate-v2`: it scores firing rate only, on cells from the same
+paper whose F-I curves that paper reports as indistinguishable from the training condition, with
+a model that predicts no resting voltage, time constant or adaptation, and it passes a
+normalized-error criterion of 1.2 at 1.064, meaning the frozen family (13.17 Hz RMSE) predicts
+the held-out cells **worse than the two-cell training mean does** (12.38 Hz). The circuit leg's
+0.8 threshold is set by the contract, not derived, and positive-response coverage is weaker than
+the gate statement's "time and amplitude". `exit-gate-v2` returns the same four verdicts with
+those caveats in the record.
 
 ## No single global contact scale fits both reference frequencies
 
 This is an observation read directly from two immutable artifacts — the ND-04 scale sweep inside
 `shiu-antennal-grooming-transfer-delayfix.json` and the derived scale range above — not a new
-experiment.
+experiment. **The interpretation that first stood here, that ND-06 short-term depression would
+reconcile the two frequencies, is withdrawn by ADR-2026-009; see the end of this section.**
 
 The Stage 1 sweep varied `synaptic_mv_per_contact` from 0.025 to 0.275 mV, which does overlap the
 0.042 to 1.12 mV range the published unitary amplitude implies, so the fit was not searching the
@@ -168,13 +225,18 @@ The physiologically derived median band, 0.117 to 0.164 mV per contact, contains
 100 Hz-matching scale and not the 220 Hz-matching one. So a physiologically plausible scale
 reproduces the low-frequency point and over-predicts the high-frequency point severalfold.
 
-That pattern is the signature of a missing rate-dependent mechanism, and the registered gap
-`ND-06` names one: the published description of this synapse is high release probability with
-strong short-term depression at high presynaptic firing rates. Depression would flatten the
-high-frequency response relative to the low and could let one scale serve both. **This is a
-hypothesis, not a result** — it is stated here as the concrete prediction to test when
-release-failure and short-term-plasticity evidence is finally acquired, so that acquisition has a
-falsifiable target rather than an open-ended one.
+**Why this is structural, not synaptic.** The reference is Shiu et al.'s archived **whole-brain**
+static LIF simulation on FlyWire, with no depression in it. The transferred circuit is a
+**one-hop induced subgraph of 41 neurons** — 39 mapped inputs, two readouts, 129 edges — with
+none of the recurrent and lateral inhibition the whole brain recruits at high input rates, on a
+different connectome with different contact counts along the mapped path. A rate-dependent
+mechanism missing from *both* models cannot be what makes them disagree, so the earlier reading
+that `ND-06` depression would let one scale serve both frequencies was a category error and is
+withdrawn. What the two-frequency mismatch measures is the distance between a one-hop subgraph
+and a whole-brain simulation. The concrete test it leaves is structural: widen the transferred
+circuit beyond the shortest paths and see whether the high-frequency over-response falls before
+any synaptic mechanism is invoked. The ND-06 prediction should be made against physiology, once
+a rate-dependent recording exists, not against this reference.
 
 ## Both Stage 1 circuits reproduce under the corrected code
 
@@ -206,7 +268,12 @@ SHA-256 `2d5f05e11bdb58a9453833cc837dd90c4723fcf061fd2840e40257c2a123d82c`.
    consumed by the test above. Both the synaptic and ensemble legs need new data, not new code.
 2. **The circuit leg's reference is not biological.** Held-out coverage is 0.0, and even a pass
    would be against archived FlyWire simulation output rather than a recording.
-3. **`ND-03` and `ND-06` have no source.** Receptor-aware polarity and release/STP evidence do
-   not exist in any acquirable, lockable form found so far.
-4. **The decay kinetics are wrong.** A revised kernel must be fitted and then tested on a new
-   independent holdout, because these five cells are now consumed too.
+3. **`ND-03` has no source, and `ND-06` has point estimates but no trace.** No connectome-mapped
+   receptor resource exists. For release and depression, Kazama and Wilson 2008 give release
+   probability 0.79, 51 sites per connection and depression above about 50 spikes/s, registered
+   in `synaptic-structure-v2`; no deposited recording exists to fit a model to.
+4. **The kernel is wrong in decay and in amplitude.** The 15 ms decay overshoots the published
+   half-decay of about 7 ms and the 24.5 pA amplitude sits under the published mean near 40 pA.
+   A revised kernel must be fitted and then tested on a new independent holdout, because these
+   five cells are now consumed too, and its next contract must not gate on peak time of
+   peak-aligned traces.

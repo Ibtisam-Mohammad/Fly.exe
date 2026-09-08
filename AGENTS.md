@@ -31,24 +31,26 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 fitted neural dynamics (active); the ADR-2026-006 evidence-chain repair is complete and V0 is reissued
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006
-ENGINEERING_STATUS: the Stage 2 exit gate is executable and one of its four legs passes; the uEPSC kernel fails its preregistered decay limit at 0.463 against 0.30, contact number is shown not to carry the ND-04 scale, and a second one-step GeNN defect is fixed so the 41-neuron transfer agrees across three backends to 1.1e-13 ms; no V1/V2 tier is awarded
-NEXT_GATE: acquire new recordings of any kind, because after the uEPSC holdout the corpus contains no unconsumed cellular or synaptic recording at all; specifically a unit-resolved multi-animal current-step source for a projection-neuron type, an independent held-out set for the revised uEPSC kernel, and release-failure/STP evidence for V2. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
+ENGINEERING_STATUS: the Stage 2 exit gate (v2) is executable and one of its four legs passes, on a criterion a two-cell cohort mean satisfies better; the uEPSC kernel is wrong in decay (0.463 against 0.30) and amplitude (13.6 pA median under), contact number is shown to move opposite to the published unitary-current scaling, the heterogeneous GeNN kernel is verified bit-identical to the homogeneous one on the full graph, and two registered MBON07 values are shown to depend on their measurement rule; no V1/V2 tier is awarded
+NEXT_GATE: decide cell-dynamics v0.4 for the MBON07 set (threshold -41.8 mV at 10 percent of peak slope or a bracket, membrane tau as 33 to 48 ms, refractory back to the fallback with the 15.8 ms bound noted); acquire new recordings of any kind, because after the uEPSC holdout the corpus contains no unconsumed cellular or synaptic recording at all; specifically a unit-resolved multi-animal current-step source for a projection-neuron type, an independent held-out set for a refitted uEPSC kernel whose contract does not gate on the peak time of peak-aligned traces, and a rate-dependent recording for ND-06 to be tested against the registered 0.79 release probability and 50 spikes/s depression onset. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
 FOUNDATION_JOB: complete; bundle 20260908T060641Z_V0 pins a scoped DATA-* snapshot. The first bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
 STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
-STAGE2_ND04_SCALE_CONFLICT: matching the 220 Hz grooming reference needs about 0.083 mV per contact and the 100 Hz reference about 0.153 mV, so no single global scale fits both; the physiologically derived 0.117-0.164 mV band fits the low-frequency point and over-predicts the high-frequency one sevenfold, which is the signature ND-06 short-term depression would be expected to remove
+STAGE2_ND04_SCALE_CONFLICT: matching the 220 Hz grooming reference needs about 0.083 mV per contact and the 100 Hz reference about 0.153 mV, so no single global scale fits both; the reference is a whole-brain static LIF simulation and the circuit a one-hop 41-neuron subgraph, so the mismatch is structural (missing recurrent inhibition, different contact counts) and the earlier ND-06 depression hypothesis is withdrawn by ADR-2026-009 as a category error
 STAGE1_REPRODUCTION_AFTER_FIXES: the grooming transfer parity improves to 1.1e-13 ms and the feeding screen is bit-identical, so both Stage 1 verdicts stand under the corrected code
-STAGE2_SYNAPTIC_STRUCTURE: 50 glomeruli, 265 PNs; contact number does not implement the published homeostatic matching (CV 0.695 total vs 0.603 ORN count) though the direction is weakly right (rho -0.232); median 43 contacts per connection agrees with the published several-dozen estimate; derived per-contact scale 0.042-1.12 mV brackets the registered 0.2 mV
-STAGE2_UEPSC_HOLDOUT: preregistered limits scored once on the five unconsumed chronic-exposure cells; sign and peak time pass, decay fails at 0.463 against 0.30; the corpus now has no unconsumed synaptic recording
-STAGE2_EXIT_GATE: executable contract stage2-exit-gate-v1; cellular passes, synaptic, circuit and ensemble fail; Stage 2 does not exit
+STAGE2_SYNAPTIC_STRUCTURE: v2 corrects v1's citation (Kazama and Wilson 2008 is 10.1016/j.neuron.2008.02.030) and claim (unitary current rises with glomerular volume and ORN number, unitary depolarization is uniform at 6.19 mV); 50 glomeruli, 265 PNs; contacts per connection fall with ORN number (rho -0.232 connected, -0.456 anatomical), the opposite of the published current, so contact number does not carry the scale; total contacts per PN are nearly flat (rho 0.04 anatomical); median 43 contacts per connection is 0.84 of the published 51 release sites; derived per-contact scale 0.042-1.12 mV brackets the registered 0.2 mV; VM6 and VP glomeruli are dropped by the type-name rule
+STAGE2_UEPSC_HOLDOUT: preregistered limits scored once on the five unconsumed chronic-exposure cells; decay fails at 0.463 against 0.30; the sign and peak-time passes carry no information because the source traces are peak-aligned and inward by selection, and the amplitude exclusion rested on a state-confound the source paper contradicts, so the 13.6 pA median underprediction is a model error; the corpus now has no unconsumed synaptic recording
+STAGE2_EXIT_GATE: executable contract stage2-exit-gate-v2 (same legs and pins as v1 with the review caveats); cellular passes at ratio 1.064, worse than the training-cohort mean; synaptic, circuit and ensemble fail; the circuit threshold 0.8 is set by the contract; Stage 2 does not exit
 GENN_SPIKE_TIME_CONVENTION: GeNN labels a spike with the start of the interval, NumPy and Brian2 with the end; circuit.py lacked the correction that neural_parity.py had, and it cancelled the axonal-delay defect at the readout so Stage 1 parity looked clean
-STAGE2_CELLULAR_OBSERVABLES: contract stage2-cellular-observables-v1; MBON-alpha1 is the only unit-resolved current-step protocol in any registered source; tau_m 32.566 ms at R2 0.911 from one surviving sweep; input resistance unmeasurable because every sweep is suprathreshold; no tier awarded
+STAGE2_CELLULAR_OBSERVABLES: contracts v1 and v2 (v2 reproduces every v1 value and adds diagnostics); MBON-alpha1 is the only unit-resolved current-step protocol in any registered source; tau_m 32.566 ms with the asymptote pinned to the pre-step baseline, 47.6 ms with it free; threshold -38.402 mV at a 10 mV/ms criterion that only 51 percent of spikes reach, -41.838 mV at 10 percent of peak slope; spikes 9-14 mV high so every count is detector-marginal; LN resting -50.79 mV whole-trace, -49.02 mV before the first spike; input resistance unmeasurable because every sweep is suprathreshold; no tier awarded
 STAGE2_PN_ENSEMBLE: contract stage2-pn-uncertainty-ensemble-v1 meets VAL-01 five-by-four; 130 of 768 candidates accepted at a 25 percent tolerance spanning 26.6-fold refractory and 38.4-fold adaptation tau, zero-adaptation included; unscored because every registered F-I cell is consumed
 STAGE2_NANAMI_UNITS: closed; step levels 3-10 are the dimensionless in-silico PQN model stimulus, the in vivo amplitudes are irrecoverable, and the reserved PN trace is retired as a scoring source
-HETEROGENEOUS_CELLS: cell-dynamics-v0.3 binds MBON07 to a measured parameter set; GeNN promotes eight coefficients to per-neuron vars only when heterogeneous; both engines refuse the graded regime because no graded transmission model is registered
+HETEROGENEOUS_CELLS: cell-dynamics-v0.3 binds MBON07 to a measured parameter set; GeNN promotes eight coefficients to per-neuron vars only when heterogeneous; both engines refuse the graded regime because no graded transmission model is registered; verified on the full graph 2026-09-08: fallback-everywhere per-neuron kernel is bit-identical to the homogeneous one (294,893 spikes, 0 of 165,122 neurons differ) and v0.3 changes MBON07 from 68/64/65/70 to 13/13/13/13 spikes with 9,972 downstream neurons following
+STAGE2_REVIEW_2026_09_08: ADR-2026-009; every hash and implementation held, four interpretations were corrected (ND-06 conflict hypothesis, uEPSC criteria and amplitude exclusion, synaptic-structure citation and claim, cellular-leg sufficiency), three measurement rules were shown to carry assumptions (relaxation asymptote, upstroke criterion, LN resting window), and v2 contracts record all of it without touching a v1 artifact
+ND06_PUBLISHED_POINT_ESTIMATES: Kazama and Wilson 2008 give release probability 0.79, 51 release sites per connection and depression onset near 50 spikes/s; registered in stage2-synaptic-structure-v2 as the values an ND-06 model is tested against; no trace is deposited
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
 TRACK_A_STATUS: not accepted; grooming-displacement cap fails 30/30; steady-state speed 0.332 minimum/0.353 median vs 0.5 target; awards no tier
@@ -245,6 +247,29 @@ Receptor-aware polarity and release/STP evidence have no registered source. The 
 and must not be read as postsynaptic receptor expression; no connectome-mapped receptor resource
 exists. Contract `stage2-exit-gate-v1` reads each Stage 2 exit leg from a checksum-pinned
 artifact: cellular passes, synaptic, circuit and ensemble fail, and Stage 2 does not exit.
+
+Stage 2 review checkpoint, 2026-09-08: ADR-2026-009. An independent review recomputed every
+Stage 2 number from the locked data and read the source papers. Every pinned hash, logical
+hash and statistical implementation held. Four interpretations did not. The ND-06 depression
+hypothesis for the two-frequency contact-scale conflict is withdrawn: the reference is a
+whole-brain static simulation and the circuit a one-hop 41-neuron subgraph, so the mismatch is
+structural. The uEPSC peak-time and sign criteria were vacuous on peak-aligned, inward traces,
+and the amplitude exclusion rested on a state-confound the source paper contradicts, so the
+kernel is wrong in decay and amplitude. `stage2-synaptic-structure-v1` cited
+`10.1016/j.neuron.2008.04.024` (Kruglikov and Rudy 2008) for Kazama and Wilson 2008
+(`10.1016/j.neuron.2008.02.030`) and stated the published claim with the wrong sign; v2
+restates it, and contacts per connection fall with ORN number (rho -0.232 connected, -0.456
+anatomical) while the published unitary current rises with it. The one passing exit-gate leg
+passes at ratio 1.064, worse than the two-cell training mean. Three cellular rules embed
+assumptions: the surviving membrane time constant is 32.6 ms with the asymptote pinned and
+47.6 ms free; the 10 mV/ms threshold criterion sits at the median peak slope so only 51
+percent of spikes reach it and a 10 percent-of-slope rule gives -41.8 mV against -38.4 mV;
+the LN resting median moves from -50.79 to -49.02 mV when read before the first spike. v2
+contracts for cellular observables, synaptic structure and the exit gate record all of this
+without touching a v1 artifact, and the heterogeneous GeNN kernel is verified on the full
+graph: bit-identical to the homogeneous kernel with the fallback everywhere, and changing
+MBON07 from 68/64/65/70 to 13/13/13/13 spikes under cell-dynamics-v0.3. The v0.4 registry
+revision those brackets imply is left to the project owner.
 
 Useful retrieval commands:
 
@@ -653,6 +678,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-08 | Accept ADR-2026-005 and freeze the ramp-aware PN revision before external scoring. | Reusing the consumed Gugel holdouts would leak validation; the single external Nanami trace is useful as a challenge but its unresolved current units and sample size prevent a V1 claim. |
 | 2026-09-08 | Accept ADR-2026-007, retire the reserved Nanami PN trace as a scoring source, and lock the in vivo cellular pack. | The stimulus levels recorded as the in vivo protocol are the dimensionless in-silico model input, the real amplitudes are never published, and the trace's somatic spikes fall below the detection prominence, so the planned sealed evaluation cannot be run at all. |
 | 2026-09-08 | Accept ADR-2026-008, make the Stage 2 exit gate executable and record that one of four legs passes. | Three legs could be evaluated from locked data; doing so turned two open assertions into measured results, failed the uEPSC kernel on a preregistered decay limit, and exposed a one-step GeNN spike-time defect that a compensating error had hidden. |
+| 2026-09-08 | Accept ADR-2026-009, the independent Stage 2 review: withdraw the ND-06 scale-conflict hypothesis, correct the uEPSC and synaptic-structure interpretations, issue v2 contracts with diagnostics and caveats, and verify the heterogeneous GeNN kernel. | Every checksum and implementation held, but four interpretations were wrong in kind and three measurement rules embedded assumptions that moved registered values by 3.4 mV and 15 ms; recording them now stops Stage 3 from inheriting them. |
 
 ## 15. Unresolved project-level choices
 
@@ -660,6 +686,10 @@ The following are deliberately not fixed yet. Agents may investigate them, but m
 
 - cell-type spiking/graded classification registry — still open. ADR-2026-007 measured a six-fold spread in somatic spike amplitude across four classes, which constrains the observation model but cannot classify a cell as graded, because axonal initiation followed by somatic attenuation produces the same measurement. Engines refuse the graded regime rather than substituting a spiking model;
 - physiological datasets and loss functions beyond the accepted first projection-neuron pack;
+- which measurement rule the MBON07 parameter set should carry in cell-dynamics v0.4: the
+  review (ADR-2026-009) left the time constant as a 33 to 48 ms bracket, the threshold at
+  -38.4 or -41.8 mV depending on the upstroke rule, and the refractory period as an upper
+  bound rather than a value;
 - weak-edge uncertainty model;
 - male body scaling dataset;
 

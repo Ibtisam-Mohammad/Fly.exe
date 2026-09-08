@@ -1,6 +1,14 @@
 # ADR-2026-007 — Cellular-tier sources and the Nanami stimulus resolution
 
-Status: accepted
+Status: accepted; measurement-rule sensitivities recorded by
+[ADR-2026-009](ADR-2026-009-stage2-independent-review.md)
+
+> **Note (ADR-2026-009).** The 32.57 ms time constant below pins its asymptote to the pre-step
+> baseline; a free asymptote gives 47.6 ms. The −38.4 mV threshold uses a 10 mV/ms criterion
+> that only half the recorded spikes reach; a fraction-of-slope rule gives −41.8 mV. The
+> fixed-threshold and prominence spike counts described as agreeing differ by 25% at 10 pA. The
+> LN resting median is −49.02 mV before the first spike, not −50.79 mV. The GeNN per-neuron
+> path this ADR shipped was first executed on hardware by the review and verified.
 
 Date: 2026-09-08
 
