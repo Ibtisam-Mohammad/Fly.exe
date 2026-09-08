@@ -1,0 +1,459 @@
+{
+  "schema_version": "1.0",
+  "dataset_id": "nanami-2024-invivo-cellular-pack-v1",
+  "title": "In vivo whole-cell recordings redistributed with the Nanami et al. 2024 FPGA olfactory-network repository",
+  "paper": "https://doi.org/10.3389/fnins.2024.1384336",
+  "source_repository": "https://github.com/tnanami/fly-olfactory-network-fpga",
+  "source_commit": "c064f47da7a1f8c4e9137c09b5e327d1a38ab9f4",
+  "license": "MIT repository license; preserve paper, repository and original-recording attribution",
+  "redistribute_with_gpl_release": true,
+  "originating_studies": {
+    "olfactory projection neuron": "Nanami et al. 2024, newly reported in that paper",
+    "MBON-alpha1": "Nanami et al. 2024, newly reported in that paper",
+    "antennal-lobe local neuron": "Seki et al. 2010, https://doi.org/10.1152/jn.00249.2010",
+    "Kenyon cell": "Inada et al. 2017, https://doi.org/10.1016/j.celrep.2017.05.049"
+  },
+  "artifacts": [
+    {
+      "path": "02_plot_figs/analyze_MBONa1.ipynb",
+      "bytes": 716352,
+      "sha256": "d05db2f1fc6e5753f9f646a6a5c4755c0b1706c94c7cad63496765688bfda583",
+      "role": "protocol-reconstruction-code",
+      "cell_class": "n/a",
+      "specimen_id": "n/a"
+    },
+    {
+      "path": "02_plot_figs/analyze_PQNtest.ipynb",
+      "bytes": 802547,
+      "sha256": "55b010987019ccb826b44be275f650168272abb40140798f94160934667f0de6",
+      "role": "protocol-reconstruction-code",
+      "cell_class": "n/a",
+      "specimen_id": "n/a"
+    },
+    {
+      "path": "invivo_results/KC/KC_181016_4_00_v.txt",
+      "bytes": 2176565,
+      "sha256": "4d9dfbe1bfc1a72398b3ef482a30daf4bcba11174c6367508e7a87d9a38e194e",
+      "role": "membrane-voltage",
+      "cell_class": "Kenyon cell",
+      "specimen_id": "inada-kc-181016-4-00"
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_10_1.txt",
+      "bytes": 1750992,
+      "sha256": "3f93098b898a191bf428d16e83cfe1cc5cc2e5d3429a45f47afbe5fdef2458b5",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 10
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_1_1.txt",
+      "bytes": 1744372,
+      "sha256": "030e7d494100f6e7fee84d9ea9082558c48b80132e002ba661d8b93ee4a6507f",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 1
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_2_1.txt",
+      "bytes": 1757643,
+      "sha256": "a7535eae05055b64c1831bbb6d847a01d525e24344b6d59ff59362de05d08669",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 2
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_3_1.txt",
+      "bytes": 1751165,
+      "sha256": "eca3a8c166cc1f031507640621d81fd068112ef00bdf45dc69793652f57e4d79",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 3
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_4_1.txt",
+      "bytes": 1734851,
+      "sha256": "a65e2e211cf455202abbe0aee577f6a1a507240838e9330cde9473cd29e24369",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 4
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_5_1.txt",
+      "bytes": 1722810,
+      "sha256": "0a5ce0b099a5a1bfea7cffd57d5ac551834a89528979479909738d6d902be380",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 5
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_6_1.txt",
+      "bytes": 1720200,
+      "sha256": "8b242200c574912b14b68a1bd6444af1384ec8656e5f4c1fc2caa73ec461ae35",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 6
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_7_1.txt",
+      "bytes": 1723862,
+      "sha256": "79696d0c345a2ba6c255f0dd62dd8f6fdc3453ca868b0f7e1314fa7582600037",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 7
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_8_1.txt",
+      "bytes": 1723629,
+      "sha256": "296742a5379aa846c3725ffa0e737924af81027ab19cc4c655607842a70196d5",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 8
+    },
+    {
+      "path": "invivo_results/LN/W081006a_1_6_9_1.txt",
+      "bytes": 1730124,
+      "sha256": "d9d412e8079ffda83775cca59769202125af02d99bfaa2a9217f97baecf73b4f",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081006a",
+      "trial_index": 9
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_10_1.txt",
+      "bytes": 1728337,
+      "sha256": "73d86d7e2bbd95789c69f755b6f530beb5d211ada8339a0f7c425fa6eeb9b9f4",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 10
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_1_1.txt",
+      "bytes": 1741448,
+      "sha256": "0ecf717aa4b979384bd539ae403bc5dcc57e134137dd04c52db19af24e45096e",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 1
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_2_1.txt",
+      "bytes": 1740419,
+      "sha256": "bd7c5c6b7b6a183dc9b04bad897e020c6c131f6158c17883dac880d932b36676",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 2
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_3_1.txt",
+      "bytes": 1738672,
+      "sha256": "f9100df727e84b12f02d611a8d070a8833f25b8f79586c57604614f4be044f3d",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 3
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_4_1.txt",
+      "bytes": 1733231,
+      "sha256": "eb69ed120a7b9a5ca3012c406cde36a018cb0a0641afdcbb3ef26eb9548c58a7",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 4
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_5_1.txt",
+      "bytes": 1733163,
+      "sha256": "90d0e1d44594e6e264682f5082d7faaedb6db3224e1a7431249bd9c20fd7be53",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 5
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_6_1.txt",
+      "bytes": 1730097,
+      "sha256": "9aefb63220ceeda84ca5271003aa2815fb3c61c032811a5a0743e2fe6febbda4",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 6
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_7_1.txt",
+      "bytes": 1734933,
+      "sha256": "30763a0e9fb8eebd0b5f0fe676d5c9b6840729ba6ba9c9de8f474531da023f48",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 7
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_8_1.txt",
+      "bytes": 1724851,
+      "sha256": "5b4f79f91e8eb481c7437456e5f1dee5074db569366bbecc8e82c66240d27fa8",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 8
+    },
+    {
+      "path": "invivo_results/LN/W081009a_1_9_9_1.txt",
+      "bytes": 1728903,
+      "sha256": "f546589ae20c404580ca852105a404ebc4e6317a07941330cbdbf9620c02fca2",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081009a",
+      "trial_index": 9
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_10_1.txt",
+      "bytes": 1737727,
+      "sha256": "ef06705312b426d77de9ae8bc6dccec27fc0d89e592c00dc6d2a8450804bef6e",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 10
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_1_1.txt",
+      "bytes": 1730876,
+      "sha256": "c7530f15ca31e10a3689ac7e6c2b42a4aa46cf9cc23649af1a775505e88c54d3",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 1
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_2_1.txt",
+      "bytes": 1743271,
+      "sha256": "cdf4b6f1fe39fd86df277909e4a12fd235a355a0c3f6745def86252ea5de1117",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 2
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_3_1.txt",
+      "bytes": 1754862,
+      "sha256": "3f2677a534e24a55f4adf391aeb1711603a1250c6ded99fdc0fe553aaaca3362",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 3
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_4_1.txt",
+      "bytes": 1742632,
+      "sha256": "a4c110f9d4832992fa619ec27e0dab68949ec36da0e77c77430fec01fe595f96",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 4
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_5_1.txt",
+      "bytes": 1734321,
+      "sha256": "f0283e087ab89ad42120fdeaf3744350b8e4cee5d054c2d6cf1f3f372c241435",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 5
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_6_1.txt",
+      "bytes": 1734376,
+      "sha256": "a571b1241c31e9634be79b490431ea1fb6598394617b012ab52d3dd222641149",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 6
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_7_1.txt",
+      "bytes": 1731440,
+      "sha256": "102ab155793122914798d95eabb70a0c0e89769b5456d314bdf4a9e5672d1d40",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 7
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_8_1.txt",
+      "bytes": 1730931,
+      "sha256": "a7fcd33150a252a7da30e1fb8cab1aee0828977295453ac726e77aca24a9aa58",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 8
+    },
+    {
+      "path": "invivo_results/LN/W081023a_1_8_9_1.txt",
+      "bytes": 1732844,
+      "sha256": "dcd53f2a1a3c74896ee477e5fad10c6075660d6db9a2be6544b4d9d61e98e5d6",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081023a",
+      "trial_index": 9
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_10_1.txt",
+      "bytes": 1727987,
+      "sha256": "ce49974a10d8dac10a02272f2c7908c0d5b0800f6c27578b42bc08f2b5e9562f",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 10
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_1_1.txt",
+      "bytes": 1740721,
+      "sha256": "057d5f1d6fbdb127ceb48c7319042ec3ab1028973f37b360583cfe07d37b8c18",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 1
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_2_1.txt",
+      "bytes": 1744471,
+      "sha256": "e112e534f0d1d6b81a0eb011cea281b70fae4d4c6d7fddee54104a20302888b3",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 2
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_3_1.txt",
+      "bytes": 1746454,
+      "sha256": "ed8213433d08e5297643e50d9a96a77914608fb23d6f9464a2f277457d4ae1c1",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 3
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_4_1.txt",
+      "bytes": 1744765,
+      "sha256": "be2909e0c0cfa3aa7608b89690a78313e7eeff258d87246cb5be19f2e8463002",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 4
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_5_1.txt",
+      "bytes": 1737868,
+      "sha256": "b6a2bc3fe2cc5d4f9032c080834be1204f37c36116f6663701a49f6099be7f80",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 5
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_6_1.txt",
+      "bytes": 1731347,
+      "sha256": "d7b18e2ace09d8e048b85c810e9a7178e137fc89649fbf8b3b5e1bc941dcc664",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 6
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_7_1.txt",
+      "bytes": 1729888,
+      "sha256": "0d527f643d3dccd8af1c1d90bc937cf5df3734c0761f7aa112bb92ea027ca4ca",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 7
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_8_1.txt",
+      "bytes": 1728720,
+      "sha256": "4288a9d9370668788e63739881125022488abb1235697a2ce6ff2df8e0e94275",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 8
+    },
+    {
+      "path": "invivo_results/LN/W081115b_1_7_9_1.txt",
+      "bytes": 1726841,
+      "sha256": "803a0648bee88b693fedf02c564cb3fafc043a85331433891aef8d814df9228b",
+      "role": "membrane-voltage",
+      "cell_class": "antennal-lobe local neuron",
+      "specimen_id": "seki-ln-w081115b",
+      "trial_index": 9
+    },
+    {
+      "path": "invivo_results/MBON/MBONa1_step_I.csv",
+      "bytes": 210000,
+      "sha256": "b103ccf6a88d3c749d5d0f32c3654cae9a3901105bbb1c26626a19a9c0566e12",
+      "role": "injected-current",
+      "cell_class": "MBON-alpha1",
+      "specimen_id": "nanami-mbon-a1-step"
+    },
+    {
+      "path": "invivo_results/MBON/MBONa1_step_V.csv",
+      "bytes": 788923,
+      "sha256": "bcaeb9dbc105803619cc631cfdfc48080f2c04fc897c2529a210350174e3d532",
+      "role": "membrane-voltage",
+      "cell_class": "MBON-alpha1",
+      "specimen_id": "nanami-mbon-a1-step"
+    },
+    {
+      "path": "invivo_results/MBON/MBONa1_step_t.csv",
+      "bytes": 137776,
+      "sha256": "4d1166543db4a64fb7f53bcb00f9f26f356af4f4211cef175ee6f5101968ca33",
+      "role": "time-base",
+      "cell_class": "MBON-alpha1",
+      "specimen_id": "nanami-mbon-a1-step"
+    },
+    {
+      "path": "invivo_results/PN/PN_160310_5_03_v.txt",
+      "bytes": 2374151,
+      "sha256": "8566550bc6f7cb97410f81483f90166646cdc9bcde276eb748413a9717759255",
+      "role": "membrane-voltage",
+      "cell_class": "olfactory projection neuron",
+      "specimen_id": "nanami-pn-160310-5-03"
+    }
+  ],
+  "artifact_count": 47,
+  "sampling_rate_hz": 10000,
+  "units": {
+    "membrane-voltage": "mV, except the LN files which store volts and carry a one-line recording-identifier header",
+    "injected-current": "pA",
+    "time-base": "seconds"
+  },
+  "stimulus_resolution": {
+    "MBON-alpha1": "resolved: 1 s square pulses at 2, 4, 6, 8 and 10 pA, stated in the paper Methods and reproduced exactly by the published injected-current file",
+    "olfactory projection neuron": "irrecoverable: the Methods state only that multiple levels of depolarizing current were injected",
+    "antennal-lobe local neuron": "irrecoverable: amplitudes are not published with the redistributed traces",
+    "Kenyon cell": "irrecoverable: amplitudes are not published with the redistributed trace"
+  },
+  "fit_role": "none",
+  "held_out_role": "sealed external cellular challenge only",
+  "mismatches": [
+    "female flies versus the five-day-old male target condition",
+    "MBON-alpha1, antennal-lobe LN and Kenyon cell classes are not the DM1/DM4 projection-neuron types Track A drives",
+    "one recorded cell for the PN, MBON and KC classes cannot characterize population uncertainty",
+    "the four LN animals carry no published stimulus amplitudes, so only current-independent observables are measurable"
+  ],
+  "permitted_claim": "Supports one unit-resolved single-cell current-step characterization for MBON-alpha1 and current-independent resting-potential and spike-statistic measurement for the PN, LN and KC classes.",
+  "forbidden_claim": "Does not support a V1 award, MaleCNS-donor physiology, a projection-neuron population distribution, or any absolute current calibration for the PN, LN or KC traces.",
+  "status": "48 files checksum-locked at the pinned commit",
+  "last_reviewed": "2026-09-08"
+}

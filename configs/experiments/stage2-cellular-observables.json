@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-cellular-observables-v1",
+  "title": "Measured resting voltage, membrane time constant and adaptation from the locked in vivo cellular pack",
+  "provenance": "M/P/I",
+  "assumption_ids": [
+    "ND-01",
+    "ND-02",
+    "ND-05"
+  ],
+  "purpose": "Produce the first measured, unit-attributed cellular observables in the project and record exactly which V1 requirements each source can and cannot support.",
+  "required_artifacts": [
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/mbon-alpha1-current-steps.parquet",
+      "sha256": "bf9b21e2a1257de0de66b72cd428ebe413bfcd6f3d20681abbe07d606ba81b64",
+      "stimulus_resolution": "unit-resolved"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/ln-voltage-traces.parquet",
+      "sha256": "19242204664bbee4f08030e8a89069556468c8981cf5bafd2aabe84b35ba66da",
+      "stimulus_resolution": "irrecoverable"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/kc-voltage-trace.parquet",
+      "sha256": "a99ad4fc0c1657585742e8b05d8cf175b87eba28abcf02579590641bf0aa0512",
+      "stimulus_resolution": "irrecoverable"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-pn-current-clamp/pn-voltage-trace.parquet",
+      "sha256": "be1ace41668a7238759f406f289c5f9ff091887b7d7d4ab33d2109f7e0cb03c0",
+      "stimulus_resolution": "irrecoverable"
+    }
+  ],
+  "sample_interval_us": 100,
+  "spike_detection": {
+    "primary": {
+      "prominence_mv": 10.0,
+      "prominence_window_ms": 10.0,
+      "refractory_ms": 2.0,
+      "resting_mask_ms": 20.0
+    },
+    "sensitivity_prominence_mv": [
+      5.0,
+      20.0
+    ],
+    "rationale": "Drosophila central neurons attenuate axonally initiated spikes before the soma, so a fixed absolute voltage threshold under-counts in classes with small somatic spikes and over-counts slow depolarizations in others. Prominence is therefore measured against a trailing local minimum.",
+    "window_calibration": {
+      "chosen_prominence_window_ms": 10.0,
+      "rejected_prominence_window_ms": 50.0,
+      "reason": "A trailing window longer than the membrane charging time absorbs the slow step depolarization into the prominence, so ordinary noise on the rising phase clears a 10 mV prominence. At 50 ms the in-step counts were 1, 28, 19, 27, 44 and non-monotonic in injected current; at 10 ms they are 1, 10, 17, 21, 24 and monotonic.",
+      "independent_reference": "Upward crossings of a fixed -35 mV threshold with the same 2 ms refractory give 0, 10, 15, 23, 30 on the same five sweeps. The 10 ms window agrees with that reference; the 50 ms window does not.",
+      "corroboration": "The published MBON analysis notebook in the same repository uses a 50-sample rolling maximum at 0.1 ms per sample, which is the same 5 ms order of magnitude and not 50 ms."
+    },
+    "disclosure": "The prominence levels and windows recorded here were compared on these traces before this contract was written, and the window was changed from 50 ms to 10 ms as a result. That calibration is reported rather than presented as a blind choice. It cannot bias a model comparison, because this contract fixes no pass/fail threshold on any measured value and no model had been scored against these traces when it was made."
+  },
+  "step_analysis": {
+    "baseline_settle_ms": 10.0,
+    "steady_window_ms": 100.0,
+    "charge_fit_low_fraction": 0.1,
+    "charge_fit_high_fraction": 0.9,
+    "minimum_subthreshold_span_mv": 1.0,
+    "minimum_fit_r_squared": 0.9,
+    "maximum_tau_to_window_ratio": 1.0,
+    "quality_gate_rationale": "A single-exponential fit reports a time constant for any monotone-looking segment. The R squared floor rejects a fit to a transient that is not exponential, and the tau-to-window ratio rejects a time constant longer than the transient actually observed, which is what a drifting baseline or a slow after-current produces."
+  },
+  "observables": [
+    {
+      "id": "resting_potential_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "resting voltage",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "membrane_tau_ms",
+      "requires_stimulus_units": true,
+      "v1_requirement": "membrane time constant",
+      "sources": [
+        "MBON-alpha1"
+      ]
+    },
+    {
+      "id": "input_resistance_mohm",
+      "requires_stimulus_units": true,
+      "v1_requirement": "input resistance",
+      "sources": [
+        "MBON-alpha1"
+      ]
+    },
+    {
+      "id": "adaptation_ratio",
+      "requires_stimulus_units": false,
+      "v1_requirement": "adaptation",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "somatic_spike_amplitude_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "spiking versus graded signalling evidence",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    }
+  ],
+  "artifact_validity_criteria": {
+    "all_required_artifacts_match_sha256": true,
+    "all_measured_values_finite": true,
+    "unit_bearing_observables_only_from_unit_resolved_sources": true,
+    "multi_animal_classes_report_per_animal_values": true
+  },
+  "tier_policy": "This contract measures observables. It awards no tier. V1 additionally requires that a fitted model predict these distributions on cells it never saw, for the cell types the model actually claims.",
+  "declared_blockers": [
+    "no unit-resolved current-step protocol exists in the registered sources for any projection-neuron type",
+    "the only unit-resolved protocol is one MBON-alpha1 cell in one animal, so it yields a point measurement and not a distribution",
+    "the four-animal LN set publishes no stimulus amplitudes, so it cannot contribute a membrane time constant"
+  ],
+  "claim_boundary": "Measured cellular observables from female flies of four classes that are not the DM1/DM4 projection-neuron types Track A drives. Supports no V1 award, no MaleCNS-donor claim and no population distribution for any class other than the four-animal LN resting potential.",
+  "last_reviewed": "2026-09-08"
+}

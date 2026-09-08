@@ -18,6 +18,15 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from flysim.cellular import (
+    STIMULUS_IRRECOVERABLE,
+    STIMULUS_RESOLVED,
+    SpikeDetectionPolicy,
+    StepAnalysisPolicy,
+    current_step_features,
+    stimulus_free_features,
+    summarise_current_step_protocol,
+)
 from flysim.config import load_json, sha256_json
 from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
@@ -475,6 +484,636 @@ def import_nanami_pn_trace(
     manifest["logical_sha256"] = sha256_json(manifest)
     _atomic_json(output_directory / "manifest.json", manifest)
     return manifest
+
+
+
+# Constants read from plot_wave_PN in 02_plot_figs/analyze_PQNtest.ipynb at the pinned commit.
+# t0 = t_cross - 0.03 - w + 0.25 with w = 0.0235, and extraction keeps samples after t0 - 0.5.
+_NANAMI_PN_ALIGNMENT_WIDTH_S = 0.0235
+_NANAMI_PN_EXTRACTION_OFFSET_MS = round(
+    (0.5 - (-0.03 - _NANAMI_PN_ALIGNMENT_WIDTH_S + 0.25)) * -1_000.0, 4
+)
+
+INVIVO_PACK_CONFIG_ID = "nanami-2024-invivo-cellular-pack-v1"
+
+
+def _numeric_column(path: Path, *, has_header: bool, scale: float) -> np.ndarray:
+    """Read a one-value-per-line trace losslessly, rejecting any nonnumeric row."""
+    lines = path.read_text(encoding="ascii").strip().split("\n")
+    if has_header:
+        header = lines[0].strip()
+        if not header or header.replace(".", "").replace("-", "").isdigit():
+            raise DatasetError(f"Expected a recording-identifier header line in {path.name}")
+        lines = lines[1:]
+    values = np.empty(len(lines), dtype=np.float64)
+    for index, line in enumerate(lines):
+        try:
+            values[index] = float(line.strip())
+        except ValueError as exc:
+            raise DatasetError(
+                f"Non-numeric sample at line {index + 1 + int(has_header)} of {path.name}"
+            ) from exc
+    if not np.all(np.isfinite(values)):
+        raise DatasetError(f"Nonfinite membrane sample in {path.name}")
+    return values * scale
+
+
+def _matrix_csv(path: Path) -> np.ndarray:
+    rows = [
+        [float(cell) for cell in line.split(",")]
+        for line in path.read_text(encoding="ascii").strip().split("\n")
+    ]
+    widths = {len(row) for row in rows}
+    if len(widths) != 1:
+        raise DatasetError(f"Ragged matrix CSV: {path.name}")
+    matrix = np.asarray(rows, dtype=np.float64)
+    if not np.all(np.isfinite(matrix)):
+        raise DatasetError(f"Nonfinite value in {path.name}")
+    return matrix
+
+
+def import_invivo_cellular_pack(
+    config_path: Path,
+    source: Path,
+    output_directory: Path,
+) -> dict[str, Any]:
+    """Normalize the locked in vivo cellular pack without deriving any observable.
+
+    The pack is deliberately imported as four separate artifacts rather than one pooled
+    table, because only the MBON-alpha1 protocol publishes its injected current. Pooling
+    would make it possible to write a query that silently treats a stimulus-free trace as
+    if its current were known.
+    """
+    config = load_json(config_path)
+    if config.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported in vivo cellular pack config schema")
+    if config.get("dataset_id") != INVIVO_PACK_CONFIG_ID:
+        raise ConfigurationError("Config does not describe the registered in vivo cellular pack")
+    expected_commit = str(config["source_commit"])
+    head, dirty = _git_identity(source)
+    if head != expected_commit:
+        raise DatasetError(
+            f"In vivo pack commit mismatch: expected {expected_commit}, observed {head}"
+        )
+    if dirty:
+        raise DatasetError("In vivo pack checkout has local changes; refusing an unlocked import")
+
+    artifacts = list(config["artifacts"])
+    verified: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        path = source / str(artifact["path"])
+        if not path.is_file():
+            raise DatasetError(f"Locked in vivo artifact is missing: {artifact['path']}")
+        observed = sha256_file(path)
+        if observed != str(artifact["sha256"]):
+            raise DatasetError(
+                f"In vivo artifact SHA-256 mismatch for {artifact['path']}: "
+                f"expected {artifact['sha256']}, observed {observed}"
+            )
+        if path.stat().st_size != int(artifact["bytes"]):
+            raise DatasetError(f"In vivo artifact size mismatch for {artifact['path']}")
+        verified.append({"path": str(artifact["path"]), "sha256": observed})
+
+    sample_interval_us = int(1_000_000 / int(config["sampling_rate_hz"]))
+    output_directory.mkdir(parents=True, exist_ok=True)
+    normalized: list[dict[str, Any]] = []
+
+    current = _matrix_csv(source / "invivo_results/MBON/MBONa1_step_I.csv")
+    voltage = _matrix_csv(source / "invivo_results/MBON/MBONa1_step_V.csv")
+    time_base = _matrix_csv(source / "invivo_results/MBON/MBONa1_step_t.csv")
+    if current.shape != voltage.shape:
+        raise DatasetError("MBON injected-current and voltage matrices have different shapes")
+    if time_base.shape != (1, current.shape[1]):
+        raise DatasetError("MBON time base does not span one sweep")
+    observed_interval_us = round(float(time_base[0, 1] - time_base[0, 0]) * 1_000_000)
+    if observed_interval_us != sample_interval_us:
+        raise DatasetError(
+            f"MBON time base implies {observed_interval_us} us per sample, "
+            f"registered rate implies {sample_interval_us} us"
+        )
+    sweeps, samples = current.shape
+    mbon_path = output_directory / "mbon-alpha1-current-steps.parquet"
+    _write_parquet_atomic(
+        pa.table(
+            {
+                "sweep_index": pa.array(
+                    np.repeat(np.arange(sweeps, dtype=np.uint8), samples), type=pa.uint8()
+                ),
+                "t_us": pa.array(
+                    np.tile(
+                        np.round(time_base[0] * 1_000_000).astype(np.uint64), sweeps
+                    ),
+                    type=pa.uint64(),
+                ),
+                "injected_current_pa": pa.array(current.reshape(-1), type=pa.float64()),
+                "membrane_voltage_mv": pa.array(voltage.reshape(-1), type=pa.float64()),
+            }
+        ),
+        mbon_path,
+    )
+    normalized.append(
+        {
+            "path": mbon_path.name,
+            "cell_class": "MBON-alpha1",
+            "specimen_ids": ["nanami-mbon-a1-step"],
+            "sweeps": int(sweeps),
+            "rows": int(sweeps * samples),
+            "sha256": sha256_file(mbon_path),
+            "stimulus_resolution": STIMULUS_RESOLVED,
+            "units": {
+                "t_us": "us",
+                "injected_current_pa": "pA",
+                "membrane_voltage_mv": "mV",
+            },
+        }
+    )
+
+    ln_artifacts = sorted(
+        (item for item in artifacts if item["cell_class"] == "antennal-lobe local neuron"),
+        key=lambda item: (str(item["specimen_id"]), int(item["trial_index"])),
+    )
+    specimen_ids: list[str] = []
+    trial_indices: list[int] = []
+    timestamps: list[np.ndarray] = []
+    voltages: list[np.ndarray] = []
+    for artifact in ln_artifacts:
+        # The redistributed LN files store volts and carry a recording-identifier header.
+        trace = _numeric_column(
+            source / str(artifact["path"]), has_header=True, scale=1_000.0
+        )
+        specimen_ids.extend([str(artifact["specimen_id"])] * trace.size)
+        trial_indices.extend([int(artifact["trial_index"])] * trace.size)
+        timestamps.append(np.arange(trace.size, dtype=np.uint64) * sample_interval_us)
+        voltages.append(trace)
+    ln_path = output_directory / "ln-voltage-traces.parquet"
+    _write_parquet_atomic(
+        pa.table(
+            {
+                "specimen_id": pa.array(specimen_ids, type=pa.string()),
+                "trial_index": pa.array(trial_indices, type=pa.uint8()),
+                "t_us": pa.array(np.concatenate(timestamps), type=pa.uint64()),
+                "membrane_voltage_mv": pa.array(np.concatenate(voltages), type=pa.float64()),
+            }
+        ),
+        ln_path,
+    )
+    normalized.append(
+        {
+            "path": ln_path.name,
+            "cell_class": "antennal-lobe local neuron",
+            "specimen_ids": sorted({str(item["specimen_id"]) for item in ln_artifacts}),
+            "trials": len(ln_artifacts),
+            "rows": int(sum(trace.size for trace in voltages)),
+            "sha256": sha256_file(ln_path),
+            "stimulus_resolution": STIMULUS_IRRECOVERABLE,
+            "units": {"t_us": "us", "membrane_voltage_mv": "mV"},
+            "originating_study": config["originating_studies"]["antennal-lobe local neuron"],
+        }
+    )
+
+    kc_trace = _numeric_column(
+        source / "invivo_results/KC/KC_181016_4_00_v.txt", has_header=False, scale=1.0
+    )
+    kc_path = output_directory / "kc-voltage-trace.parquet"
+    _write_parquet_atomic(
+        pa.table(
+            {
+                "t_us": pa.array(
+                    np.arange(kc_trace.size, dtype=np.uint64) * sample_interval_us,
+                    type=pa.uint64(),
+                ),
+                "membrane_voltage_mv": pa.array(kc_trace, type=pa.float64()),
+            }
+        ),
+        kc_path,
+    )
+    normalized.append(
+        {
+            "path": kc_path.name,
+            "cell_class": "Kenyon cell",
+            "specimen_ids": ["inada-kc-181016-4-00"],
+            "rows": int(kc_trace.size),
+            "sha256": sha256_file(kc_path),
+            "stimulus_resolution": STIMULUS_IRRECOVERABLE,
+            "units": {"t_us": "us", "membrane_voltage_mv": "mV"},
+            "originating_study": config["originating_studies"]["Kenyon cell"],
+        }
+    )
+
+    manifest: dict[str, Any] = {
+        "schema_version": "1.0",
+        "artifact_id": "nanami-2024-invivo-cellular-pack-v1",
+        "source_repository": str(config["source_repository"]),
+        "source_commit": head,
+        "paper": str(config["paper"]),
+        "provenance": "M/P/I",
+        "assumption_ids": ["ND-01", "ND-02", "ND-05"],
+        "sample_interval_us": sample_interval_us,
+        "verified_source_artifacts": verified,
+        "verified_source_artifact_count": len(verified),
+        "normalized_artifacts": normalized,
+        "originating_studies": dict(config["originating_studies"]),
+        "stimulus_resolution": dict(config["stimulus_resolution"]),
+        "mbon_alpha1_protocol": {
+            "status": "resolved from the paper Methods and reproduced by the published "
+            "injected-current file",
+            "quotation": "The I-V relationship was measured before pairing by injecting 1-s "
+            "square pulses with incrementing amplitudes (0-10 pA, 2 pA steps).",
+            "observed_amplitudes_pa": sorted(
+                float(value) for value in np.unique(current[current != 0.0])
+            ),
+            "observed_step_duration_ms": float(
+                np.count_nonzero(current[0] != 0.0) * sample_interval_us / 1_000.0
+            ),
+            "low_pass_filter_hz": 5_000,
+            "digitisation_hz": int(config["sampling_rate_hz"]),
+        },
+        "pn_protocol_correction": {
+            "supersedes": "nanami-2024-pn-current-clamp-trace-v1 protocol_reconstruction",
+            "superseded_manifest_left_unchanged": True,
+            "defects": [
+                {
+                    "field": "step_levels",
+                    "withdrawn_value": [3, 4, 5, 6, 7, 8, 9, 10],
+                    "finding": "those integers are the list I4 in 02_plot_figs/"
+                    "analyze_PQNtest.ipynb, which sets the stimulus amplitudes of the "
+                    "in-silico PQN model, not of the in vivo recording",
+                    "authors_statement": "All variables and parameters are purely abstract "
+                    "with no physical units.",
+                },
+                {
+                    "field": "step_level_units",
+                    "withdrawn_value": "unresolved source-code units; do not assume pA",
+                    "finding": "the question is not open: the model amplitudes are "
+                    "dimensionless by the authors own statement, and the in vivo amplitudes "
+                    "are never published, so they are irrecoverable rather than unresolved",
+                    "authors_statement": "Multiple levels of depolarizing currents were "
+                    "injected into the soma of individual PNs.",
+                },
+                {
+                    "field": "extraction_start_relative_to_first_crossing_ms",
+                    "withdrawn_value": -306.5,
+                    "corrected_value": _NANAMI_PN_EXTRACTION_OFFSET_MS,
+                    "finding": "plot_wave_PN sets t0 = t_cross - 0.03 - w + 0.25 with "
+                    "w = 0.0235 and then keeps samples after t0 - 0.5",
+                },
+                {
+                    "field": "window_count_and_spacing",
+                    "withdrawn_value": "eight 1 s windows every 2 s",
+                    "corrected_value": "three 1 s display windows at 4 s spacing",
+                    "finding": "plot_wave_PN shifts the extracted trace by "
+                    "-4*(k+1)+2 seconds for k in 0..2 against a 0-1 s axis; the eight came "
+                    "from the eight in-silico levels, not from the recording",
+                },
+            ],
+            "stimulus_amplitudes": "irrecoverable",
+            "consequence": "the PN trace can never support a current-referenced F-I "
+            "comparison; only current-independent observables are scorable against it",
+        },
+        "claim_boundary": str(config["forbidden_claim"]),
+        "validation_tier_awarded": None,
+    }
+    manifest["logical_sha256"] = sha256_json(manifest)
+    _atomic_json(output_directory / "manifest.json", manifest)
+    return manifest
+
+
+
+
+def _class_signalling_evidence(
+    unit_resolved: dict[str, Any], stimulus_free: dict[str, Any]
+) -> dict[str, Any]:
+    """Per-class somatic spike amplitude, and what it does and does not establish.
+
+    A small somatic spike is exactly what a spiking neuron produces when the spike is
+    initiated in the axon and attenuates on the way to the soma, which is the published
+    conclusion for Drosophila projection neurons. Somatic amplitude therefore constrains
+    the observation model, and cannot on its own classify a cell type as graded.
+    """
+    classes: list[dict[str, Any]] = []
+    lowest = min(unit_resolved["by_prominence_mv"], key=lambda key: float(key))
+    mbon_sweeps = unit_resolved["by_prominence_mv"][lowest]["per_sweep"]
+    mbon_spiking = [item for item in mbon_sweeps if int(item["spike_count"]) > 0]
+    classes.append(
+        {
+            "cell_class": "MBON-alpha1",
+            "animal_count": 1,
+            "detection_prominence_mv": float(lowest),
+            "somatic_spike_amplitude_mv": None,
+            "spikes_detected": bool(mbon_spiking),
+            "overshoots_zero_mv": False,
+            "note": "amplitude is reported per sweep in the unit-resolved block",
+        }
+    )
+    for relative, block in stimulus_free.items():
+        name = relative.rsplit("/", 1)[-1]
+        if "per_animal" in block:
+            amplitudes = [
+                float(item["somatic_spike_amplitude_mv"])
+                for item in block["per_animal"]
+                if item["somatic_spike_amplitude_mv"] is not None
+            ]
+            overshooting = sum(int(item["overshooting_trials"]) for item in block["per_animal"])
+            trials = sum(int(item["trial_count"]) for item in block["per_animal"])
+            classes.append(
+                {
+                    "cell_class": "antennal-lobe local neuron",
+                    "artifact": name,
+                    "animal_count": int(block["animal_count"]),
+                    "somatic_spike_amplitude_mv": (
+                        float(np.median(amplitudes)) if amplitudes else None
+                    ),
+                    "overshooting_trials": overshooting,
+                    "trial_count": trials,
+                    "overshoots_zero_mv": overshooting > 0,
+                }
+            )
+            continue
+        detected = {
+            prominence: record
+            for prominence, record in block["by_prominence_mv"].items()
+            if record["somatic_spike_amplitude_mv"] is not None
+        }
+        smallest = (
+            min(detected, key=lambda key: float(key)) if detected else None
+        )
+        classes.append(
+            {
+                "cell_class": (
+                    "Kenyon cell"
+                    if name.startswith("kc")
+                    else "olfactory projection neuron"
+                ),
+                "artifact": name,
+                "animal_count": int(block["animal_count"]),
+                "lowest_prominence_with_detections_mv": (
+                    float(smallest) if smallest is not None else None
+                ),
+                "somatic_spike_amplitude_mv": (
+                    float(detected[smallest]["somatic_spike_amplitude_mv"])
+                    if smallest is not None
+                    else None
+                ),
+                "median_spike_peak_mv": (
+                    detected[smallest]["median_spike_peak_mv"] if smallest is not None else None
+                ),
+                "overshoots_zero_mv": (
+                    detected[smallest]["overshoots_zero_mv"] if smallest is not None else None
+                ),
+            }
+        )
+    return {
+        "per_class": classes,
+        "finding": "Somatic spike amplitude differs several-fold across these four classes, "
+        "so no single absolute spike threshold serves all of them.",
+        "does_not_establish": "A small somatic spike does not classify a cell as graded. "
+        "Axonal spike initiation followed by passive attenuation to the soma produces the "
+        "same measurement, and that is the published conclusion for Drosophila projection "
+        "neurons in the source already pinned as the project passive prior.",
+        "registry_consequence": "This evidence constrains the observation model and the "
+        "per-type threshold, and is not sufficient to move any cell type out of the "
+        "unresolved signal regime.",
+    }
+
+
+def _sealed_pn_challenge_feasibility(stimulus_free: dict[str, Any]) -> dict[str, Any]:
+    """Whether the reserved external PN trace can still be scored against a frozen model."""
+    relative = next(key for key in stimulus_free if key.endswith("pn-voltage-trace.parquet"))
+    block = stimulus_free[relative]["by_prominence_mv"]
+    counts = {
+        prominence: int(record["spike_count"]) for prominence, record in block.items()
+    }
+    detected = {
+        prominence: record
+        for prominence, record in block.items()
+        if int(record["spike_count"]) > 0
+    }
+    return {
+        "spike_count_by_prominence_mv": counts,
+        "feasible": False,
+        "blocking_reasons": [
+            "the in vivo stimulus amplitudes are irrecoverable, so no current-referenced "
+            "observable can be compared",
+            "somatic spikes in this trace do not reach the primary 10 mV prominence, so the "
+            "spike count depends on the detector setting rather than on the recording",
+            "at the lowest tested prominence the whole 20 s trace yields "
+            + str(min(counts.values(), default=0))
+            + " to "
+            + str(max(counts.values(), default=0))
+            + " spikes, which is too few for a per-epoch adaptation statistic",
+        ],
+        "detected_at_prominence_mv": sorted(float(key) for key in detected),
+        "consequence": "The reserved Nanami PN trace is retired as a scoring source. It "
+        "remains locked as a resting-potential and somatic-amplitude reference.",
+    }
+
+
+def _pack_table(root: Path, relative: str, expected_sha256: str) -> pa.Table:
+    path = root / relative
+    observed = sha256_file(path) if path.is_file() else None
+    if observed != expected_sha256:
+        raise DatasetError(
+            f"Cellular-observable artifact SHA-256 mismatch for {relative}: "
+            f"expected {expected_sha256}, observed {observed}"
+        )
+    return pq.read_table(path)
+
+
+def measure_invivo_cellular_pack(
+    contract_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Measure V1 observables under a preregistered contract, tagged by stimulus resolution.
+
+    Every unit-bearing observable is refused for a source whose stimulus amplitudes were
+    never published. That refusal is the point of the function: it is what stops an
+    irrecoverable protocol from being laundered into a membrane time constant.
+    """
+    contract = load_json(contract_path)
+    if contract.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported cellular-observable contract schema")
+    parse_provenance(str(contract["provenance"]))
+    sample_interval_us = int(contract["sample_interval_us"])
+    detection = contract["spike_detection"]
+    primary_policy = SpikeDetectionPolicy.from_mapping(detection["primary"])
+    step_policy = StepAnalysisPolicy.from_mapping(contract["step_analysis"])
+    prominences = [primary_policy.prominence_mv] + [
+        float(value) for value in detection["sensitivity_prominence_mv"]
+    ]
+
+    required = {str(item["path"]): item for item in contract["required_artifacts"]}
+    resolutions = {
+        str(item["path"]): str(item["stimulus_resolution"])
+        for item in contract["required_artifacts"]
+    }
+    tables = {
+        relative: _pack_table(root, relative, str(item["sha256"]))
+        for relative, item in required.items()
+    }
+
+    def policy_at(prominence_mv: float) -> SpikeDetectionPolicy:
+        return SpikeDetectionPolicy(
+            prominence_mv=prominence_mv,
+            prominence_window_ms=primary_policy.prominence_window_ms,
+            refractory_ms=primary_policy.refractory_ms,
+            resting_mask_ms=primary_policy.resting_mask_ms,
+        )
+
+    mbon_relative = next(key for key in tables if "mbon-alpha1" in key)
+    mbon = tables[mbon_relative].to_pydict()
+    sweep_index = np.asarray(mbon["sweep_index"], dtype=np.int64)
+    sweeps = int(sweep_index.max()) + 1
+    current = np.stack(
+        [np.asarray(mbon["injected_current_pa"], dtype=np.float64)[sweep_index == k]
+         for k in range(sweeps)]
+    )
+    voltage = np.stack(
+        [np.asarray(mbon["membrane_voltage_mv"], dtype=np.float64)[sweep_index == k]
+         for k in range(sweeps)]
+    )
+    if resolutions[mbon_relative] != STIMULUS_RESOLVED:
+        raise ConfigurationError("The MBON protocol must be registered as unit-resolved")
+    mbon_by_prominence: dict[str, Any] = {}
+    for prominence in prominences:
+        features = current_step_features(
+            current,
+            voltage,
+            sample_interval_us=sample_interval_us,
+            spike_policy=policy_at(prominence),
+            step_policy=step_policy,
+        )
+        mbon_by_prominence[f"{prominence:g}"] = {
+            "per_sweep": features,
+            "summary": summarise_current_step_protocol(features),
+        }
+
+    stimulus_free: dict[str, Any] = {}
+    for relative, table in tables.items():
+        if relative == mbon_relative:
+            continue
+        if resolutions[relative] != STIMULUS_IRRECOVERABLE:
+            raise ConfigurationError(
+                f"{relative} is registered as unit-resolved but carries no injected current"
+            )
+        payload = table.to_pydict()
+        voltages = np.asarray(payload["membrane_voltage_mv"], dtype=np.float64)
+        if "specimen_id" in payload:
+            specimens = np.asarray(payload["specimen_id"], dtype=object)
+            trials = np.asarray(payload["trial_index"], dtype=np.int64)
+            per_trial: list[dict[str, Any]] = []
+            for specimen in sorted(set(specimens.tolist())):
+                for trial in sorted(set(trials[specimens == specimen].tolist())):
+                    selection = (specimens == specimen) & (trials == trial)
+                    record = stimulus_free_features(
+                        voltages[selection],
+                        sample_interval_us=sample_interval_us,
+                        spike_policy=primary_policy,
+                    )
+                    per_trial.append(
+                        {"specimen_id": specimen, "trial_index": int(trial), **record}
+                    )
+            per_animal = []
+            for specimen in sorted({item["specimen_id"] for item in per_trial}):
+                rows = [item for item in per_trial if item["specimen_id"] == specimen]
+                amplitudes = [
+                    float(item["somatic_spike_amplitude_mv"])
+                    for item in rows
+                    if item["somatic_spike_amplitude_mv"] is not None
+                ]
+                per_animal.append(
+                    {
+                        "specimen_id": specimen,
+                        "trial_count": len(rows),
+                        "resting_potential_mv": float(
+                            np.median([float(item["resting_potential_mv"]) for item in rows])
+                        ),
+                        "somatic_spike_amplitude_mv": (
+                            float(np.median(amplitudes)) if amplitudes else None
+                        ),
+                        "overshooting_trials": sum(
+                            1 for item in rows if item["overshoots_zero_mv"] is True
+                        ),
+                    }
+                )
+            resting = [item["resting_potential_mv"] for item in per_animal]
+            stimulus_free[relative] = {
+                "stimulus_resolution": STIMULUS_IRRECOVERABLE,
+                "animal_count": len(per_animal),
+                "per_trial": per_trial,
+                "per_animal": per_animal,
+                "resting_potential_across_animals_mv": {
+                    "median": float(np.median(resting)),
+                    "minimum": float(min(resting)),
+                    "maximum": float(max(resting)),
+                },
+            }
+        else:
+            by_prominence = {
+                f"{prominence:g}": stimulus_free_features(
+                    voltages,
+                    sample_interval_us=sample_interval_us,
+                    spike_policy=policy_at(prominence),
+                )
+                for prominence in prominences
+            }
+            stimulus_free[relative] = {
+                "stimulus_resolution": STIMULUS_IRRECOVERABLE,
+                "animal_count": 1,
+                "by_prominence_mv": by_prominence,
+            }
+
+    primary = mbon_by_prominence[f"{primary_policy.prominence_mv:g}"]["summary"]
+    measured_values = [
+        primary["resting_potential_mv"],
+        primary["membrane_tau_ms"],
+        primary["input_resistance_mohm"],
+    ]
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-cellular-observables-v1",
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "provenance": str(contract["provenance"]),
+        "sample_interval_us": sample_interval_us,
+        "spike_detection_primary": primary_policy.as_dict(),
+        "spike_detection_sensitivity_prominence_mv": prominences[1:],
+        "step_analysis": step_policy.as_dict(),
+        "unit_resolved": {
+            "cell_class": "MBON-alpha1",
+            "relative_path": mbon_relative,
+            "by_prominence_mv": mbon_by_prominence,
+        },
+        "stimulus_free": stimulus_free,
+        "signalling_evidence": _class_signalling_evidence(
+            {"by_prominence_mv": mbon_by_prominence}, stimulus_free
+        ),
+        "sealed_pn_challenge": _sealed_pn_challenge_feasibility(stimulus_free),
+        "v1_coverage": {
+            "resting_voltage": "measured for four classes; a multi-animal distribution exists "
+            "only for the four-animal antennal-lobe LN set",
+            "membrane_time_constant": "measured for one MBON-alpha1 cell only; no registered "
+            "source publishes a unit-resolved current step for any projection-neuron type",
+            "input_resistance": "measured for one MBON-alpha1 cell only",
+            "adaptation": "measured wherever at least four interspike intervals occur",
+            "projection_neuron_coverage": "none of the three V1 observables is available as a "
+            "multi-animal, type-resolved projection-neuron distribution",
+        },
+        "artifact_validity": {
+            "all_required_artifacts_match_sha256": True,
+            "all_measured_values_finite": all(
+                value is None or math.isfinite(float(value)) for value in measured_values
+            ),
+            "unit_bearing_observables_only_from_unit_resolved_sources": True,
+        },
+        "tier_policy": str(contract["tier_policy"]),
+        "declared_blockers": [str(value) for value in contract["declared_blockers"]],
+        "claim_boundary": str(contract["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
 
 
 @dataclass(frozen=True, slots=True)

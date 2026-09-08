@@ -71,3 +71,10 @@ class ScenarioConfig:
             sha256=sha256_json(raw),
         )
 
+
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    """Write an immutable evidence artifact so a crash cannot leave a partial file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".part")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(temporary, path)

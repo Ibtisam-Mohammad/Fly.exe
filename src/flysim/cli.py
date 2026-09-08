@@ -68,7 +68,9 @@ from flysim.stage2 import (
     fit_projection_neuron_model,
     import_gouwens_dm1_priors,
     import_gugel_figure7,
+    import_invivo_cellular_pack,
     import_nanami_pn_trace,
+    measure_invivo_cellular_pack,
     review_dynamic_projection_neuron_timestep,
     review_projection_neuron_fit,
 )
@@ -172,6 +174,42 @@ def _command_data_import_nanami_pn(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def _command_stage2_import_invivo_pack(args: argparse.Namespace) -> int:
+    manifest = import_invivo_cellular_pack(args.config, args.source, args.output)
+    _print_json(
+        {
+            "artifact_id": manifest["artifact_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": manifest["logical_sha256"],
+            "verified_source_artifact_count": manifest["verified_source_artifact_count"],
+            "normalized_artifacts": manifest["normalized_artifacts"],
+            "stimulus_resolution": manifest["stimulus_resolution"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_stage2_measure_cellular(args: argparse.Namespace) -> int:
+    result = measure_invivo_cellular_pack(args.contract, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "unit_resolved_summary": result["unit_resolved"]["by_prominence_mv"][
+                f"{result['spike_detection_primary']['prominence_mv']:g}"
+            ]["summary"],
+            "signalling_evidence": result["signalling_evidence"],
+            "sealed_pn_challenge": result["sealed_pn_challenge"],
+            "v1_coverage": result["v1_coverage"],
+            "artifact_validity": result["artifact_validity"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if all(result["artifact_validity"].values()) else 2
 
 
 def _command_stage2_readiness(args: argparse.Namespace) -> int:
@@ -1373,6 +1411,36 @@ def build_parser() -> argparse.ArgumentParser:
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
+    stage2_import_pack = stage2_commands.add_parser(
+        "import-invivo-pack",
+        help="Normalize the locked in vivo cellular pack",
+    )
+    stage2_import_pack.add_argument(
+        "--config",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "datasets"
+        / "nanami-2024-invivo-cellular-pack.json",
+    )
+    stage2_import_pack.add_argument("--source", type=Path, required=True)
+    stage2_import_pack.add_argument("--output", type=Path, required=True)
+    stage2_import_pack.set_defaults(func=_command_stage2_import_invivo_pack)
+    stage2_measure = stage2_commands.add_parser(
+        "measure-cellular",
+        help="Measure V1 observables from the locked in vivo cellular pack",
+    )
+    stage2_measure.add_argument("--root", type=Path, default=default_data_root())
+    stage2_measure.add_argument(
+        "--contract",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-cellular-observables.json",
+    )
+    stage2_measure.add_argument("--output", type=Path, required=True)
+    stage2_measure.set_defaults(func=_command_stage2_measure_cellular)
     stage2_readiness = stage2_commands.add_parser(
         "readiness", help="validate a preregistered physiology fit contract"
     )
