@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.1",
+  "experiment_id": "shiu-antennal-grooming-widened-v3",
+  "title": "Does widening the transferred JON-F to aBN1 circuit beyond the shortest paths remove the high-frequency over-response?",
+  "base_experiment": "configs/experiments/shiu-antennal-grooming.json",
+  "provenance": "M/P/E",
+  "assumption_ids": [
+    "DATA-03",
+    "ND-01",
+    "ND-02",
+    "ND-03",
+    "ND-04",
+    "ND-05",
+    "ND-08",
+    "VAL-01"
+  ],
+  "purpose": "ADR-2026-009 withdrew the hypothesis that short-term depression explains why no single contact scale fits both the 100 Hz and 220 Hz reference points, on the ground that the reference is a whole-brain static simulation while the transferred circuit is a one-hop 41-neuron subgraph. This contract tests the structural alternative it left: that the over-response at high drive comes from the paths the shortest-path rule excluded.",
+  "supersedes": {
+    "experiment_id": "shiu-antennal-grooming-widened-v2",
+    "artifact": "evidence/male-cns-v1.0/shiu-grooming-widened-v2.json",
+    "artifact_sha256": "969500e10783fae402e3d2dc930ded49a69d55d2e7aa216e178ec20da256ba12",
+    "also_supersedes": {
+      "experiment_id": "shiu-antennal-grooming-widened-v1",
+      "artifact": "evidence/male-cns-v1.0/shiu-grooming-widened-v1.json",
+      "artifact_sha256": "8a9a3b94c8ef9abf040c09c9cf986a2c592ba184dd94dd1c53ec93172d051759",
+      "reason": "Its H1 was the one-sided 'widened 220 Hz rate below the one-hop 33.167 Hz', which the silent readout satisfied, so v1 scored a vacuous pass."
+    },
+    "reason": "v2 corrected H1 and added the K = 1 identity control, the static readout-drive composition as H4, and circuit activity as H5. Its H1 and H2 verdicts stand and are unchanged here. What does not stand is H4 as a mechanism: the static signed contact sum is net excitatory at K = 3 (+440 and +657 contacts) while the readout is silent, so read as net drive it has the wrong sign. v3 restates H4 to require the delivered drive alongside the static sum.",
+    "v2_results_retained": "The K = 1 identity control passed with 41 neurons and 129 edges and an identical body set. GeNN parity passed at both path lengths. H1 was 'suppressed' and H2 failed at K = 2 and K = 3. The static readout composition was net inhibitory at K = 2 (-222, -267) and net excitatory at K = 3 (+440, +657)."
+  },
+  "circuit_selection": {
+    "mode": "bounded-path",
+    "rule": "keep every neuron v with forward_distance(inputs, v) + backward_distance(v, readouts) <= K, and every edge among the kept neurons",
+    "maximum_path_lengths": [
+      2,
+      3
+    ],
+    "identity_control": {
+      "requirement": "at K = 1 the bounded-path rule must return exactly the circuit the shortest-path rule returns, by body-ID set and edge count",
+      "why": "the sweep's whole result is a comparison against the one-hop circuit, so the selection rule must be shown to reproduce it rather than assumed to",
+      "expected": {
+        "neurons": 41,
+        "edges": 129
+      },
+      "fails_closed": true
+    },
+    "sizes_observed_before_registration": {
+      "1": {
+        "neurons": 41,
+        "edges": 129
+      },
+      "2": {
+        "neurons": 322,
+        "edges": 11140
+      },
+      "3": {
+        "neurons": 1706,
+        "edges": 139215
+      },
+      "4": {
+        "neurons": 35425,
+        "edges": 6458359,
+        "excluded": "too large for the NumPy runner within the session; a GeNN-only follow-up"
+      }
+    }
+  },
+  "one_hop_reference_values": {
+    "source_artifact": "evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-delayfix.json",
+    "source_sha256": "a734ea71f21146e7e743d52463ea41077bdd97568f81ccc1c360bb1668d9cfe2",
+    "scale_matching_100hz_mv_per_contact": 0.15,
+    "readout_rate_at_0_15_hz": {
+      "100": 0.167,
+      "220": 33.167
+    },
+    "reference_mean_hz": {
+      "100": 0.933,
+      "220": 4.633
+    },
+    "reference_std_hz": {
+      "100": 0.964,
+      "220": 2.008
+    }
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "At 0.15 mV per contact, the scale that best matched the 100 Hz reference in the one-hop circuit, the widened circuit's mean 220 Hz readout rate is moved toward the reference: strictly below the one-hop value of 33.167 Hz and strictly above zero.",
+      "test": "0.0 < mean over seeds of the 220 Hz bilateral readout rate at 0.15 mV per contact < 33.167 Hz",
+      "outcomes": {
+        "moderated": "0 < rate < 33.167; the widened circuit moves the response toward the reference and H1 is supported",
+        "suppressed": "rate == 0; the widened circuit abolishes the response rather than moderating it, and H1 is NOT supported even though the one-sided v1 inequality holds",
+        "not_moderated": "rate >= 33.167; widening does not reduce the over-response"
+      },
+      "supports_structural_explanation_if": "outcome == moderated"
+    },
+    {
+      "id": "H2",
+      "statement": "Some single contact scale in the registered candidate grid reproduces both the 100 Hz and the 220 Hz reference means within one reference standard deviation. The one-hop circuit fails this.",
+      "test": "exists scale s in the grid with |rate_100(s) - 0.933| <= 0.964 and |rate_220(s) - 4.633| <= 2.008",
+      "supports_structural_explanation_if": true
+    },
+    {
+      "id": "H3",
+      "statement": "Descriptive: the fraction of neurons in the widened circuit whose transmitter prediction makes them inhibitory under the zero unresolved-sign policy, and the fraction of edges they carry.",
+      "test": "none",
+      "supports_structural_explanation_if": null
+    },
+    {
+      "id": "H4",
+      "statement": "Mechanistic, descriptive: the drive arriving directly on each readout at every path length including K = 1, reported both as the static signed contact sum over all incoming edges and as the delivered drive, which weights each incoming edge by how often its presynaptic partner actually fired at the H1 condition.",
+      "test": "none; both measures are recorded because the static sum alone was found insufficient. It is net excitatory at K = 3 while the readout is silent, since it counts hundreds of added excitatory partners that never spike. The artifact also records whether the two measures agree in sign.",
+      "supports_structural_explanation_if": null,
+      "why_both": "A silent readout has to be attributable. The static sum answers 'what is wired to it', the delivered drive answers 'what reached it', and at K = 3 those have opposite signs, so reporting only the first would have supported a confident and wrong mechanism."
+    },
+    {
+      "id": "H5",
+      "statement": "Diagnostic, descriptive: whether the circuit as a whole is active at the parity condition, reported as total spikes and the number of distinct spiking neurons, and how many input bodies the bounded-path rule actually stimulates at each path length.",
+      "test": "none; a silent readout inside an active circuit is a different finding from a dead circuit, and the two must be distinguishable in the artifact",
+      "supports_structural_explanation_if": null
+    }
+  ],
+  "protocol": {
+    "reuse_from_base": [
+      "published_parameters",
+      "reference",
+      "crosswalk",
+      "transfer_protocol.nd04_contact_scale_fit",
+      "transfer_protocol.seeds",
+      "transfer_protocol.neural_dt_ms",
+      "transfer_protocol.backend_spike_time_tolerance_ms",
+      "transfer_protocol.backend_rate_relative_tolerance"
+    ],
+    "unresolved_sign_policy": "zero",
+    "backends": [
+      "numpy",
+      "genn"
+    ],
+    "parity_condition": {
+      "frequency_hz": 100.0,
+      "seed": 1
+    },
+    "gate_on_parity": "the ND-04 sweep is blocked for a path length whose NumPy and GeNN runs disagree beyond the base tolerances",
+    "controls": "the K = 1 selection identity control above, plus parity; this contract answers one structural question and is not a Stage 1 exit attempt"
+  },
+  "known_confound": "The bounded-path rule does not only add interneurons: at K = 2 it admits 78 of the JON-F input bodies against the one-hop circuit's 39, because more inputs can reach a readout within two hops than within one. The stimulated drive therefore roughly doubles between K = 1 and K = 2. This strengthens a suppression finding, since more drive produces less output, and would weaken a moderation finding, since part of any reduction could not then be attributed to the added partners alone.",
+  "disclosure": "The circuit sizes were computed before the v1 contract was written; no rate had been simulated in any widened circuit when v1 was registered. v1 and v2 have since been executed and their outcomes are recorded under `supersedes`, so neither the corrected H1 criterion nor the extended H4 diagnostic is blind to the results it is scored against. This contract is a post-hoc correction of a criterion and of a diagnostic, and must be read as such rather than as a preregistration. H1 and H2 are unchanged from v2.",
+  "claim_boundary": "A structural sensitivity test of a transferred, bounded open-loop circuit against archived FlyWire simulation output. It cannot award V1, V2 or V3, and even a pass on H2 would be a fit of one scale to two simulation-derived points.",
+  "last_reviewed": "2026-09-08"
+}

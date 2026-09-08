@@ -11,6 +11,7 @@ shortest-path rule dropped are present.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -86,6 +87,60 @@ def _readout_drive(
             }
         )
     return drive
+
+
+def _delivered_drive(
+    selected: Any,
+    edge_signs: np.ndarray,
+    spike_indices: np.ndarray,
+    *,
+    frequency_hz: float,
+    scale_mv_per_contact: float,
+) -> list[dict[str, Any]]:
+    """Signed contacts weighted by how often each presynaptic partner actually fired.
+
+    The static composition in :func:`_readout_drive` counts every incoming edge whether or
+    not its source ever spikes, and that makes it the wrong sign at K = 3: the static sum is
+    net excitatory there while the drive the readout actually receives is strongly inhibitory,
+    because almost all of the added excitatory partners are silent. Delivered drive is the
+    measure that explains a silent readout; the static sum on its own does not.
+    """
+    counts = np.bincount(spike_indices, minlength=selected.graph.neuron_count).astype(np.float64)
+    body_to_index = {int(body): index for index, body in enumerate(selected.graph.body_ids)}
+    delivered: list[dict[str, Any]] = []
+    for body in selected.readout_body_ids:
+        index = body_to_index[int(body)]
+        incoming = np.flatnonzero(selected.graph.target_indices == index)
+        weighted = selected.graph.contact_counts[incoming] * edge_signs[incoming]
+        source_counts = counts[selected.graph.source_indices[incoming]]
+        product = weighted * source_counts
+        excitatory_edges = weighted > 0.0
+        inhibitory_edges = weighted < 0.0
+        positive = float(product[product > 0.0].sum())
+        negative = float(product[product < 0.0].sum())
+        delivered.append(
+            {
+                "body_id": int(body),
+                "frequency_hz": frequency_hz,
+                "scale_mv_per_contact": scale_mv_per_contact,
+                "delivered_excitation": positive,
+                "delivered_inhibition": negative,
+                "delivered_net": positive + negative,
+                "static_net_signed_contacts": float(weighted.sum()),
+                "static_and_delivered_agree_in_sign": bool(
+                    np.sign(weighted.sum()) == np.sign(positive + negative)
+                ),
+                "active_excitatory_sources": int(
+                    np.count_nonzero(excitatory_edges & (source_counts > 0.0))
+                ),
+                "excitatory_sources": int(np.count_nonzero(excitatory_edges)),
+                "active_inhibitory_sources": int(
+                    np.count_nonzero(inhibitory_edges & (source_counts > 0.0))
+                ),
+                "inhibitory_sources": int(np.count_nonzero(inhibitory_edges)),
+            }
+        )
+    return delivered
 
 
 def _selection_identity_control(
@@ -194,6 +249,7 @@ def run_widened_grooming_transfer(
     hypotheses = {str(item["id"]): item for item in contract["hypotheses"]}
     match_scale = float(one_hop["scale_matching_100hz_mv_per_contact"])
     one_hop_220 = float(one_hop["readout_rate_at_0_15_hz"]["220"])
+    h1_frequency = 220.0
     mean_100, std_100 = reference_by_frequency[100.0]
     mean_220, std_220 = reference_by_frequency[220.0]
 
@@ -273,6 +329,25 @@ def run_widened_grooming_transfer(
             "inhibition": inhibition,
             "input_bodies_stimulated": len(selected.input_body_ids),
             "readout_drive": _readout_drive(selected, signs),
+            "readout_delivered_drive": _delivered_drive(
+                selected,
+                signs,
+                run_numpy_circuit(
+                    selected.graph,
+                    signs,
+                    make_stimulus_schedule(
+                        selected.graph,
+                        selected.input_body_ids,
+                        frequency_hz=h1_frequency,
+                        parameters=replace(parameters, synaptic_mv_per_contact=match_scale),
+                        seed=seeds[0],
+                    ),
+                    replace(parameters, synaptic_mv_per_contact=match_scale),
+                    selected.readout_body_ids,
+                ).spike_indices,
+                frequency_hz=h1_frequency,
+                scale_mv_per_contact=match_scale,
+            ),
             "parity_condition": {
                 "frequency_hz": float(parity["frequency_hz"]),
                 "seed": int(parity["seed"]),
