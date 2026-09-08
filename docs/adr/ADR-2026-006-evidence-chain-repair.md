@@ -38,12 +38,22 @@ alternatives_tested:
   - leaving the interface delays at their registered values and shortening the coupling interval
   - retaining the mm/s label and documenting the conversion only in prose
 validation_effect: >-
-  V0 Structural is withdrawn until a bundle is reissued and validates. Track A acceptance
-  evidence v1 and v2 are withdrawn; no acceptance claim stands until the v3 matrix runs from a
-  clean commit. Stage 1 conclusions are unchanged, but the gate-split disclosure is now part
-  of the evidence record.
+  V0 Structural was withdrawn and has been reissued as bundle 20260908T060641Z_V0, which
+  validates. Track A acceptance evidence v1 and v2 are withdrawn permanently; the v3 matrix ran
+  from clean commit 4a061ac and fails its own behavioural criterion in 30 of 30 runs, so no
+  acceptance claim stands. Stage 1 conclusions are unchanged, but the gate-split disclosure is
+  now part of the evidence record.
 approved_by: project-owner
 ```
+
+## Outcome
+
+The repair is complete. V0 is reissued and validates, and Stage 2 has resumed. Two engineering
+defects that the repair surfaced remain open and are tracked in
+[docs/STATUS.md](../STATUS.md) and
+[the Track A evidence report](../evidence/TRACK_A_EON_MALECNS.md): the FlyGym body cannot hold
+station while grooming, and enabling the renderer shifts the last two transitions by 1.44 s
+under no criterion that bounds it.
 
 ## Consequences
 

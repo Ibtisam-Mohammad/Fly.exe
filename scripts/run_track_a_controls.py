@@ -105,6 +105,25 @@ def _require_reusable(raw: dict[str, Any], expected_commit: str, output_root: Pa
         )
 
 
+# "All controls pass" is only meaningful if the reader can see what each control tests. A
+# causal ablation that blocks a transition is far stronger evidence than a recorded baseline
+# whose criterion is that a file exists.
+CONTROL_CLASSES = {
+    "blocked-transition": "causal-ablation",
+    "readout-degradation": "structural-degradation",
+    "transition-signature-identical": "equivalence-check",
+    "artifact-present": "recorded-baseline",
+    "graph-unused": "recorded-baseline",
+}
+
+
+def _control_class(criterion: dict[str, Any]) -> str:
+    try:
+        return CONTROL_CLASSES[criterion["type"]]
+    except KeyError:
+        raise RuntimeError(f"Unclassified control criterion: {criterion.get('type')}") from None
+
+
 def _event_targets(manifest: dict[str, Any]) -> list[str]:
     return [event["to_state"] for event in manifest["result"]["events"]]
 
@@ -226,6 +245,7 @@ def main() -> int:
             "completed": manifest["result"]["completed"],
             "event_targets": targets,
             "criterion": criterion,
+            "control_class": _control_class(criterion),
             "validation": validation,
         }
         if criterion["type"] == "blocked-transition":
@@ -285,7 +305,20 @@ def main() -> int:
         for viewer, headless in zip(viewer_events, headless_events, strict=True)
     ]
     equivalence_passed = viewer_signature == headless_signature
+    # The criterion is transition-signature identity, not timing identity. Rendering perturbs
+    # the trajectory, so the timing spread is reported as a diagnostic that does not gate.
+    max_timing_difference_us = max((abs(v) for v in timing_differences_us), default=0)
     results["headless-viewer-equivalence"] = {
+        "control_class": _control_class(criteria["headless-viewer-equivalence"]),
+        "timing_diagnostic": {
+            "gates_the_control": False,
+            "max_abs_transition_timing_difference_us": max_timing_difference_us,
+            "transition_timing_identical": max_timing_difference_us == 0,
+            "note": (
+                "The control tests transition identities and reasons. A nonzero spread means a "
+                "rendered run is not a timing replica of a headless one."
+            ),
+        },
         "headless_manifest": str(headless_manifest_path.resolve()),
         "headless_manifest_sha256": _sha256(headless_manifest_path),
         "viewer_manifest": str(viewer_manifest_path.resolve()),
@@ -305,6 +338,7 @@ def main() -> int:
         "manifest": str(controller_manifest),
         "manifest_sha256": _sha256(controller_manifest) if controller_present else None,
         "criterion": criteria["controller-only"],
+        "control_class": _control_class(criteria["controller-only"]),
         "passed": controller_present,
     }
     bypass_root = output_root / "neural-bypass"
@@ -331,6 +365,7 @@ def main() -> int:
         "manifest_sha256": _sha256(bypass_manifest_path),
         "connectome_graph_used": bypass_manifest["connectome"]["graph_used"],
         "criterion": criteria["neural-bypass"],
+        "control_class": _control_class(criteria["neural-bypass"]),
         "passed": bypass_manifest["connectome"]["graph_used"] is False,
     }
 
@@ -356,6 +391,14 @@ def main() -> int:
         "all_required_controls_passed": all(
             bool(results[name]["passed"]) for name in experiment["required_controls"]
         ),
+        "controls_by_class": {
+            klass: sorted(
+                name
+                for name in experiment["required_controls"]
+                if results[name].get("control_class") == klass
+            )
+            for klass in sorted(set(CONTROL_CLASSES.values()))
+        },
         "performance": {
             "metric": experiment["throughput_metric"],
             "minimum_biological_seconds_per_wall_second": min(speeds),

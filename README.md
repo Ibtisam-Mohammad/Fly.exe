@@ -140,7 +140,10 @@ that could not fail, and with the body settling inside the dust patch. The v3 ma
 clean commit at three unused positions: 29 of 30 runs complete the sequence and all nine
 controls pass, but **0 of 30 clear the grooming-displacement cap**, so Track A is not an
 accepted milestone. The body translates a median 6.26 mm during a 3-second grooming bout under
-a zero forward command. See
+a zero forward command, and it drifts even while standing, so the defect is stance
+station-keeping. Of the nine controls, five are causal ablations, one is a quantitative
+degradation control, one is an equivalence check that tests transition identities but not
+timing, and two are recorded baselines. See
 [the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) for the v3 results and the
 withdrawal record, and [the repair ADR](docs/adr/ADR-2026-006-evidence-chain-repair.md) for
 what changed.

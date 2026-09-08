@@ -488,6 +488,35 @@ def test_every_required_control_has_a_falsifiable_criterion() -> None:
     assert 0.0 < float(shuffled["max_fraction_of_exact_peak"]) < 1.0
 
 
+def test_every_control_criterion_has_a_declared_class() -> None:
+    """'All controls pass' is only meaningful if each control's strength is visible."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "run_track_a_controls", PROJECT_ROOT / "scripts" / "run_track_a_controls.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    experiment = json.loads(
+        (PROJECT_ROOT / "configs" / "experiments" / "track-a-acceptance.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    classes = {
+        name: module._control_class(experiment["control_criteria"][name])
+        for name in experiment["required_controls"]
+    }
+    assert classes["contamination-input-ablation"] == "causal-ablation"
+    assert classes["shuffled-connectome"] == "structural-degradation"
+    assert classes["headless-viewer-equivalence"] == "equivalence-check"
+    assert classes["controller-only"] == "recorded-baseline"
+    assert classes["neural-bypass"] == "recorded-baseline"
+    # Five of the nine required controls are causal ablations; the rest are weaker.
+    assert sum(1 for value in classes.values() if value == "causal-ablation") == 5
+
+
 # --- Step 10: the held-out positions have never been used ------------------------------
 
 

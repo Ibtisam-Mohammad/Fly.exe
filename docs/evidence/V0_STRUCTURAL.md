@@ -1,23 +1,36 @@
 # V0 Structural evidence
 
-> **Withdrawn on 2026-09-08.** `flysim evidence validate` rejects bundle
-> `20260906T065413Z_V0`: it pinned `configs/assumptions.json`, the whole mutable project
-> assumption register, which a later unrelated Stage 2 edit changed from 23,560 to 25,853
-> bytes. The bundle could not be rebuilt either, because the builder additionally required the
-> literal assumption set `foundation-v0.3` while the register had moved to `foundation-v0.5`.
-> The structural measurements below were not disputed by the audit; the bundle that attested to
-> them was. The builder now pins an immutable snapshot scoped to the `DATA-*` foundation
-> records and gates on their content, so unrelated register edits cannot invalidate a
-> structural bundle while any change to a scoped record still does. It also recomputes each
-> raw artifact's upstream MD5 from local bytes, which the first revision did not. See
-> [ADR-2026-006](../adr/ADR-2026-006-evidence-chain-repair.md). Until a bundle is reissued and
-> validates, the project awards no tier.
-
-- Award date: 2026-09-06
-- Evidence bundle: `/srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json`
-- Bundle ID: `20260906T065413Z_V0`
-- Bundle SHA-256: `d8a95e151daf3e2bb70b13052f52a2b794e9bf6887121d64d34727f37cccf0b0`
+- Award date: 2026-09-08 (reissue); first awarded 2026-09-06
+- Evidence bundle: `/srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence-r2.json`
+- Bundle ID: `20260908T060641Z_V0`
+- Bundle SHA-256: `38366a8df86861501ca2fd4eff3e3c9329e0e089ec0e188b4af4f1a66c085958`
+- Hashed artifacts: 9
 - Highest validation tier: **V0 Structural**
+
+## Reissue and the withdrawn first bundle
+
+The first bundle, `20260906T065413Z_V0`
+(SHA-256 `d8a95e151daf3e2bb70b13052f52a2b794e9bf6887121d64d34727f37cccf0b0`), is **withdrawn**
+and still fails `flysim evidence validate`. It pinned `configs/assumptions.json`, the whole
+mutable project assumption register, which a later unrelated Stage 2 edit grew from 23,560 to
+25,853 bytes. It could not be rebuilt either, because the builder additionally required the
+literal assumption set `foundation-v0.3` while the register had moved on. It is left on disk
+in its failing state, which is what a withdrawn claim should look like.
+
+The structural measurements below were never in dispute; the bundle attesting to them was. The
+reissued bundle differs from the first in three ways:
+
+1. It pins `v0-foundation-assumptions.json`, an immutable snapshot scoped to the `DATA-*`
+   foundation records, instead of the whole register. A change to a scoped record still breaks
+   it; an unrelated register edit no longer does. The observed register revision is kept in an
+   unhashed provenance sidecar.
+2. Its raw-profile review, `raw-profile-integrity-review-r2.json`, recomputes each of the seven
+   raw artifacts' upstream MD5 from local bytes. All seven match. CRC32C is pinned but not
+   recomputed, because no native CRC32C implementation is installed, and the review records
+   that as unverified rather than implying the check ran.
+3. It was built from a clean worktree at commit `e0bd1de`; the builder now refuses a dirty tree.
+
+See [ADR-2026-006](../adr/ADR-2026-006-evidence-chain-repair.md).
 
 ## What passed
 
@@ -36,9 +49,13 @@ All twelve preregistered gates in the immutable evidence bundle are true:
 11. confidence-threshold sensitivity; and
 12. a bounded cross-connectome comparison.
 
-The seven official flat-connectome artifacts were rehashed, their Feather schemas and footers
-were opened, and their pinned GCS generation, byte count, ETag, MD5, CRC32C, and local SHA-256
-identities were checked when the bundle was built.
+When the bundle was built, the seven official flat-connectome artifacts were reread end to end:
+their SHA-256 was recomputed and matched the lock, their upstream MD5 was recomputed and matched
+the pinned value, their Feather schemas and footers were opened, and their byte counts matched.
+The pinned GCS generation and ETag are recorded but cannot be recomputed from local bytes, and
+the pinned CRC32C is recorded and **not** verified, because no native CRC32C implementation is
+installed. The review artifact states that explicitly rather than listing CRC32C among the
+checks that ran.
 
 ## Contact preservation
 

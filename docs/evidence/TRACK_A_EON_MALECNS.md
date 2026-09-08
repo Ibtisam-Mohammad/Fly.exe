@@ -1,13 +1,18 @@
 # Track A full-graph Eon-like demonstration
 
-Evidence date: 2026-09-07  
-Revision date: 2026-09-08  
-Milestone status: **acceptance evidence withdrawn**; the integration itself still runs  
-Validation tier awarded: none; the project awards no tier while the V0 bundle is withdrawn
+Evidence date: 2026-09-07 (v2, withdrawn); 2026-09-08 (v3, current)  
+Milestone status: **not accepted**. The v1 and v2 acceptance evidence is withdrawn, and the v3
+matrix ran cleanly but fails its own preregistered behavioural criterion in every run.  
+Validation tier awarded: none. Track A awards no tier by design; the project's V0 Structural
+tier comes from bundle `20260908T060641Z_V0` and is unrelated to this milestone.
 
-## Withdrawal notice, 2026-09-08
+Read the [v3 acceptance matrix](#v3-acceptance-matrix-2026-09-08) for the current result. The
+withdrawal notice and the superseded v2 record below are kept for audit.
 
-The v2 acceptance matrix and control bundle described below are withdrawn. The measurements are
+## Withdrawal notice for v1 and v2, 2026-09-08
+
+The v2 acceptance matrix and control bundle described in the superseded record below are
+withdrawn. The measurements are
 real and the artifacts remain on disk, but four defects mean they cannot support the acceptance
 claim they were used for. See [ADR-2026-006](../adr/ADR-2026-006-evidence-chain-repair.md).
 
@@ -89,8 +94,9 @@ is now accurate.
 ### What the repair did not fix: grooming-phase body translation
 
 The body still travels a median 6.26 mm during a 3-second grooming bout while the forward
-command is zero, against a preregistered cap of one adult body length. Three isolation probes
-locate the cause, and it is mostly not the trajectory replay:
+command is zero, against a preregistered cap of one adult body length. Three probes localize
+the cause. They are separate simulations, not a decomposition: MuJoCo contact dynamics are
+nonlinear, so these conditions do not add up and no term can be assigned a share of the total.
 
 | Condition, 3 s | Net body displacement |
 |---|---:|
@@ -99,13 +105,17 @@ locate the cause, and it is mostly not the trajectory replay:
 | Grooming, registered 200 ms blend-in | 5.876 mm |
 | Grooming, 1000 ms blend-in | 5.507 mm |
 
-The FlyGym body drifts 2.16 mm in three seconds while merely standing, and switching to the
-grooming adhesion pattern, which releases the two forelegs, roughly doubles that before the
-published trajectory contributes anything. The replay itself adds about 1 mm. Holding the
-settled joint configuration instead of the nominal default pose was tested and made standing
-worse, at 4.63 mm, so it was not adopted. The registered `groom_blend_in_us` scaffold removes
-the position-target discontinuity at bout onset but is measured not to reduce the drift; it is
-recorded as such rather than presented as a fix.
+What the probes establish is narrower than a breakdown, and it is enough to redirect the work:
+the FlyGym body already fails to hold station under no command at all, at 2.16 mm in three
+seconds, and grooming with the published trajectory suppressed is still far above the cap at
+4.92 mm. So the trajectory replay is not the primary problem, and removing or reshaping it
+cannot bring the run under the cap. The defect is station-keeping in the stance, most likely in
+the interaction between the held pose, the released forelegs, and leg adhesion.
+
+Holding the settled joint configuration instead of the nominal default pose was tested and made
+standing worse, at 4.63 mm, so it was not adopted. The registered `groom_blend_in_us` scaffold
+removes the position-target discontinuity at bout onset but is measured not to reduce the drift;
+it is recorded as such rather than presented as a fix.
 
 No further physics tuning was attempted. Adjusting the body until the number clears a gate that
 was set from body length is the failure mode this repair exists to prevent. The honest position
@@ -114,29 +124,58 @@ was invisible while the demo had no displacement criterion.
 
 ### Controls
 
-All nine required controls pass, and unlike v2 they can now fail.
+All nine required controls pass, and unlike v2 the criteria can fail. They are not equally
+strong, so they are grouped by what they actually test. Five are causal ablations, one is a
+quantitative degradation control, one is an equivalence check, and two are recorded baselines
+whose criterion is that a labelled artifact exists. "Nine of nine" should be read with that
+composition in mind.
 
-| Control | Criterion | Result |
-|---|---|---|
-| contamination-input-ablation | `GROOM` blocked | pass, no transitions |
-| groom-readout-ablation | `GROOM` blocked | pass, no transitions |
-| sucrose-input-ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
-| mn9-readout-ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
-| zero-weight | `GROOM` blocked | pass, no transitions |
-| shuffled-connectome | must not complete **and** peak grooming-DN readout at most half the exact-graph median | pass: 66.7 Hz against an allowance of 77.8 Hz, from an exact median peak of 155.6 Hz, and did not complete |
-| controller-only | baseline artifact recorded | pass |
-| neural-bypass | connectome unused | pass |
-| headless-viewer-equivalence | identical transition signature | pass |
+| Control | Class | Criterion | Result |
+|---|---|---|---|
+| contamination-input-ablation | causal ablation | `GROOM` blocked | pass, no transitions |
+| groom-readout-ablation | causal ablation | `GROOM` blocked | pass, no transitions |
+| sucrose-input-ablation | causal ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
+| mn9-readout-ablation | causal ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
+| zero-weight | causal ablation | `GROOM` blocked | pass, no transitions |
+| shuffled-connectome | structural degradation | must not complete **and** peak grooming-DN readout at most half the exact-graph median | pass: 66.7 Hz against an allowance of 77.8 Hz, from an exact median peak of 155.6 Hz, and did not complete |
+| headless-viewer-equivalence | equivalence check | identical transition identities and reasons; **timing is not tested** | pass on signature; transitions differ by up to 1.44 s |
+| controller-only | recorded baseline | the labelled baseline artifact exists | pass |
+| neural-bypass | recorded baseline | the connectome is unused | pass |
 
 The shuffled-connectome margin is 14%, so this control was close to failing. That is the point:
 in v2 it was registered with no blocked transition and its `passed` field was unconditionally
 true.
 
-Rendering perturbs the trajectory more than it did in v2. The viewer and headless runs still
-produce identical transition identities and reasons, but the last two transitions now differ by
-1.44 seconds rather than 30 milliseconds. The equivalence control tests the transition
-signature, not timing, so it passes; the timing divergence is recorded here because it means a
-rendered run is not a faithful timing replica of a headless one.
+Rendering perturbs the trajectory far more than it did in v2. The viewer and headless runs
+still produce identical transition identities and reasons, but the last two transitions differ
+by 1.44 seconds rather than 30 milliseconds. The control tests the transition signature, not
+timing, so it passes on its stated criterion while the underlying divergence grew by a factor of
+48. That is a weakness in the control, not a strength of the system: a rendered run is not a
+timing replica of a headless one, and no current criterion would catch it if it grew further.
+This is recorded as an open issue below.
+
+The controls script now derives each control's class and records a non-gating timing diagnostic
+for the equivalence check. Those fields were added after the v3 controls executed, so they will
+appear in the machine-readable payload from the next run; the v3 JSON carries the raw
+`transition_timing_differences_us` from which the 1.44 s figure above is taken.
+
+### Open engineering issues
+
+Two defects are unresolved and are tracked here rather than being left implicit.
+
+1. **Body station-keeping.** The FlyGym Track A body cannot hold position while grooming, and
+   drifts even while standing under no command. This blocks Track A acceptance. It must be
+   fixed in the stance, contact or adhesion model, not by raising the cap.
+2. **Rendered-timing divergence.** Enabling the renderer shifts the last two transitions by
+   1.44 s. No preregistered criterion currently bounds this, so a future round should add a
+   timing tolerance to the equivalence control rather than relying on the signature alone.
+
+A third, milder friction is worth recording: the acceptance and control scripts refuse to reuse
+a run whose recorded commit differs from the current one. That is correct for a single evidence
+round, but it means a documentation-only commit invalidates reuse of 39 GPU runs, which pushes
+an operator toward `--allow-dirty-tree`. A future revision should require a clean tree and a
+single commit shared across the bundle, and record whether that commit is still current, rather
+than demanding equality with `HEAD`.
 
 ### Workspace copies
 

@@ -28,7 +28,7 @@ These stable keys are intended for agent search and handoff:
 PROJECT_GOAL: MaleCNS-constrained embodied adult-male sensorimotor model
 CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital twin
 CANONICAL_CONNECTOME: MaleCNS v1.0
-CURRENT_STAGE: evidence-chain repair (ADR-2026-006); Stage 2 fitted dynamics paused until the repair completes
+CURRENT_STAGE: Stage 2 fitted neural dynamics (active); the ADR-2026-006 evidence-chain repair is complete and V0 is reissued
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006
 ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064 and preserves it at 50 us; it is not complete V1 and no V1/V2 tier is awarded
@@ -90,18 +90,23 @@ identical classifications/AUROC, and zero weights give no MN9 response. These re
 Stage 1 baseline exit gate. They fail the frozen 0.05 AUROC margin over cell-type-only (observed
 margin 0.0105), so they do not establish individual-connectome specificity and award no V3 tier.
 
-Track A checkpoint, 2026-09-07: the full 165,122-body, 25,563,197-edge traced graph executes in
-direct PyGeNN through an exact degree-bucketed sparse layout and a FlyGym 2.1/MuJoCo 3.9 body.
-All ten seeds completed the required sequence at each of three held-out food positions (30/30).
-The contamination/grooming and sucrose/MN9 ablations block their respective transitions;
-zero-weight, shuffled-connectome, controller-only and neural-bypass controls are recorded. The
-primary matrix is SHA-256 `6fb57a6fe536ed559360bb91c1b41554cbab0056d2aae22a1df17ae35caeaa57` and
-the controls bundle is SHA-256 `65250db0fc473b9011a3fd25e116752135419b2ec009b8a75478d9b03a352731`.
-Observed throughput is 0.117 minimum and 0.169 median biological seconds per wall second, below
-the 0.5 target, so the milestone is an offline engineering prototype. It injects DM1/DM4 and
-GNG588 central relays, applies a 10x entry-path gain, drives DNg97 with an odor-gated intent bias,
-uses explicit odor-gradient steering, and replays a published grooming trajectory through ideal
-joint actuators. It is not autonomous connectome-generated behavior and awards no validation tier.
+Track A checkpoint, 2026-09-08 (supersedes the withdrawn 2026-09-07 checkpoint): the full
+165,122-body, 25,563,197-edge traced graph executes in direct PyGeNN through an exact
+degree-bucketed sparse layout and a FlyGym 2.1/MuJoCo 3.9 body. The v3 matrix ran from clean
+commit `4a061ac` at three food positions no earlier round had used, with every run recording
+`git.dirty: false`. 29 of 30 runs complete the required sequence and all nine required controls
+pass, but 0 of 30 clear the preregistered 2.5 mm grooming-displacement cap, so the milestone is
+**not accepted**. The primary matrix is SHA-256
+`bb5674a4ab942e0c80ce3a03b1d96df9a3f8cb428c8850e899a9284afac5a492` and the controls bundle is
+SHA-256 `249353025c770080a5a96d347f5c3a8df6b30aef5ba300649b4a8faea740a0f5`. Steady-state
+throughput is 0.332 minimum and 0.353 median biological seconds per wall second, about 71% of
+the 0.5 target; the cold-start figure including graph load and GeNN build is 0.114 minimum. The
+v1 and v2 matrices are withdrawn: they ran from an uncommitted tree, at positions a discarded
+round had already used, with a shuffled-connectome control that could not fail, and with the
+body settling inside the dust patch. Track A still injects DM1/DM4 and GNG588 central relays,
+applies a 10x entry-path gain, drives DNg97 with an odor-gated intent bias, uses explicit
+odor-gradient steering, and replays a published grooming trajectory through ideal joint
+actuators. It is not autonomous connectome-generated behavior and awards no validation tier.
 
 Stage 2 checkpoint, 2026-09-07: ADR-2026-004 locks the first projection-neuron physiology
 pack and a recorded-cell split. Three published DM1 passive cable fits are retained as `P/F`

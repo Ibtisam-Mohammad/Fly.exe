@@ -66,12 +66,15 @@ Status date: 2026-09-08
   food positions, 10 seeds each. 29 of 30 runs complete the required sequence and all 30 clear
   the pre-groom seek floor, but **0 of 30 clear the grooming-displacement cap**, so the matrix
   does not pass. See [the Track A evidence report](evidence/TRACK_A_EON_MALECNS.md).
-- All nine required Track A controls pass against criteria that can now fail. The
-  shuffled-connectome control cleared its degradation criterion by 14%: peak grooming readout
-  66.7 Hz against an allowance of 77.8 Hz.
+- All nine required Track A controls pass against criteria that can now fail, but they are not
+  equally strong: five are causal ablations, one is a quantitative degradation control, one is
+  an equivalence check, and two are recorded baselines whose criterion is that an artifact
+  exists. The shuffled-connectome control cleared its degradation criterion by 14%: peak
+  grooming readout 66.7 Hz against an allowance of 77.8 Hz.
 - A physical FlyGym MP4 was produced. Viewer and headless runs have identical transition
-  identities and reasons, but the last two transitions now differ by 1.44 s, so a rendered run
-  is not a timing replica of a headless one.
+  identities and reasons, but the last two transitions differ by 1.44 s, up from 30 ms in v2.
+  The equivalence control tests the signature, not timing, so it passes while the divergence
+  grew 48-fold. A rendered run is not a timing replica of a headless one.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
 - CLI surface for data, benchmarks, runs, rendering, and validation.
 - Checksum-locked official MaleCNS starter profile (annotations, transmitter predictions, body statistics, and aggregate segment weights).
@@ -137,13 +140,16 @@ Status date: 2026-09-08
 - The v0.2 dynamics registry is an executable uncertainty and prior boundary, not a fitted hybrid
   model. Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
 - Track A is an offline prototype. Steady-state throughput is 0.332 minimum and 0.353 median
-  biological seconds per wall second, below the 0.5 interactive target; including graph load and
+  biological seconds per wall second, about 71% of the 0.5 interactive target; including graph load and
   GeNN model build the cold-start figure is 0.114 minimum. The previously reported 0.117/0.169
   figures were cold-start numbers presented as throughput.
 - The Track A body cannot hold station while grooming. It translates a median 6.26 mm during a
-  3-second bout under a zero forward command, against a 2.5 mm one-body-length cap. Isolation
-  probes attribute 2.16 mm to standing drift alone and about 1 mm to the trajectory replay; the
-  rest comes from releasing the forelegs. This blocks Track A acceptance and is unresolved.
+  3-second bout under a zero forward command, against a 2.5 mm one-body-length cap. Separate
+  probes show 2.16 mm of drift while standing under no command and 4.92 mm while grooming with
+  the trajectory replay suppressed, both far above the cap. MuJoCo contact dynamics are
+  nonlinear, so these are localizing probes rather than an additive breakdown, but they are
+  enough to show the defect is stance station-keeping and not the replay. This blocks Track A
+  acceptance and is unresolved.
 - Track A is not autonomous connectome-generated behavior. It injects central DM1/DM4 and GNG588
   relays, applies a 10x entry-path gain, drives DNg97 with a 20-Hz odor-gated intent scaffold, and
   combines DNa activity with an explicit odor-gradient steering controller.
@@ -220,15 +226,18 @@ but not recomputed, because no native CRC32C implementation is installed; the re
 records that explicitly rather than implying the check ran. The evidence establishes dataset identity, lossless structural
 transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
 cross-connectome comparison, and it makes no physiological or behavioral claim. Stage 1's
-deliberately simple open-loop baseline is complete, with the gate split disclosed below. Track A
-acceptance evidence is withdrawn pending a rerun from a clean commit. Stage 2 fitted neural
-dynamics is paused until the repair in
-[ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md) completes.
+deliberately simple open-loop baseline is complete, with the gate split disclosed below. The v1
+and v2 Track A acceptance evidence is withdrawn permanently; the v3 rerun from a clean commit
+fails its own behavioural criterion, so Track A is not an accepted milestone. The
+[ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md) evidence-chain repair is complete and
+Stage 2 fitted neural dynamics has resumed.
 
-## Repair in progress (2026-09-08)
+## Evidence-chain repair (completed 2026-09-08)
 
-An independent audit confirmed eight defects that this status page previously did not disclose.
-Each is now tracked, and the claims they supported are withdrawn rather than restated:
+An independent audit confirmed ten defects that this status page previously did not disclose.
+All are repaired under [ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md), V0 is
+reissued and validates, and Stage 2 has resumed. Two engineering defects that the repair
+*surfaced* remain open and are listed after the table.
 
 | Defect | Status |
 |---|---|
@@ -236,10 +245,19 @@ Each is now tracked, and the claims they supported are withdrawn rather than res
 | The V0 builder required assumption set `foundation-v0.3` while the register had moved on | Gate is now content-based; the set identifier no longer affects V0 |
 | Every Track A acceptance and control artifact was produced from an uncommitted worktree | Evidence-grade runs and both Track A scripts now refuse a dirty tree |
 | The settled FlyGym body began inside the dust patch, so grooming began on a fixed schedule | Dust patch moved; a startup guard fails closed if clearance is lost |
-| The grooming replay translated the body 5 to 8 mm while the forward command was zero | Measured, capped at one body length, enforced in acceptance; **the cap now fails in 30 of 30 runs and the cause is mostly standing drift, not the replay** |
+| The grooming replay translated the body 5 to 8 mm while the forward command was zero | Measured, capped at one body length, enforced in acceptance; **the cap fails in 30 of 30 runs and the defect is stance station-keeping, not the replay** |
 | The registered 0.1 ms GeNN synaptic delay executed as 0.2 ms | Corrected, with a one-synapse impulse test across three delays |
 | Registered 2 ms interface delays were realised as 15 ms without being registered | Effective delays are computed, registered, and asserted at build time |
 | The shuffled-connectome control could not fail | Replaced with a preregistered degradation criterion |
 | The forward and yaw commands were labelled mm/s and rad/s | Renamed to normalized descending drives |
 | The Track A held-out positions had already been used by a discarded v1 round | Three genuinely unused positions preregistered and executed as v3 |
 | Every Track A transition fired at an identical time in all 30 runs | Grooming now begins across 12 distinct times between 330 and 690 ms, after a measured approach |
+
+### Open engineering issues surfaced by the repair
+
+1. **Body station-keeping.** The FlyGym Track A body drifts while standing and cannot hold
+   position during a grooming bout. This is why Track A fails acceptance in every run. It must
+   be fixed in the stance, contact or adhesion model, not by raising the cap.
+2. **Rendered-timing divergence.** Enabling the renderer shifts the last two transitions by
+   1.44 s, and no preregistered criterion bounds it. The equivalence control should gain a
+   timing tolerance rather than testing the transition signature alone.
