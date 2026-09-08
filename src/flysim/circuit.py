@@ -35,6 +35,7 @@ class CircuitSelection:
     no_path_readout_body_ids: tuple[int, ...]
     shortest_path_hops: int
     full_graph_dense_indices: tuple[int, ...]
+    selection_rule: str = "all nodes and induced edges on directed shortest input-readout paths"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -47,7 +48,7 @@ class CircuitSelection:
             "no_path_input_body_ids": list(self.no_path_input_body_ids),
             "no_path_readout_body_ids": list(self.no_path_readout_body_ids),
             "shortest_path_hops": self.shortest_path_hops,
-            "selection": "all nodes and induced edges on directed shortest input-readout paths",
+            "selection": self.selection_rule,
         }
 
 
@@ -386,6 +387,172 @@ def select_shortest_path_circuit(
     )
 
 
+def _hop_distances(
+    seeds: np.ndarray,
+    starts: np.ndarray,
+    ends: np.ndarray,
+    neighbours: np.ndarray,
+    *,
+    maximum: int,
+    count: int,
+) -> np.ndarray:
+    """Hop distance from the nearest seed along ``neighbours``; ``maximum + 1`` if unreached."""
+    distance = np.full(count, maximum + 1, dtype=np.int64)
+    distance[seeds] = 0
+    frontier = np.unique(seeds)
+    for hop in range(1, maximum + 1):
+        parts = [neighbours[starts[int(node)] : ends[int(node)]] for node in frontier]
+        nonempty = [part for part in parts if part.size]
+        if not nonempty:
+            break
+        reached = np.unique(np.concatenate(nonempty))
+        reached = reached[distance[reached] > maximum]
+        if reached.size == 0:
+            break
+        distance[reached] = hop
+        frontier = reached
+    return distance
+
+
+def _induced_selection(
+    graph: SparseConnectome,
+    full_dense: np.ndarray,
+    input_body_ids: tuple[int, ...],
+    readout_body_ids: tuple[int, ...],
+    unavailable_inputs: tuple[int, ...],
+    unavailable_readouts: tuple[int, ...],
+    *,
+    hops: int,
+    identity_tag: str,
+    rule: str,
+) -> CircuitSelection:
+    """Induce the sub-connectome on ``full_dense`` and report which endpoints it kept."""
+    full_dense = np.unique(full_dense).astype(np.uint32, copy=False)
+    selected_mask = np.zeros(graph.neuron_count, dtype=np.bool_)
+    selected_mask[full_dense] = True
+    edge_mask = selected_mask[graph.source_indices] & selected_mask[graph.target_indices]
+    old_sources = graph.source_indices[edge_mask]
+    old_targets = graph.target_indices[edge_mask]
+    old_counts = graph.contact_counts[edge_mask]
+    selected_body_ids = graph.body_ids[full_dense]
+    body_order = np.argsort(selected_body_ids)
+    sorted_full_dense = full_dense[body_order]
+    sorted_body_ids = selected_body_ids[body_order].astype(np.uint64, copy=False)
+    old_to_new = np.full(graph.neuron_count, np.iinfo(np.uint32).max, dtype=np.uint32)
+    old_to_new[sorted_full_dense] = np.arange(sorted_full_dense.size, dtype=np.uint32)
+    new_sources = old_to_new[old_sources]
+    new_targets = old_to_new[old_targets]
+    edge_order = np.lexsort((new_targets, new_sources))
+    identity = hashlib.sha256()
+    identity.update(graph.source_sha256.encode())
+    identity.update(sorted_body_ids.astype("<u8", copy=False).tobytes())
+    identity.update(identity_tag.encode())
+    circuit = SparseConnectome(
+        body_ids=sorted_body_ids,
+        source_indices=new_sources[edge_order].astype(np.uint32, copy=False),
+        target_indices=new_targets[edge_order].astype(np.uint32, copy=False),
+        contact_counts=old_counts[edge_order].astype(np.uint32, copy=False),
+        source_release=f"{graph.source_release}:{identity_tag}",
+        source_sha256=identity.hexdigest(),
+    )
+    circuit.validate()
+    selected_dense_set = set(int(value) for value in sorted_full_dense)
+    present_input_ids = tuple(
+        body_id for body_id in input_body_ids if body_id not in unavailable_inputs
+    )
+    present_readout_ids = tuple(
+        body_id for body_id in readout_body_ids if body_id not in unavailable_readouts
+    )
+    available_input_ids = tuple(
+        body_id for body_id in present_input_ids if graph.dense_index(body_id) in selected_dense_set
+    )
+    available_readout_ids = tuple(
+        body_id
+        for body_id in present_readout_ids
+        if graph.dense_index(body_id) in selected_dense_set
+    )
+    return CircuitSelection(
+        graph=circuit,
+        input_body_ids=available_input_ids,
+        readout_body_ids=available_readout_ids,
+        unavailable_input_body_ids=unavailable_inputs,
+        unavailable_readout_body_ids=unavailable_readouts,
+        no_path_input_body_ids=tuple(
+            body_id for body_id in present_input_ids if body_id not in available_input_ids
+        ),
+        no_path_readout_body_ids=tuple(
+            body_id for body_id in present_readout_ids if body_id not in available_readout_ids
+        ),
+        shortest_path_hops=hops,
+        full_graph_dense_indices=tuple(int(value) for value in sorted_full_dense),
+        selection_rule=rule,
+    )
+
+
+def select_bounded_path_circuit(
+    graph: SparseConnectome,
+    input_body_ids: tuple[int, ...],
+    readout_body_ids: tuple[int, ...],
+    *,
+    maximum_path_length: int,
+) -> CircuitSelection:
+    """Keep every neuron on some directed input-to-readout path of at most ``K`` hops.
+
+    A neuron ``v`` is kept when its forward hop distance from the inputs plus its backward
+    hop distance to the readouts is at most ``K``; every edge among kept neurons is kept.
+    ``K = 1`` reproduces the shortest-path circuit when the shortest path is one hop. Larger
+    ``K`` admits the lateral and recurrent partners a shortest-path rule leaves out, which
+    is the structural alternative ADR-2026-009 asked to be tested.
+    """
+    graph.validate()
+    if maximum_path_length <= 0:
+        raise ConfigurationError("maximum_path_length must be positive")
+    inputs, unavailable_inputs = _available_dense_indices(graph, input_body_ids)
+    readouts, unavailable_readouts = _available_dense_indices(graph, readout_body_ids)
+    if inputs.size == 0:
+        raise ReadinessError("No requested input neurons are present in the production graph")
+    if readouts.size == 0:
+        raise ReadinessError("No requested readout neurons are present in the production graph")
+    count = graph.neuron_count
+    forward_order = np.argsort(graph.source_indices, kind="stable")
+    forward_sources = graph.source_indices[forward_order]
+    forward_targets = graph.target_indices[forward_order]
+    forward_starts = np.searchsorted(forward_sources, np.arange(count), side="left")
+    forward_ends = np.searchsorted(forward_sources, np.arange(count), side="right")
+    backward_order = np.argsort(graph.target_indices, kind="stable")
+    backward_targets = graph.target_indices[backward_order]
+    backward_sources = graph.source_indices[backward_order]
+    backward_starts = np.searchsorted(backward_targets, np.arange(count), side="left")
+    backward_ends = np.searchsorted(backward_targets, np.arange(count), side="right")
+    forward = _hop_distances(
+        inputs, forward_starts, forward_ends, forward_targets,
+        maximum=maximum_path_length, count=count,
+    )
+    backward = _hop_distances(
+        readouts, backward_starts, backward_ends, backward_sources,
+        maximum=maximum_path_length, count=count,
+    )
+    keep = np.flatnonzero(forward + backward <= maximum_path_length).astype(np.uint32)
+    if np.intersect1d(keep, readouts).size == 0:
+        raise ReadinessError(
+            f"No directed input-to-readout path was found within {maximum_path_length} hops"
+        )
+    return _induced_selection(
+        graph,
+        keep,
+        input_body_ids,
+        readout_body_ids,
+        unavailable_inputs,
+        unavailable_readouts,
+        hops=maximum_path_length,
+        identity_tag=f"bounded-path-circuit:{maximum_path_length}",
+        rule=(
+            "all nodes whose forward hop distance from the inputs plus backward hop distance "
+            f"to the readouts is at most {maximum_path_length}, with every induced edge"
+        ),
+    )
+
+
 def select_population_path_circuit(
     graph: SparseConnectome,
     input_populations: Mapping[str, tuple[int, ...]],
@@ -686,6 +853,49 @@ def _functional_edge_weights(
     )
 
 
+def _edge_indices_of(
+    current: np.ndarray, edge_starts: np.ndarray, edge_ends: np.ndarray
+) -> np.ndarray:
+    """Concatenated edge indices of the spiking sources, in source order then edge order.
+
+    This is the order the original per-source loop visited, so accumulating the same
+    values with one ``np.add.at`` reproduces its floating-point result bit for bit.
+    """
+    starts = edge_starts[current]
+    lengths = edge_ends[current] - starts
+    total = int(lengths.sum())
+    if total == 0:
+        return np.empty(0, dtype=np.int64)
+    offsets = np.concatenate(([0], np.cumsum(lengths)[:-1]))
+    return np.asarray(
+        np.arange(total, dtype=np.int64) + np.repeat(starts - offsets, lengths),
+        dtype=np.int64,
+    )
+
+
+def _deliver_spikes(
+    row: np.ndarray,
+    current: np.ndarray,
+    edge_starts: np.ndarray,
+    edge_ends: np.ndarray,
+    targets: np.ndarray,
+    weights: np.ndarray,
+    *,
+    vectorized: bool = True,
+) -> None:
+    """Queue the weights of every edge leaving a spiking source for later delivery."""
+    if not vectorized:
+        for source in current:
+            start = edge_starts[int(source)]
+            end = edge_ends[int(source)]
+            if start != end:
+                np.add.at(row, targets[start:end], weights[start:end])
+        return
+    indices = _edge_indices_of(current, edge_starts, edge_ends)
+    if indices.size:
+        np.add.at(row, targets[indices], weights[indices])
+
+
 def run_numpy_circuit(
     graph: SparseConnectome,
     edge_signs: np.ndarray,
@@ -693,8 +903,16 @@ def run_numpy_circuit(
     parameters: TransferLIFParameters,
     readout_body_ids: tuple[int, ...],
     edge_scale_multipliers: np.ndarray | None = None,
+    depression: Any | None = None,
 ) -> CircuitRun:
-    """Run the source-faithful linear update with an explicit causal schedule."""
+    """Run the source-faithful linear update with an explicit causal schedule.
+
+    ``depression`` is an optional :class:`flysim.plasticity.EdgeDepression`. When it is
+    given, every depressing edge carries a resource variable that a presynaptic spike
+    depletes by its utilisation and that recovers exponentially between spikes; the static
+    weight is the resting unitary response, so the first spike after rest is unchanged.
+    When it is ``None`` the update is exactly the recorded static path.
+    """
     graph.validate()
     parameters.validate()
     if schedule.forced_spikes.shape != (parameters.steps, schedule.input_indices.size):
@@ -714,6 +932,16 @@ def run_numpy_circuit(
     targets = np.asarray(graph.target_indices)
     edge_starts = np.searchsorted(sources, np.arange(graph.neuron_count), side="left")
     edge_ends = np.searchsorted(sources, np.arange(graph.neuron_count), side="right")
+    resources: np.ndarray | None = None
+    depressing = np.empty(0, dtype=np.int64)
+    utilisation = np.empty(0, dtype=np.float64)
+    recovery_factor = 1.0
+    if depression is not None:
+        depression.validate(graph.edge_count)
+        resources = np.ones(graph.edge_count, dtype=np.float64)
+        depressing = np.asarray(depression.depressing_edge_indices, dtype=np.int64)
+        utilisation = np.asarray(depression.utilisation, dtype=np.float64)
+        recovery_factor = float(np.exp(-parameters.dt_ms / depression.recovery_tau_ms))
     spike_times: list[float] = []
     spike_indices: list[int] = []
     readouts = np.asarray(
@@ -722,6 +950,8 @@ def run_numpy_circuit(
     readout_voltage = np.empty((parameters.steps, readouts.size), dtype=np.float64)
     readout_synaptic_state = np.empty_like(readout_voltage)
     for step in range(parameters.steps):
+        if resources is not None and depressing.size:
+            resources[depressing] = 1.0 - (1.0 - resources[depressing]) * recovery_factor
         queue_slot = step % queue.shape[0]
         arrivals = queue[queue_slot].copy()
         queue[queue_slot].fill(0.0)
@@ -749,11 +979,19 @@ def run_numpy_circuit(
             spike_times.extend([end_time] * current.size)
             spike_indices.extend(int(value) for value in current)
             delivery_slot = (step + parameters.delay_steps) % queue.shape[0]
-            for source in current:
-                start = edge_starts[int(source)]
-                end = edge_ends[int(source)]
-                if start != end:
-                    np.add.at(queue[delivery_slot], targets[start:end], weights[start:end])
+            if resources is None:
+                _deliver_spikes(
+                    queue[delivery_slot], current, edge_starts, edge_ends, targets, weights
+                )
+            else:
+                indices = _edge_indices_of(current, edge_starts, edge_ends)
+                if indices.size:
+                    np.add.at(
+                        queue[delivery_slot],
+                        targets[indices],
+                        weights[indices] * resources[indices],
+                    )
+                    resources[indices] -= utilisation[indices] * resources[indices]
             voltage[current] = parameters.reset_mv
             if parameters.reset_synaptic_state_on_spike:
                 synaptic_state[current] = 0.0

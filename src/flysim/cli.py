@@ -80,11 +80,13 @@ from flysim.synaptic import (
     analyse_synaptic_structure,
     evaluate_stage2_exit_gate,
     evaluate_uepsc_kinetics_holdout,
+    fit_uepsc_prior,
 )
 from flysim.universes import audit_body_universes
 from flysim.v0 import CONTACT_CHECKS as V0_CONTACT_CHECKS
 from flysim.v0 import build_v0_evidence_bundle
 from flysim.validation import validate_run
+from flysim.widened import run_widened_grooming_transfer
 
 
 def _print_json(value: Any) -> None:
@@ -278,6 +280,58 @@ def _command_stage2_uepsc_holdout(args: argparse.Namespace) -> int:
         }
     )
     return 0 if result["acceptance"]["v2_kinetics_subgate_pass"] else 2
+
+
+def _command_stage2_uepsc_prior(args: argparse.Namespace) -> int:
+    result = fit_uepsc_prior(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "kernel": result["kernel"],
+            "against_published_half_decay": result["against_published_half_decay"],
+            "against_frozen_fit": result["against_frozen_fit"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_benchmark_widened_circuit(args: argparse.Namespace) -> int:
+    population_path = args.populations or (
+        args.root / "derived" / "male-cns-v1.0" / "shiu-antennal-grooming-populations.json"
+    )
+    result = run_widened_grooming_transfer(
+        root=args.root,
+        graph_path=args.graph,
+        experiment_path=args.experiment,
+        population_resolution_path=population_path,
+        output_path=args.output,
+        backends=tuple(args.backend),
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "by_path_length": [
+                {
+                    "maximum_path_length": block["maximum_path_length"],
+                    "neurons": block["selection"]["neurons"],
+                    "edges": block["selection"]["edges"],
+                    "inhibition": block["inhibition"],
+                    "backend_parity_passed": block["backend_parity_passed"],
+                    "hypotheses": block["hypotheses"],
+                }
+                for block in result["by_path_length"]
+            ],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "immutable_snapshot": result["immutable_snapshot"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
 
 
 def _command_stage2_pn_ensemble(args: argparse.Namespace) -> int:
@@ -1413,7 +1467,7 @@ def build_parser() -> argparse.ArgumentParser:
     circuit.add_argument(
         "--dynamics-registry",
         type=Path,
-        default=project_root() / "configs" / "neural" / "cell-dynamics-v0.1.json",
+        default=project_root() / "configs" / "neural" / "cell-dynamics-v0.4.json",
     )
     circuit.add_argument("--output", type=Path)
     circuit.add_argument(
@@ -1425,6 +1479,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     circuit.add_argument("--prepare-only", action="store_true")
     circuit.set_defaults(func=_command_benchmark_circuit)
+
+    widened = benchmark_commands.add_parser(
+        "widened-circuit",
+        help="rerun the ND-04 sweep on bounded-path circuits wider than the shortest paths",
+    )
+    widened.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "shiu-antennal-grooming-widened.json",
+    )
+    widened.add_argument("--root", type=Path, default=default_data_root())
+    widened.add_argument(
+        "--graph",
+        type=Path,
+        default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
+    )
+    widened.add_argument("--populations", type=Path)
+    widened.add_argument("--output", type=Path, required=True)
+    widened.add_argument(
+        "--backend",
+        action="append",
+        choices=("numpy", "genn"),
+        default=["numpy"],
+        help="parity backend; the sweep is blocked unless GeNN parity passes",
+    )
+    widened.set_defaults(func=_command_benchmark_widened_circuit)
 
     feeding_screen = benchmark_commands.add_parser(
         "feeding-screen",
@@ -1570,6 +1650,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_uepsc.add_argument("--output", type=Path, required=True)
     stage2_uepsc.set_defaults(func=_command_stage2_uepsc_holdout)
+    stage2_uepsc_prior = stage2_commands.add_parser(
+        "uepsc-prior",
+        help="refit the unitary-EPSC kernel on every recording as a labelled, unvalidated prior",
+    )
+    stage2_uepsc_prior.add_argument("--root", type=Path, default=default_data_root())
+    stage2_uepsc_prior.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-uepsc-prior-refit.json",
+    )
+    stage2_uepsc_prior.add_argument("--output", type=Path, required=True)
+    stage2_uepsc_prior.set_defaults(func=_command_stage2_uepsc_prior)
     stage2_ensemble = stage2_commands.add_parser(
         "pn-ensemble",
         help="Widen the frozen PN family into a VAL-01 uncertainty ensemble",

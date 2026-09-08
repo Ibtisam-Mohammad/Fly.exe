@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "shiu-antennal-grooming-widened-v1",
+  "title": "Does widening the transferred JON-F to aBN1 circuit beyond the shortest paths remove the high-frequency over-response?",
+  "base_experiment": "configs/experiments/shiu-antennal-grooming.json",
+  "provenance": "M/P/E",
+  "assumption_ids": ["DATA-03", "ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-08", "VAL-01"],
+  "purpose": "ADR-2026-009 withdrew the hypothesis that short-term depression explains why no single contact scale fits both the 100 Hz and 220 Hz reference points, on the ground that the reference is a whole-brain static simulation while the transferred circuit is a one-hop 41-neuron subgraph. This contract tests the structural alternative it left: that the over-response at high drive comes from the paths the shortest-path rule excluded.",
+  "circuit_selection": {
+    "mode": "bounded-path",
+    "rule": "keep every neuron v with forward_distance(inputs, v) + backward_distance(v, readouts) <= K, and every edge among the kept neurons",
+    "maximum_path_lengths": [2, 3],
+    "sizes_observed_before_registration": {
+      "1": {"neurons": 41, "edges": 129},
+      "2": {"neurons": 322, "edges": 11140},
+      "3": {"neurons": 1706, "edges": 139215},
+      "4": {"neurons": 35425, "edges": 6458359, "excluded": "too large for the NumPy runner within the session; a GeNN-only follow-up"}
+    }
+  },
+  "one_hop_reference_values": {
+    "source_artifact": "evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-delayfix.json",
+    "source_sha256": "a734ea71f21146e7e743d52463ea41077bdd97568f81ccc1c360bb1668d9cfe2",
+    "scale_matching_100hz_mv_per_contact": 0.15,
+    "readout_rate_at_0_15_hz": {"100": 0.167, "220": 33.167},
+    "reference_mean_hz": {"100": 0.933, "220": 4.633},
+    "reference_std_hz": {"100": 0.964, "220": 2.008}
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "At 0.15 mV per contact, the scale that best matched the 100 Hz reference in the one-hop circuit, the widened circuit's mean 220 Hz readout rate is below the one-hop value of 33.167 Hz.",
+      "test": "mean over seeds of the 220 Hz bilateral readout rate at 0.15 mV per contact < 33.167 Hz",
+      "supports_structural_explanation_if": true
+    },
+    {
+      "id": "H2",
+      "statement": "Some single contact scale in the registered candidate grid reproduces both the 100 Hz and the 220 Hz reference means within one reference standard deviation. The one-hop circuit fails this.",
+      "test": "exists scale s in the grid with |rate_100(s) - 0.933| <= 0.964 and |rate_220(s) - 4.633| <= 2.008",
+      "supports_structural_explanation_if": true
+    },
+    {
+      "id": "H3",
+      "statement": "Descriptive: the fraction of neurons in the widened circuit whose transmitter prediction makes them inhibitory under the zero unresolved-sign policy, and the fraction of edges they carry.",
+      "test": "none",
+      "supports_structural_explanation_if": null
+    }
+  ],
+  "protocol": {
+    "reuse_from_base": ["published_parameters", "reference", "crosswalk", "transfer_protocol.nd04_contact_scale_fit", "transfer_protocol.seeds", "transfer_protocol.neural_dt_ms", "transfer_protocol.backend_spike_time_tolerance_ms", "transfer_protocol.backend_rate_relative_tolerance"],
+    "unresolved_sign_policy": "zero",
+    "backends": ["numpy", "genn"],
+    "parity_condition": {"frequency_hz": 100.0, "seed": 1},
+    "gate_on_parity": "the ND-04 sweep is blocked for a path length whose NumPy and GeNN runs disagree beyond the base tolerances",
+    "controls": "none beyond parity; this contract answers one structural question and is not a Stage 1 exit attempt"
+  },
+  "disclosure": "The circuit sizes above were computed before this contract was written; no rate had been simulated in any widened circuit when it was registered. The one-hop values are read from the immutable delayfix artifact.",
+  "claim_boundary": "A structural sensitivity test of a transferred, bounded open-loop circuit against archived FlyWire simulation output. It cannot award V1, V2 or V3, and even a pass on H2 would be a fit of one scale to two simulation-derived points.",
+  "last_reviewed": "2026-09-08"
+}

@@ -32,7 +32,7 @@ from flysim.config import load_json, sha256_json
 from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
 from flysim.provenance import parse_provenance
-from flysim.synaptic import epsc_waveform_features
+from flysim.synaptic import epsc_waveform_features, fit_difference_of_exponentials_kernel
 
 GOUWENS_MODELDB_COMMIT = "cf5a57dee863cea502e78ef5bc481369253900d9"
 GUGEL_FIGURE7_SHA256 = "a8ae6fcd3bf0d8effab7a0ecbfa88fccf192f134144072282758ca8125bd8c78"
@@ -1987,47 +1987,8 @@ def _fit_fi_model(current: np.ndarray, fit_curves: np.ndarray) -> dict[str, Any]
 
 
 def _fit_epsc_kernel(time_ms: np.ndarray, fit_curves: np.ndarray) -> dict[str, Any]:
-    baseline = np.mean(fit_curves[:, time_ms < 40.0], axis=1)
-    inward_current = baseline[:, None] - fit_curves
-    best: tuple[float, float, float, float, np.ndarray] | None = None
-    onset_candidates = np.linspace(45.0, 51.0, 25)
-    rise_candidates = np.asarray((0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0))
-    decay_candidates = np.linspace(3.0, 30.0, 19)
-    for onset in onset_candidates:
-        elapsed = np.maximum(0.0, time_ms - onset)
-        for rise in rise_candidates:
-            for decay in decay_candidates:
-                if decay <= rise:
-                    continue
-                kernel = np.exp(-elapsed / decay) - np.exp(-elapsed / rise)
-                kernel[time_ms < onset] = 0.0
-                peak = float(np.max(kernel))
-                if peak <= 0.0:
-                    continue
-                kernel /= peak
-                denominator = float(kernel @ kernel)
-                amplitudes = np.maximum(0.0, inward_current @ kernel / denominator)
-                predicted = amplitudes[:, None] * kernel[None, :]
-                loss = _huber_mean(inward_current - predicted, 1.0)
-                candidate = (loss, float(onset), float(rise), float(decay), amplitudes)
-                if best is None or candidate[:4] < best[:4]:
-                    best = candidate
-    if best is None:
-        raise DatasetError("No valid EPSC kernel candidate")
-    best_loss, best_onset, best_rise, best_decay, best_amplitudes = best
-    return {
-        "onset_ms": best_onset,
-        "rise_tau_ms": best_rise,
-        "decay_tau_ms": best_decay,
-        "training_amplitudes_pa": [float(value) for value in best_amplitudes],
-        "population_amplitude_pa": float(np.median(best_amplitudes)),
-        "training_huber_pa2": best_loss,
-        "continuous_parameter_at_search_boundary": bool(
-            best_onset in {float(onset_candidates[0]), float(onset_candidates[-1])}
-            or best_rise in {float(rise_candidates[0]), float(rise_candidates[-1])}
-            or best_decay in {float(decay_candidates[0]), float(decay_candidates[-1])}
-        ),
-    }
+    """The frozen Stage 2 kernel fit; the grid now lives in ``flysim.synaptic`` unchanged."""
+    return fit_difference_of_exponentials_kernel(time_ms, fit_curves)
 
 
 def _rmse(actual: np.ndarray, predicted: np.ndarray) -> float:

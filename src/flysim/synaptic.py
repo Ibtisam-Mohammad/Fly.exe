@@ -231,6 +231,227 @@ def difference_of_exponentials_kernel(
     return kernel / peak
 
 
+def _huber_mean(residual: np.ndarray, delta: float) -> float:
+    absolute = np.abs(residual)
+    loss = np.where(absolute <= delta, 0.5 * residual**2, delta * (absolute - 0.5 * delta))
+    return float(np.mean(loss))
+
+
+def fit_difference_of_exponentials_kernel(
+    time_ms: np.ndarray,
+    fit_curves: np.ndarray,
+    *,
+    baseline_end_ms: float = 40.0,
+    onset_grid_ms: np.ndarray | None = None,
+    rise_grid_ms: np.ndarray | None = None,
+    decay_grid_ms: np.ndarray | None = None,
+    huber_delta_pa: float = 1.0,
+) -> dict[str, Any]:
+    """Grid-fit one unit-peak causal kernel with a free amplitude per recorded cell.
+
+    The defaults are the grid the frozen Stage 2 fit used, so calling this with defaults
+    reproduces that fit exactly; a contract may register a different grid.
+    """
+    times = np.asarray(time_ms, dtype=np.float64)
+    curves = np.asarray(fit_curves, dtype=np.float64)
+    if curves.ndim != 2 or curves.shape[1] != times.size:
+        raise ConfigurationError("Kernel fit needs one row per cell on the shared time grid")
+    onset_candidates = (
+        np.linspace(45.0, 51.0, 25) if onset_grid_ms is None else np.asarray(onset_grid_ms)
+    )
+    rise_candidates = (
+        np.asarray((0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0))
+        if rise_grid_ms is None
+        else np.asarray(rise_grid_ms, dtype=np.float64)
+    )
+    decay_candidates = (
+        np.linspace(3.0, 30.0, 19) if decay_grid_ms is None else np.asarray(decay_grid_ms)
+    )
+    baseline = np.mean(curves[:, times < baseline_end_ms], axis=1)
+    inward_current = baseline[:, None] - curves
+    best: tuple[float, float, float, float, np.ndarray] | None = None
+    for onset in onset_candidates:
+        elapsed = np.maximum(0.0, times - onset)
+        for rise in rise_candidates:
+            for decay in decay_candidates:
+                if decay <= rise:
+                    continue
+                kernel = np.exp(-elapsed / decay) - np.exp(-elapsed / rise)
+                kernel[times < onset] = 0.0
+                peak = float(np.max(kernel))
+                if peak <= 0.0:
+                    continue
+                kernel /= peak
+                denominator = float(kernel @ kernel)
+                amplitudes = np.maximum(0.0, inward_current @ kernel / denominator)
+                predicted = amplitudes[:, None] * kernel[None, :]
+                loss = _huber_mean(inward_current - predicted, huber_delta_pa)
+                candidate = (loss, float(onset), float(rise), float(decay), amplitudes)
+                if best is None or candidate[:4] < best[:4]:
+                    best = candidate
+    if best is None:
+        raise DatasetError("No valid EPSC kernel candidate")
+    best_loss, best_onset, best_rise, best_decay, best_amplitudes = best
+    return {
+        "onset_ms": best_onset,
+        "rise_tau_ms": best_rise,
+        "decay_tau_ms": best_decay,
+        "training_amplitudes_pa": [float(value) for value in best_amplitudes],
+        "population_amplitude_pa": float(np.median(best_amplitudes)),
+        "training_huber_pa2": best_loss,
+        "continuous_parameter_at_search_boundary": bool(
+            best_onset in {float(onset_candidates[0]), float(onset_candidates[-1])}
+            or best_rise in {float(rise_candidates[0]), float(rise_candidates[-1])}
+            or best_decay in {float(decay_candidates[0]), float(decay_candidates[-1])}
+        ),
+    }
+
+
+def _grid_from_contract(spec: Any) -> np.ndarray:
+    if isinstance(spec, dict):
+        return np.linspace(float(spec["start"]), float(spec["stop"]), int(spec["count"]))
+    return np.asarray([float(value) for value in spec], dtype=np.float64)
+
+
+def fit_uepsc_prior(
+    contract_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Refit the kernel on every registered recording and label the result unvalidated.
+
+    Every DL5 uEPSC recording has been consumed for validation, so no kernel fitted now can
+    be scored on anything it did not see. The registry still needs the best available
+    prior; this produces it and says exactly what it is.
+    """
+    contract = load_json(contract_path)
+    if contract.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported uEPSC prior contract schema")
+    parse_provenance(str(contract["provenance"]))
+    if contract.get("held_out_specimen_ids"):
+        raise ConfigurationError(
+            "A prior refit holds nothing out; use the holdout contract to validate a kernel"
+        )
+    artifact = contract["required_artifact"]
+    artifact_path = root / str(artifact["path"])
+    observed = sha256_file(artifact_path) if artifact_path.is_file() else None
+    if observed != str(artifact["sha256"]):
+        raise DatasetError(
+            f"uEPSC artifact SHA-256 mismatch: expected {artifact['sha256']}, observed {observed}"
+        )
+    fit_ids = tuple(str(value) for value in contract["fit_specimen_ids"])
+    if len(set(fit_ids)) != len(fit_ids) or not fit_ids:
+        raise ConfigurationError("Fit cells must be a non-empty set of distinct identifiers")
+    baseline_end_ms = float(contract.get("baseline_window_ms", {}).get("end", 40.0))
+
+    payload = pq.read_table(artifact_path).to_pydict()
+    specimens = np.asarray(payload["specimen_id"], dtype=object)
+    times_all = np.asarray(payload["time_ms"], dtype=np.float64)
+    currents_all = np.asarray(payload["current_pa"], dtype=np.float64)
+    time_ms: np.ndarray | None = None
+    curves: list[np.ndarray] = []
+    for specimen_id in fit_ids:
+        selection = specimens == specimen_id
+        if not selection.any():
+            raise DatasetError(f"No normalized waveform for recorded cell {specimen_id}")
+        specimen_times = times_all[selection]
+        if time_ms is None:
+            time_ms = specimen_times
+        elif not np.array_equal(time_ms, specimen_times):
+            raise DatasetError(f"Recorded cell {specimen_id} uses a different sample grid")
+        curves.append(currents_all[selection])
+    assert time_ms is not None
+    stacked = np.stack(curves)
+
+    kernel_spec = contract["kernel"]
+    fit = fit_difference_of_exponentials_kernel(
+        time_ms,
+        stacked,
+        baseline_end_ms=baseline_end_ms,
+        onset_grid_ms=_grid_from_contract(kernel_spec["onset_grid_ms"]),
+        rise_grid_ms=_grid_from_contract(kernel_spec["rise_grid_ms"]),
+        decay_grid_ms=_grid_from_contract(kernel_spec["decay_grid_ms"]),
+    )
+    kernel = difference_of_exponentials_kernel(
+        time_ms,
+        onset_ms=float(fit["onset_ms"]),
+        rise_tau_ms=float(fit["rise_tau_ms"]),
+        decay_tau_ms=float(fit["decay_tau_ms"]),
+    )
+    prior_features = epsc_waveform_features(
+        time_ms, -float(fit["population_amplitude_pa"]) * kernel, baseline_end_ms=baseline_end_ms
+    )
+    cell_features = [
+        {
+            "specimen_id": specimen_id,
+            **epsc_waveform_features(time_ms, curve, baseline_end_ms=baseline_end_ms),
+            "fitted_amplitude_pa": float(amplitude),
+        }
+        for specimen_id, curve, amplitude in zip(
+            fit_ids, stacked, fit["training_amplitudes_pa"], strict=True
+        )
+    ]
+    data_decays = np.asarray([item["peak_to_one_over_e_ms"] for item in cell_features])
+    data_amplitudes = np.asarray([item["peak_inward_amplitude_pa"] for item in cell_features])
+
+    comparison = contract["comparison_values"]
+    frozen_spec = comparison["frozen_fit"]
+    frozen_path = root / str(frozen_spec["path"])
+    frozen_observed = sha256_file(frozen_path) if frozen_path.is_file() else None
+    if frozen_observed != str(frozen_spec["sha256"]):
+        raise DatasetError(
+            "Frozen fit SHA-256 mismatch: "
+            f"expected {frozen_spec['sha256']}, observed {frozen_observed}"
+        )
+    frozen = load_json(frozen_path)["uepsc_model"]["parameters"]
+    published_half_decay = float(comparison["published_half_decay_ms"])
+
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": str(contract["experiment_id"]),
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "provenance": str(contract["provenance"]),
+        "fit_specimen_ids": list(fit_ids),
+        "held_out_specimen_ids": [],
+        "pooling_justification": str(contract["pooling_justification"]),
+        "kernel": {
+            "family": str(kernel_spec["family"]),
+            **{key: value for key, value in fit.items() if key != "training_amplitudes_pa"},
+            "peak_to_one_over_e_ms": prior_features["peak_to_one_over_e_ms"],
+        },
+        "per_cell": cell_features,
+        "data_summary": {
+            "median_peak_inward_amplitude_pa": float(np.median(data_amplitudes)),
+            "mean_peak_inward_amplitude_pa": float(np.mean(data_amplitudes)),
+            "median_peak_to_one_over_e_ms": float(np.median(data_decays)),
+        },
+        "against_published_half_decay": {
+            "published_half_decay_ms": published_half_decay,
+            "implied_single_exponential_tau_ms": published_half_decay / math.log(2.0),
+            "prior_kernel_decay_tau_ms": float(fit["decay_tau_ms"]),
+            "prior_kernel_peak_to_one_over_e_ms": prior_features["peak_to_one_over_e_ms"],
+            "data_median_peak_to_one_over_e_ms": float(np.median(data_decays)),
+        },
+        "against_frozen_fit": {
+            "frozen_decay_tau_ms": float(frozen["decay_tau_ms"]),
+            "frozen_population_amplitude_pa": float(frozen["population_amplitude_pa"]),
+            "prior_decay_tau_ms": float(fit["decay_tau_ms"]),
+            "prior_population_amplitude_pa": float(fit["population_amplitude_pa"]),
+        },
+        "acceptance": {
+            "validated": False,
+            "why_not": str(contract["acceptance"]["why_not"]),
+        },
+        "tier_policy": str(contract["tier_policy"]),
+        "claim_boundary": str(contract["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    write_json_atomic(output, result)
+    return result
+
+
 def analyse_synaptic_structure(
     contract_path: Path,
     root: Path,
@@ -741,6 +962,12 @@ def evaluate_stage2_exit_gate(
             threshold = float(leg["expect_at_least"])
             passed = bool(float(value) >= threshold)
             criterion = f">= {threshold}"
+        elif "expect_below" in leg:
+            # Strict: a prediction that merely ties the comparator it is measured against has
+            # not beaten it.
+            threshold = float(leg["expect_below"])
+            passed = bool(float(value) < threshold)
+            criterion = f"< {threshold}"
         else:
             raise ConfigurationError(f"Exit-gate leg {leg['id']!r} declares no criterion")
         legs.append(

@@ -178,8 +178,11 @@ Status date: 2026-09-08
   is bit-identical across all eleven variants, so both Stage 1 verdicts stand.
 - No single global contact scale fits the grooming reference at both frequencies: 220 Hz needs
   about 0.083 mV per contact and 100 Hz about 0.153 mV. The physiologically derived band contains
-  the second and over-predicts the first sevenfold, which is the pattern the missing ND-06
-  short-term depression would be expected to remove.
+  the second and over-predicts the first sevenfold. [ADR-2026-009](adr/ADR-2026-009-stage2-independent-review.md)
+  withdrew the earlier reading that missing ND-06 short-term depression explains this: the
+  reference is a static whole-brain simulation with no depression in it and the transferred
+  circuit is a 41-neuron one-hop subgraph, so a mechanism absent from both cannot be what makes
+  them disagree. The structural reading is under test by the bounded-path sweep below.
 
 ## Not implemented or not yet validated
 
@@ -336,3 +339,42 @@ reissued and validates, and Stage 2 has resumed. Two engineering defects that th
 2. **Rendered-timing divergence.** Enabling the renderer shifts the last two transitions by
    1.44 s, and no preregistered criterion bounds it. The equivalence control should gain a
    timing tolerance rather than testing the transition signature alone.
+
+## Stage 2 open decisions closed (2026-09-08)
+
+[ADR-2026-010](adr/ADR-2026-010-cell-dynamics-v0.4-and-registered-depression.md) closes the two
+decisions ADR-2026-009 left open and registers the first quantitative short-term-plasticity rule.
+No tier is awarded and no gate changes verdict.
+
+- **Cell-dynamics v0.4.** The MBON07 alpha1 parameter rule is decided by an LIF F-I consistency
+  ranking over all eight candidate combinations against three independent spike detectors. The
+  free-asymptote membrane time constant of 47.577 ms beats the pinned 32.566 ms under every
+  detector (RMSE 1.80 vs 4.48, 1.61 vs 3.06, 2.46 vs 2.72 Hz) and the minimum-ISI refractory
+  period of 15.8 ms beats the 2.2 ms fallback (1.80 vs 5.51 Hz). The threshold is formally
+  unidentifiable from the fit, because threshold and input resistance trade off exactly, so it is
+  decided on measurement definedness: -41.838 mV is defined for every spike, -38.402 mV for 51%
+  of them. Every value now carries its rule-dependent range, which the loader validates.
+- **A parameter set inconsistent with its own rheobase, disclosed not resolved.** Every
+  self-consistent candidate implies 4.4 to 6.4 GOhm input resistance while the observed 2 pA
+  rheobase requires at least 9.26 GOhm, and published fly central-neuron values are an order of
+  magnitude lower again. This is a fitting artifact of the single-compartment LIF form; v0.4
+  records it in `value_notes` and claims no resolution.
+- **The cellular exit criterion is now failable, and fails.** The leg requires the normalised
+  error ratio strictly below 1.0 against a cohort-mean predictor. Issued as
+  `stage2-exit-gate-v3.json`; v1, v2 and every artifact under them are untouched.
+- **ND-06 carries its first fitted parameters.** `male-cns-short-term-plasticity-v0.1` binds
+  same-glomerulus ORN-to-uniglomerular-PN edges to a depression-only Tsodyks-Markram rule with
+  utilisation 0.22 and recovery 893 ms, from Nagel, Hong and Wilson 2015, which fits that exact
+  equation to measured EPSC amplitude versus stimulus number in 19 PNs from 19 flies. The
+  registered spread is [0.09, 0.23] and [629, 1006] ms across their three fits. The first draft
+  had bound Kazama and Wilson's release probability of 0.79 to utilisation and invented a 500 ms
+  recovery ceiling that excluded the published value; 0.79 mispredicts the measured 10 Hz
+  paired-pulse ratio by a factor of 2.735, so the reading is recorded and not run. Implemented on
+  the NumPy runner only; Brian2, GeNN and the Track A engine refuse a run that asks for it. No
+  MaleCNS synapse was measured, so it awards nothing.
+- **Data acquisition, mostly negative.** No public repository hosts raw *Drosophila* PN or
+  ORN-to-PN patch-clamp traces, so the cellular tier stays single-specimen and the uEPSC prior
+  keeps an empty holdout and labels all twelve cells as fitted. Croset, Treiber and Waddell 2018
+  (eLife 7:e34550, GSE95361 / SRP128516) is located but unusable for ND-03: it is a midbrain
+  Drop-Seq atlas whose PN receptor statements are inferential and which has no published mapping
+  to MaleCNS body IDs.

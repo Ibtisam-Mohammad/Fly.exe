@@ -290,18 +290,19 @@
       "name": "release and short-term plasticity",
       "value": {
         "track_a_baseline": "static-deterministic",
-        "supported_classes": "stochastic-release-and-STP"
+        "supported_classes": "stochastic-release-and-STP",
+        "registered_classes": "orn-to-uniglomerular-pn depression-only Tsodyks-Markram, male-cns-short-term-plasticity-v0.1"
       },
       "units": "model-family policy",
       "provenance": "P/F/E",
       "applies_to": "chemical synapses",
-      "source": "AGENTS.md section 6",
+      "source": "AGENTS.md section 6; ADR-2026-010; https://doi.org/10.1038/nn.3895",
       "biological_mismatch": "The baseline omits vesicle failures and short-term dynamics.",
-      "uncertainty": "Class-specific parameters require failure and paired-pulse data.",
+      "uncertainty": "One synapse class now carries a utilisation of 0.22 and a recovery time constant of 893 ms fitted by Nagel, Hong and Wilson 2015 to measured EPSC amplitude versus stimulus number, with a published spread of [0.09, 0.23] and [629, 1006] ms across their three fits. No MaleCNS synapse was measured and no recording independent of that fit has been located, so the rule is a labelled executable alternative that awards no tier. Every other class still requires failure and paired-pulse data.",
       "status": "proposed",
       "validation": "failure, paired-pulse, sustained-response, and recovery measurements",
       "owner": "neural",
-      "last_reviewed": "2026-09-05"
+      "last_reviewed": "2026-09-08"
     },
     {
       "id": "ND-07",

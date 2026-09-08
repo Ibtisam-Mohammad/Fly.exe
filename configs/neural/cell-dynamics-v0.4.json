@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.2",
+  "registry_id": "male-cns-cell-dynamics-v0.4",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": ["ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-09"],
+  "supersedes": {
+    "registry_id": "male-cns-cell-dynamics-v0.3",
+    "decision": "ADR-2026-010",
+    "what_changes": "the MBON07 parameter set carries the values the review's alternative rules produced where those rules are better defined, records the spread between rules as value_ranges, and keeps the refractory bound because the cell's own F-I curve supports it under the LIF; nothing else changes"
+  },
+  "fallback_parameter_set_id": "shiu-2024-global-lif-fallback-v1",
+  "parameter_sets": [
+    {
+      "parameter_set_id": "shiu-2024-global-lif-fallback-v1",
+      "source": "https://doi.org/10.1038/s41586-024-07763-9",
+      "evidence": "The global leaky-integrate-and-fire values used by the Shiu et al. 2024 whole-brain model of a different connectome. They are the project engineering fallback for every cell type with no registered measurement, and they are not MaleCNS physiology.",
+      "values": {
+        "resting_mv": -52.0,
+        "reset_mv": -52.0,
+        "threshold_mv": -45.0,
+        "membrane_tau_ms": 20.0,
+        "synapse_tau_ms": 5.0,
+        "refractory_ms": 2.2,
+        "tonic_drive_mv": 0.0
+      },
+      "value_provenance": {
+        "resting_mv": "P/E",
+        "reset_mv": "P/E",
+        "threshold_mv": "P/E",
+        "membrane_tau_ms": "P/E",
+        "synapse_tau_ms": "P/E",
+        "refractory_ms": "P/E",
+        "tonic_drive_mv": "E"
+      }
+    },
+    {
+      "parameter_set_id": "mbon07-alpha1-measured-v2",
+      "source": "https://doi.org/10.3389/fnins.2024.1384336",
+      "evidence": "Measured under contracts stage2-cellular-observables-v1 and -v2 from the only unit-resolved current-step protocol in any registered source: one MBON-alpha1 cell, five 1 s square pulses at 2, 4, 6, 8 and 10 pA. Resting voltage is the median pre-step baseline across sweeps. The membrane time constant is the free-asymptote fit of the one spike-free relaxation (47.577 ms, asymptote -60.164 mV, R squared 0.881); the pinned-asymptote fit of the same relaxation gives 32.566 ms and both are carried as the range. The threshold is the median voltage at which each spike's upstroke reaches 10 percent of its own peak slope; the absolute 10 mV/ms criterion of v1 is reached by only 51 percent of the recorded spikes and gives -38.402 mV, carried as the other end of the range. The refractory period is the shortest interspike interval at the highest current, an upper bound on the absolute refractory period; it is kept as the value because a LIF with it reproduces the cell's own F-I curve to 1.6 to 2.5 Hz RMSE under every detector, against 4.6 to 5.9 Hz with the 2.2 ms fallback (ADR-2026-010). Values with E provenance were not measured by this protocol and carry the fallback.",
+      "values": {
+        "resting_mv": -60.354,
+        "reset_mv": -60.354,
+        "threshold_mv": -41.838,
+        "membrane_tau_ms": 47.577,
+        "synapse_tau_ms": 5.0,
+        "refractory_ms": 15.8,
+        "tonic_drive_mv": 0.0
+      },
+      "value_ranges": {
+        "resting_mv": [-63.174, -57.506],
+        "threshold_mv": [-41.838, -38.402],
+        "membrane_tau_ms": [32.566, 47.577],
+        "refractory_ms": [14.4, 15.8]
+      },
+      "value_provenance": {
+        "resting_mv": "M",
+        "reset_mv": "E",
+        "threshold_mv": "M",
+        "membrane_tau_ms": "M",
+        "synapse_tau_ms": "P/E",
+        "refractory_ms": "M/E",
+        "tonic_drive_mv": "E"
+      },
+      "value_notes": {
+        "resting_mv": "Median of the five pre-step baselines; the range is their spread, which is the drift the relaxation-fit asymptote question comes from.",
+        "reset_mv": "Set equal to the measured resting voltage following the Shiu convention. The protocol does not resolve a separate reset level.",
+        "threshold_mv": "Fraction-of-peak-slope rule chosen because it is defined for every recorded spike; the absolute 10 mV/ms rule sits at the median peak upstroke velocity (10.03 mV/ms) of these attenuated somatic spikes and drops half of them. The LIF F-I fit cannot separate the two thresholds because threshold and input resistance trade off exactly; the choice rests on the measurement being well defined, not on fit quality.",
+        "membrane_tau_ms": "Free-asymptote fit chosen because the pre-step baseline the pinned fit assumes drifts by 5.7 mV across sweeps, and because a LIF with 47.6 ms fits the cell's F-I better than one with 32.6 ms under every detector (1.80 vs 4.48, 1.61 vs 3.06, 2.46 vs 2.72 Hz RMSE). One sweep of one cell either way.",
+        "refractory_ms": "Detector-dependent bound: 15.8 ms at 10 mV prominence, 14.4 ms at a fixed -35 mV crossing. Used as the value because the LIF needs it to bend the F-I curve the way the cell's does; that bend may be adaptation rather than refractoriness, which a LIF cannot represent. It caps the modelled rate at about 63 Hz.",
+        "fitted_input_resistance": "Not a registry parameter. The LIF F-I fit that selected these values places the input resistance at 5.1 to 6.4 GOhm; that is inconsistent with the observed single spike at 2 pA, which under the LIF would need at least 9.3 GOhm, so the 2 pA event is not reproduced by any candidate set."
+      }
+    }
+  ],
+  "default_record": {
+    "cell_type": "__unregistered__",
+    "signal_regime": "unresolved",
+    "model_family": "competing-spiking-or-passive-graded",
+    "provenance": "E",
+    "status": "proposed",
+    "source": null,
+    "evidence_scope": "No type-specific signaling evidence registered.",
+    "biological_mismatch": "A simulator fallback cannot establish whether an unregistered neuron spikes or signals with graded voltage.",
+    "alternatives": ["lif-spiking-fallback", "passive-graded-fallback"]
+  },
+  "records": [
+    {
+      "cell_type": "MBON07",
+      "signal_regime": "spiking",
+      "model_family": "measured-single-cell-lif",
+      "provenance": "M/P/E",
+      "status": "accepted",
+      "source": "https://doi.org/10.3389/fnins.2024.1384336",
+      "evidence_scope": "One MBON-alpha1 cell under a unit-resolved 2 to 10 pA current-step protocol. The F-I curve is 1, 10, 17, 21 and 24 Hz at 10 mV prominence and 0, 10, 15, 23 and 30 Hz at a fixed -35 mV crossing; the spikes are 9 to 14 mV high, so every count is detector-marginal. The MaleCNS type identifier is confirmed from the body annotation itself: MBON07 carries instance MBON07(a1).",
+      "biological_mismatch": "One female cell in one animal. Type-level distributions, sex and the five-day-old male target condition are all unaddressed, and the reset voltage, synaptic time constant and tonic drive are not measured.",
+      "alternatives": [],
+      "parameter_prior_id": null,
+      "parameter_set_id": "mbon07-alpha1-measured-v2"
+    },
+    {
+      "cell_type": "DM1_lPN",
+      "signal_regime": "spiking",
+      "model_family": "reduced-compartment-spiking-candidate",
+      "provenance": "P/F",
+      "status": "proposed",
+      "source": "https://doi.org/10.1523/JNEUROSCI.0764-09.2009",
+      "evidence_scope": "DM1 projection-neuron electrophysiology and three published fitted passive cable models.",
+      "biological_mismatch": "Female cross-specimen physiology; active spiking parameters remain unfitted and no MaleCNS DM1 recording exists.",
+      "alternatives": [],
+      "parameter_prior_id": "gouwens-wilson-2009-dm1-passive-priors-v1",
+      "parameter_set_id": null
+    },
+    {
+      "cell_type": "DM4_adPN",
+      "signal_regime": "spiking",
+      "model_family": "projection-neuron-spiking-candidate",
+      "provenance": "P/F",
+      "status": "proposed",
+      "source": "https://doi.org/10.1016/j.neuron.2008.02.030",
+      "evidence_scope": "Identified DM4 projection-neuron whole-cell and ORN-to-PN synaptic physiology.",
+      "biological_mismatch": "Female cross-specimen physiology; DM4-specific active parameters are not yet fitted.",
+      "alternatives": [],
+      "parameter_prior_id": null,
+      "parameter_set_id": null
+    },
+    {
+      "cell_type": "DM4_vPN",
+      "signal_regime": "unresolved",
+      "model_family": "competing-spiking-or-passive-graded",
+      "provenance": "P/E",
+      "status": "proposed",
+      "source": null,
+      "evidence_scope": "The registered evidence does not distinguish the DM4 vPN signaling regime.",
+      "biological_mismatch": "adPN evidence must not be silently transferred to vPN.",
+      "alternatives": ["projection-neuron-spiking-candidate", "passive-graded-fallback"],
+      "parameter_prior_id": null,
+      "parameter_set_id": null
+    }
+  ],
+  "signal_regime_policy": {
+    "somatic_spike_amplitude_is_not_a_classifier": "Median somatic spike amplitude differs six-fold across the four measured classes, but axonal spike initiation followed by passive attenuation to the soma produces a small somatic spike in a fully spiking cell. See ADR-2026-007.",
+    "graded_regime_is_declared_but_not_executable": "No graded transmission model is registered, so an engine must refuse a graph containing neurons resolved to the graded regime rather than substitute a spiking model for them.",
+    "unresolved_regime_is_permitted_and_counted": "Every unregistered cell type resolves to the unresolved regime and the engineering fallback parameters. Engines report that fraction so no run can appear to be using fitted physiology."
+  },
+  "type_pair_policy": {
+    "formula": "contact_count * fitted_type_pair_scale",
+    "provenance": "M/F",
+    "fit_status": "First frozen fit evaluated: steady-state LIF F-I gate failed; uEPSC kernel failed its preregistered decay limit and underpredicts amplitude (ADR-2026-009); contact number shown to move opposite to the published unitary-current scaling",
+    "canonical_values": null
+  }
+}

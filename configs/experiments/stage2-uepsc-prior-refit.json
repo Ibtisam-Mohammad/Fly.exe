@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-uepsc-prior-refit-v1",
+  "title": "Refit the unitary-EPSC kernel on all twelve DL5 recordings as a labelled, unvalidated prior",
+  "provenance": "P/F",
+  "assumption_ids": ["ND-03", "ND-04", "ND-05"],
+  "purpose": "The frozen kernel fitted on four solvent cells failed its preregistered decay limit and underpredicts amplitude (ADR-2026-009). Every DL5 uEPSC recording in the corpus is now consumed for validation, so no new kernel can be validated. This contract fits the same kernel family on all twelve cells to give the type-pair registry the best available prior, and labels it as exactly that.",
+  "required_artifact": {
+    "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-uepsc-traces.parquet",
+    "sha256": "4e9d363f3d404dfacec30f0dee4e3e8f52ee93a809e39fff206a94b82d6786b0"
+  },
+  "fit_specimen_ids": [
+    "gugel-dl5-uepsc-solvent-01",
+    "gugel-dl5-uepsc-solvent-02",
+    "gugel-dl5-uepsc-solvent-03",
+    "gugel-dl5-uepsc-solvent-04",
+    "gugel-dl5-uepsc-solvent-05",
+    "gugel-dl5-uepsc-solvent-06",
+    "gugel-dl5-uepsc-solvent-07",
+    "gugel-dl5-uepsc-exposed-01",
+    "gugel-dl5-uepsc-exposed-02",
+    "gugel-dl5-uepsc-exposed-03",
+    "gugel-dl5-uepsc-exposed-04",
+    "gugel-dl5-uepsc-exposed-05"
+  ],
+  "pooling_justification": "The source paper reports DL5 uEPSC amplitudes and kinetics indistinguishable between solvent and E2-hexenal exposed flies, so pooling the two conditions is what the source supports.",
+  "held_out_specimen_ids": [],
+  "baseline_window_ms": {"start": 0.0, "end": 40.0},
+  "kernel": {
+    "family": "causal difference of exponentials, unit peak, one amplitude per cell",
+    "onset_grid_ms": {"start": 45.0, "stop": 51.0, "count": 25},
+    "rise_grid_ms": [0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0],
+    "decay_grid_ms": {"start": 3.0, "stop": 30.0, "count": 55},
+    "loss": "Huber, delta 1 pA, over the inward current of every fit cell",
+    "population_amplitude": "median of the per-cell fitted amplitudes"
+  },
+  "comparison_values": {
+    "frozen_fit": {
+      "path": "evidence/stage2/projection-neuron-fit-v3.json",
+      "sha256": "5ee63453c3c12d7ada3754245b93c172567e1ecaf6b0c4a4a51fec958a336780",
+      "decay_tau_ms": 15.0,
+      "population_amplitude_pa": 24.467
+    },
+    "published_half_decay_ms": 7.0,
+    "published_half_decay_source": "Gugel et al. 2023 eLife 85443: uEPSCs in DL5 PNs had 'rise time (~2 ms), and half decay time (t1/2 ~7 ms)'",
+    "implied_decay_tau_ms": 10.1,
+    "implied_decay_tau_note": "7 ms / ln 2 for a single exponential; the kernel is a difference of exponentials so its 1/e time is the quantity reported alongside"
+  },
+  "acceptance": {
+    "validated": false,
+    "why_not": "No held-out cell remains. The fit is scored on nothing it did not see. It is a prior for the type-pair registry and must be labelled unvalidated wherever it is used.",
+    "reported": ["per-cell fitted amplitudes", "population amplitude", "onset, rise and decay constants", "kernel peak-to-1/e time", "training Huber loss", "boundary flag", "features against the published half-decay"]
+  },
+  "tier_policy": "Awards no tier and removes no blocker. A future independent uEPSC holdout is still required, and its contract must not gate on the peak time of peak-aligned traces.",
+  "claim_boundary": "A cross-specimen female DL5 prior for the ORN-to-PN unitary-EPSC kernel, fitted on every available recording with nothing held out. Not MaleCNS synaptic physiology and not a V2 award.",
+  "last_reviewed": "2026-09-08"
+}

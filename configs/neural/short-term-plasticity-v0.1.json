@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.1",
+  "registry_id": "male-cns-short-term-plasticity-v0.1",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": ["ND-04", "ND-06"],
+  "purpose": "ND-06 permits class-specific short-term plasticity only where evidence exists. The one synapse class with published quantitative depression parameters in the registered corpus is ORN-to-PN. Nagel, Hong and Wilson 2015 fit the depression-only Tsodyks-Markram equation this registry implements directly to measured EPSC amplitude as a function of stimulus number, so both the utilisation and the recovery time constant are taken from a fit to the depression trajectory itself rather than inferred from a separate quantity. This registry binds that class to those values, records the competing reading of Kazama and Wilson 2008, and carries a preregistered paired-pulse prediction, so the mechanism can be executed as a labelled alternative and never silently.",
+  "model": {
+    "family": "tsodyks-markram-depression-only",
+    "state": "one resource variable x per depressing edge, x = 1 at rest",
+    "release": "a presynaptic spike delivers weight * x, then x <- x - utilisation * x",
+    "recovery": "dx/dt = (1 - x) / recovery_tau_ms between spikes",
+    "normalisation": "the static contact-count weight is the resting unitary response, so the first spike after rest is unchanged and only subsequent spikes depress; this keeps every static result reproducible when no edge is depressing",
+    "steady_state": "x* = 1 / (1 + utilisation * rate_hz * recovery_tau_ms / 1000) for a regular train, as an approximation to the exact discrete-train value (1 - c) / (1 - (1 - utilisation) * c) with c = exp(-isi_ms / recovery_tau_ms)",
+    "source_equation_match": "Nagel, Hong and Wilson 2015 Equation 1 is A <- f * A on a presynaptic spike with A <- A + (1 - A) * dt / tau between spikes, and the paper states that its r 'governs the rate of depression and is equivalent to (1 - f)'. That is term for term the equation above with utilisation = r = 1 - f and recovery_tau_ms = tau, so the published parameters transfer without reinterpretation."
+  },
+  "rules": [
+    {
+      "rule_id": "orn-to-uniglomerular-pn",
+      "source_type_prefix": "ORN_",
+      "target_type_regex": "^[A-Za-z0-9]+_(?:ad|l|v|il|lv|vl|m)PN$",
+      "same_glomerulus_only": true,
+      "utilisation": 0.22,
+      "utilisation_provenance": "F",
+      "utilisation_source": "Nagel, Hong and Wilson 2015, Figure 1c caption: 'Line is a fit of the simple synaptic depression model (Equation 1, see Methods; f = 0.78 and tau = 893 ms)'. Utilisation = 1 - f = 0.22. This is the whole unitary EPSC in control saline under 10 Hz stimulation, which is the quantity a single-rule depression model on the whole edge weight represents.",
+      "utilisation_range": [0.09, 0.23],
+      "utilisation_range_derivation": "The three published fits of the same equation to the same synapse: whole EPSC in control saline f = 0.78 (utilisation 0.22); IMI-resistant fast component f = 0.77 (utilisation 0.23); curare-resistant slow component f = 0.91 (utilisation 0.09). The range is the spread across the pharmacological decomposition, not a confidence interval.",
+      "recovery_tau_ms": {
+        "value": 893.0,
+        "range": [629.0, 1006.0],
+        "provenance": "F",
+        "source": "Nagel, Hong and Wilson 2015, Figure 1c caption: 'f = 0.78 and tau = 893 ms', fit to EPSC amplitude versus stimulus number at 10 Hz in control saline.",
+        "derivation": "The range spans the same three fits that set the utilisation range: 893 ms for the whole EPSC in control saline, 1006 ms for the IMI-resistant fast component, 629 ms for the curare-resistant slow component. A run must name the value it uses and the value must lie in this range. The paired utilisation and recovery time constant come from the same fit and must not be mixed across fits."
+      },
+      "source": "https://doi.org/10.1038/nn.3895",
+      "source_open_access_copy": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4289142/",
+      "recording_basis": "n = 19 PNs from 19 flies, glomerulus DM6 or VM2, electrical stimulation of ORN axons; odour-response recordings n = 17 PNs from 17 flies in DM6, VM2 or VM7.",
+      "competing_reading": {
+        "source": "https://doi.org/10.1016/j.neuron.2008.02.030",
+        "claim": "Kazama and Wilson 2008 report 'Estimated release probability was consistently high, with a mean value of 0.79' and that 'Estimates of p were uniform across glomeruli.' Under a one-vesicle-per-site binomial release model, a per-site release probability p maps onto the Tsodyks-Markram utilisation, which would put utilisation at 0.79 rather than 0.22.",
+        "why_not_adopted": "The two readings are separated by a direct measurement rather than a preference. With recovery_tau_ms = 893 ms the registered utilisation 0.22 predicts a second-to-first EPSC ratio of 0.8033 at 10 Hz, which is what the Figure 1c trajectory the value was fitted to shows. Utilisation 0.79 predicts 0.2937 at the same interval, a factor of 2.735 below the measured trajectory. Kazama and Wilson estimated p from trial-to-trial variance, and mapping it to utilisation requires the extra assumptions of one vesicle per site and no recovery within the train; Nagel and colleagues fitted their value to the depression trajectory that utilisation governs. The directly fitted value is adopted and the variance-derived value is recorded here, not discarded.",
+        "utilisation_if_adopted": 0.79
+      },
+      "preregistered_prediction": {
+        "quantity": "second-to-first unitary EPSC amplitude ratio at 10 Hz, ORN to uniglomerular PN, control saline",
+        "predicted": 0.8033,
+        "predicted_at": {"utilisation": 0.22, "recovery_tau_ms": 893.0, "interstimulus_interval_ms": 100.0},
+        "status": "consistent with the fit it was derived from, so it is not independent evidence; it becomes a test only against a paired-pulse or train recording not used by Nagel and colleagues",
+        "steady_state_predictions": {
+          "regular_train_10hz_exact": 0.3501,
+          "regular_train_50hz_exact": 0.0933
+        }
+      },
+      "glomeruli_recorded": ["DM6", "VM2", "VM7", "DL5", "DM4"],
+      "claim_boundary": "Female cross-specimen values from a handful of glomeruli applied to every same-glomerulus ORN-to-uniglomerular-PN edge in MaleCNS. Not a measurement of MaleCNS synapses. Nagel and colleagues fitted the fast component in imidacloprid and the slow component in curare; the adopted whole-EPSC value is control saline but still a two-component response collapsed onto one resource variable."
+    }
+  ],
+  "engine_coverage": {
+    "numpy_circuit_runner": "implemented",
+    "brian2_circuit_runner": "not implemented; a run that asks for depression on this backend must be refused",
+    "genn_circuit_runner": "not implemented; a run that asks for depression on this backend must be refused",
+    "track_a_genn_engine": "not implemented"
+  },
+  "validation_status": "The parameters are now fitted values from a published recording of this synapse class rather than an unresolved engineering range, but no MaleCNS rate-dependent ORN-to-PN recording is registered and no recording independent of Nagel and colleagues has been located, so this rule remains an executable labelled alternative for sensitivity ensembles and awards no validation tier. The open prediction is the paired-pulse ratio above against a recording not used in the fit.",
+  "revision_note": "Issued at schema 1.0 with utilisation 0.79 taken from the Kazama and Wilson release probability and recovery_tau_ms left unresolved in an invented [25, 500] ms window. Corrected to schema 1.1 before first commit, so no artifact was ever produced under the superseded values. The correction followed verification of Nagel, Hong and Wilson 2015 against the open-access full text: that paper fits this registry's exact equation and publishes both parameters, its recovery time constant of 893 ms fell outside the invented ceiling, and the superseded utilisation was a different physical quantity that mispredicts the measured paired-pulse ratio by a factor of 2.735.",
+  "last_reviewed": "2026-09-08"
+}

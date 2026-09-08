@@ -101,6 +101,7 @@ class CellParameterSet:
     evidence: str
     values: dict[str, float]
     value_provenance: dict[str, str]
+    value_ranges: dict[str, tuple[float, float]] | None = None
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> CellParameterSet:
@@ -108,6 +109,23 @@ class CellParameterSet:
         if missing:
             raise ConfigurationError(f"Cell parameter set omits {sorted(missing)}")
         values = {key: float(raw["values"][key]) for key in CELL_PARAMETER_KEYS}
+        # A range records the spread the alternative measurement rules produced. The engine
+        # runs the value; the range travels with it so no downstream report can quote the
+        # value as more certain than the measurement was.
+        ranges: dict[str, tuple[float, float]] | None = None
+        if raw.get("value_ranges") is not None:
+            ranges = {}
+            for key, bounds in raw["value_ranges"].items():
+                if key not in CELL_PARAMETER_KEYS:
+                    raise ConfigurationError(f"value_ranges names unknown parameter {key!r}")
+                low, high = (float(bounds[0]), float(bounds[1]))
+                if not (math.isfinite(low) and math.isfinite(high)) or low > high:
+                    raise ConfigurationError(f"value_ranges for {key} must be finite and ordered")
+                if not low <= values[key] <= high:
+                    raise ConfigurationError(
+                        f"value_ranges for {key} do not contain the registered value"
+                    )
+                ranges[key] = (low, high)
         if any(not math.isfinite(value) for value in values.values()):
             raise ConfigurationError("Cell parameter values must be finite")
         for key in ("membrane_tau_ms", "synapse_tau_ms"):
@@ -128,6 +146,7 @@ class CellParameterSet:
             evidence=str(raw["evidence"]),
             values=values,
             value_provenance=provenance,
+            value_ranges=ranges,
         )
 
     @property
@@ -146,6 +165,11 @@ class CellParameterSet:
             "values": dict(self.values),
             "value_provenance": dict(self.value_provenance),
             "measured_keys": list(self.measured_keys),
+            "value_ranges": (
+                {key: [low, high] for key, (low, high) in self.value_ranges.items()}
+                if self.value_ranges is not None
+                else None
+            ),
         }
 
 
@@ -189,7 +213,7 @@ class DynamicsRegistry:
     @classmethod
     def load(cls, path: Path) -> DynamicsRegistry:
         payload = load_json(path)
-        if payload.get("schema_version") not in {"1.0", "1.1"}:
+        if payload.get("schema_version") not in {"1.0", "1.1", "1.2"}:
             raise ConfigurationError("Unsupported dynamics registry schema")
         assumption_ids = tuple(str(value) for value in payload["assumption_ids"])
         required_assumptions = {"ND-01", "ND-02", "ND-03", "ND-04", "ND-05"}
