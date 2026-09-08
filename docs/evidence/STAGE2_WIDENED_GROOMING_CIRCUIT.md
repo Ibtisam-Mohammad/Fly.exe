@@ -119,9 +119,8 @@ better scale or a wider subgraph fixes.
    [ORN-to-PN convergence test](ORN_PN_CONVERGENCE.md), run after this sweep, shows what that
    costs in practice: edge recovery is complete where connections are strong and degrades
    specifically at the weak end, and a neuron's total contact budget predicts whether its known
-   connections are recovered. No reconstruction-quality statistic was computed for the JON-F or
-   aBN1 populations before this sweep was run, and one should be — it is now the first thing to
-   check before treating the K=2 sign flip as biology.
+   connections are recovered. That statistic has since been computed for these populations and
+   it changes how much weight this result can bear; see the section below.
 
 ## Rounds run, including the discarded one
 
@@ -135,3 +134,60 @@ better scale or a wider subgraph fixes.
 Two of those three corrections were to criteria and diagnostics this session had itself just
 written. Both are recorded rather than quietly fixed, because the v1 artifact is issued and a
 reader who finds it needs to know why its H1 says what it says.
+
+## Reconstruction quality of these populations, measured after the fact
+
+The [convergence test](ORN_PN_CONVERGENCE.md) established that a neuron's total contact budget
+predicts whether its known connections are recovered, and calibrated what good and bad look
+like. Applying that instrument here, in percentile terms against all 165,122 traced neurons
+(graph median 442 out-contacts, 349 in-contacts):
+
+| population | out-contacts | percentile | in-contacts | percentile |
+|---|---|---|---|---|
+| JON-F inputs (n = 78) | 260 median | **24.2** | 36 median | — |
+| aBN1 readout 11718 | 6,962 | **99.4** | 3,158 | 96.1 |
+| aBN1 readout 521358 | 7,055 | **99.4** | 3,710 | 97.1 |
+| VM7d ORNs (convergence 1.000) | 834 median | 78.0 | — | — |
+| VL2p ORNs (convergence 0.485) | 533 median | 58.7 | — | — |
+
+Three things follow, and the second is the one that matters.
+
+**The readouts are excellently reconstructed.** Both aBN1 cells sit at the 99.4th percentile for
+outputs and above the 96th for inputs. Whatever else is wrong here, it is not that the readouts
+are poorly reconstructed neurons.
+
+**The inhibitory and excitatory partners are not equally well reconstructed, and the asymmetry
+runs the same way as the result.** Median out-contact budget of the sources delivering onto each
+readout at K = 2:
+
+| readout | inhibitory sources | percentile | excitatory sources | percentile | ratio |
+|---|---|---|---|---|---|
+| 11718 | 2,884 | 96.3 | 882 | 79.6 | **3.3×** |
+| 521358 | 2,530 | 95.5 | 853 | 78.6 | **3.0×** |
+
+The inhibitory partners carry roughly three times the contact budget of the excitatory ones. Part
+of that is real biology — the gain-control literature describes antennal-lobe inhibition as
+coming from cells with broad dense arbors, and large cells genuinely have more synapses — but
+larger and better-reconstructed neurons also have their edges recovered more completely, at 42%
+postsynaptic completion. **The recovered excitation/inhibition balance therefore overstates
+inhibition relative to the truth, by an amount this data cannot quantify.** The suppression
+finding is not thereby explained away: delivered inhibition exceeds delivered excitation by about
+1.8-fold, and the reconstruction asymmetry is 3-fold in contact budget, so the two are the same
+order of magnitude and the sign of the true balance is genuinely uncertain. That is a materially
+weaker claim than this report made before the statistic existed.
+
+**The JON-F inputs are worse reconstructed than the worst glomerulus in the convergence test.**
+At the 24.2nd percentile they fall below VL2p's ORNs at 58.7, and VL2p is the glomerulus where
+only 48.5% of known connections were recovered. This is a caveat on the entire Stage 1 grooming
+transfer, not only on this sweep: the 39 JON-F inputs of the one-hop circuit and the 78 of the
+widened circuits are drawn from a poorly reconstructed sensory population, which is expected for
+axons entering from the periphery and is exactly the population whose edges are most likely to be
+missing. Any claim about how much drive reaches aBN1 inherits that.
+
+**Net effect on the reading.** H1's `suppressed` outcome and H2's failure stand as measurements of
+the model as built. The mechanistic attribution — that a handful of active inhibitory neurons
+holds the readout silent — is now qualified: those neurons are the best-reconstructed partners in
+a circuit whose excitatory partners and sensory inputs are among the worst, and the observed
+balance is consistent with that asymmetry rather than independent of it. Establishing the true
+balance needs either a reconstruction-corrected estimate or a circuit whose partners are
+uniformly well reconstructed.

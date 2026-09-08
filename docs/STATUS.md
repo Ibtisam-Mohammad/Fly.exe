@@ -486,3 +486,23 @@ single place to check before registering a parameter.
 - **No raw traces exist.** Confirmed absent for all four Wilson-lab papers, so the cellular tier
   stays single-specimen and the uEPSC holdout stays empty for that reason rather than for want of
   searching.
+
+### Reconstruction quality applied to the grooming circuit (2026-09-09)
+
+The convergence test's calibration was applied to the Stage 1/Stage 2 grooming populations, and
+it materially weakens what the widened-circuit result can claim.
+
+- The two aBN1 readouts are excellently reconstructed, at the 99.4th percentile for outputs and
+  above the 96th for inputs among all 165,122 traced neurons.
+- **The JON-F sensory inputs sit at the 24.2nd percentile**, below VL2p's ORNs at 58.7 — and VL2p
+  is the glomerulus where only 48.5% of known connections were recovered. This is a caveat on the
+  whole grooming transfer, not just the widened sweep: the inputs are drawn from a poorly
+  reconstructed peripheral population whose edges are the most likely to be missing.
+- **The inhibitory partners onto the readouts carry about 3 times the contact budget of the
+  excitatory ones** (96.3rd against 79.6th percentile). Part is real biology, since inhibitory
+  gain-control cells have broad dense arbors, but larger and better-reconstructed neurons also
+  have their edges recovered more completely at 42% postsynaptic completion. The recovered
+  excitation/inhibition balance therefore overstates inhibition by an unquantified amount. Since
+  delivered inhibition exceeds delivered excitation by only about 1.8-fold while the
+  reconstruction asymmetry is 3-fold, **the sign of the true balance is genuinely uncertain** and
+  the mechanistic attribution of the readout silence is now qualified rather than established.
