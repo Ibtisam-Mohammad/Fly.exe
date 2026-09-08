@@ -25,6 +25,7 @@ from flysim.contacts import (
     compare_contact_derivatives,
     import_contact_table,
 )
+from flysim.convergence import run_orn_pn_convergence
 from flysim.datasets import (
     DatasetSpec,
     dataset_status,
@@ -293,6 +294,30 @@ def _command_stage2_uepsc_prior(args: argparse.Namespace) -> int:
             "against_published_half_decay": result["against_published_half_decay"],
             "against_frozen_fit": result["against_frozen_fit"],
             "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_benchmark_orn_pn_convergence(args: argparse.Namespace) -> int:
+    result = run_orn_pn_convergence(
+        root=args.root,
+        graph_path=args.graph,
+        experiment_path=args.experiment,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "glomeruli_tested": result["glomeruli_tested"],
+            "totals": result["totals"],
+            "completeness_distribution": result["completeness_distribution"],
+            "hypotheses": result["hypotheses"],
+            "hypotheses_descriptive": result["hypotheses_descriptive"],
+            "output": result["output"],
+            "sha256": result["sha256"],
             "validation_tier_awarded": None,
         }
     )
@@ -1511,6 +1536,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="produce an explicitly non-evidence-grade run from an uncommitted worktree",
     )
     widened.set_defaults(func=_command_benchmark_widened_circuit)
+
+    convergence = benchmark_commands.add_parser(
+        "orn-pn-convergence",
+        help="test the published complete ORN-to-PN convergence against the locked connectome",
+    )
+    convergence.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "orn-pn-convergence-v1.json",
+    )
+    convergence.add_argument("--root", type=Path, default=default_data_root())
+    convergence.add_argument(
+        "--graph",
+        type=Path,
+        default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
+    )
+    convergence.add_argument("--output", type=Path, required=True)
+    convergence.add_argument(
+        "--allow-dirty-tree",
+        action="store_true",
+        help="produce an explicitly non-evidence-grade run from an uncommitted worktree",
+    )
+    convergence.set_defaults(func=_command_benchmark_orn_pn_convergence)
 
     feeding_screen = benchmark_commands.add_parser(
         "feeding-screen",

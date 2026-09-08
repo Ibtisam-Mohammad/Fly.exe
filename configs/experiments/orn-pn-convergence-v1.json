@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "orn-pn-convergence-v1",
+  "title": "Does the MaleCNS connectome recover the complete ORN-to-PN convergence that Kazama and Wilson 2009 established physiologically?",
+  "provenance": "M",
+  "assumption_ids": ["DATA-03", "DATA-04", "ND-04"],
+  "purpose": "Kazama and Wilson 2009 showed by dual whole-cell recording that spontaneous EPSCs occur synchronously in homotypic PN pairs, and concluded that ORN-PN connections are completely convergent: every olfactory receptor neuron of a glomerulus synapses onto every uniglomerular projection neuron of that glomerulus. That is a binary, parameter-free, complete-bipartite prediction about connectome structure. This contract tests it. Nothing here requires a biophysical parameter, a fit, or a simulation, so a failure is a statement about the connectome or about the cell typing rather than about any model this project has built.",
+  "primary_sources": [
+    {
+      "key": "KW2009",
+      "citation": "Kazama H, Wilson RI. Origins of correlated activity in an olfactory circuit. Nat Neurosci.",
+      "claim_quoted": "This implies that ORN-PN connections are completely convergent, with each PN receiving input from all ORNs. This is equivalent to the statement that this circuit is completely divergent, meaning that each ORN synapses onto all PNs.",
+      "supporting_quote": "The finding that virtually all EPSCs occurred synchronously in homotypic pairs implies that each ORN axon branches to synapse onto every PN in its cognate glomerulus."
+    },
+    {
+      "key": "KW2008",
+      "citation": "Kazama H, Wilson RI. Homeostatic matching and nonlinear amplification at identified central synapses. Neuron 58:401-413.",
+      "claim_quoted": "each axon projecting to a large glomerulus corresponds to >25 release sites per postsynaptic PN",
+      "used_for": "the release-site count that drives the H2 recovery argument"
+    },
+    {
+      "key": "MaleCNS",
+      "citation": "Sexual dimorphism in the complete Drosophila male central nervous system connectome",
+      "claim_quoted": "With 94% pre- and 42% postsynaptic completion rates, this dataset is similar to or exceeds previously published connectomes",
+      "used_for": "the per-synapse recovery rate that drives the H2 recovery argument"
+    }
+  ],
+  "population_definition": {
+    "receptor_neurons": "bodies whose annotation type begins with 'ORN_', with the glomerulus taken as the remainder of the label",
+    "projection_neurons": "bodies whose annotation type matches ^([A-Za-z0-9]+)_(?:ad|l|v|il|lv|vl|m)PN$, with the glomerulus taken as capture group 1; this is the same uniglomerular regex the short-term-plasticity registry uses",
+    "status_filter": "status == 'Traced', which is the project's accepted runtime universe of 165,122 bodies",
+    "sidedness": "pooled bilateral. Every ORN body carries somaSide null because olfactory receptor neuron somata sit in the antenna, outside the imaged CNS volume, so the data cannot be split by antenna. This matches the prediction's scope, since KW2008 established that ipsilateral and contralateral ORN projections evoke equal unitary EPSCs (p > 0.54)."
+  },
+  "sizes_observed_before_registration": {
+    "note": "Body counts were computed before this contract was written so the test could be scoped and powered. No edge, no adjacency and no completeness fraction had been computed for any glomerulus when it was registered, so H1 and H2 are blind. H3 is explicitly not blind; see its disclosure field.",
+    "glomeruli_with_both_populations": 50,
+    "traced_orn_bodies": 2635,
+    "traced_uniglomerular_pn_bodies": 276,
+    "possible_orn_by_pn_pairs": 16384,
+    "largest_glomeruli_by_orn_count": {"DA1": 204, "VA1d": 132, "VA1v": 130, "DL3": 103, "VL2a": 98}
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "Taken literally, the convergence is complete: within every glomerulus, every ORN-to-PN ordered pair carries at least one edge, so the convergence completeness fraction is 1.0.",
+      "test": "for each glomerulus, completeness = (ordered ORN->PN pairs with an edge) / (n_ORN * n_PN); H1 holds if the minimum across the 50 glomeruli is 1.0",
+      "expect": 1.0
+    },
+    {
+      "id": "H2",
+      "statement": "Allowing for connectome incompleteness, completeness should still be near 1.0 at the level of edges, because each ORN-to-PN connection comprises many release sites and an edge survives if any one of them is recovered.",
+      "derivation": "MaleCNS reports 42% postsynaptic completion, so take 0.42 as the per-synapse probability that a postsynaptic site is attributed to its proofread neuron. KW2008 measures 51.4 +/- 7.8 release sites per ORN axon per PN by multiple-probability fluctuation analysis and states >25 per PN for large glomeruli; Rozenfeld and colleagues independently estimate 10-30. Taking the most pessimistic count of 10 sites, the probability that at least one is recovered is 1 - 0.58^10 = 0.9957. At 25 sites it is 1 - 0.58^25 = 0.9999988. Per-synapse incompleteness therefore cannot by itself reduce edge-level completeness below about 0.99.",
+      "test": "median completeness across the 50 glomeruli >= 0.95",
+      "expect_at_least": 0.95,
+      "interpretation_if_failed": "A median materially below 0.95 cannot be explained by the published postsynaptic completion rate under any release-site count in the literature. It would instead indicate one of: cell-type misassignment in the annotation, ORN bodies whose axons are truncated so their outputs are not recovered, uniglomerular PN labels that include cells not postsynaptic to that glomerulus, or that the complete-convergence claim does not generalise from the four glomeruli KW2009 recorded to all 50. The artifact must distinguish these rather than assert one."
+    },
+    {
+      "id": "H3",
+      "statement": "Descriptive, and not blind: the number of DM4 ORN bodies in MaleCNS against the 17.4 +/- 0.9 per antenna that KW2009 counted from Or59b-GFP labelling, doubled to 34.8 for the bilateral projection.",
+      "test": "none; recorded as a comparison",
+      "disclosure": "The MaleCNS DM4 ORN count of 32 was observed while scoping this contract, before it was written. It is recorded as a comparison and not as a preregistered test, and it must not be reported as a passed prediction."
+    },
+    {
+      "id": "H4",
+      "statement": "Descriptive: the full per-glomerulus table of ORN count, PN count, possible pairs, realised pairs, completeness, and the contact-count distribution over realised pairs.",
+      "test": "none"
+    },
+    {
+      "id": "H5",
+      "statement": "Descriptive: the median contacts per realised ORN-to-PN connection, against KW2008's 51.4 +/- 7.8 release sites by fluctuation analysis and Rozenfeld and colleagues' 10-30, treating one anatomical contact as one release site.",
+      "test": "none; the identification of a contact with a release site is an assumption and is recorded as one",
+      "assumption": "one aggregate anatomical contact corresponds to one vesicular release site. KW2008's own release-site counts are inferred from current fluctuations, not from anatomy, so this comparison is between two indirect estimates of the same quantity."
+    }
+  ],
+  "protocol": {
+    "graph": "derived/male-cns-v1.0/graph, the checksum-locked aggregate connectome",
+    "edge_direction": "ORN as source, PN as target; the reverse direction is recorded separately as a control and is not part of any hypothesis",
+    "contact_threshold": "none; any edge with at least one contact counts as a realised connection, which is the weakest and therefore most favourable reading of the prediction",
+    "requires_clean_worktree": true
+  },
+  "claim_boundary": "A structural test of the locked connectome against a published physiological result. It awards no validation tier. It is evidence about edge recovery and cell typing in MaleCNS, not about any dynamical model, and a pass would not validate any parameter this project registers.",
+  "last_reviewed": "2026-09-09"
+}
