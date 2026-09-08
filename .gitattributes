@@ -1,0 +1,15 @@
+# Normalise line endings in the repository so that the clean-worktree gate used by
+# evidence-grade runs gives the same answer to the Windows host git (core.autocrlf=true)
+# and to the WSL git that executes the runs.
+* text=auto eol=lf
+
+# PowerShell supervisors run from the Windows host.
+*.ps1 text eol=crlf
+
+*.png binary
+*.mp4 binary
+*.npy binary
+*.npz binary
+*.feather binary
+*.parquet binary
+*.xlsx binary
