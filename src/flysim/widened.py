@@ -25,6 +25,7 @@ from flysim.circuit import (
     run_genn_circuit,
     run_numpy_circuit,
     select_bounded_path_circuit,
+    select_shortest_path_circuit,
 )
 from flysim.config import load_json, project_root, sha256_json
 from flysim.connectome import SparseConnectome
@@ -51,6 +52,82 @@ def _training_rates(candidate: dict[str, Any]) -> dict[float, float]:
     }
 
 
+def _readout_drive(
+    selected: Any, edge_signs: np.ndarray
+) -> list[dict[str, Any]]:
+    """Signed contact composition of the drive arriving directly on each readout.
+
+    A readout that never fires is either starved of input or held down by inhibition, and
+    those are different findings. Recording the composition means the artifact can say which
+    instead of leaving it to be guessed at.
+    """
+    body_to_index = {int(body): index for index, body in enumerate(selected.graph.body_ids)}
+    drive: list[dict[str, Any]] = []
+    for body in selected.readout_body_ids:
+        index = body_to_index[int(body)]
+        incoming = np.flatnonzero(selected.graph.target_indices == index)
+        weighted = selected.graph.contact_counts[incoming] * edge_signs[incoming]
+        excitatory = float(weighted[weighted > 0.0].sum())
+        inhibitory = float(weighted[weighted < 0.0].sum())
+        drive.append(
+            {
+                "body_id": int(body),
+                "incoming_edges": int(incoming.size),
+                "excitatory_contacts": excitatory,
+                "inhibitory_contacts": inhibitory,
+                "net_signed_contacts": excitatory + inhibitory,
+                "net_sign": (
+                    "excitatory"
+                    if excitatory + inhibitory > 0.0
+                    else "inhibitory"
+                    if excitatory + inhibitory < 0.0
+                    else "balanced"
+                ),
+            }
+        )
+    return drive
+
+
+def _selection_identity_control(
+    graph: SparseConnectome,
+    inputs: tuple[int, ...],
+    readouts: tuple[int, ...],
+    expected: dict[str, Any],
+) -> dict[str, Any]:
+    """At K = 1 the bounded-path rule must return exactly the shortest-path circuit.
+
+    Every number in this sweep is a comparison against the one-hop circuit, so the selection
+    rule has to be shown to reproduce it. This fails closed.
+    """
+    bounded = select_bounded_path_circuit(graph, inputs, readouts, maximum_path_length=1)
+    shortest = select_shortest_path_circuit(graph, inputs, readouts, maximum_hops=1)
+    identical_bodies = set(bounded.graph.body_ids.tolist()) == set(shortest.graph.body_ids.tolist())
+    matches_expected = (
+        bounded.graph.neuron_count == int(expected["neurons"])
+        and bounded.graph.edge_count == int(expected["edges"])
+    )
+    control = {
+        "bounded_k1_neurons": int(bounded.graph.neuron_count),
+        "bounded_k1_edges": int(bounded.graph.edge_count),
+        "shortest_path_neurons": int(shortest.graph.neuron_count),
+        "shortest_path_edges": int(shortest.graph.edge_count),
+        "identical_body_sets": bool(identical_bodies),
+        "matches_registered_expectation": bool(matches_expected),
+        "input_bodies_stimulated": len(bounded.input_body_ids),
+        "passed": bool(
+            identical_bodies
+            and matches_expected
+            and bounded.graph.edge_count == shortest.graph.edge_count
+        ),
+    }
+    if not control["passed"]:
+        raise DatasetError(
+            "The bounded-path rule does not reproduce the shortest-path circuit at K = 1: "
+            f"{control}"
+        )
+    return control
+
+
 def run_widened_grooming_transfer(
     *,
     root: Path,
@@ -62,7 +139,7 @@ def run_widened_grooming_transfer(
 ) -> dict[str, Any]:
     """Run the preregistered bounded-path sweep and score its hypotheses."""
     contract = load_json(experiment_path)
-    if contract.get("schema_version") != "1.0":
+    if contract.get("schema_version") not in {"1.0", "1.1"}:
         raise ConfigurationError("Unsupported widened-circuit contract schema")
     parse_provenance(str(contract["provenance"]))
     base_path = project_root() / str(contract["base_experiment"])
@@ -119,6 +196,13 @@ def run_widened_grooming_transfer(
     one_hop_220 = float(one_hop["readout_rate_at_0_15_hz"]["220"])
     mean_100, std_100 = reference_by_frequency[100.0]
     mean_220, std_220 = reference_by_frequency[220.0]
+
+    identity_control: dict[str, Any] | None = None
+    control_spec = contract["circuit_selection"].get("identity_control")
+    if control_spec is not None:
+        identity_control = _selection_identity_control(
+            graph, inputs, readouts, control_spec["expected"]
+        )
 
     by_path_length: list[dict[str, Any]] = []
     for length in contract["circuit_selection"]["maximum_path_lengths"]:
@@ -187,10 +271,14 @@ def run_widened_grooming_transfer(
                 value or "untyped": cell_types.count(value) for value in sorted(set(cell_types))
             },
             "inhibition": inhibition,
+            "input_bodies_stimulated": len(selected.input_body_ids),
+            "readout_drive": _readout_drive(selected, signs),
             "parity_condition": {
                 "frequency_hz": float(parity["frequency_hz"]),
                 "seed": int(parity["seed"]),
                 "numpy_readout_rates_hz": list(numpy_run.readout_rates_hz),
+                "total_spikes": int(numpy_run.spike_indices.size),
+                "distinct_spiking_neurons": int(np.unique(numpy_run.spike_indices).size),
             },
             "backend_comparisons": [
                 {key: value for key, value in item.items() if key != "timing_outliers"}
@@ -236,6 +324,16 @@ def run_widened_grooming_transfer(
                 if abs(rates[100.0] - mean_100) <= std_100
                 and abs(rates[220.0] - mean_220) <= std_220
             )
+            # A one-sided "below the one-hop rate" test is satisfied by a readout that
+            # produces nothing, which is not evidence that widening moves the response
+            # toward the reference. The outcome is therefore three-way and only
+            # "moderated" supports the structural reading.
+            if rate_220 <= 0.0:
+                outcome = "suppressed"
+            elif rate_220 < one_hop_220:
+                outcome = "moderated"
+            else:
+                outcome = "not_moderated"
             block["hypotheses"] = {
                 "H1": {
                     "statement": hypotheses["H1"]["statement"],
@@ -243,7 +341,9 @@ def run_widened_grooming_transfer(
                     "rate_100hz_at_scale": by_scale[match_scale][100.0],
                     "rate_220hz_at_scale": rate_220,
                     "one_hop_rate_220hz": one_hop_220,
-                    "passed": bool(rate_220 < one_hop_220),
+                    "outcome": outcome,
+                    "one_sided_inequality_holds": bool(rate_220 < one_hop_220),
+                    "passed": outcome == "moderated",
                 },
                 "H2": {
                     "statement": hypotheses["H2"]["statement"],
@@ -253,7 +353,9 @@ def run_widened_grooming_transfer(
                     "passed": bool(within_both),
                 },
             }
-        block["hypotheses_descriptive"] = {"H3": hypotheses["H3"]["statement"]}
+        block["hypotheses_descriptive"] = {
+            key: hypotheses[key]["statement"] for key in ("H3", "H4", "H5") if key in hypotheses
+        }
         by_path_length.append(block)
 
     result: dict[str, Any] = {
@@ -267,6 +369,9 @@ def run_widened_grooming_transfer(
         "assumption_ids": list(contract["assumption_ids"]),
         "graph_source_sha256": graph.source_sha256,
         "one_hop_reference_values": one_hop,
+        "selection_identity_control": identity_control,
+        "known_confound": contract.get("known_confound"),
+        "supersedes": contract.get("supersedes"),
         "backends": list(backends),
         "by_path_length": by_path_length,
         "disclosure": str(contract["disclosure"]),
