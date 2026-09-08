@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-exit-gate-v2",
+  "title": "Executable Stage 2 exit gate, with the sufficiency caveats the 2026-09-08 review found missing",
+  "provenance": "E",
+  "assumption_ids": ["ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-06", "VAL-01"],
+  "purpose": "AGENTS section 9 states the Stage 2 exit gate in prose. This contract turns it into a re-runnable check that reads immutable evidence artifacts by checksum and reports each leg separately, so the gate flips on its own when the missing evidence arrives instead of being re-argued. v2 keeps every leg, pin and criterion of v1 and adds the caveats ADR-2026-009 found missing, so a reader of the result sees what a pass does and does not establish.",
+  "supersedes": {
+    "experiment_id": "stage2-exit-gate-v1",
+    "what_changes": "no leg, artifact pin or criterion changes; sufficiency caveats are extended and the supporting evidence points at the v2 measurement artifacts",
+    "why": "v1 recorded the cellular leg as passing without saying that the frozen model is worse than the training-cohort mean predictor, recorded the synaptic leg's peak-time and sign criteria as informative when the source traces are peak-aligned and inward by selection, and set a circuit coverage threshold without saying it was set by this contract"
+  },
+  "gate_statement": {
+    "source": "AGENTS.md section 9, Stage 2",
+    "text": "Held-out cellular, synaptic and circuit responses are predicted in time and amplitude, not merely activation order. Key predictions survive plausible parameter/model ensembles."
+  },
+  "legs": [
+    {
+      "id": "cellular",
+      "requirement": "A held-out cellular response is predicted in amplitude by a model frozen beforehand.",
+      "artifact": {
+        "path": "evidence/stage2/projection-neuron-dynamic-condition-holdout-v1.json",
+        "sha256": "401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434"
+      },
+      "read": ["acceptance", "cellular_fi_subgate_pass"],
+      "expect": true,
+      "sufficiency_caveats": [
+        "the held-out cells come from the same paper under a chronic-exposure condition, and that paper reports firing-rate curves and input resistance indistinguishable between conditions, so this is a same-population holdout rather than a state shift",
+        "only firing rate is scored; resting voltage, membrane time constant and adaptation are not predicted by this model at all",
+        "the preregistered criterion is a normalized error ratio of at most 1.2, and the observed ratio is 1.064: the frozen family's held-out RMSE of 13.17 Hz is worse than the 12.38 Hz obtained by predicting the two-cell training mean curve, so the pass shows the model lies within the biological spread and not that it predicts better than a cohort average"
+      ]
+    },
+    {
+      "id": "synaptic",
+      "requirement": "A held-out synaptic response is predicted in time and amplitude against preregistered numeric feature limits.",
+      "artifact": {
+        "path": "evidence/stage2/uepsc-kinetics-holdout-v1.json",
+        "sha256": "68877f888a3080100df85dd01f91308d215596b81744cd1b7299abea4dcc9275"
+      },
+      "read": ["acceptance", "v2_kinetics_subgate_pass"],
+      "expect": true,
+      "sufficiency_caveats": [
+        "the source traces were aligned on their peaks by the authors, so every one of the twelve recorded waveforms peaks on the same sample; the peak-time criterion therefore measures the alignment convention and the kernel's own onset, and the inward-sign criterion is satisfied by selection; only the decay criterion is informative, and it fails",
+        "the amplitude leg was excluded on a state-confound argument that the source paper does not support: it reports unitary amplitudes and kinetics indistinguishable between solvent and exposed cells, so the kernel's 13.6 pA median underprediction on these five cells is a model error, not a state difference",
+        "even a pass would leave release failure and short-term plasticity untested; the source paper's release probability of 0.79 and depression onset near 50 spikes per second are registered but unmodelled"
+      ]
+    },
+    {
+      "id": "circuit",
+      "requirement": "A held-out circuit response is predicted, not merely the activation order.",
+      "artifact": {
+        "path": "evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-delayfix.json",
+        "sha256": "a734ea71f21146e7e743d52463ea41077bdd97568f81ccc1c360bb1668d9cfe2"
+      },
+      "read": ["stage1_gate_assessment", "held_out_positive_response_coverage"],
+      "expect_at_least": 0.8,
+      "sufficiency_caveats": [
+        "the reference is archived FlyWire simulation output, not biological response data, so even a pass here would not settle the circuit leg biologically",
+        "the 0.8 coverage threshold is set by this contract and is not derived from any source; positive-response coverage asks only whether the readout fires at frequencies where the reference fires, which is weaker than the gate statement's 'time and amplitude'",
+        "the transferred circuit is a one-hop induced subgraph of 41 neurons between mapped inputs and readouts, while the reference simulated the whole brain, so a rate mismatch between the two is structural before any biophysical mechanism is invoked"
+      ]
+    },
+    {
+      "id": "ensemble",
+      "requirement": "Key predictions survive a plausible parameter and model ensemble of the VAL-01 shape.",
+      "artifact": {
+        "path": "evidence/stage2/projection-neuron-ensemble-v1.json",
+        "sha256": "066046f8809edf51260caaacff78c805cf30ae85e9164c9feb7b43f0cac031d4"
+      },
+      "read": ["acceptance", "held_out_evaluation_performed"],
+      "expect": true,
+      "sufficiency_caveats": [
+        "the ensemble has the required five-by-four shape but every registered held-out recording is consumed, so no prediction has been scored across it",
+        "the accepted members span a 27-fold range of refractory period and a 38-fold range of adaptation time constant at a 25 percent loss tolerance, so a future score across this ensemble would report the width of an unconstrained family rather than the robustness of a prediction"
+      ]
+    }
+  ],
+  "supporting_evidence": [
+    {
+      "id": "cellular_observables",
+      "path": "evidence/stage2/cellular-observables-v2.json",
+      "sha256": "7cbacca867818a3927b83bfe75cc8fbaf99b03768de8b57e8cd9bacd497c482b",
+      "role": "records which V1 observables are measured at all and for which cell classes, with the review diagnostics that show what the primary values assume"
+    },
+    {
+      "id": "synaptic_structure",
+      "path": "evidence/stage2/synaptic-structure-v2.json",
+      "sha256": "0d55155008591c4ea389e8d055b452c0cffbc53a290296a2e66d45dd636a137c",
+      "role": "records whether contact number could carry the type-pair scale ND-04 requires, against the corrected statement of the published claim"
+    }
+  ],
+  "acceptance": {
+    "stage2_exit_gate_passed": "every leg passes",
+    "partial_pass_is_not_a_pass": "Stage 2 does not exit on a subset. A leg that passes is recorded so the remaining work is visible, not so the stage can be declared complete."
+  },
+  "review": "ADR-2026-009",
+  "tier_policy": "This contract evaluates a stage exit gate and awards no validation tier. Tiers are awarded only by immutable evidence bundles.",
+  "claim_boundary": "A mechanical re-evaluation of the recorded Stage 2 exit criteria against checksum-pinned artifacts. It does not assess whether those criteria are the right ones; the caveats record where the review found them weaker than the gate statement.",
+  "last_reviewed": "2026-09-08"
+}
