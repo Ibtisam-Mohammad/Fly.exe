@@ -534,3 +534,48 @@ Chasing an apparent independent validation found a real defect instead. Recorded
 - **It does not unblock the synaptic leg.** A better kernel fitted to all twelve cells is a
   better prior, not a test, and even two decays leave the amplitude 7% low and the half-decay 40%
   above the published value.
+
+### Homeostatic matching: the recorded negative was a proxy failure (2026-09-09)
+
+This status page recorded that "contact number does not implement the published homeostatic
+matching". That conclusion rests on a proxy the project substituted for the variable Kazama and
+Wilson actually measured, and on the four glomeruli where they measured it the connectome
+reproduces their result.
+
+**Their claim, precisely.** Unitary EPSC amplitude correlates with the **glomerular volume**
+occupied by the PN dendritic tuft (r = 0.75, n = 39), achieved by scaling the number of release
+sites per ORN axon per PN while release probability and quantal size stay constant across
+glomeruli (p > 0.36 and p > 0.07 respectively), so that unitary *depolarisation* is uniform
+(p > 0.43) while unitary *current* is not (p < 1e-6).
+
+**What the connectome shows.** Contacts per realised ORN-to-PN connection, against their stated
+ordering that "uEPSC amplitudes are consistently larger for glomeruli DL5 and DM4 than for DM6
+and VM2":
+
+```
+  DL5   81 contacts        }  large group, min 63
+  DM4   63 contacts        }
+  VM2   40 contacts        }  small group, max 40
+  DM6   28 contacts        }
+  clean separation, 1.57x, ordering reproduced exactly
+```
+
+**Why the earlier test failed.** The `stage2-synaptic-structure-v2` H2 predicts contacts per
+connection *rising* with converging ORN count, on the chain "unitary current rises with
+glomerular volume and volume rises with ORN number". The first link is Kazama and Wilson's
+measurement; the second is the project's own substitution, and it is what breaks. Across all 50
+glomeruli contacts per connection **anti**-correlates with ORN count (Pearson -0.413, Spearman
+-0.487) and with PN count (-0.626). ORN count is not a usable proxy for glomerular volume in
+MaleCNS, so H2 tested the proxy rather than the claim.
+
+**How much weight this carries.** Not much yet, and it is labelled accordingly. It is a post-hoc
+ordinal check on four glomeruli in two groups of two, computed from the convergence artifact
+rather than preregistered. Only the ordering is testable because Kazama and Wilson's
+per-glomerulus amplitudes are figure-only. Median contacts is measured over realised pairs and is
+biased upward where completeness is low, and DM4 has the lowest completeness of the four at
+0.680 — though dropping DM4 leaves DL5 at 81 still cleanly above VM2 at 40 and DM6 at 28.
+
+**What a real test needs.** Glomerular volumes, which the connectome can supply from synapse-cloud
+extent or meshes and which this analysis did not compute. That would test Kazama and Wilson's
+actual r = 0.75 correlation over all 50 glomeruli instead of an ordering over four, and it is the
+indicated next experiment for the synaptic tier.
