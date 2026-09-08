@@ -41,12 +41,12 @@ STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
-TRACK_A_STATUS: complete as offline engineering prototype; speed gate 0.117 minimum/0.169 median vs 0.5 target; awards no tier
+TRACK_A_STATUS: not accepted; grooming-displacement cap fails 30/30; steady-state speed 0.332 minimum/0.353 median vs 0.5 target; awards no tier
 TRACK_A_POPULATIONS: DNa01/DNa02, DNg97, MN9, JO-F, DNg62/DNge078/DNg21, DM1/DM4 PNs, and GNG588 resolve numerically
 STAGE2_DATA: Gouwens-Wilson DM1 priors and Gugel DL5 F-I/uEPSC data locked; one external Nanami PN trace is normalized and reserved but is not population evidence
 STAGE2_READINESS: dynamic revision contract 8ddb0b77770d passes four hashes; two original Gugel cells are training-only, four chronic-condition cells are now consumed holdouts, and the Nanami cell remains unscored
 STAGE2_FIT: first frozen F-I ratio 1.228 fails and uEPSC ratio 1.105 passes; adaptive distribution training RMSE 7.630 vs 15.528 baseline, chronic-condition held-out ratio 1.064 passes, and 100-to-50-us conclusion is stable; no tier awarded
-TRACK_A_EVIDENCE: primary 6fb57a6fe536ed55; controls 65250db0fc473b90; population registry 3b0c53a38230be21
+TRACK_A_EVIDENCE: v3 primary bb5674a4ab942e0c; v3 controls 249353025c770080; population registry 3b0c53a38230be21; v1 and v2 evidence withdrawn
 FIRST_EMBODIMENT: closed-loop flat-ground walking
 NEURAL_BASELINE: hybrid graded/spiking with explicit uncertainty
 INITIAL_STATE: awake, fed, water-replete, unmated, daytime, artificial naive memory

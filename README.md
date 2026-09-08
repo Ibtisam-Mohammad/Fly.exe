@@ -136,9 +136,14 @@ python scripts/run_track_a_controls.py --root /srv/flybrain-data --run-root /srv
 
 The v2 acceptance evidence has been withdrawn. It was produced from an uncommitted worktree,
 at food positions a discarded v1 round had already used, with a shuffled-connectome control
-that could not fail, and with the body settling inside the dust patch. See
-[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) for the withdrawal record
-and [the repair ADR](docs/adr/ADR-2026-006-evidence-chain-repair.md) for what changed.
+that could not fail, and with the body settling inside the dust patch. The v3 matrix ran from a
+clean commit at three unused positions: 29 of 30 runs complete the sequence and all nine
+controls pass, but **0 of 30 clear the grooming-displacement cap**, so Track A is not an
+accepted milestone. The body translates a median 6.26 mm during a 3-second grooming bout under
+a zero forward command. See
+[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) for the v3 results and the
+withdrawal record, and [the repair ADR](docs/adr/ADR-2026-006-evidence-chain-repair.md) for
+what changed.
 `full-vnc-walk` remains gated; there is no synthetic fallback hidden behind that scientific
 command. `eon-demo` remains the semantic engineering storyboard and neural-bypass control.
 

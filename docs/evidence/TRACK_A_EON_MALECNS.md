@@ -39,6 +39,122 @@ dust patch that leaves checked clearance after settling, a grooming-displacement
 length, and a shuffled-connectome criterion that must both fail to complete and degrade its
 grooming readout below half the exact-graph reference.
 
+## v3 acceptance matrix, 2026-09-08
+
+Preregistration: `configs/experiments/track-a-acceptance.json`, experiment
+`track-a-eon-malecns-acceptance-v3`, SHA-256
+`8335d3b10c15ea803d24cffd7aaa797b8c87dab034ccd7ed6dd624770dffc39f`.
+
+- Primary matrix: `/srv/flybrain-data/runs/track-a-acceptance-v3/primary-progress.json`,
+  SHA-256 `bb5674a4ab942e0c80ce3a03b1d96df9a3f8cb428c8850e899a9284afac5a492`.
+- Controls: `/srv/flybrain-data/evidence/male-cns-v1.0/track-a-controls-v3.json`,
+  SHA-256 `249353025c770080a5a96d347f5c3a8df6b30aef5ba300649b4a8faea740a0f5`.
+- Viewer video: SHA-256
+  `8a163ae920fca4f1ad96a4c6be1624083c68cf3ee59df75ea5d57f68423c97ca`.
+
+Every one of the 30 primary runs and every control run records commit
+`4a061ac7207a4f3b5abe4aa40ec58125de805493` with `dirty: false`. Zero runs came from an
+uncommitted tree, and the acceptance script refuses to reuse a run recorded against any other
+commit.
+
+### Outcome: the matrix does not pass
+
+| Gate | Result |
+|---|---:|
+| Held-out food positions | far-left `(7.5,-2)`, far-center `(9.5,0)`, far-right `(7.5,2)` mm, none previously used |
+| Runs | 10 seeds at each of 3 positions, 30 total |
+| Completed the required sequence | 29 of 30 |
+| Pre-groom seek displacement, floor 0.5 mm | 30 of 30 pass; 0.741 to 1.379 mm, median 0.918 |
+| Grooming displacement, cap 2.5 mm | **0 of 30 pass**; 5.166 to 7.532 mm, median 6.257 |
+| Accepted conditions | **0 of 30** |
+| `primary_matrix_passed` | **false** |
+| Required controls | 9 of 9 pass |
+| Throughput, steady state | 0.332 to 0.363, median 0.353 biological s per wall s |
+| Throughput, cold start | 0.114 to 0.245 biological s per wall s |
+| Interactive target 0.5 | not met |
+
+`far-right:seed-2` reached `SEEK_RESUME` and then stalled 1.9 mm short of the source at
+`(5.95, 0.98)` mm for the remainder of the 12-second run. That is a genuine navigation failure
+under the odor-gradient controller and is recorded rather than excluded.
+
+### What the geometry repair fixed
+
+The v2 matrix entered `GROOM` at exactly 135,000 microseconds in all 30 runs, because the
+settled thorax was already inside the dust patch. With the patch moved to leave a checked
+0.71 mm clearance after settling, grooming now begins between 330,000 and 690,000 microseconds
+across 12 distinct times, always after the fly has walked 0.74 mm or more into the patch. The
+first two transitions are seed-dependent for the first time, so calling these runs stochastic
+is now accurate.
+
+### What the repair did not fix: grooming-phase body translation
+
+The body still travels a median 6.26 mm during a 3-second grooming bout while the forward
+command is zero, against a preregistered cap of one adult body length. Three isolation probes
+locate the cause, and it is mostly not the trajectory replay:
+
+| Condition, 3 s | Net body displacement |
+|---|---:|
+| Standing, no command at all | 2.161 mm |
+| Grooming, trajectory replay suppressed | 4.917 mm |
+| Grooming, registered 200 ms blend-in | 5.876 mm |
+| Grooming, 1000 ms blend-in | 5.507 mm |
+
+The FlyGym body drifts 2.16 mm in three seconds while merely standing, and switching to the
+grooming adhesion pattern, which releases the two forelegs, roughly doubles that before the
+published trajectory contributes anything. The replay itself adds about 1 mm. Holding the
+settled joint configuration instead of the nominal default pose was tested and made standing
+worse, at 4.63 mm, so it was not adopted. The registered `groom_blend_in_us` scaffold removes
+the position-target discontinuity at bout onset but is measured not to reduce the drift; it is
+recorded as such rather than presented as a fix.
+
+No further physics tuning was attempted. Adjusting the body until the number clears a gate that
+was set from body length is the failure mode this repair exists to prevent. The honest position
+is that the Track A body cannot presently hold station during a grooming bout, and that this
+was invisible while the demo had no displacement criterion.
+
+### Controls
+
+All nine required controls pass, and unlike v2 they can now fail.
+
+| Control | Criterion | Result |
+|---|---|---|
+| contamination-input-ablation | `GROOM` blocked | pass, no transitions |
+| groom-readout-ablation | `GROOM` blocked | pass, no transitions |
+| sucrose-input-ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
+| mn9-readout-ablation | `FEED_INITIATION` blocked | pass, stops at `SEEK_RESUME` |
+| zero-weight | `GROOM` blocked | pass, no transitions |
+| shuffled-connectome | must not complete **and** peak grooming-DN readout at most half the exact-graph median | pass: 66.7 Hz against an allowance of 77.8 Hz, from an exact median peak of 155.6 Hz, and did not complete |
+| controller-only | baseline artifact recorded | pass |
+| neural-bypass | connectome unused | pass |
+| headless-viewer-equivalence | identical transition signature | pass |
+
+The shuffled-connectome margin is 14%, so this control was close to failing. That is the point:
+in v2 it was registered with no blocked transition and its `passed` field was unconditionally
+true.
+
+Rendering perturbs the trajectory more than it did in v2. The viewer and headless runs still
+produce identical transition identities and reasons, but the last two transitions now differ by
+1.44 seconds rather than 30 milliseconds. The equivalence control tests the transition
+signature, not timing, so it passes; the timing divergence is recorded here because it means a
+rendered run is not a faithful timing replica of a headless one.
+
+### Workspace copies
+
+Copies for human inspection are under `artifacts/track-a-v3`: the rendered viewer run in
+`final-run`, and the primary matrix, controls, reissued V0 bundle and scoped assumption
+snapshot in `evidence`. The `final-run` directory can be passed straight back to
+`flysim validate`, which reports `valid: true` with `behavioral_criteria_passed: false`, since
+the artifacts are intact and the behavioural cap is breached. The withdrawn v2 copies remain
+under `artifacts/track-a`.
+
+### Standing
+
+Track A is a working full-graph integration: 165,122 bodies and 25,563,197 edges execute in
+direct PyGeNN, coupled to a FlyGym body, with causal event gates, falsifiable controls, and
+reproducible run records from a committed tree. It is not an accepted milestone. Its own
+preregistered behavioural criterion fails in every run, and its throughput remains below the
+interactive target even after the cold-start cost is separated out.
+
 ## Superseded v2 record
 
 Everything below this line describes the withdrawn v2 evidence and is kept for audit.

@@ -62,13 +62,16 @@ Status date: 2026-09-08
   actuators.
 - Causal full-graph FlyGym sequence: seek, antennal contamination, groom, resume seeking, reach
   food, and initiate rostrum/haustellum extension.
-- Track A acceptance matrix: all 10 preregistered seeds passed at each of three held-out food
-  positions (30/30), exceeding the required 8/10 per position.
-- Required Track A controls pass: contamination-input, grooming-readout, sucrose-input and MN9
-  ablations block their transitions; zero-weight and shuffled-connectome controls do not complete;
-  controller-only and neural-bypass conditions are recorded.
-- A physical FlyGym MP4 was produced. Viewer and headless runs have identical transition identities
-  and reasons; feed and completion occur 30 ms earlier in the viewer trace.
+- Track A v3 acceptance matrix executed from clean commit `4a061ac` at three genuinely unused
+  food positions, 10 seeds each. 29 of 30 runs complete the required sequence and all 30 clear
+  the pre-groom seek floor, but **0 of 30 clear the grooming-displacement cap**, so the matrix
+  does not pass. See [the Track A evidence report](evidence/TRACK_A_EON_MALECNS.md).
+- All nine required Track A controls pass against criteria that can now fail. The
+  shuffled-connectome control cleared its degradation criterion by 14%: peak grooming readout
+  66.7 Hz against an allowance of 77.8 Hz.
+- A physical FlyGym MP4 was produced. Viewer and headless runs have identical transition
+  identities and reasons, but the last two transitions now differ by 1.44 s, so a rendered run
+  is not a timing replica of a headless one.
 - Run manifests, traces, validation reports, deterministic replay, and MP4 rendering.
 - CLI surface for data, benchmarks, runs, rendering, and validation.
 - Checksum-locked official MaleCNS starter profile (annotations, transmitter predictions, body statistics, and aggregate segment weights).
@@ -133,8 +136,14 @@ Status date: 2026-09-08
   dynamics have not yet been implemented or validated.
 - The v0.2 dynamics registry is an executable uncertainty and prior boundary, not a fitted hybrid
   model. Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
-- Track A is an offline prototype: observed throughput was 0.117 minimum and 0.169 median
-  biological seconds per wall second, below the 0.5 interactive target.
+- Track A is an offline prototype. Steady-state throughput is 0.332 minimum and 0.353 median
+  biological seconds per wall second, below the 0.5 interactive target; including graph load and
+  GeNN model build the cold-start figure is 0.114 minimum. The previously reported 0.117/0.169
+  figures were cold-start numbers presented as throughput.
+- The Track A body cannot hold station while grooming. It translates a median 6.26 mm during a
+  3-second bout under a zero forward command, against a 2.5 mm one-body-length cap. Isolation
+  probes attribute 2.16 mm to standing drift alone and about 1 mm to the trajectory replay; the
+  rest comes from releasing the forelegs. This blocks Track A acceptance and is unresolved.
 - Track A is not autonomous connectome-generated behavior. It injects central DM1/DM4 and GNG588
   relays, applies a 10x entry-path gain, drives DNg97 with a 20-Hz odor-gated intent scaffold, and
   combines DNa activity with an explicit odor-gradient steering controller.
@@ -227,9 +236,10 @@ Each is now tracked, and the claims they supported are withdrawn rather than res
 | The V0 builder required assumption set `foundation-v0.3` while the register had moved on | Gate is now content-based; the set identifier no longer affects V0 |
 | Every Track A acceptance and control artifact was produced from an uncommitted worktree | Evidence-grade runs and both Track A scripts now refuse a dirty tree |
 | The settled FlyGym body began inside the dust patch, so grooming began on a fixed schedule | Dust patch moved; a startup guard fails closed if clearance is lost |
-| The grooming replay translated the body 5 to 8 mm while the forward command was zero | Displacement is measured, capped at one body length, and enforced in validation |
+| The grooming replay translated the body 5 to 8 mm while the forward command was zero | Measured, capped at one body length, enforced in acceptance; **the cap now fails in 30 of 30 runs and the cause is mostly standing drift, not the replay** |
 | The registered 0.1 ms GeNN synaptic delay executed as 0.2 ms | Corrected, with a one-synapse impulse test across three delays |
 | Registered 2 ms interface delays were realised as 15 ms without being registered | Effective delays are computed, registered, and asserted at build time |
 | The shuffled-connectome control could not fail | Replaced with a preregistered degradation criterion |
 | The forward and yaw commands were labelled mm/s and rad/s | Renamed to normalized descending drives |
-| The Track A held-out positions had already been used by a discarded v1 round | Three genuinely unused positions preregistered as v3 |
+| The Track A held-out positions had already been used by a discarded v1 round | Three genuinely unused positions preregistered and executed as v3 |
+| Every Track A transition fired at an identical time in all 30 runs | Grooming now begins across 12 distinct times between 330 and 690 ms, after a measured approach |
