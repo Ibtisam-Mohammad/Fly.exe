@@ -2090,6 +2090,23 @@ def fit_projection_neuron_model(
 
 
 
+def _repository_root() -> Path:
+    """Project root, resolved from this module rather than from a caller-supplied path."""
+    return Path(__file__).resolve().parents[2]
+
+
+def _guard_consumed_cells(
+    requested: tuple[str, ...], forbidden: frozenset[str]
+) -> tuple[str, ...]:
+    """Refuse to read a recorded cell that an earlier evaluation has already consumed."""
+    overlap = sorted(forbidden.intersection(requested))
+    if overlap:
+        raise DatasetError(
+            f"Refusing to read already consumed recorded cells: {overlap}"
+        )
+    return requested
+
+
 def build_projection_neuron_ensemble(
     experiment_path: Path,
     root: Path,
@@ -2158,10 +2175,13 @@ def build_projection_neuron_ensemble(
     rate_window_ms = float(protocol["rate_window_ms"])
     bank_settings = fit["candidate_bank"]
 
-    raw_experiment = load_json(
-        experiment_path.parent / "stage2-pn-dynamic-revision.json"
-    )
-    parameter_policy = raw_experiment["parameter_policy"]
+    policy_source = contract["parameter_policy_source"]
+    policy_path = _repository_root() / str(policy_source["path"])
+    if not policy_path.is_file():
+        raise ConfigurationError(
+            f"The ensemble contract names a missing parameter-policy source: {policy_path}"
+        )
+    parameter_policy = load_json(policy_path)["parameter_policy"]
     bank = _adaptive_candidate_bank(
         int(bank_settings["size"]),
         int(bank_settings["seed"]),
@@ -2174,11 +2194,12 @@ def build_projection_neuron_ensemble(
     if not bank_settings["selected_indices"]:
         raise DatasetError("The frozen fit records no selected candidate")
 
-    # The artifact legitimately contains the consumed cells; what matters is that the
-    # grouping below names only training cells, which the disjointness check above fixed.
+    # The artifact legitimately contains the consumed cells, so the guard has to sit at the
+    # point of reading rather than on the file.
     table = pq.read_table(artifact_path)
+    requested = _guard_consumed_cells(training_ids, forbidden_ids)
     current_pa, training_curves = _group_curves(
-        table, training_ids, "current_pa", "firing_rate_hz"
+        table, requested, "current_pa", "firing_rate_hz"
     )
 
     # Re-score the whole candidate bank against the training cells so acceptance is defined
@@ -2259,7 +2280,11 @@ def build_projection_neuron_ensemble(
         "frozen_fit_sha256": observed_fit_sha256,
         "parameters_refitted": False,
         "training_specimen_ids": list(training_ids),
-        "specimen_ids_read": list(training_ids),
+        "specimen_ids_read": list(requested),
+        "consumed_cell_guard": (
+            "every recorded-cell identifier passed to the reader is checked against the "
+            "consumed list before the read, and a match raises"
+        ),
         "forbidden_specimen_ids": sorted(forbidden_ids),
         "candidate_bank_size": int(bank_settings["size"]),
         "accepted_candidate_count": int(accepted.size),
@@ -2305,7 +2330,7 @@ def build_projection_neuron_ensemble(
             "meets_val01_parameter_samples": sample_count >= 5,
             "meets_val01_seeds_per_condition": seed_count >= 4,
             "all_predictions_finite": bool(np.all(np.isfinite(member_rates))),
-            "no_forbidden_specimen_read": not (forbidden_ids & set(training_ids)),
+            "no_forbidden_specimen_read": True,
             "held_out_evaluation_performed": False,
         },
         "tier_policy": str(contract["tier_policy"]),

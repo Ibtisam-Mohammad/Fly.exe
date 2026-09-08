@@ -2,6 +2,7 @@
 
 Status: first measured cellular observables recorded; V1 remains blocked
 Date: 2026-09-08
+Immutable results: `cellular-observables-v1.json` logical SHA-256 `4796191ebd8c1ecd…`; `projection-neuron-ensemble-v1.json` logical SHA-256 `8759a6dd9f991255…`
 Highest project validation tier: V0 Structural
 
 ## What changed
@@ -166,6 +167,10 @@ set includes `adaptation_increment = 0.0` — a model with no adaptation at all 
 the best fit. The ensemble mean scores 18.847 Hz training RMSE against the 7.630 Hz previously
 reported for the two-draw family, which makes plain that the 7.630 Hz figure was a property of
 scoring each per-cell best fit on the cell that selected it, not of a well-determined family.
+
+Reading a consumed cell is guarded at the point of the read, not merely by contract text: every
+recorded-cell identifier handed to the reader is checked against the consumed list and a match
+raises.
 
 The ensemble is deliberately **unscored**. Every registered F-I recording has already been
 consumed, by the first frozen evaluation or by the chronic-condition holdout, so evaluating the

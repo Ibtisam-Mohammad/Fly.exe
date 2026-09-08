@@ -67,5 +67,9 @@
     "the two training cells come from one paper, one sex and one age, so the ensemble spread reflects parameter uncertainty and not biological population variability"
   ],
   "claim_boundary": "A parameter-uncertainty ensemble over a cross-specimen female DL5 projection-neuron family. It satisfies the VAL-01 ensemble shape and nothing else, and supports no V1 award.",
-  "last_reviewed": "2026-09-08"
+  "last_reviewed": "2026-09-08",
+  "parameter_policy_source": {
+    "path": "configs/experiments/stage2-pn-dynamic-revision.json",
+    "role": "supplies the candidate-bank ranges the frozen fit was drawn from; the bank is rebuilt from them deterministically rather than re-optimised"
+  }
 }
