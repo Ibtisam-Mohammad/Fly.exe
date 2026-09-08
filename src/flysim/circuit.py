@@ -1001,7 +1001,13 @@ def run_genn_circuit(
         raise RuntimeError(f"Expected one GeNN recording batch, got {len(recorded)}")
     times, indices = recorded[0]
     model.unload()
-    spike_times = np.asarray(times, dtype=np.float64)
+    # GeNN labels a spike with the start of the integration interval that produced it,
+    # while the NumPy oracle and the Brian2 adapter both label it with the end of that
+    # interval. `neural_parity.run_genn` already corrects for this; this adapter did not,
+    # and the resulting one-step offset was masked in the Stage 1 reports by the separate
+    # axonal-delay defect pushing GeNN one step the other way. Fixing the delay alone
+    # would have left a real one-step disagreement in place.
+    spike_times = np.asarray(times, dtype=np.float64) + parameters.dt_ms
     spike_indices = np.asarray(indices, dtype=np.uint32)
     readouts = np.asarray(
         [graph.dense_index(body_id) for body_id in readout_body_ids], dtype=np.uint32

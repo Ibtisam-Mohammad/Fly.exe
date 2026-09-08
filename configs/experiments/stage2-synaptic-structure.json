@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-synaptic-structure-v1",
+  "title": "Does the MaleCNS ORN-to-PN contact structure implement the published homeostatic matching, and what per-contact scale does it imply?",
+  "provenance": "M/P/F",
+  "assumption_ids": ["ND-03", "ND-04", "ND-06"],
+  "purpose": "ND-04 asserts that contact count is not synaptic strength and that a type-pair scale must be fitted. This contract tests that assertion against a published physiological claim using only V0-locked structural data, and derives the first per-contact scale in physical units.",
+  "required_artifacts": [
+    {
+      "path": "derived/male-cns-v1.0/graph",
+      "role": "V0-locked traced aggregate graph"
+    },
+    {
+      "path": "raw/male-cns-v1.0/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "role": "cell-type labels"
+    }
+  ],
+  "population_rule": {
+    "receptor_neuron_type_pattern": "ORN_<glomerulus>",
+    "projection_neuron_type_pattern": "<glomerulus>_<tract>PN",
+    "tracts": ["ad", "l", "v", "il", "lv", "vl", "m"],
+    "unit": "one connected ORN-to-PN pair; a pair with zero aggregate contacts is not a connection",
+    "minimum_glomeruli": 20
+  },
+  "published_claim_under_test": {
+    "source": "https://doi.org/10.1016/j.neuron.2008.04.024",
+    "restated_by": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3933953/",
+    "claim": "Each ORN spike produces a 5 to 7 mV unitary EPSP in a PN; each ORN axon forms several dozen synaptic sites onto each postsynaptic PN; and ORN-to-PN connections are homeostatically matched, so glomeruli with fewer converging ORNs have stronger unitary connections.",
+    "unitary_epsp_mv": {"minimum": 5.0, "maximum": 7.0},
+    "several_dozen_contacts_range": {"minimum": 24, "maximum": 100}
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "If homeostatic matching is implemented by contact number, total ORN contacts per PN vary less across glomeruli than the converging ORN count does.",
+      "test": "coefficient_of_variation(total_contacts_per_pn) < coefficient_of_variation(converging_orn_count)",
+      "supports_structural_matching_if": true
+    },
+    {
+      "id": "H2",
+      "statement": "If homeostatic matching is implemented by contact number, contacts per connection fall as the number of converging ORNs rises.",
+      "test": "spearman_rho(converging_orn_count, median_contacts_per_connection) < 0",
+      "supports_structural_matching_if": true
+    },
+    {
+      "id": "H3",
+      "statement": "MaleCNS contacts per connection are consistent with the published several-dozen estimate.",
+      "test": "the median across glomeruli of median contacts per connection lies within the several-dozen range",
+      "supports_structural_matching_if": null
+    }
+  ],
+  "disclosure": "Five glomeruli (DM1, DL5, DM4, DM6, VA6) were inspected while assessing feasibility, before this contract was written. In that exploratory sample total contacts per PN varied about five-fold while ORN count varied about two-fold, and the direction of H2 was not clearly negative. This contract fixes the tests on all qualifying glomeruli, and the exploratory sample is reported inside the full result rather than removed from it.",
+  "derived_scale": {
+    "formula": "per_contact_mv = published_unitary_epsp_mv / median_contacts_per_connection",
+    "reported_per": "glomerulus, at both ends of the published unitary range",
+    "comparison_value": {
+      "assumption_id": "ND-LIF-01",
+      "synaptic_mv_per_contact": 0.2,
+      "role": "the registered engineering fallback this derivation is compared against"
+    }
+  },
+  "artifact_validity_criteria": {
+    "minimum_glomeruli_resolved": 20,
+    "all_values_finite": true,
+    "every_reported_pair_has_at_least_one_contact": true
+  },
+  "tier_policy": "This is a structural analysis of V0-locked data against a published physiological claim. It awards no tier. A per-contact scale derived from a cross-specimen unitary amplitude is a prior, not a measurement of MaleCNS synapses.",
+  "declared_blockers": [
+    "the unitary amplitude is a published cross-specimen female value covering a small number of glomeruli, and is applied here to all of them",
+    "aggregate contact count is not release-site count; a contact may host more or fewer functional release sites",
+    "no release-probability or short-term-plasticity measurement is registered, so the scale cannot be converted into a rate-dependent conductance"
+  ],
+  "claim_boundary": "Structural evidence about the MaleCNS ORN-to-PN contact distribution and the per-contact scale a published unitary amplitude would imply. Not a measurement of MaleCNS synaptic strength and not a V2 award.",
+  "last_reviewed": "2026-09-08"
+}

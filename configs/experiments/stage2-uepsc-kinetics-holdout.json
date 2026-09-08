@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-uepsc-kinetics-holdout-v1",
+  "title": "Preregistered feature-level test of the frozen unitary-EPSC kernel on the five unconsumed chronic-exposure DL5 cells",
+  "provenance": "P/F",
+  "assumption_ids": [
+    "ND-03",
+    "ND-04",
+    "ND-05",
+    "ND-06"
+  ],
+  "purpose": "The frozen uEPSC kernel passed an aggregate RMSE gate but the post-freeze feature review recorded that no numeric feature threshold had been preregistered, and listed that as a V2 blocker. This contract fixes those thresholds before opening the only unconsumed synaptic recordings in the corpus.",
+  "frozen_fit": {
+    "path": "evidence/stage2/projection-neuron-fit-v3.json",
+    "sha256": "5ee63453c3c12d7ada3754245b93c172567e1ecaf6b0c4a4a51fec958a336780",
+    "model": "causal difference-of-exponentials uEPSC kernel; parameters are read, never refitted"
+  },
+  "required_artifact": {
+    "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-uepsc-traces.parquet",
+    "sha256": "4e9d363f3d404dfacec30f0dee4e3e8f52ee93a809e39fff206a94b82d6786b0"
+  },
+  "held_out_specimen_ids": [
+    "gugel-dl5-uepsc-exposed-01",
+    "gugel-dl5-uepsc-exposed-02",
+    "gugel-dl5-uepsc-exposed-03",
+    "gugel-dl5-uepsc-exposed-04",
+    "gugel-dl5-uepsc-exposed-05"
+  ],
+  "consumed_specimen_ids": [
+    "gugel-dl5-uepsc-solvent-01",
+    "gugel-dl5-uepsc-solvent-02",
+    "gugel-dl5-uepsc-solvent-03",
+    "gugel-dl5-uepsc-solvent-04",
+    "gugel-dl5-uepsc-solvent-05",
+    "gugel-dl5-uepsc-solvent-06",
+    "gugel-dl5-uepsc-solvent-07",
+    "gugel-dl5-fi-solvent-01",
+    "gugel-dl5-fi-solvent-02",
+    "gugel-dl5-fi-solvent-03",
+    "gugel-dl5-fi-solvent-04",
+    "gugel-dl5-fi-exposed-01",
+    "gugel-dl5-fi-exposed-02",
+    "gugel-dl5-fi-exposed-03",
+    "gugel-dl5-fi-exposed-04"
+  ],
+  "baseline_window_ms": {
+    "start": 0.0,
+    "end": 40.0
+  },
+  "gated_criteria": [
+    {
+      "id": "sign",
+      "statement": "Every held-out waveform is inward after baseline subtraction.",
+      "rule": "min over held-out cells of the baseline-corrected peak inward amplitude is strictly positive",
+      "justification": "ND-03 polarity for a cholinergic ORN-to-PN synapse is the one feature that must not be wrong, and it is state-independent."
+    },
+    {
+      "id": "peak_time",
+      "statement": "The kernel places the unitary peak within 1.0 ms of the recorded peak.",
+      "rule": "median over held-out cells of absolute peak-time error <= 1.0 ms",
+      "justification": "The source grid is 0.1 ms and the fitted decay constant is 15 ms, so 1.0 ms is one fifteenth of the time constant that governs postsynaptic integration and ten source samples.",
+      "limit_ms": 1.0
+    },
+    {
+      "id": "decay_time",
+      "statement": "The kernel reproduces the decay time constant to within 30 percent.",
+      "rule": "median over held-out cells of absolute peak-to-one-over-e time error, divided by the recorded value, <= 0.30",
+      "justification": "A proportional tolerance is the correct scale for a time constant. Thirty percent is well inside the factor of two that would change temporal summation qualitatively, and well outside the measurement noise of a single-exponential decay read from a 0.1 ms grid.",
+      "limit_fraction": 0.3
+    }
+  ],
+  "reported_but_not_gated": [
+    {
+      "id": "peak_amplitude",
+      "reason": "The source paper's subject is that chronic odor exposure changes this synapse. An amplitude mismatch on exposure-state cells cannot distinguish model error from a real state difference, so gating on it would make the test uninterpretable in both directions."
+    }
+  ],
+  "threshold_provenance": "Both numeric thresholds are derived from the measurement grid and the fitted time constant, not from the model errors already observed on the consumed solvent held-out cells. Those observed errors were 0.300 ms in peak time and -1.200, -3.300 and +5.000 ms in decay time, and were deliberately not used to set these limits.",
+  "acceptance": {
+    "v2_kinetics_subgate_pass": "all gated criteria pass",
+    "awards_v2": false,
+    "why_not": "V2 requires sign, unitary amplitude, kinetics, release failure and short-term plasticity for mapped pairs. No release-failure or short-term-plasticity measurement is registered in any source, and the amplitude leg is state-confounded here."
+  },
+  "tier_policy": "This contract tests kinetics and sign against preregistered numeric thresholds and awards no tier. Passing removes one recorded V2 blocker; two remain.",
+  "declared_blockers": [
+    "no release-failure distribution is registered in any source",
+    "no short-term-plasticity protocol is registered in any source",
+    "these five cells are chronic-exposure state, so after this evaluation the corpus contains no unconsumed synaptic recording at all"
+  ],
+  "claim_boundary": "One preregistered kinetics and sign test of a cross-specimen female DL5 unitary-EPSC kernel on five state-shifted cells from the same paper. Not MaleCNS synaptic physiology and not a V2 award.",
+  "last_reviewed": "2026-09-08"
+}

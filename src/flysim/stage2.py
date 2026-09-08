@@ -31,6 +31,7 @@ from flysim.config import load_json, sha256_json
 from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
 from flysim.provenance import parse_provenance
+from flysim.synaptic import epsc_waveform_features
 
 GOUWENS_MODELDB_COMMIT = "cf5a57dee863cea502e78ef5bc481369253900d9"
 GUGEL_FIGURE7_SHA256 = "a8ae6fcd3bf0d8effab7a0ecbfa88fccf192f134144072282758ca8125bd8c78"
@@ -2344,24 +2345,9 @@ def build_projection_neuron_ensemble(
 
 
 def _epsc_features(time_ms: np.ndarray, trace_pa: np.ndarray) -> dict[str, float]:
-    baseline = float(np.mean(trace_pa[time_ms < 40.0]))
-    inward = baseline - trace_pa
-    peak_index = int(np.argmax(inward))
-    peak = float(inward[peak_index])
-    peak_time = float(time_ms[peak_index])
-    target = peak / math.e
-    after_peak = np.flatnonzero(
-        (np.arange(len(time_ms)) > peak_index) & (inward <= target)
-    )
-    decay_ms = (
-        float(time_ms[int(after_peak[0])] - peak_time) if len(after_peak) else math.nan
-    )
-    return {
-        "baseline_pa": baseline,
-        "peak_inward_amplitude_pa": peak,
-        "peak_time_ms": peak_time,
-        "peak_to_one_over_e_ms": decay_ms,
-    }
+    """Delegate to the shared definition so the frozen review and the preregistered
+    held-out test cannot drift apart."""
+    return epsc_waveform_features(time_ms, trace_pa)
 
 
 def review_projection_neuron_fit(

@@ -76,6 +76,7 @@ from flysim.stage2 import (
     review_projection_neuron_fit,
 )
 from flysim.structural import audit_structural_references
+from flysim.synaptic import analyse_synaptic_structure, evaluate_uepsc_kinetics_holdout
 from flysim.universes import audit_body_universes
 from flysim.v0 import CONTACT_CHECKS as V0_CONTACT_CHECKS
 from flysim.v0 import build_v0_evidence_bundle
@@ -211,6 +212,44 @@ def _command_stage2_measure_cellular(args: argparse.Namespace) -> int:
         }
     )
     return 0 if all(result["artifact_validity"].values()) else 2
+
+
+def _command_stage2_synaptic_structure(args: argparse.Namespace) -> int:
+    result = analyse_synaptic_structure(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "glomeruli_resolved": result["glomeruli_resolved"],
+            "projection_neurons_profiled": result["projection_neurons_profiled"],
+            "hypotheses": result["hypotheses"],
+            "derived_per_contact_scale_mv": {
+                key: value
+                for key, value in result["derived_per_contact_scale_mv"].items()
+                if key != "per_glomerulus"
+            },
+            "artifact_validity": result["artifact_validity"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if all(result["artifact_validity"].values()) else 2
+
+
+def _command_stage2_uepsc_holdout(args: argparse.Namespace) -> int:
+    result = evaluate_uepsc_kinetics_holdout(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "gated": result["gated"],
+            "reported_not_gated": result["reported_not_gated"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if result["acceptance"]["v2_kinetics_subgate_pass"] else 2
 
 
 def _command_stage2_pn_ensemble(args: argparse.Namespace) -> int:
@@ -1464,6 +1503,33 @@ def build_parser() -> argparse.ArgumentParser:
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
+    stage2_synaptic = stage2_commands.add_parser(
+        "synaptic-structure",
+        help="Test the published homeostatic-matching claim against locked contact structure",
+    )
+    stage2_synaptic.add_argument("--root", type=Path, default=default_data_root())
+    stage2_synaptic.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-synaptic-structure.json",
+    )
+    stage2_synaptic.add_argument("--output", type=Path, required=True)
+    stage2_synaptic.set_defaults(func=_command_stage2_synaptic_structure)
+    stage2_uepsc = stage2_commands.add_parser(
+        "uepsc-holdout",
+        help="Score the frozen unitary-EPSC kernel against preregistered feature limits",
+    )
+    stage2_uepsc.add_argument("--root", type=Path, default=default_data_root())
+    stage2_uepsc.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-uepsc-kinetics-holdout.json",
+    )
+    stage2_uepsc.add_argument("--output", type=Path, required=True)
+    stage2_uepsc.set_defaults(func=_command_stage2_uepsc_holdout)
     stage2_ensemble = stage2_commands.add_parser(
         "pn-ensemble",
         help="Widen the frozen PN family into a VAL-01 uncertainty ensemble",
