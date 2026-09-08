@@ -3,7 +3,7 @@
 
 Conditions are evidence-grade: the worktree must be clean, a resumed condition is only
 reused when it came from the current commit, and each run must satisfy the preregistered
-behavioural criteria as well as completing the required sequence.
+behavioral criteria as well as completing the required sequence.
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _pre_groom_seek_displacement_mm(run_directory: Path) -> float | None:
     return math.hypot(latest[0] - origin[0], latest[1] - origin[1])
 
 
-def _behavioural_report(
+def _behavioral_report(
     run_directory: Path, manifest: dict[str, Any], criteria: dict[str, Any]
 ) -> dict[str, Any]:
     metadata = manifest.get("run_metadata", {})
@@ -207,7 +207,7 @@ def main() -> int:
             if recovered is not None:
                 run_directory = Path(recovered["run_directory"])
                 manifest = run_directory / "manifest.json"
-                behaviour = _behavioural_report(
+                behavior = _behavioral_report(
                     run_directory, recovered["manifest"], criteria
                 )
                 progress["conditions"][key] = {
@@ -223,7 +223,7 @@ def main() -> int:
                     "biological_seconds_per_wall_second_cold_start": recovered[
                         "biological_seconds_per_wall_second_cold_start"
                     ],
-                    "behavioural_criteria": behaviour,
+                    "behavioral_criteria": behavior,
                     "code_commit": commit,
                     "run_directory": str(run_directory.resolve()),
                     "manifest": str(manifest.resolve()),
@@ -273,7 +273,7 @@ def main() -> int:
             run_directory = Path(result["run_directory"])
             manifest = run_directory / "manifest.json"
             written_manifest = json.loads(manifest.read_text(encoding="utf-8"))
-            behaviour = _behavioural_report(run_directory, written_manifest, criteria)
+            behavior = _behavioral_report(run_directory, written_manifest, criteria)
             progress["conditions"][key] = {
                 "position_id": position["id"],
                 "position_mm": [position["x"], position["y"]],
@@ -287,7 +287,7 @@ def main() -> int:
                 "biological_seconds_per_wall_second_cold_start": result.get(
                     "biological_seconds_per_wall_second_cold_start"
                 ),
-                "behavioural_criteria": behaviour,
+                "behavioral_criteria": behavior,
                 "code_commit": commit,
                 "run_directory": str(run_directory.resolve()),
                 "manifest": str(manifest.resolve()),
@@ -315,16 +315,16 @@ def main() -> int:
             bool(
                 row["completed"]
                 and row["valid"]
-                and row.get("behavioural_criteria", {}).get("passed")
+                and row.get("behavioral_criteria", {}).get("passed")
             )
             for row in rows
         )
-        behavioural_failures = sorted(
+        behavioral_failures = sorted(
             f"{row['position_id']}:seed-{row['seed']}"
             for row in rows
             if row["completed"]
             and row["valid"]
-            and not row.get("behavioural_criteria", {}).get("passed")
+            and not row.get("behavioral_criteria", {}).get("passed")
         )
         passed = len(rows) == len(seeds) and successes >= minimum
         all_passed &= passed
@@ -332,7 +332,7 @@ def main() -> int:
             "runs": len(rows),
             "successes": successes,
             "minimum_successes": minimum,
-            "behavioural_failures": behavioural_failures,
+            "behavioral_failures": behavioral_failures,
             "passed": passed,
         }
     progress["position_summaries"] = summaries

@@ -137,18 +137,32 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
                 "a run recorded as connectome-backed must trace a full-graph neural readout"
             )
 
+    # Artifact integrity is separate from validation (docs/architecture.md). A run that breaches
+    # a behavioural limit is still a well-formed record, so the breach is reported in its own
+    # block and does not make the artifacts invalid. Acceptance is decided by the experiment.
     metadata = manifest.get("run_metadata", {})
     groom_limit = metadata.get("groom_net_displacement_limit_mm")
     groom_observed = metadata.get("groom_net_displacement_mm")
+    behavioral: dict[str, Any] = {}
     if groom_limit is not None:
+        behavioral["groom_net_displacement_limit_mm"] = float(groom_limit)
+        behavioral["groom_net_displacement_mm"] = (
+            float(groom_observed) if groom_observed is not None else None
+        )
         if groom_observed is None:
+            # A manifest that declares a limit and records no measurement is internally
+            # inconsistent, which is an integrity failure rather than a behavioural one.
             failures.append("a declared grooming-displacement limit requires a measured value")
-        elif float(groom_observed) > float(groom_limit):
-            failures.append(
-                f"grooming-phase body displacement {float(groom_observed):.3f} mm exceeds the "
-                f"registered limit of {float(groom_limit):.3f} mm; the position-controller "
-                "replay moved the body instead of grooming in place"
-            )
+            behavioral["groom_displacement_passed"] = False
+        else:
+            passed = float(groom_observed) <= float(groom_limit)
+            behavioral["groom_displacement_passed"] = passed
+            if not passed:
+                behavioral["groom_displacement_note"] = (
+                    f"grooming-phase body displacement {float(groom_observed):.3f} mm exceeds "
+                    f"the registered limit of {float(groom_limit):.3f} mm; the position-"
+                    "controller replay moved the body instead of grooming in place"
+                )
     if manifest.get("connectome", {}).get("graph_used") is False:
         tier = manifest.get("result", {}).get("highest_validation_tier")
         if tier is not None:
@@ -189,6 +203,12 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
         "completed": completed,
         "required_sequence_observed": cursor == len(required_order),
         "scientific_validation_tier": claimed_tier,
+        "behavioral": behavioral,
+        "behavioral_criteria_passed": all(
+            value
+            for key, value in behavioral.items()
+            if key.endswith("_passed")
+        ),
     }
     report_path = run_directory / "validation-report.json"
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

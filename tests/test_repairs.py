@@ -366,8 +366,59 @@ def test_run_validation_rejects_excess_grooming_displacement(tmp_path: Path) -> 
         },
     )
     report = validate_run(run)
-    assert report["valid"] is False
-    assert any("grooming-phase body displacement" in item for item in report["failures"])
+    # Artifact integrity and behavioural acceptance are separate: the record is well formed,
+    # so it stays valid, but the declared limit is reported as breached.
+    assert report["valid"] is True
+    assert report["behavioral_criteria_passed"] is False
+    assert report["behavioral"]["groom_displacement_passed"] is False
+    assert report["behavioral"]["groom_net_displacement_mm"] == 6.55
+    assert "exceeds" in report["behavioral"]["groom_displacement_note"]
+
+
+def test_run_validation_passes_grooming_displacement_within_the_limit(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    record = {
+        "t_us": 15000,
+        "state": "GROOM",
+        "body": {"t_us": 15000},
+        "sensors": {"t_us": 15000},
+        "neural": {"t_us": 15000},
+        "actuators": {"t_us": 15000},
+    }
+    (run / "trace.jsonl").write_text(json.dumps(record) + chr(10), encoding="utf-8")
+    from flysim.validation import _sha256_file
+
+    _write(
+        run / "manifest.json",
+        {
+            "run_id": "test",
+            "scenario": {},
+            "assumption_set": {},
+            "random_seed": 1,
+            "backends": {},
+            "connectome": {"graph_used": False},
+            "scaffolds": [],
+            "omissions": [],
+            "git": {},
+            "artifacts": {
+                "trace": "trace.jsonl",
+                "trace_sha256": _sha256_file(run / "trace.jsonl"),
+            },
+            "result": {
+                "completed": False,
+                "events": [{"t_us": 15000, "to_state": "GROOM"}],
+                "highest_validation_tier": None,
+            },
+            "run_metadata": {
+                "groom_net_displacement_limit_mm": 2.5,
+                "groom_net_displacement_mm": 1.2,
+            },
+        },
+    )
+    report = validate_run(run)
+    assert report["valid"] is True
+    assert report["behavioral_criteria_passed"] is True
 
 
 def test_run_validation_rejects_events_absent_from_the_trace(tmp_path: Path) -> None:
