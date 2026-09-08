@@ -982,6 +982,12 @@ def measure_invivo_cellular_pack(
             sample_interval_us=sample_interval_us,
             spike_policy=policy_at(prominence),
             step_policy=step_policy,
+            upstroke_criterion_mv_per_ms=float(
+                contract["step_analysis"]["upstroke_criterion_mv_per_ms"]
+            ),
+            threshold_search_window_ms=float(
+                contract["step_analysis"]["threshold_search_window_ms"]
+            ),
         )
         mbon_by_prominence[f"{prominence:g}"] = {
             "per_sweep": features,

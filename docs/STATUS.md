@@ -132,13 +132,31 @@ Status date: 2026-09-08
 - A separately preregistered 100-to-50-us review preserves that sub-gate: normalized ratio changes
   from 1.064444 to 1.064332 and all predictions remain finite. No parameters or limits changed.
 
+- The Nanami stimulus-unit question is closed. The step levels recorded as the in vivo protocol
+  are the in-silico PQN model's dimensionless amplitudes; the real amplitudes are never published
+  and are irrecoverable. The reserved PN trace is retired as a scoring source, so the planned
+  sealed evaluation will not happen.
+- The project has its first measured cellular observables in physical units. MBON-alpha1 is the
+  only unit-resolved current-step protocol in any registered source and gives resting potential
+  -60.354 mV, membrane time constant 32.566 ms at R squared 0.911, threshold -38.402 mV, a
+  monotonic F-I of 1, 10, 17, 21 and 24 Hz at 2 to 10 pA, and an adaptation ratio of 0.749. Four
+  Seki et al. 2010 LN animals give the only multi-animal distribution: resting potential median
+  -50.789 mV.
+- Both neural engines carry per-neuron membrane parameters. GeNN promotes eight kernel
+  coefficients to per-neuron variables only when the resolution is heterogeneous, so recorded
+  Track A runs are unchanged, and both engines refuse a graph containing graded-regime neurons
+  because no graded transmission model is registered.
+
 ## Not implemented or not yet validated
 
 - Track A's functional whole-graph dynamics are an explicit Shiu-style engineering regression, not
   fitted whole-CNS physiology. The Stage 2 data foundation is implemented, but fitted hybrid
   dynamics have not yet been implemented or validated.
-- The v0.2 dynamics registry is an executable uncertainty and prior boundary, not a fitted hybrid
-  model. Type-pair parameters remain unset and typed spiking/graded execution remains disabled.
+- The v0.3 dynamics registry binds exactly one cell type to measured values. Against the full
+  traced graph that is 4 of 165,122 neurons across 11,752 cell types, a measured fraction of
+  0.0024%; everything else runs the Shiu-style engineering fallback, and engines report that
+  fraction in run metadata. Type-pair parameters remain unset, and Stage 1 keeps execution on the
+  source-faithful LIF baseline so its frozen numbers stay reproducible.
 - Track A is an offline prototype. Steady-state throughput is 0.332 minimum and 0.353 median
   biological seconds per wall second, about 71% of the 0.5 interactive target; including graph load and
   GeNN model build the cold-start figure is 0.114 minimum. The previously reported 0.117/0.169
@@ -175,9 +193,14 @@ Status date: 2026-09-08
   preregistered feature, failure-probability, and short-term-plasticity evidence.
 - The ramp-aware adaptive replacement currently passes only an internal training comparison. Its
   chronic-condition F-I holdout sub-gate passes, but this is the same source paper and state-shifted
-  cohort. The separate Nanami cell remains unscored because the repository does not state the
-  physical units of the stimulus levels. Independent resting-voltage, membrane-time-constant, and
-  adaptation evidence remains necessary for complete V1. V1 and V2 remain unawarded.
+  cohort, and the family carries two draws against the VAL-01 requirement of five samples by four
+  seeds. No projection-neuron type has a multi-animal, type-resolved measurement of resting
+  voltage, membrane time constant or adaptation, and no registered source publishes a
+  unit-resolved current step for any PN type. Input resistance is unmeasurable even from the one
+  unit-resolved protocol, because every sweep is suprathreshold. V1 and V2 remain unawarded.
+- The Gugel Dryad deposit holds four source-data files the eLife CDN does not carry, including two
+  more Figure 7 files. Dryad now serves downloads behind a proof-of-work bot wall, so scripted
+  acquisition under the project checksum-locking rule is currently blocked.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -190,6 +213,9 @@ evidence: [full-graph Eon-like demonstration](evidence/TRACK_A_EON_MALECNS.md).
 First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-004-projection-neuron-physiology-pack.md),
 [ADR-2026-005](adr/ADR-2026-005-independent-pn-trace-challenge.md), and
 [projection-neuron physiology foundation](evidence/STAGE2_PN_PHYSIOLOGY_FOUNDATION.md).
+Cellular-tier sources, the Nanami stimulus resolution, and heterogeneous-cell execution:
+[ADR-2026-007](adr/ADR-2026-007-cellular-tier-sources.md) and
+[Stage 2 cellular observables](evidence/STAGE2_CELLULAR_OBSERVABLES.md).
 
 ## Measured foundation results
 

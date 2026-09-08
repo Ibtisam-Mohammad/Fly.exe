@@ -42,6 +42,13 @@ class NumpyLIFEngine:
         self._external_drive = np.empty(0, dtype=np.float32)
         self._refractory_until = np.empty(0, dtype=np.int64)
         self._edge_weights = np.empty(0, dtype=np.float32)
+        self._resting = np.empty(0, dtype=np.float32)
+        self._reset = np.empty(0, dtype=np.float32)
+        self._threshold = np.empty(0, dtype=np.float32)
+        self._tau_us = np.empty(0, dtype=np.float64)
+        self._refractory_us_by_neuron = np.empty(0, dtype=np.int64)
+        self._tonic = np.empty(0, dtype=np.float32)
+        self._heterogeneous = False
         self._spikes = np.empty(0, dtype=np.bool_)
         self._spike_history: list[tuple[int, np.ndarray]] = []
         self._queue: list[tuple[int, int, NeuralInputFrame]] = []
@@ -80,9 +87,71 @@ class NumpyLIFEngine:
             * signs
             * self._parameters.synaptic_mv_per_contact
         )
+        self._bind_cell_parameters(graph, parameters)
         self._spikes = np.zeros(graph.neuron_count, dtype=np.bool_)
         self._spike_history.clear()
         self._queue.clear()
+
+    def _bind_cell_parameters(
+        self, graph: SparseConnectome, parameters: dict[str, Any]
+    ) -> None:
+        """Broadcast the shared parameters, then overwrite with any per-neuron arrays.
+
+        Broadcasting first keeps a homogeneous graph numerically identical to the scalar
+        path, so the Brian2 and GeNN parity comparisons are unaffected by this change.
+        """
+        assert self._parameters is not None
+        count = graph.neuron_count
+        regimes = tuple(str(value) for value in parameters.get("signal_regimes", ()))
+        if regimes:
+            if len(regimes) != count:
+                raise ConfigurationError("Signal regimes do not align with the graph")
+            graded = int(np.count_nonzero(np.asarray(regimes) == "graded"))
+            if graded:
+                raise ConfigurationError(
+                    f"{graded} neurons resolve to the graded signal regime and no graded "
+                    "transmission model is registered; refusing to run them as spiking cells"
+                )
+        self._resting = np.full(count, self._parameters.resting_mv, dtype=np.float32)
+        self._reset = np.full(count, self._parameters.reset_mv, dtype=np.float32)
+        self._threshold = np.full(count, self._parameters.threshold_mv, dtype=np.float32)
+        self._tau_us = np.full(count, float(self._parameters.membrane_tau_us), dtype=np.float64)
+        self._refractory_us_by_neuron = np.full(
+            count, int(self._parameters.refractory_us), dtype=np.int64
+        )
+        self._tonic = np.full(count, self._parameters.tonic_drive_mv, dtype=np.float32)
+        per_neuron = parameters.get("per_neuron_parameters")
+        self._heterogeneous = per_neuron is not None
+        if per_neuron is None:
+            return
+        supplied = {key: np.asarray(value, dtype=np.float64) for key, value in per_neuron.items()}
+        for key, array in supplied.items():
+            if array.shape != (count,):
+                raise ConfigurationError(
+                    f"Per-neuron parameter {key} has shape {array.shape}, expected ({count},)"
+                )
+            if not np.all(np.isfinite(array)):
+                raise ConfigurationError(f"Per-neuron parameter {key} contains nonfinite values")
+        if "membrane_tau_ms" in supplied and np.any(supplied["membrane_tau_ms"] <= 0.0):
+            raise ConfigurationError("Per-neuron membrane time constants must be positive")
+        if {"threshold_mv", "resting_mv"} <= set(supplied) and np.any(
+            supplied["threshold_mv"] <= supplied["resting_mv"]
+        ):
+            raise ConfigurationError("Per-neuron threshold must sit above resting potential")
+        if "resting_mv" in supplied:
+            self._resting = supplied["resting_mv"].astype(np.float32)
+        if "reset_mv" in supplied:
+            self._reset = supplied["reset_mv"].astype(np.float32)
+        if "threshold_mv" in supplied:
+            self._threshold = supplied["threshold_mv"].astype(np.float32)
+        if "membrane_tau_ms" in supplied:
+            self._tau_us = supplied["membrane_tau_ms"] * 1_000.0
+        if "refractory_ms" in supplied:
+            self._refractory_us_by_neuron = np.rint(
+                supplied["refractory_ms"] * 1_000.0
+            ).astype(np.int64)
+        if "tonic_drive_mv" in supplied:
+            self._tonic = supplied["tonic_drive_mv"].astype(np.float32)
 
     def push_inputs(self, frame: NeuralInputFrame) -> None:
         self._require_ready()
@@ -112,7 +181,7 @@ class NumpyLIFEngine:
         while self._t_us < t_us:
             next_t = min(t_us, self._t_us + parameters.neural_dt_us)
             self._apply_inputs(next_t)
-            dt_fraction = (next_t - self._t_us) / parameters.membrane_tau_us
+            dt_fraction = (next_t - self._t_us) / self._tau_us
             synaptic = np.zeros(graph.neuron_count, dtype=np.float32)
             active_edges = self._spikes[graph.source_indices]
             np.add.at(
@@ -121,21 +190,20 @@ class NumpyLIFEngine:
                 self._edge_weights[active_edges],
             )
             active = self._refractory_until <= self._t_us
-            drive = (
-                parameters.tonic_drive_mv
-                + parameters.input_gain_mv * self._external_drive
-                + synaptic
-            )
-            self._voltage[active] += dt_fraction * (
-                parameters.resting_mv - self._voltage[active] + drive[active]
-            )
-            self._voltage[~active] = parameters.reset_mv
-            self._spikes = active & (self._voltage >= parameters.threshold_mv)
+            drive = self._tonic + parameters.input_gain_mv * self._external_drive + synaptic
+            self._voltage[active] += (
+                dt_fraction[active]
+                * (self._resting[active] - self._voltage[active] + drive[active])
+            ).astype(np.float32)
+            self._voltage[~active] = self._reset[~active]
+            self._spikes = active & (self._voltage >= self._threshold)
             if np.any(self._spikes):
                 spike_indices = np.flatnonzero(self._spikes).astype(np.uint32)
                 self._spike_history.append((next_t, spike_indices))
-                self._voltage[self._spikes] = parameters.reset_mv
-                self._refractory_until[self._spikes] = next_t + parameters.refractory_us
+                self._voltage[self._spikes] = self._reset[self._spikes]
+                self._refractory_until[self._spikes] = (
+                    next_t + self._refractory_us_by_neuron[self._spikes]
+                )
             self._t_us = next_t
 
     def read_outputs(self, ids: tuple[str | int, ...], window_us: int) -> NeuralOutputFrame:
@@ -164,7 +232,11 @@ class NumpyLIFEngine:
             signal_type=SignalType.FIRING_RATE,
             provenance="P/E",
             assumption_ids=("ND-LIF-01", "ND-03", "ND-04"),
-            metadata={"backend": "numpy-lif-oracle", "window_us": window_us},
+            metadata={
+                "backend": "numpy-lif-oracle",
+                "window_us": window_us,
+                "heterogeneous_cell_parameters": self._heterogeneous,
+            },
         )
 
     def checkpoint(self) -> dict[str, Any]:

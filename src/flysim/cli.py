@@ -925,6 +925,15 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
         food_position_mm=food_position,
         render=args.render,
         fps=args.fps,
+        dynamics_registry_path=args.cell_dynamics,
+        annotations_path=(
+            args.annotations
+            if args.annotations is not None
+            else args.root
+            / "raw"
+            / "male-cns-v1.0"
+            / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+        ),
     )
     try:
         duration = args.duration_us or demo.duration_us
@@ -1391,6 +1400,21 @@ def build_parser() -> argparse.ArgumentParser:
     eon_malecns.add_argument("--food-x-mm", type=float)
     eon_malecns.add_argument("--food-y-mm", type=float)
     eon_malecns.add_argument("--headless", action="store_true")
+    eon_malecns.add_argument(
+        "--cell-dynamics",
+        type=Path,
+        default=None,
+        help=(
+            "Resolve per-type membrane parameters from this dynamics registry. Omit to keep "
+            "the single global Shiu-style LIF that every recorded Track A run used."
+        ),
+    )
+    eon_malecns.add_argument(
+        "--annotations",
+        type=Path,
+        default=None,
+        help="Body-annotation table used to resolve cell types for --cell-dynamics.",
+    )
     eon_malecns.add_argument("--render", action="store_true")
     eon_malecns.add_argument("--fps", type=int, default=30)
     eon_malecns.add_argument(

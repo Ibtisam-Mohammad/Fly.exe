@@ -7,8 +7,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from flysim.circuit import load_cell_types
 from flysim.config import ScenarioConfig, project_root
 from flysim.connectome import SparseConnectome
+from flysim.dynamics import DynamicsRegistry
 from flysim.engines.body import KinematicBodyEngine, KinematicParameters
 from flysim.engines.flygym import FlyGymTrackABodyEngine, FlyGymTrackAParameters
 from flysim.engines.genn import TrackAGeNNEngine
@@ -213,6 +215,8 @@ def build_track_a_demo(
     fps: int = 30,
     assumptions_path: Path | None = None,
     scenario_path: Path | None = None,
+    dynamics_registry_path: Path | None = None,
+    annotations_path: Path | None = None,
 ) -> TrackADemo:
     """Build the full-graph Track A simulation from immutable registered inputs."""
     root = project_root()
@@ -240,11 +244,29 @@ def build_track_a_demo(
         import numpy as np
 
         signs = np.zeros(graph.edge_count, dtype=np.float32)
+    # Type-resolved membrane parameters are opt-in. Without a registry the engine keeps the
+    # single global Shiu-style LIF, so an existing Track A run is bit-for-bit unchanged.
+    cell_parameters: dict[str, Any] = {}
+    if dynamics_registry_path is not None:
+        if annotations_path is None:
+            raise ValueError(
+                "A dynamics registry needs the body-annotation table to resolve cell types"
+            )
+        cell_types = load_cell_types(annotations_path, graph.body_ids)
+        resolution = DynamicsRegistry.load(dynamics_registry_path).resolve_parameters(cell_types)
+        cell_parameters = {
+            "per_neuron_parameters": resolution.parameter_arrays,
+            "signal_regimes": tuple(
+                regime.value for regime in resolution.signal_regimes
+            ),
+            "cell_parameter_report": resolution.as_dict(),
+        }
     neural = TrackAGeNNEngine(build_path, variant=variant)
     neural.initialize(
         graph,
         {
             **track_a_values,
+            **cell_parameters,
             "functional_edge_signs": signs,
             "entry_body_ids": tuple(
                 dict.fromkeys(

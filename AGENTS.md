@@ -31,14 +31,17 @@ CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: Stage 2 fitted neural dynamics (active); the ADR-2026-006 evidence-chain repair is complete and V0 is reissued
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006
-ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064 and preserves it at 50 us; it is not complete V1 and no V1/V2 tier is awarded
-NEXT_GATE: lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
+ENGINEERING_STATUS: the first measured cellular observables exist under ADR-2026-007 (MBON-alpha1 tau_m 32.566 ms, Vrest -60.354 mV, threshold -38.402 mV; four-animal LN Vrest median -50.789 mV) and both engines carry per-neuron membrane parameters; 0.0024% of the traced graph has a measured parameter set and no V1/V2 tier is awarded
+NEXT_GATE: find a unit-resolved multi-animal current-step source for a projection-neuron type, since no registered source has one; widen the PN family to the VAL-01 five samples by four seeds; source release-failure/STP evidence for V2. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
 FOUNDATION_JOB: complete; bundle 20260908T060641Z_V0 pins a scoped DATA-* snapshot. The first bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
 STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
+STAGE2_CELLULAR_OBSERVABLES: contract stage2-cellular-observables-v1; MBON-alpha1 is the only unit-resolved current-step protocol in any registered source; tau_m 32.566 ms at R2 0.911 from one surviving sweep; input resistance unmeasurable because every sweep is suprathreshold; no tier awarded
+STAGE2_NANAMI_UNITS: closed; step levels 3-10 are the dimensionless in-silico PQN model stimulus, the in vivo amplitudes are irrecoverable, and the reserved PN trace is retired as a scoring source
+HETEROGENEOUS_CELLS: cell-dynamics-v0.3 binds MBON07 to a measured parameter set; GeNN promotes eight coefficients to per-neuron vars only when heterogeneous; both engines refuse the graded regime because no graded transmission model is registered
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
 STAGE1_SECOND_CIRCUIT: immutable review 3da6ffefaf9bdc6d; 101 mapped types x 30 trials; exact BA/AUROC 0.808; shuffled 0.500; cell-type-only 0.797; Stage 1 baseline passed but selected V3 specificity failed and no tier was awarded
 TRACK_A_STATUS: not accepted; grooming-displacement cap fails 30/30; steady-state speed 0.332 minimum/0.353 median vs 0.5 target; awards no tier
@@ -160,6 +163,39 @@ without changing parameters or acceptance limits. The normalized ratio changes f
 review `projection-neuron-dynamic-timestep-review-v1.json` has SHA-256
 `5fa0f39fe15e239d441c57a16b4d2cb1c76c2175c7fe50e65c475fc4b5e088b8`. This closes a
 numerical-sensitivity check only and does not add biological evidence or award a tier.
+
+Stage 2 cellular checkpoint, 2026-09-08: ADR-2026-007 closes the Nanami stimulus-unit question
+and the answer removes a planned evaluation. The step levels recorded as the in vivo protocol are
+the list `I4` in the pinned plotting notebook, which sets the amplitudes of the in-silico PQN
+model; the paper states that model is dimensionless. The in vivo amplitudes are never published,
+so they are irrecoverable, and the extraction offset is 303.5 ms rather than 306.5 ms. The
+reserved PN trace is retired as a scoring source, because without amplitudes no current-referenced
+observable is comparable and its somatic spikes fall below the primary detection prominence. The
+superseded manifest is left unchanged so the frozen dynamic-revision contract stays reproducible.
+
+The other in vivo recordings redistributed with the same commit are locked as
+`nanami-2024-invivo-cellular-pack-v1`, 47 checksum-verified files, and measured under contract
+`stage2-cellular-observables-v1`. MBON-alpha1 is the only unit-resolved current-step protocol in
+any registered source: five 1 s pulses at 2, 4, 6, 8 and 10 pA, matching the quoted Methods
+exactly. It yields resting potential -60.354 mV, membrane time constant 32.566 ms at R squared
+0.911, threshold -38.402 mV at a 10 mV/ms upstroke criterion, a monotonic F-I of 1, 10, 17, 21 and
+24 Hz, and an adaptation ratio of 0.749. Input resistance is unmeasurable because every sweep is
+suprathreshold. Four Seki et al. 2010 antennal-lobe LN animals give the only multi-animal
+distribution in the project: resting potential median -50.789 mV. Two analysis rules were
+corrected before any number was believed: a 50 ms spike-prominence window conflated the step
+depolarization with spikes, and an ungated exponential fit reported a 268 ms time constant from a
+relaxation that overshoots and drifts.
+
+`cell-dynamics-v0.3` adds numeric parameter sets with per-value provenance and binds `MBON07` to
+the measured set; the MaleCNS identity is confirmed from the annotation table, where `MBON07`
+carries instance `MBON07(a1)`. Both engines now accept per-neuron membrane parameters. GeNN
+promotes the eight kernel coefficients from shared parameters to per-neuron variables only when
+the resolution is heterogeneous, so recorded Track A runs are bit-for-bit unchanged, and the model
+identity hash covers the per-neuron values. Both engines refuse a graph containing graded-regime
+neurons rather than substituting the spiking model. Against the full traced graph, 4 of 165,122
+neurons across 11,752 cell types have a measured parameter set, a measured fraction of 0.0024%,
+and engines report that fraction in run metadata. Stage 1 records the resolution but keeps
+execution on the source-faithful LIF baseline. No V1 or V2 tier is awarded.
 
 Useful retrieval commands:
 
@@ -566,12 +602,13 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-08 | Accept ADR-2026-006 and withdraw both the first V0 bundle and the Track A v1/v2 acceptance evidence. | An independent audit confirmed the bundle no longer validated and could not be rebuilt, that every Track A artifact came from an uncommitted tree, and that the behavioural narrative was largely a physics artefact. |
 | 2026-09-07 | Accept ADR-2026-004 for the first Stage 2 projection-neuron physiology pack, recorded-cell split, and losses. | DM1 passive model fits and individual-cell DL5 F-I/uEPSC recordings provide complementary priors and held-out data while keeping sex, age, and cell-type transfer explicit. |
 | 2026-09-08 | Accept ADR-2026-005 and freeze the ramp-aware PN revision before external scoring. | Reusing the consumed Gugel holdouts would leak validation; the single external Nanami trace is useful as a challenge but its unresolved current units and sample size prevent a V1 claim. |
+| 2026-09-08 | Accept ADR-2026-007, retire the reserved Nanami PN trace as a scoring source, and lock the in vivo cellular pack. | The stimulus levels recorded as the in vivo protocol are the dimensionless in-silico model input, the real amplitudes are never published, and the trace's somatic spikes fall below the detection prominence, so the planned sealed evaluation cannot be run at all. |
 
 ## 15. Unresolved project-level choices
 
 The following are deliberately not fixed yet. Agents may investigate them, but must not silently make them permanent:
 
-- cell-type spiking/graded classification registry;
+- cell-type spiking/graded classification registry — still open. ADR-2026-007 measured a six-fold spread in somatic spike amplitude across four classes, which constrains the observation model but cannot classify a cell as graded, because axonal initiation followed by somatic attenuation produces the same measurement. Engines refuse the graded regime rather than substituting a spiking model;
 - physiological datasets and loss functions beyond the accepted first projection-neuron pack;
 - weak-edge uncertainty model;
 - male body scaling dataset;

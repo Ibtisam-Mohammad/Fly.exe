@@ -322,6 +322,7 @@ def run_shiu_malecns_transfer(
     cell_types = load_cell_types(annotations, selected.graph.body_ids)
     dynamics_registry = DynamicsRegistry.load(dynamics_registry_path)
     dynamics_resolution = dynamics_registry.resolve(cell_types)
+    parameter_resolution = dynamics_registry.resolve_parameters(cell_types)
     type_pair_counts = Counter(edge_type_pair_keys(selected.graph, cell_types))
     parameters = parameters_from_experiment(experiment)
     population_status = _population_resolution_status(population_resolution_path)
@@ -346,13 +347,17 @@ def run_shiu_malecns_transfer(
         "dynamics_registry_file_sha256": sha256_file(dynamics_registry_path),
         "dynamics_resolution": dynamics_resolution.as_dict(),
         "type_pair_edge_counts": dict(sorted(type_pair_counts.items())),
+        "cell_parameter_resolution": parameter_resolution.as_dict(),
         "typed_dynamics_execution": {
             "status": "registry-resolved-not-enabled",
             "reason": (
-                "The Stage 1 regression remains the source-faithful LIF baseline. "
-                "Hybrid spiking/graded execution and fitted type-pair scales require "
-                "independent training and validation evidence."
+                "The engines can now carry per-neuron membrane parameters, but the Stage 1 "
+                "regression remains the source-faithful LIF baseline so its recorded results "
+                "stay reproducible. Enabling type-resolved execution here would change every "
+                "frozen Stage 1 number without new validation evidence to justify it."
             ),
+            "engine_capability": "per-neuron membrane parameters supported; graded "
+            "signalling refused because no graded transmission model is registered",
             "validation_tier_awarded": None,
         },
         "parameters": dataclass_payload(parameters),

@@ -17,8 +17,83 @@ from flysim.connectome import SparseConnectome
 from flysim.contracts import NeuralInputFrame, NeuralOutputFrame, SignalType
 from flysim.errors import CausalityError, ConfigurationError
 
-TRACK_A_GENN_MODEL_VERSION = "3"
+TRACK_A_GENN_MODEL_VERSION = "4"
 DEGREE_BUCKET_UPPER_BOUNDS = (64, 128, 256, 512, 1024, 2048, 4096, 8192)
+
+HETEROGENEOUS_NEURON_PARAMETER_NAMES = (
+    "MembraneDecay",
+    "SynapseDecay",
+    "SynapticVoltageCoefficient",
+    "Vrest",
+    "Vreset",
+    "Vthresh",
+    "TauRefrac",
+    "Tonic",
+)
+
+CELL_PARAMETER_KEYS = (
+    "resting_mv",
+    "reset_mv",
+    "threshold_mv",
+    "membrane_tau_ms",
+    "synapse_tau_ms",
+    "refractory_ms",
+    "tonic_drive_mv",
+)
+
+
+def derive_neuron_arrays(
+    values: dict[str, np.ndarray], *, dt_ms: float, neuron_count: int
+) -> dict[str, np.ndarray]:
+    """Convert per-neuron physical membrane parameters into the engine coefficients.
+
+    The registry stores physical units so it stays readable against a paper. The kernel
+    needs decay coefficients, so the conversion lives here rather than in the registry.
+    """
+    missing = [key for key in CELL_PARAMETER_KEYS if key not in values]
+    if missing:
+        raise ConfigurationError(f"Per-neuron parameters omit {missing}")
+    arrays = {key: np.asarray(values[key], dtype=np.float64) for key in CELL_PARAMETER_KEYS}
+    for key, array in arrays.items():
+        if array.shape != (neuron_count,):
+            raise ConfigurationError(
+                f"Per-neuron parameter {key} has shape {array.shape}, expected ({neuron_count},)"
+            )
+        if not np.all(np.isfinite(array)):
+            raise ConfigurationError(f"Per-neuron parameter {key} contains nonfinite values")
+    membrane_tau = arrays["membrane_tau_ms"]
+    synapse_tau = arrays["synapse_tau_ms"]
+    if np.any(membrane_tau <= 0.0) or np.any(synapse_tau <= 0.0):
+        raise ConfigurationError("Per-neuron membrane and synapse time constants must be positive")
+    if np.any(arrays["threshold_mv"] <= arrays["resting_mv"]):
+        raise ConfigurationError("Per-neuron threshold must sit above resting potential")
+    refractory = arrays["refractory_ms"] - dt_ms
+    if np.any(refractory < 0.0):
+        raise ConfigurationError(
+            "Per-neuron refractory period must be at least one neural step; GeNN cannot "
+            "represent a refractory period shorter than the timestep"
+        )
+    membrane_decay = np.exp(-dt_ms / membrane_tau)
+    synapse_decay = np.exp(-dt_ms / synapse_tau)
+    separated = ~np.isclose(synapse_tau, membrane_tau)
+    coefficient = np.where(
+        separated,
+        np.divide(
+            synapse_tau * (synapse_decay - membrane_decay),
+            np.where(separated, synapse_tau - membrane_tau, 1.0),
+        ),
+        dt_ms * membrane_decay / membrane_tau,
+    )
+    return {
+        "MembraneDecay": membrane_decay,
+        "SynapseDecay": synapse_decay,
+        "SynapticVoltageCoefficient": coefficient,
+        "Vrest": arrays["resting_mv"],
+        "Vreset": arrays["reset_mv"],
+        "Vthresh": arrays["threshold_mv"],
+        "TauRefrac": refractory,
+        "Tonic": arrays["tonic_drive_mv"],
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +195,7 @@ class TrackAGeNNEngine:
         self._sparse_layout: dict[str, Any] = {}
         self._last_counts: dict[int, float] = {}
         self._model_identity: str | None = None
+        self._cell_parameters: dict[str, Any] = {}
         self._loaded = False
 
     @property
@@ -142,6 +218,29 @@ class TrackAGeNNEngine:
         entry_by_dense = np.zeros(graph.neuron_count, dtype=np.bool_)
         for body_id in entry_body_ids:
             entry_by_dense[graph.dense_index(body_id)] = True
+        # A neuron whose signal regime resolves to graded has no registered transmission
+        # model here. Substituting the spiking model for it would be an undeclared
+        # modelling decision, so the engine refuses the graph instead.
+        regimes = tuple(str(value) for value in parameters.get("signal_regimes", ()))
+        if regimes:
+            if len(regimes) != graph.neuron_count:
+                raise ConfigurationError(
+                    "Track A signal regimes do not align with the complete graph"
+                )
+            graded = int(np.count_nonzero(np.asarray(regimes) == "graded"))
+            if graded:
+                raise ConfigurationError(
+                    f"{graded} neurons resolve to the graded signal regime and no graded "
+                    "transmission model is registered; refusing to run them as spiking cells"
+                )
+        per_neuron_raw = parameters.get("per_neuron_parameters")
+        per_neuron: dict[str, np.ndarray] | None = None
+        if per_neuron_raw is not None:
+            per_neuron = derive_neuron_arrays(
+                {key: np.asarray(value) for key, value in per_neuron_raw.items()},
+                dt_ms=values.dt_ms,
+                neuron_count=graph.neuron_count,
+            )
         if self._loaded:
             raise ConfigurationError("Track A GeNN engine is already initialized")
         if "CUDA_PATH" not in os.environ:
@@ -158,19 +257,19 @@ class TrackAGeNNEngine:
                 "V = Vreset; G = 0.0; SpikeCount += 1.0; "
                 "RefracTime = InputRateHz > 0.0 ? 0.0 : TauRefrac;"
             )
+        # Shared parameters compile to constants and per-neuron vars to memory reads, so a
+        # homogeneous graph keeps the cheaper model and the identical generated kernel.
+        shared_names = () if per_neuron is not None else HETEROGENEOUS_NEURON_PARAMETER_NAMES
+        promoted_vars = (
+            tuple((name, "scalar") for name in HETEROGENEOUS_NEURON_PARAMETER_NAMES)
+            if per_neuron is not None
+            else ()
+        )
         neuron_model = create_neuron_model(
             "MaleCNSTrackALIF",
-            params=(
-                "MembraneDecay",
-                "SynapseDecay",
-                "SynapticVoltageCoefficient",
-                "Vrest",
-                "Vreset",
-                "Vthresh",
-                "TauRefrac",
-                "Tonic",
-            ),
+            params=shared_names,
             vars=(
+                *promoted_vars,
                 ("V", "scalar"),
                 ("G", "scalar"),
                 ("RefracTime", "scalar"),
@@ -213,6 +312,12 @@ class TrackAGeNNEngine:
         # generated CUDA model; all seeds of one graph/parameter variant share
         # the same compiled binary.
         identity.update(self.variant.encode())
+        if per_neuron is None:
+            identity.update(b"homogeneous")
+        else:
+            identity.update(b"per-neuron")
+            for name in HETEROGENEOUS_NEURON_PARAMETER_NAMES:
+                identity.update(per_neuron[name].astype("<f8", copy=False).tobytes())
         self._model_identity = identity.hexdigest()
         model = GeNNModel(
             "float",
@@ -237,7 +342,7 @@ class TrackAGeNNEngine:
         )
         local_by_dense = np.empty(graph.neuron_count, dtype=np.uint32)
         populations: list[Any] = []
-        neuron_params = {
+        homogeneous_params = {
             "MembraneDecay": values.membrane_decay,
             "SynapseDecay": values.synapse_decay,
             "SynapticVoltageCoefficient": values.synaptic_voltage_coefficient,
@@ -247,13 +352,7 @@ class TrackAGeNNEngine:
             "TauRefrac": values.genn_refractory_ms,
             "Tonic": values.tonic_drive_mv,
         }
-        neuron_vars = {
-            "V": values.resting_mv,
-            "G": 0.0,
-            "RefracTime": 0.0,
-            "SpikeCount": 0.0,
-            "InputRateHz": 0.0,
-        }
+        neuron_params = {} if per_neuron is not None else homogeneous_params
         for group_index, dense_indices in enumerate(group_dense_indices):
             if dense_indices.size == 0:
                 raise ConfigurationError(
@@ -262,6 +361,18 @@ class TrackAGeNNEngine:
             local_by_dense[dense_indices] = np.arange(
                 dense_indices.size, dtype=np.uint32
             )
+            neuron_vars: dict[str, Any] = {
+                "V": values.resting_mv,
+                "G": 0.0,
+                "RefracTime": 0.0,
+                "SpikeCount": 0.0,
+                "InputRateHz": 0.0,
+            }
+            if per_neuron is not None:
+                for name in HETEROGENEOUS_NEURON_PARAMETER_NAMES:
+                    neuron_vars[name] = per_neuron[name][dense_indices]
+                # Each neuron starts at its own resting potential, not a shared one.
+                neuron_vars["V"] = per_neuron["Vrest"][dense_indices]
             populations.append(
                 model.add_neuron_population(
                     f"neurons_{group_index}",
@@ -330,6 +441,22 @@ class TrackAGeNNEngine:
         self._group_by_dense = group_by_dense
         self._local_by_dense = local_by_dense
         self._group_dense_indices = group_dense_indices
+        self._cell_parameters = {
+            "heterogeneous": per_neuron is not None,
+            "promoted_to_per_neuron_vars": (
+                list(HETEROGENEOUS_NEURON_PARAMETER_NAMES) if per_neuron is not None else []
+            ),
+            "signal_regimes_supplied": bool(regimes),
+            "signal_regime_counts": (
+                {
+                    regime: int(np.count_nonzero(np.asarray(regimes) == regime))
+                    for regime in sorted(set(regimes))
+                }
+                if regimes
+                else None
+            ),
+            "resolution": parameters.get("cell_parameter_report"),
+        }
         self._sparse_layout = {
             "strategy": "out-degree-bucketed-disjoint-populations-v1",
             "degree_bucket_upper_bounds": list(DEGREE_BUCKET_UPPER_BOUNDS),
@@ -418,6 +545,7 @@ class TrackAGeNNEngine:
                 "neurons": graph.neuron_count,
                 "edges": graph.edge_count,
                 "sparse_layout": self._sparse_layout,
+                "cell_parameters": self._cell_parameters,
                 "physiological_default": False,
                 "warning": "Shiu transmitter-only regression baseline; not fitted physiology",
             },
@@ -433,6 +561,7 @@ class TrackAGeNNEngine:
             "neurons": graph.neuron_count,
             "edges": graph.edge_count,
             "sparse_layout": self._sparse_layout,
+            "cell_parameters": self._cell_parameters,
             "state_arrays_omitted": "optional Track A checkpoint is metadata-only",
         }
 

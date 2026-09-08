@@ -61,7 +61,9 @@
     "minimum_subthreshold_span_mv": 1.0,
     "minimum_fit_r_squared": 0.9,
     "maximum_tau_to_window_ratio": 1.0,
-    "quality_gate_rationale": "A single-exponential fit reports a time constant for any monotone-looking segment. The R squared floor rejects a fit to a transient that is not exponential, and the tau-to-window ratio rejects a time constant longer than the transient actually observed, which is what a drifting baseline or a slow after-current produces."
+    "quality_gate_rationale": "A single-exponential fit reports a time constant for any monotone-looking segment. The R squared floor rejects a fit to a transient that is not exponential, and the tau-to-window ratio rejects a time constant longer than the transient actually observed, which is what a drifting baseline or a slow after-current produces.",
+    "upstroke_criterion_mv_per_ms": 10.0,
+    "threshold_search_window_ms": 5.0
   },
   "observables": [
     {
@@ -111,6 +113,14 @@
         "antennal-lobe local neuron",
         "Kenyon cell",
         "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "spike_threshold_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "firing threshold",
+      "sources": [
+        "MBON-alpha1"
       ]
     }
   ],

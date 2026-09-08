@@ -91,10 +91,18 @@ experiment contract fixes a ramp-aware adaptive LIF family, its 100-us integrati
 ranges, diagnostics, and external metrics before quantitative scoring.
 
 The trace is genuinely external to the first fit but not sufficient for V1. It represents one
-three-day-old female, is driver-defined rather than MaleCNS-type-resolved, and its repository code
-does not state a physical unit for stimulus levels 3 through 10. The published notebook also aligns
-the eight steps with a threshold-crossing heuristic rather than stored stimulus timestamps. Those
-limitations remain explicit in the manifest and revision contract.
+three-day-old female and is driver-defined rather than MaleCNS-type-resolved.
+
+**Superseded by [ADR-2026-007](../adr/ADR-2026-007-cellular-tier-sources.md).** The statement above
+that the repository "does not state a physical unit for stimulus levels 3 through 10" was wrong
+about what those levels are. They are the list `I4` in the pinned plotting notebook, which sets
+the amplitudes of the in-silico PQN model, and the paper states that model is dimensionless. The
+in vivo amplitudes are never published, so they are irrecoverable rather than unresolved. The
+extraction offset is 303.5 ms, not 306.5 ms, and the notebook plots three one-second windows at
+four-second spacing, not eight at two-second spacing. The reserved trace is now retired as a
+scoring source. The manifest and revision contract are deliberately left unchanged so the frozen
+fit below stays reproducible; the correction lives in the new pack manifest and in
+[Stage 2 cellular observables](STAGE2_CELLULAR_OBSERVABLES.md).
 
 The frozen replacement fits one adaptive-LIF parameter draw to each of the two original Gugel
 training cells, retaining both as an empirical PN-family distribution. At 100 us it reduces the

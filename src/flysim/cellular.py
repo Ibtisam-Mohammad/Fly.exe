@@ -346,6 +346,8 @@ def current_step_features(
     sample_interval_us: int,
     spike_policy: SpikeDetectionPolicy,
     step_policy: StepAnalysisPolicy,
+    upstroke_criterion_mv_per_ms: float = 10.0,
+    threshold_search_window_ms: float = 5.0,
 ) -> list[dict[str, Any]]:
     """Per-sweep cellular features from a paired injected-current and voltage protocol."""
     current = np.asarray(current_pa, dtype=np.float64)
@@ -421,6 +423,16 @@ def current_step_features(
             "firing_rate_hz": float(in_step.size) / (step_duration_ms / 1_000.0),
             "spike_times_ms": [float((int(index) - start) * dt_ms) for index in in_step],
             "post_step_spike_count": int(after_step.size),
+            "spike_threshold_mv": spike_threshold_mv(
+                trace,
+                in_step,
+                sample_interval_us=sample_interval_us,
+                upstroke_criterion_mv_per_ms=upstroke_criterion_mv_per_ms,
+                search_window_ms=threshold_search_window_ms,
+            ),
+            "minimum_interspike_interval_ms": minimum_interspike_interval_ms(
+                in_step, sample_interval_us=sample_interval_us
+            ),
         }
         record.update(charging)
         record.update({"relaxation_" + key: value for key, value in relaxation.items()})
@@ -472,6 +484,16 @@ def summarise_current_step_protocol(features: list[dict[str, Any]]) -> dict[str,
             if float(item["injected_current_pa"]) < rheobase_upper
         ]
         rheobase_lower = max(below) if below else None
+    thresholds = [
+        float(item["spike_threshold_mv"])
+        for item in features
+        if item.get("spike_threshold_mv") is not None
+    ]
+    minima = [
+        float(item["minimum_interspike_interval_ms"])
+        for item in features
+        if item.get("minimum_interspike_interval_ms") is not None
+    ]
     currents = [float(item["injected_current_pa"]) for item in features]
     rates = [float(item["firing_rate_hz"]) for item in features]
     return {
@@ -503,6 +525,9 @@ def summarise_current_step_protocol(features: list[dict[str, Any]]) -> dict[str,
         ),
         "adaptation_ratio_median": float(np.median(ratios)) if ratios else None,
         "adaptation_ratio_sample_count": len(ratios),
+        "spike_threshold_mv": float(np.median(thresholds)) if thresholds else None,
+        "spike_threshold_sample_count": len(thresholds),
+        "minimum_interspike_interval_ms": float(min(minima)) if minima else None,
         "stimulus_resolution": STIMULUS_RESOLVED,
     }
 
@@ -549,3 +574,43 @@ def stimulus_free_features(
         }
     )
     return record
+
+
+def spike_threshold_mv(
+    voltage_mv: np.ndarray,
+    spike_indices: np.ndarray,
+    *,
+    sample_interval_us: int,
+    upstroke_criterion_mv_per_ms: float,
+    search_window_ms: float,
+) -> float | None:
+    """Median voltage at which the upstroke first exceeds the registered rate criterion.
+
+    A fixed absolute threshold cannot be read off a somatic recording whose spikes are
+    attenuated, so the rate criterion is applied to the upstroke and the crossing voltage
+    is reported. Cells whose spikes never reach the criterion return None rather than a
+    number derived from a slower depolarization.
+    """
+    voltage = np.asarray(voltage_mv, dtype=np.float64)
+    indices = np.asarray(spike_indices, dtype=np.int64)
+    if indices.size == 0:
+        return None
+    dt_ms = sample_interval_us / 1_000.0
+    span = max(2, round(search_window_ms / dt_ms))
+    derivative = np.gradient(voltage, dt_ms)
+    crossings: list[float] = []
+    for index in indices:
+        start = max(0, int(index) - span)
+        segment = derivative[start : int(index) + 1]
+        fast = np.flatnonzero(segment >= upstroke_criterion_mv_per_ms)
+        if fast.size:
+            crossings.append(float(voltage[start + int(fast[0])]))
+    return float(np.median(crossings)) if crossings else None
+
+
+def minimum_interspike_interval_ms(
+    spike_indices: np.ndarray, *, sample_interval_us: int
+) -> float | None:
+    """Shortest observed interval, an upper bound on the absolute refractory period."""
+    intervals = _interspike_intervals_ms(spike_indices, sample_interval_us)
+    return float(np.min(intervals)) if intervals.size else None
