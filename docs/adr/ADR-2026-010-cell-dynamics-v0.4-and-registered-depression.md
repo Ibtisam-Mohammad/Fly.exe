@@ -104,10 +104,25 @@ criterion states the weakest defensible claim: the model must beat predicting ev
 population mean. `evaluate_stage2_exit_gate` gained an `expect_below` branch that compares with
 a strict inequality, so a ratio of exactly 1.0 fails.
 
-The leg fails under this criterion. That is the point of stating it — ADR-2026-009 recorded the
-cellular result as weaker than a cohort-mean predictor, and the gate now says so mechanically
-instead of in prose. The contract is issued as `stage2-exit-gate-v3.json`; v1 and v2 and every
-artifact under them are untouched.
+The leg fails under this criterion, at an observed ratio of 1.0644: the frozen family's
+held-out RMSE is 13.17 Hz against 12.38 Hz for the two-cell training mean, so the model is 6.4
+percent worse than predicting every cell by the cohort average. The whole gate now fails all
+four legs where it previously failed three.
+
+**This is a post-hoc tightening and must be read as one.** The holdout's own preregistered limit
+was a ratio of at most 1.2, and 1.064 met it; the v1 and v2 gates read a boolean recording that
+pass. Nothing about the model got worse and no new measurement was taken. What changed is that
+ADR-2026-009 had already recorded in prose that a ratio above 1.0 means the model loses to a
+cohort mean, and v3 makes that prose the criterion instead of leaving it as a caveat under a
+leg marked passed. Choosing a stricter criterion than the one preregistered is only defensible
+if it is labelled, so it is labelled here: the 1.2 limit was met, the 1.0 limit was chosen
+afterwards, and the reason is that a model which cannot beat its own training mean should not
+be reported as clearing a leg of an exit gate.
+
+The gate result is `evidence/stage2/exit-gate-v3.json`, logical SHA-256
+`520e4dae713970bf2f41f0e8cde7fb3304b2fc31769f2f4783f9642dd8a3521d`, with the synaptic leg false,
+the circuit leg at 0.0 against a 0.8 floor, and the ensemble leg false. The contract is issued as
+`stage2-exit-gate-v3.json`; v1 and v2 and every artifact under them are untouched.
 
 ## 3. ND-06: the first quantitative short-term-plasticity rule
 
@@ -183,3 +198,45 @@ Four data targets were open. The outcome is mostly negative, and the negatives a
 
 Two sources new to the corpus came out of this: Nagel, Hong and Wilson 2015, used above, and
 Croset, Treiber and Waddell 2018, recorded as a lead that ND-03 cannot yet use.
+
+## 5. Addendum: the two runs this ADR's code enabled
+
+Both were executed after the sections above were written, from clean commits, and neither awards
+a tier. They are recorded here because each corrected something in this ADR's own work.
+
+**The bounded-path grooming sweep** tested the structural reading ADR-2026-009 substituted for
+the withdrawn depression explanation. It is reported in full in
+[the widened-circuit evidence report](../evidence/STAGE2_WIDENED_GROOMING_CIRCUIT.md). The
+short version: the shortest-path rule had dropped *every* inhibitory input to the readout, since
+all inhibition onto aBN1 arrives via paths of length two or more, so the structural reading is
+right about the cause. But widening does not moderate the response toward the reference, it
+abolishes it — 0.0 Hz at all eleven scales and all three frequencies at both K = 2 and K = 3,
+against a one-hop 33.2 Hz and a reference 4.63 Hz. The transferred-circuit method is not
+repaired by a wider selection rule.
+
+Three corrections came out of running it, two of them to criteria written in this session:
+
+- The v1 H1 criterion was one-sided and a silent readout satisfied it, so v1 scored a vacuous
+  pass. v2 restates it three-way, and the outcome is `suppressed`, not supported.
+- The v2 static contact-sum diagnostic is net *excitatory* at K = 3, +440 and +657 contacts onto
+  readouts that never fire, because it counts hundreds of partners that never spike. Delivered
+  drive has the opposite sign. v3 records both and whether they agree.
+- The first v3 round recorded a commit that did not describe the code that ran, because
+  `widened.py` used a bare `git rev-parse HEAD`. That is the dirty-tree provenance defect
+  ADR-2026-006 banned for Track A, reappearing in a new code path. The round is discarded and
+  disclosed, and the sweep now fails closed on a dirty worktree.
+
+**The uEPSC prior refit** fits the difference-of-exponentials kernel to all twelve recordings as
+a labelled, unvalidated prior — `evidence/stage2/uepsc-prior-refit-v1.json`, logical SHA-256
+`df9ed7a405f7ab559c298e94fed0e395f33fe4ed2b8617d20c83b1f72dba3f78`. Decay time constant 16.5 ms
+against the frozen 15.0 ms, rise 0.75 ms, population amplitude 30.25 pA against the frozen
+24.47 pA, with no continuous parameter at a search boundary.
+
+It does not repair the decay failure ADR-2026-008 recorded, and it slightly widens it. The
+refitted kernel's peak-to-`1/e` time is 17.3 ms, while the median of the twelve source
+recordings is 11.5 ms and the published 7.0 ms half-decay implies 10.1 ms. A population fit that
+shares one shape across cells and one amplitude per cell therefore decays about 50 percent
+slower than the median individual cell. `held_out_specimen_ids` is empty and all twelve cells are
+labelled fitted, because no independent uEPSC recording was located; that is what makes this a
+prior and not a test, and it must be labelled unvalidated wherever the type-pair registry uses
+it.

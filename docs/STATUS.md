@@ -359,9 +359,17 @@ No tier is awarded and no gate changes verdict.
   rheobase requires at least 9.26 GOhm, and published fly central-neuron values are an order of
   magnitude lower again. This is a fitting artifact of the single-compartment LIF form; v0.4
   records it in `value_notes` and claims no resolution.
-- **The cellular exit criterion is now failable, and fails.** The leg requires the normalised
-  error ratio strictly below 1.0 against a cohort-mean predictor. Issued as
-  `stage2-exit-gate-v3.json`; v1, v2 and every artifact under them are untouched.
+- **The cellular exit criterion is now failable, and fails. The Stage 2 gate is 0 of 4.** The
+  leg requires the normalised error ratio strictly below 1.0 against a cohort-mean predictor and
+  observes 1.0644: held-out RMSE 13.17 Hz against 12.38 Hz for the two-cell training mean, so the
+  model is 6.4% worse than the cohort average. The gate previously failed three legs of four; it
+  now fails all four. **This is a post-hoc tightening, not a regression** — the holdout's own
+  preregistered limit was a ratio of at most 1.2 and 1.064 met it, the v1 and v2 gates read a
+  boolean recording that pass, nothing about the model changed, and no new measurement was taken.
+  ADR-2026-009 had already recorded in prose that a ratio above 1.0 loses to a cohort mean; v3
+  makes that the criterion rather than a caveat under a leg marked passed. Issued as
+  `stage2-exit-gate-v3.json` with result `evidence/stage2/exit-gate-v3.json`; v1, v2 and every
+  artifact under them are untouched.
 - **ND-06 carries its first fitted parameters.** `male-cns-short-term-plasticity-v0.1` binds
   same-glomerulus ORN-to-uniglomerular-PN edges to a depression-only Tsodyks-Markram rule with
   utilisation 0.22 and recovery 893 ms, from Nagel, Hong and Wilson 2015, which fits that exact
@@ -378,3 +386,38 @@ No tier is awarded and no gate changes verdict.
   (eLife 7:e34550, GSE95361 / SRP128516) is located but unusable for ND-03: it is a midbrain
   Drop-Seq atlas whose PN receptor statements are inferential and which has no published mapping
   to MaleCNS body IDs.
+
+## Structural test of the transferred grooming circuit (2026-09-08)
+
+The bounded-path sweep ADR-2026-009 implied has been executed. See
+[the widened-circuit evidence report](evidence/STAGE2_WIDENED_GROOMING_CIRCUIT.md). No tier is
+awarded.
+
+- **The structural reading is right about the cause and wrong about the cure.** The shortest-path
+  selection rule dropped every inhibitory input to the aBN1 readout — all inhibition onto it
+  arrives by paths of length two or more, so a one-hop induced subgraph is necessarily purely
+  feedforward-excitatory there, and that alone explains a monotone over-response to drive. But
+  widening does not moderate the response toward the reference: at K = 2 and K = 3 the readout
+  produces 0.0 Hz at all eleven candidate scales and all three frequencies, against a one-hop
+  33.2 Hz and a reference 4.63 ± 2.01 Hz at 220 Hz. H1 is `suppressed` and H2 fails at both.
+  NumPy/GeNN parity passes at both, so it is not a backend artifact.
+- **The mechanism is a handful of neurons, not bulk connectivity.** Delivered excitation onto the
+  readouts barely changes as the edge count grows a thousandfold (12,857 → 13,564 → 13,375 and
+  16,159 → 17,804 → 17,932); at K = 3 only 27 of 296 and 35 of 386 excitatory sources are ever
+  active. What widening adds that matters is 14 to 22 active inhibitory neurons delivering about
+  1.8x the excitatory drive.
+- **A bounded induced subgraph of a connectome is not a small whole-brain simulation.** Both
+  readings of "make the subgraph more complete" fail in opposite directions, so `ND-04`'s derived
+  per-contact scale cannot be rescued by a better scale or a wider subgraph.
+- **Three self-corrections are disclosed rather than quietly fixed**: the v1 H1 criterion was
+  satisfied by a silent readout and scored a vacuous pass; the v2 static contact-sum diagnostic
+  has the wrong sign at K = 3 against delivered drive; and the first v3 round recorded a commit
+  that did not describe the code that ran, so it is discarded and the sweep now fails closed on a
+  dirty worktree. Two of the three were criteria written in the same session.
+- **The obvious next control is untested**: only the `zero` unresolved-sign policy was run, and
+  the result turns on an excitation/inhibition balance that the other three registered policies
+  could move.
+- **The uEPSC prior refit does not repair the decay failure** and slightly widens it. Refitted
+  decay is 16.5 ms against the frozen 15.0 ms, and the kernel's 17.3 ms peak-to-1/e sits about
+  50% above the 11.5 ms median of the twelve source recordings. The holdout is empty and all
+  twelve cells are labelled fitted, so it is a prior and not a test.
