@@ -245,7 +245,24 @@ connection. Those are the same physical quantity measured two ways, so the compa
 and it is currently favourable — 43 sits inside the MPFA estimate's spread and above
 `Rozenfeld2023`'s range.
 
-**P3 — Homeostatic matching, restated correctly (`KW2008`).** Contacts per ORN→PN connection
+**P3 — Homeostatic matching, restated correctly (`KW2008`). Partly done; see
+[STATUS](../STATUS.md).** A post-hoc ordinal check found that contacts per connection reproduce
+`KW2008`'s stated uEPSC ordering on their four recorded glomeruli with clean separation
+(DL5 81 > DM4 63 > VM2 40 > DM6 28), and that the project's earlier negative result came from
+substituting ORN count for glomerular volume — a proxy that anti-correlates with contacts across
+all 50 glomeruli. The proper test needs **glomerular volumes**, and here is the practical route,
+because it is not immediately available: the `syn-partners` contacts derivative carries
+`x_post, y_post, z_post, body_post`, so a volume proxy can be computed from the spatial extent of
+each glomerulus's ORN→PN synapse cloud by streaming its 298 parquet shards. Region labels would
+be better than a proxy, and `syn-points` carries `primary_label` and `subprimary_label` with 12
+and 100 distinct values respectively — 100 being suggestively close to 50 glomeruli on two sides
+— but the derivative stores them as **integer codes with no name mapping**, and the manifest does
+not carry one. The strings would have to be recovered from the raw
+`syn-points-male-cns-v1.0-minconf-0.5.feather` dictionary first. Note that reading that raw
+artifact whole is not viable — 357 M points saturated the WSL instance — so any such work must
+stream shards.
+
+**P3 original statement.** Contacts per ORN→PN connection
 should scale with glomerular volume across DM6, VM2, DL5 and DM4, with the ordering
 DL5 ≈ DM4 > DM6 ≈ VM2. The repository's existing test found contact number "does not implement
 the published homeostatic matching"; section 2.2 gives the precise form of the claim to retest
