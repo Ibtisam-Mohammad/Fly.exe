@@ -138,6 +138,67 @@ stays visible, not so the stage can be declared complete. The one passing leg ca
 caveat: it scores firing rate only, on state-shifted cells from the same paper, using a model
 that predicts no resting voltage, time constant or adaptation at all.
 
+## No single global contact scale fits both reference frequencies
+
+This is an observation read directly from two immutable artifacts — the ND-04 scale sweep inside
+`shiu-antennal-grooming-transfer-delayfix.json` and the derived scale range above — not a new
+experiment.
+
+The Stage 1 sweep varied `synaptic_mv_per_contact` from 0.025 to 0.275 mV, which does overlap the
+0.042 to 1.12 mV range the published unitary amplitude implies, so the fit was not searching the
+wrong place. What it shows is worse than a failed fit:
+
+```
+scale mV/contact   predicted mean readout rate (Hz) at 20 / 100 / 220 Hz drive
+0.075              0.00    0.00    0.83
+0.100              0.00    0.00   12.83
+0.125              0.00    0.00   24.17
+0.150              0.00    0.17   33.17
+0.175              0.00    4.17   40.17
+reference          0.00    0.93    4.63
+```
+
+Matching the 220 Hz reference of 4.63 Hz needs a scale near **0.083**. Matching the 100 Hz
+reference of 0.93 Hz needs a scale near **0.153**. The two frequencies demand scales that differ
+by about 1.8-fold, so **no single global contact scale reproduces both**. At the scale that fits
+100 Hz the model predicts roughly 34 Hz at 220 Hz drive against a 4.63 Hz reference, a sevenfold
+over-response.
+
+The physiologically derived median band, 0.117 to 0.164 mV per contact, contains the
+100 Hz-matching scale and not the 220 Hz-matching one. So a physiologically plausible scale
+reproduces the low-frequency point and over-predicts the high-frequency point severalfold.
+
+That pattern is the signature of a missing rate-dependent mechanism, and the registered gap
+`ND-06` names one: the published description of this synapse is high release probability with
+strong short-term depression at high presynaptic firing rates. Depression would flatten the
+high-frequency response relative to the low and could let one scale serve both. **This is a
+hypothesis, not a result** — it is stated here as the concrete prediction to test when
+release-failure and short-term-plasticity evidence is finally acquired, so that acquisition has a
+falsifiable target rather than an open-ended one.
+
+## Both Stage 1 circuits reproduce under the corrected code
+
+| Circuit | Effect of the two one-step fixes |
+|---|---|
+| Grooming transfer | Backend parity improves from 0.1 ms to 1.1e-13 ms; readout rates and held-out coverage unchanged |
+| Feeding screen | **Bit-identical**; every variant's balanced accuracy and AUROC match to four decimals |
+
+The feeding screen is unaffected because it reads spike counts over the full run rather than
+spike times, so a one-step labelling shift cannot move it, and the axonal-delay change does not
+alter total counts at these rates. Its Stage 1 verdict is unchanged: exit gate passed, selected
+V3 review failed, 101 mapped types.
+
+```
+variant                  BA before / after      AUROC before / after
+exact                    0.8077 / 0.8077        0.8077 / 0.8077
+cell-type-only           0.7963 / 0.7963        0.7972 / 0.7972
+shuffled-connectivity    0.5000 / 0.5000        0.5000 / 0.5000
+randomized-weights       0.5000 / 0.5000        0.5000 / 0.5000
+```
+
+The reproduction review is `shiu-feeding-screen-stage1-review-delayfix.json`, immutable snapshot
+SHA-256 `2d5f05e11bdb58a9453833cc837dd90c4723fcf061fd2840e40257c2a123d82c`.
+
 ## What now blocks Stage 2
 
 1. **No unconsumed recording of any kind remains.** Every registered F-I cell was consumed by the

@@ -162,6 +162,13 @@ Status date: 2026-09-08
 - The frozen unitary-EPSC kernel was scored once against preregistered numeric limits on the five
   unconsumed chronic-exposure cells. Sign and peak time pass; decay fails at 0.463 median
   fractional error against a 0.30 limit.
+- Both Stage 1 circuits reproduce under the corrected code. The grooming transfer's backend
+  parity improves from 0.1 ms to 1.1e-13 ms with unchanged rates and coverage; the feeding screen
+  is bit-identical across all eleven variants, so both Stage 1 verdicts stand.
+- No single global contact scale fits the grooming reference at both frequencies: 220 Hz needs
+  about 0.083 mV per contact and 100 Hz about 0.153 mV. The physiologically derived band contains
+  the second and over-predicts the first sevenfold, which is the pattern the missing ND-06
+  short-term depression would be expected to remove.
 
 ## Not implemented or not yet validated
 
