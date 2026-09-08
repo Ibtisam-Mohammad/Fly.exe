@@ -38,4 +38,8 @@ even with `axonal_delay_steps = 0`, and the adapters assigned the full registere
 on top of that, so the registered 0.1 ms delay executed as 0.2 ms. The adapters now assign
 `delay_steps - 1`, and `tests/test_repairs.py` pins the semantics with a one-synapse impulse
 probe at one, two and three steps on the CPU backend. Every measurement in this report predates
-that fix, so a rerun would move the GeNN spike times one step earlier and remove the offset.
+that fix. This fixture was in fact unaffected: it uses `neural_parity.run_genn`, which already
+corrected for GeNN labelling a spike with the start of its integration interval. A rerun at
+commit 036f627 reproduces the same 2.842170943040401e-14 ms. The one-step offset was in the
+Stage 1 circuit adapter, which lacked that correction; see
+[ADR-2026-008](../adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md).

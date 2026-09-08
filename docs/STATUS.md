@@ -147,6 +147,22 @@ Status date: 2026-09-08
   Track A runs are unchanged, and both engines refuse a graph containing graded-regime neurons
   because no graded transmission model is registered.
 
+- The Stage 2 exit gate is an executable contract that reads each leg from a checksum-pinned
+  artifact. One leg of four passes: the cellular F-I sub-gate. Synaptic, circuit and ensemble
+  fail, and Stage 2 does not exit.
+- A second one-step GeNN defect is fixed. GeNN labels a spike with the start of the integration
+  interval while NumPy and Brian2 label it with the end, and the Stage 1 adapter lacked the
+  correction the parity harness already had. It had been cancelling the axonal-delay defect at
+  the readout, so the recorded Stage 1 parity pass came from two compensating errors. All three
+  backends now agree to 1.1e-13 ms on the 41-neuron transfer, down from 0.1 ms.
+- ND-04 is tested rather than asserted. Across 50 glomeruli and 265 projection neurons, contact
+  number does not implement the published homeostatic matching, and the median 43 contacts per
+  connection agrees with the published several-dozen estimate. The registered 0.2 mV per contact
+  lies inside the 0.042 to 1.12 mV range the published unitary amplitude implies.
+- The frozen unitary-EPSC kernel was scored once against preregistered numeric limits on the five
+  unconsumed chronic-exposure cells. Sign and peak time pass; decay fails at 0.463 median
+  fractional error against a 0.30 limit.
+
 ## Not implemented or not yet validated
 
 - Track A's functional whole-graph dynamics are an explicit Shiu-style engineering regression, not
@@ -201,6 +217,12 @@ Status date: 2026-09-08
 - The Gugel Dryad deposit holds four source-data files the eLife CDN does not carry, including two
   more Figure 7 files. Dryad now serves downloads behind a proof-of-work bot wall, so scripted
   acquisition under the project checksum-locking rule is currently blocked.
+- After the uEPSC holdout the corpus contains no unconsumed cellular or synaptic recording at
+  all. Both the synaptic and ensemble exit legs now need new data, not new code.
+- Receptor-aware polarity has no source. The MaleCNS `receptorType` column is gustatory receptor
+  identity, not postsynaptic receptor expression, and no connectome-mapped receptor resource
+  exists. Release-failure and short-term-plasticity evidence is described qualitatively in the
+  literature but is not deposited in any lockable form.
 
 Detailed structural evidence: [V0 Structural](evidence/V0_STRUCTURAL.md),
 [full flat-connectome profile](evidence/FULL_PROFILE_INTEGRITY.md), and
@@ -216,6 +238,9 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 Cellular-tier sources, the Nanami stimulus resolution, and heterogeneous-cell execution:
 [ADR-2026-007](adr/ADR-2026-007-cellular-tier-sources.md) and
 [Stage 2 cellular observables](evidence/STAGE2_CELLULAR_OBSERVABLES.md).
+Synaptic-tier evidence and the executable exit gate:
+[ADR-2026-008](adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md) and
+[Stage 2 synaptic tier](evidence/STAGE2_SYNAPTIC_TIER.md).
 
 ## Measured foundation results
 

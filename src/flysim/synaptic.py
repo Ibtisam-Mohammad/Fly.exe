@@ -543,3 +543,103 @@ def evaluate_uepsc_kinetics_holdout(
     result["logical_sha256"] = sha256_json(result)
     write_json_atomic(output, result)
     return result
+
+
+def _read_path(payload: dict[str, Any], keys: list[str]) -> Any:
+    value: Any = payload
+    for key in keys:
+        if not isinstance(value, dict) or key not in value:
+            raise DatasetError(f"Evidence artifact has no field at {'.'.join(keys)}")
+        value = value[key]
+    return value
+
+
+def evaluate_stage2_exit_gate(
+    contract_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Re-evaluate the recorded Stage 2 exit criteria against checksum-pinned artifacts.
+
+    Each leg is read out of an immutable artifact rather than restated, so the gate cannot
+    drift away from the evidence and flips on its own when the missing evidence arrives.
+    """
+    contract = load_json(contract_path)
+    if contract.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported Stage 2 exit-gate contract schema")
+    parse_provenance(str(contract["provenance"]))
+
+    legs: list[dict[str, Any]] = []
+    for leg in contract["legs"]:
+        artifact = leg["artifact"]
+        path = root / str(artifact["path"])
+        observed = sha256_file(path) if path.is_file() else None
+        if observed != str(artifact["sha256"]):
+            raise DatasetError(
+                f"Exit-gate leg {leg['id']!r} artifact SHA-256 mismatch for {artifact['path']}: "
+                f"expected {artifact['sha256']}, observed {observed}"
+            )
+        payload = load_json(path)
+        value = _read_path(payload, [str(key) for key in leg["read"]])
+        if "expect" in leg:
+            passed = bool(value == leg["expect"])
+            criterion = f"equals {leg['expect']!r}"
+        elif "expect_at_least" in leg:
+            threshold = float(leg["expect_at_least"])
+            passed = bool(float(value) >= threshold)
+            criterion = f">= {threshold}"
+        else:
+            raise ConfigurationError(f"Exit-gate leg {leg['id']!r} declares no criterion")
+        legs.append(
+            {
+                "id": str(leg["id"]),
+                "requirement": str(leg["requirement"]),
+                "artifact_path": str(artifact["path"]),
+                "artifact_sha256": observed,
+                "read": list(leg["read"]),
+                "observed_value": value,
+                "criterion": criterion,
+                "passed": passed,
+                "sufficiency_caveats": [str(item) for item in leg["sufficiency_caveats"]],
+            }
+        )
+
+    supporting: list[dict[str, Any]] = []
+    for item in contract.get("supporting_evidence", []):
+        path = root / str(item["path"])
+        observed = sha256_file(path) if path.is_file() else None
+        if observed != str(item["sha256"]):
+            raise DatasetError(
+                f"Supporting artifact SHA-256 mismatch for {item['path']}: "
+                f"expected {item['sha256']}, observed {observed}"
+            )
+        supporting.append(
+            {"id": str(item["id"]), "path": str(item["path"]), "sha256": observed,
+             "role": str(item["role"])}
+        )
+
+    failing = [leg["id"] for leg in legs if not leg["passed"]]
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-exit-gate-v1",
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "provenance": str(contract["provenance"]),
+        "gate_statement": dict(contract["gate_statement"]),
+        "legs": legs,
+        "supporting_evidence": supporting,
+        "legs_passed": [leg["id"] for leg in legs if leg["passed"]],
+        "legs_failed": failing,
+        "acceptance": {
+            "stage2_exit_gate_passed": not failing,
+            "partial_pass_is_not_a_pass": str(
+                contract["acceptance"]["partial_pass_is_not_a_pass"]
+            ),
+        },
+        "tier_policy": str(contract["tier_policy"]),
+        "claim_boundary": str(contract["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    write_json_atomic(output, result)
+    return result

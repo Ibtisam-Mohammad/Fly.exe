@@ -76,7 +76,11 @@ from flysim.stage2 import (
     review_projection_neuron_fit,
 )
 from flysim.structural import audit_structural_references
-from flysim.synaptic import analyse_synaptic_structure, evaluate_uepsc_kinetics_holdout
+from flysim.synaptic import (
+    analyse_synaptic_structure,
+    evaluate_stage2_exit_gate,
+    evaluate_uepsc_kinetics_holdout,
+)
 from flysim.universes import audit_body_universes
 from flysim.v0 import CONTACT_CHECKS as V0_CONTACT_CHECKS
 from flysim.v0 import build_v0_evidence_bundle
@@ -212,6 +216,30 @@ def _command_stage2_measure_cellular(args: argparse.Namespace) -> int:
         }
     )
     return 0 if all(result["artifact_validity"].values()) else 2
+
+
+def _command_stage2_exit_gate(args: argparse.Namespace) -> int:
+    result = evaluate_stage2_exit_gate(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "legs": [
+                {
+                    "id": leg["id"],
+                    "observed_value": leg["observed_value"],
+                    "criterion": leg["criterion"],
+                    "passed": leg["passed"],
+                }
+                for leg in result["legs"]
+            ],
+            "legs_failed": result["legs_failed"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0 if result["acceptance"]["stage2_exit_gate_passed"] else 2
 
 
 def _command_stage2_synaptic_structure(args: argparse.Namespace) -> int:
@@ -1503,6 +1531,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
+    stage2_exit = stage2_commands.add_parser(
+        "exit-gate",
+        help="Re-evaluate the Stage 2 exit criteria against checksum-pinned evidence",
+    )
+    stage2_exit.add_argument("--root", type=Path, default=default_data_root())
+    stage2_exit.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-exit-gate.json",
+    )
+    stage2_exit.add_argument("--output", type=Path, required=True)
+    stage2_exit.set_defaults(func=_command_stage2_exit_gate)
     stage2_synaptic = stage2_commands.add_parser(
         "synaptic-structure",
         help="Test the published homeostatic-matching claim against locked contact structure",

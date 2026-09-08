@@ -105,4 +105,10 @@ even with `axonal_delay_steps = 0`, and the adapters assigned the full registere
 on top of that, so the registered 0.1 ms delay executed as 0.2 ms. The adapters now assign
 `delay_steps - 1`, and `tests/test_repairs.py` pins the semantics with a one-synapse impulse
 probe at one, two and three steps on the CPU backend. Every measurement in this report predates
-that fix, so a rerun would move the GeNN spike times one step earlier and remove the offset.
+that fix. The rerun moved the GeNN spike times one step earlier as expected but did **not**
+remove the offset, because a second independent defect was present: GeNN labels a spike with the
+start of the integration interval while the NumPy oracle and Brian2 adapter label it with the
+end, and this adapter lacked the correction `neural_parity.py` already carried. The two errors
+cancelled at the readout, so the parity pass recorded above came from two compensating defects.
+With both fixed, the same transfer agrees across all three backends to 1.1e-13 ms with zero
+timing outliers. See [ADR-2026-008](../adr/ADR-2026-008-synaptic-tier-and-stage2-exit-gate.md).

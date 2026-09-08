@@ -127,3 +127,134 @@ def test_the_kernel_refuses_a_decay_faster_than_its_rise() -> None:
         difference_of_exponentials_kernel(
             np.arange(0.0, 10.0, 0.1), onset_ms=1.0, rise_tau_ms=5.0, decay_tau_ms=2.0
         )
+
+
+def _write(path, payload):
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def _sha(path):
+    from flysim.datasets import sha256_file
+
+    return sha256_file(path)
+
+
+def test_the_exit_gate_fails_when_any_leg_fails(tmp_path) -> None:
+    from flysim.synaptic import evaluate_stage2_exit_gate
+
+    root = tmp_path / "root"
+    good = _write(root / "good.json", {"acceptance": {"pass": True}})
+    bad = _write(root / "bad.json", {"gate": {"coverage": 0.0}})
+    contract = _write(
+        tmp_path / "contract.json",
+        {
+            "schema_version": "1.0",
+            "experiment_id": "test-exit",
+            "provenance": "E",
+            "gate_statement": {"source": "test", "text": "t"},
+            "legs": [
+                {
+                    "id": "alpha",
+                    "requirement": "r",
+                    "artifact": {"path": "good.json", "sha256": _sha(good)},
+                    "read": ["acceptance", "pass"],
+                    "expect": True,
+                    "sufficiency_caveats": [],
+                },
+                {
+                    "id": "beta",
+                    "requirement": "r",
+                    "artifact": {"path": "bad.json", "sha256": _sha(bad)},
+                    "read": ["gate", "coverage"],
+                    "expect_at_least": 0.8,
+                    "sufficiency_caveats": [],
+                },
+            ],
+            "acceptance": {"partial_pass_is_not_a_pass": "no"},
+            "tier_policy": "none",
+            "claim_boundary": "none",
+        },
+    )
+
+    result = evaluate_stage2_exit_gate(contract, root, tmp_path / "out.json")
+
+    assert result["legs_passed"] == ["alpha"]
+    assert result["legs_failed"] == ["beta"]
+    assert result["acceptance"]["stage2_exit_gate_passed"] is False
+
+
+def test_the_exit_gate_refuses_a_changed_artifact(tmp_path) -> None:
+    import json
+
+    import pytest as _pytest
+
+    from flysim.errors import DatasetError
+    from flysim.synaptic import evaluate_stage2_exit_gate
+
+    root = tmp_path / "root"
+    artifact = _write(root / "a.json", {"acceptance": {"pass": True}})
+    contract = _write(
+        tmp_path / "contract.json",
+        {
+            "schema_version": "1.0",
+            "experiment_id": "test-exit",
+            "provenance": "E",
+            "gate_statement": {"source": "test", "text": "t"},
+            "legs": [
+                {
+                    "id": "alpha",
+                    "requirement": "r",
+                    "artifact": {"path": "a.json", "sha256": _sha(artifact)},
+                    "read": ["acceptance", "pass"],
+                    "expect": True,
+                    "sufficiency_caveats": [],
+                }
+            ],
+            "acceptance": {"partial_pass_is_not_a_pass": "no"},
+            "tier_policy": "none",
+            "claim_boundary": "none",
+        },
+    )
+    artifact.write_text(json.dumps({"acceptance": {"pass": True, "tampered": 1}}), encoding="utf-8")
+
+    with _pytest.raises(DatasetError, match="SHA-256 mismatch"):
+        evaluate_stage2_exit_gate(contract, root, tmp_path / "out.json")
+
+
+def test_a_missing_field_is_an_error_not_a_silent_failure(tmp_path) -> None:
+    import pytest as _pytest
+
+    from flysim.errors import DatasetError
+    from flysim.synaptic import evaluate_stage2_exit_gate
+
+    root = tmp_path / "root"
+    artifact = _write(root / "a.json", {"acceptance": {}})
+    contract = _write(
+        tmp_path / "contract.json",
+        {
+            "schema_version": "1.0",
+            "experiment_id": "test-exit",
+            "provenance": "E",
+            "gate_statement": {"source": "test", "text": "t"},
+            "legs": [
+                {
+                    "id": "alpha",
+                    "requirement": "r",
+                    "artifact": {"path": "a.json", "sha256": _sha(artifact)},
+                    "read": ["acceptance", "absent"],
+                    "expect": True,
+                    "sufficiency_caveats": [],
+                }
+            ],
+            "acceptance": {"partial_pass_is_not_a_pass": "no"},
+            "tier_policy": "none",
+            "claim_boundary": "none",
+        },
+    )
+
+    with _pytest.raises(DatasetError, match="no field at"):
+        evaluate_stage2_exit_gate(contract, root, tmp_path / "out.json")
