@@ -342,16 +342,68 @@ Recorded here so they are not lost; each needs its own change with tests.
 7. **Add `KW2008`, `KW2009`, `Gouwens2009` and `MaleCNS` as literature sources** with the values
    in sections 2 and 3, so the uEPSC amplitude comparison below becomes registrable.
 
-### A note on the uEPSC amplitude coincidence
+### The uEPSC amplitude coincidence was spurious, and chasing it found a real defect
 
-The project's refitted uEPSC prior gives a population amplitude of **30.25 pA** from the 12
-`Gugel2023` DL5 cells. `KW2008` measures **29.0 ± 2.6 pA** (n = 45) across DM6, VM2, DL5 and
-DM4 with a different preparation, in a different laboratory, sixteen years earlier. The agreement
-is close enough to be worth pursuing as the independent amplitude check the synaptic tier lacks.
+**Withdrawn.** An earlier draft of this document noted that the project's refitted uEPSC prior
+gives a population amplitude of **30.25 pA** from the 12 `Gugel2023` DL5 cells while `KW2008`
+measures **29.0 ± 2.6 pA** (n = 45), and flagged the agreement as a promising independent check.
+Both conditions that draft said had to be settled first were then settled, and the coincidence
+does not survive either.
 
-Two things must be settled before it can count as one. The measurement conditions differ —
-`KW2008` used minimal antennal-nerve stimulation at 0.033 Hz, essentially depression-free, and
-whether the Gugel protocol is comparable has to be established from that paper rather than
-assumed. And `KW2008` reports a pooled mean across four glomeruli whose uEPSC amplitudes
-*differ significantly* (p < 10⁻⁶), so the right comparison is against its DL5 subgroup (n = 9),
-not the pooled 29.0 pA. Until both are resolved this remains a promising lead and not a validation.
+**The protocols are comparable — that part holds.** `Gugel2023` state that they "adapted a
+previously established minimal stimulation protocol (Kazama and Wilson, 2008)", substituting
+488 nm optogenetic stimulation of ORN terminals for electrical antennal-nerve stimulation with
+the nerve severed, and they report their DL5 values were "similar to previous measurements made
+using conventional electrical stimulation of the antennal nerve (Kazama and Wilson, 2008),
+confirming this method". So a DL5-to-DL5 comparison is legitimate.
+
+**But the comparison was against the wrong numbers on both sides.** `KW2008`'s 29.0 pA is pooled
+across four glomeruli whose amplitudes differ at p < 10⁻⁶, and DL5 is one of the two *large* ones.
+`Gugel2023` state their own DL5 control amplitude as **~40 pA**, not 29. And the project's
+30.25 pA is not a measurement of those cells but the output of a kernel fit. Measuring the
+traces directly — per-cell peak deflection against a pre-stimulus baseline — gives:
+
+```
+  12 cells, peak amplitude:  mean 36.61 pA, median 36.13, SEM 2.92, range 24.0 to 55.8
+  control (solvent) only, n=7:  mean 34.92 pA
+  Gugel2023 stated value for the control condition:  ~40 pA
+```
+
+So the repository's **data is faithful** and agrees with the source paper; the repository's
+**kernel fit underestimates the amplitude by 17%** (30.25 against 36.61 pA), and the frozen fit
+by 33% (24.47 pA). The apparent agreement with `KW2008` was a biased fit amplitude landing near a
+pooled cross-glomerular mean by coincidence.
+
+**Why the fit is biased, tested and mostly answered.** Three candidates were tested:
+
+| candidate | result |
+|---|---|
+| decay overestimate pulling the amplitude down | pinning decay to the published τ = 10.1 ms moves amplitude 30.25 → 31.59 pA, only 4% of the gap |
+| per-cell onset jitter smeared by one shared onset | ruled out — all 12 traces peak at exactly 49.90 ms, already peak-aligned as `Gugel2023` describe doing |
+| Huber δ = 1.0 pA against a 36 pA signal | 3% effect; pure least squares gives 31.47 pA |
+
+The answer is **model-family misspecification, and both source papers say so explicitly.**
+`KW2008`: *"The decay phase of these evoked EPSCs typically had two components, fast and slow."*
+`Nagel2015` fits exactly that, at τ = 9.3 ms and τ = 80 ms with conductances of 0.22 and 0.06 nS.
+The project's kernel has **one** decay. Fitting a single exponential decay to a fast-plus-slow
+waveform necessarily returns an intermediate decay and a depressed peak. Adding a second decay
+term to the same fitting machinery, over a comparable grid:
+
+```
+  one decay  (repo family): decay 15.0 ms      | amp 32.93 pA (-10.0%) | SSE 50199 | t_half 11.20 ms
+  two decays              : 11.0 / 50.0 ms     | amp 33.95 pA ( -7.2%) | SSE 38568 | t_half  9.80 ms
+                                                                          SSE improvement 23.2%
+  published targets                                    ~40 pA                        t_half ~7 ms
+```
+
+**This reframes a recorded result.** ADR-2026-008 recorded the frozen uEPSC kernel's decay as
+*failing* its preregistered holdout at 0.463 median fractional error against a 0.30 limit, and
+ADR-2026-009 examined the criteria but not the kernel family. That failure is substantially a
+misspecification the literature predicted rather than an open empirical question: the fitted
+family cannot represent the waveform the source papers describe. A two-component kernel is the
+indicated fix and its parameters are published.
+
+**What it does not do is unblock the synaptic tier.** A better kernel is still fitted to all
+twelve cells, so it is a better prior and not a test. And even two decays leave the amplitude 7%
+low and the half-decay 40% above the published 7 ms, so the family is improved rather than
+correct.

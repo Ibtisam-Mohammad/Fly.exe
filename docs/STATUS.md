@@ -506,3 +506,31 @@ it materially weakens what the widened-circuit result can claim.
   delivered inhibition exceeds delivered excitation by only about 1.8-fold while the
   reconstruction asymmetry is 3-fold, **the sign of the true balance is genuinely uncertain** and
   the mechanistic attribution of the readout silence is now qualified rather than established.
+
+### The uEPSC kernel family is misspecified (2026-09-09)
+
+Chasing an apparent independent validation found a real defect instead. Recorded in
+[the literature corpus](evidence/LITERATURE_PARAMETER_CORPUS.md), final section.
+
+- **The apparent agreement was spurious.** The refitted prior's 30.25 pA sitting near Kazama and
+  Wilson's 29.0 ± 2.6 pA looked like the independent amplitude check the synaptic tier lacks. It
+  was not: their 29.0 pA is pooled over four glomeruli differing at p < 1e-6, with DL5 one of the
+  two large ones, and Gugel and colleagues state their own DL5 control amplitude as ~40 pA.
+- **The data is faithful; the fit is biased.** Measuring the twelve traces directly gives a
+  per-cell peak amplitude of **36.61 pA, SEM 2.92** (34.92 pA for the seven controls), which does
+  agree with the published ~40 pA. The repository's kernel fit reports 30.25 pA, **17% low**, and
+  the frozen fit 24.47 pA, 33% low.
+- **The cause is the kernel family, and both source papers say so.** Kazama and Wilson: "The
+  decay phase of these evoked EPSCs typically had two components, fast and slow." Nagel and
+  colleagues fit exactly that at 9.3 ms and 80 ms. The project's kernel has one decay. Three
+  alternative explanations were tested and rejected: pinning the decay to the published value
+  recovers only 4% of the gap, the traces are already peak-aligned so there is no onset jitter to
+  smear, and the Huber delta is worth 3%. Adding a second decay term reduces SSE by **23.2%** and
+  moves the kernel half-decay from 11.20 ms to 9.80 ms against a published ~7 ms.
+- **This reframes a recorded result.** ADR-2026-008 recorded the kernel's decay as failing its
+  preregistered holdout at 0.463 median fractional error against a 0.30 limit, and treated it as
+  an empirical finding. It is substantially a misspecification the literature predicted. A
+  two-component kernel is the indicated fix and its parameters are published.
+- **It does not unblock the synaptic leg.** A better kernel fitted to all twelve cells is a
+  better prior, not a test, and even two decays leave the amplitude 7% low and the half-decay 40%
+  above the published value.
