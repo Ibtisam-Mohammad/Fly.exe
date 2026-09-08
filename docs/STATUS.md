@@ -436,3 +436,53 @@ awarded.
   decay is 16.5 ms against the frozen 15.0 ms, and the kernel's 17.3 ms peak-to-1/e sits about
   50% above the 11.5 ms median of the twelve source recordings. The holdout is empty and all
   twelve cells are labelled fitted, so it is a prior and not a test.
+
+## Literature corpus and the first connectome-versus-physiology test (2026-09-09)
+
+Fourteen primary papers were read in full and consolidated into
+[the literature parameter corpus](evidence/LITERATURE_PARAMETER_CORPUS.md), which is now the
+single place to check before registering a parameter.
+
+- **The connectome completion rates were undisclosed and now are not.** The MaleCNS paper reports
+  94% presynaptic completion, 42% postsynaptic completion, and 40.1% of synaptic connections with
+  both partners proofread. None appeared anywhere in this repository. More than half of all
+  postsynaptic sites are not attributed to a proofread neuron, so every statement about the
+  inputs a neuron receives rests on a minority sample, and out-degree is far better sampled than
+  in-degree. Now recorded in [V0_STRUCTURAL.md](evidence/V0_STRUCTURAL.md) with a body-count
+  reconciliation, and added as a caveat to the widened-circuit report whose central
+  excitation/inhibition result depends on it.
+- **First quantitative agreement between the connectome and independent physiology.** See
+  [the ORN-to-PN convergence report](evidence/ORN_PN_CONVERGENCE.md). Kazama and Wilson 2009's
+  complete-convergence prediction is parameter-free and testable directly on the locked graph.
+  Both preregistered hypotheses fail globally — median completeness 0.865 against a 0.95 floor,
+  minimum 0.485 — yet **four glomeruli are exactly complete bipartite graphs**: V, VC5, VM5v and
+  VM7d, 718 ordered pairs with zero missing edges, which has probability 7.3e-46 under
+  independent edge recovery at the observed median rate. Where the reconstruction supports the
+  question, the answer is exactly the published one.
+- **The shortfall is reconstruction quality and it is measurable per neuron.** An ORN's total
+  out-contact budget predicts the fraction of its cognate PNs it reaches (r = +0.85 in VL2p and
+  DA1), the distributions are smooth rather than bimodal, and weak connections are specifically
+  what goes missing: the complete glomeruli have no pairs below 5 contacts, while VL2p at 0.485
+  has ten pairs carrying exactly one. Zero PNs are orphaned, which rules out gross typing error.
+  This gives the project a reusable reconstruction-quality statistic to report alongside any
+  modelled circuit; the JON-F/aBN1 populations do not yet have one.
+- **My own H2 argument was wrong and is marked so.** It assumed at least 10 contacts per pair, so
+  per-synapse incompleteness could not push edge recovery below 0.99. Measured contacts per pair
+  reach down to 1, so the arithmetic was right on a false premise.
+- **ND-06 fails its first external test.** Kazama and Wilson 2008 independently measure about 40%
+  depression at 7 Hz; the registered pair predicts 56%, over-predicting by roughly 16 points.
+  Their 1/CV-squared analysis does independently validate the presynaptic depletion *form* of the
+  model (r = 0.79, p < 1e-4).
+- **The v0.4 input-resistance defect is confirmed with a measurement.** Gouwens and Wilson 2009
+  measure PN input resistance at 598 +/- 69 MOhm, 7 to 15 times below the 4.4-6.4 GOhm the MBON07
+  LIF fit implies, so ADR-2026-010's fitting-artifact conclusion no longer rests on another
+  model's constant. The same paper shows electrode seal conductance depolarises measured somatic
+  resting potentials by about 10 mV, with a larger error at more hyperpolarised potentials, which
+  widens the true threshold-to-rest distance and makes the rheobase inconsistency worse.
+- **ND-03 is a boundary, not a pending action.** Receptor class does match presynaptic
+  transmitter, but different receptors for the same transmitter localise to different dendritic
+  domains receiving different partners, so the refinement is partner-specific and no bulk
+  expression atlas can supply it.
+- **No raw traces exist.** Confirmed absent for all four Wilson-lab papers, so the cellular tier
+  stays single-specimen and the uEPSC holdout stays empty for that reason rather than for want of
+  searching.

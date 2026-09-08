@@ -111,6 +111,17 @@ better scale or a wider subgraph fixes.
    grid either. A scale below 0.025 was not tested.
 5. **The reference is simulation output, not a recording.** Even a pass on H2 would have been a
    fit of one scale to two points from another model.
+6. **The excitation/inhibition balance is computed from a minority of each readout's inputs.**
+   The MaleCNS paper reports 42% postsynaptic completion, so more than half of all postsynaptic
+   sites are not attributed to a proofread neuron, and 40.1% of synaptic connections have both
+   partners proofread. The entire result here is a signed sum over *recovered* edges onto the two
+   readouts, and the direction of the bias from the missing majority is unknown. The
+   [ORN-to-PN convergence test](ORN_PN_CONVERGENCE.md), run after this sweep, shows what that
+   costs in practice: edge recovery is complete where connections are strong and degrades
+   specifically at the weak end, and a neuron's total contact budget predicts whether its known
+   connections are recovered. No reconstruction-quality statistic was computed for the JON-F or
+   aBN1 populations before this sweep was run, and one should be — it is now the first thing to
+   check before treating the K=2 sign flip as biology.
 
 ## Rounds run, including the discarded one
 

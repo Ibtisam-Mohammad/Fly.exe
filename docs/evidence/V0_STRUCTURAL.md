@@ -91,6 +91,40 @@ traced-to-traced aggregate edges. Extending it through `Assign+Anchor` adds 2,44
 60,281 edges (0.24%), and 149,409 contacts (0.12%); these alternatives remain available for
 sensitivity analyses.
 
+### Connectome completeness, as the source paper reports it
+
+The MaleCNS paper states completion rates that this document previously did not carry, and they
+qualify every structural and functional claim the project makes:
+
+| quantity | value |
+|---|---|
+| presynaptic completion rate | **94%** |
+| postsynaptic completion rate | **42%** |
+| synaptic connections with both partners proofread | **40.1%** |
+| neurons identified, proofread and annotated | 166,700 (including sensory axons) |
+| neurons in the paper's connectivity graph | 166,483 (217 disconnected) |
+| synaptic connections | 124.2 M |
+| unique cell types | 11,710 |
+| proofreading effort | 44 person-years |
+
+**More than half of all postsynaptic sites are not attributed to a proofread neuron.** Every
+statement in this project about the inputs a neuron receives is therefore computed from a
+minority sample of that neuron's actual inputs, and the direction of the resulting bias is not
+known. Out-degree is far better sampled than in-degree, at 94% against 42%, so any asymmetry
+between forward and backward reachability results may be partly this rather than biology. The
+[ORN-to-PN convergence test](ORN_PN_CONVERGENCE.md) measures the practical consequence directly:
+edge recovery is complete where connections are strong and degrades where they are weak, and an
+ORN's total out-contact budget predicts whether its known connections are recovered at all
+(r up to +0.85).
+
+Body-count reconciliation against the paper. The accepted `Traced` universe of 165,122 sits
+below the paper's graph count of 166,483, and the `Assign+Anchor` extension of 2,443 bodies
+brings the total to 167,565, above it. The paper's figure therefore falls inside the interval
+these two definitions bracket, and the 1,361-body difference from `Traced` is a status-filter
+difference rather than missing data. The cell-type count differs in the other direction: 11,752
+type labels appear in the annotation artifact against the paper's 11,710 final types, a surplus
+of 42 that has not been itemised.
+
 The paper-reference checks compare the v1.0 observations with the source authors' rounded or
 v0.9-definition counts under declared tolerances. The cross-connectome input contains 3,761,792
 paper-author aligned type-edge rows and 281,656 mappings, pinned to supplement commit
