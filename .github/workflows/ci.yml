@@ -13,8 +13,11 @@ jobs:
         with:
           python-version: "3.12"
           enable-cache: true
-      - run: uv sync --frozen
+      # The data and render extras are installed so that the contact-audit test exercises
+      # DuckDB instead of skipping, and so that the type check sees the same imports the
+      # production environment has. GeNN, FlyGym and MuJoCo stay out: they need a native
+      # build and a GPU, and their modules are covered by mypy import overrides.
+      - run: uv sync --frozen --extra data --extra render
       - run: uv run ruff check .
       - run: uv run mypy
       - run: uv run pytest --cov=flysim --cov-report=term-missing
-

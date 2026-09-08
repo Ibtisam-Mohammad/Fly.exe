@@ -27,6 +27,14 @@ class SchedulerResult:
     final_state: DemoState
     trace: tuple[dict[str, Any], ...]
     events: tuple[dict[str, Any], ...]
+    timing: dict[str, Any]
+
+
+def coupling_quantised_delay_us(delay_us: int, coupling_us: int) -> int:
+    """Return the delay a queue polled only at coupling boundaries actually realises."""
+    if delay_us <= 0:
+        return 0
+    return -(-delay_us // coupling_us) * coupling_us
 
 
 class CausalScheduler:
@@ -59,6 +67,33 @@ class CausalScheduler:
         self.motor_queue: CausalDelayQueue[ActuatorCommandFrame] = CausalDelayQueue(
             motor_delay_us
         )
+        # Both queues are polled once per coupling interval, so a registered delay that is
+        # not a whole number of coupling intervals is realised as the next multiple. The
+        # effective values are published rather than left implicit.
+        self.effective_sensory_delay_us = coupling_quantised_delay_us(
+            sensory_delay_us, coupling_us
+        )
+        self.effective_motor_delay_us = coupling_quantised_delay_us(motor_delay_us, coupling_us)
+
+    def timing_contract(self) -> dict[str, Any]:
+        """Registered versus realised interface delays for this scheduler."""
+        return {
+            "coupling_us": self.coupling_us,
+            "registered_sensory_delay_us": self.sensory_queue.delay_us,
+            "registered_motor_delay_us": self.motor_queue.delay_us,
+            "effective_sensory_delay_us": self.effective_sensory_delay_us,
+            "effective_motor_delay_us": self.effective_motor_delay_us,
+            "sensor_to_actuator_loop_us": (
+                self.coupling_us
+                + self.effective_sensory_delay_us
+                + self.effective_motor_delay_us
+            ),
+            "quantisation": (
+                "delay queues are polled once per coupling interval, so the effective "
+                "delay is ceil(registered / coupling) * coupling"
+            ),
+            "assumption_ids": ["NUM-01"],
+        }
 
     def run_until(self, duration_us: int) -> SchedulerResult:
         if duration_us <= self.body.t_us:
@@ -67,11 +102,15 @@ class CausalScheduler:
             t_us=self.body.t_us,
             ids=COMMAND_IDS,
             values=tuple(0.0 for _ in COMMAND_IDS),
-            units="mm/s, rad/s, normalized, normalized",
+            units="normalized-drive [0,1], normalized-drive [-1,1], normalized, normalized",
             signal_type=SignalType.ACTUATOR_COMMAND,
             provenance="E",
             assumption_ids=("MOTOR-03",),
-            metadata={"controller_state": "INITIAL_DELAY", "vnc_bypass": True},
+            metadata={
+                "controller_state": "INITIAL_DELAY",
+                "vnc_bypass": True,
+                "normalized_controller_drive": True,
+            },
         )
         self.body.apply_actuators(initial)
         applied_command = initial
@@ -153,4 +192,5 @@ class CausalScheduler:
             final_state=self.controller.state,
             trace=tuple(trace),
             events=tuple(event.as_dict() for event in self.controller.events),
+            timing=self.timing_contract(),
         )

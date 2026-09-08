@@ -96,3 +96,13 @@ global `ND-04` scale fails held-out transfer, mapped `CB0496` silencing is unava
 reference is simulation output rather than biological response data. The next gate is
 preregistered execution of the prepared Figure 2 feeding screen, using its biological labels
 only for held-out evaluation, before any selected V3 review.
+
+## GeNN delay correction, 2026-09-08
+
+The one-step GeNN offset recorded in this report was a defect, not a property of the backend.
+GeNN presents synaptic input to the postsynaptic neuron on the step after the presynaptic spike
+even with `axonal_delay_steps = 0`, and the adapters assigned the full registered `delay_steps`
+on top of that, so the registered 0.1 ms delay executed as 0.2 ms. The adapters now assign
+`delay_steps - 1`, and `tests/test_repairs.py` pins the semantics with a one-synapse impulse
+probe at one, two and three steps on the CPU backend. Every measurement in this report predates
+that fix, so a rerun would move the GeNN spike times one step earlier and remove the offset.

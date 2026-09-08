@@ -6,9 +6,14 @@ import pyarrow as pa
 import pyarrow.feather as feather
 import pytest
 
+from flysim.datasets import file_digests
 from flysim.errors import ValidationError
 from flysim.evidence import sha256_file, validate_evidence_bundle
-from flysim.v0 import CONTACT_ARTIFACTS, build_v0_evidence_bundle
+from flysim.v0 import (
+    CONTACT_ARTIFACTS,
+    V0_SCOPED_ASSUMPTION_IDS,
+    build_v0_evidence_bundle,
+)
 
 
 def _write(path: Path, payload: dict[str, object]) -> None:
@@ -16,23 +21,31 @@ def _write(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> None:
+def _fixture(
+    root: Path,
+    spec_path: Path,
+    *,
+    excessive_peak: bool = False,
+    assumption_set_id: str = "foundation-v9.9-fixture",
+) -> None:
     config_root = spec_path.parent.parent
     project_root = config_root.parent
     assumptions = config_root / "assumptions.json"
     _write(
         assumptions,
         {
-            "assumption_set_id": "foundation-v0.3",
+            # The project-wide identifier is deliberately arbitrary: V0 is gated on the
+            # content of the scoped DATA-* records, not on the mutable set identifier.
+            "assumption_set_id": assumption_set_id,
             "records": [
                 {
                     "id": assumption_id,
-                    "status": "accepted",
+                    "status": "proposed" if assumption_id == "DATA-03" else "accepted",
                     "value": {"annotation_statuses": ["Traced"]}
                     if assumption_id == "DATA-04"
                     else {},
                 }
-                for assumption_id in ("DATA-01", "DATA-02", "DATA-04", "DATA-05")
+                for assumption_id in V0_SCOPED_ASSUMPTION_IDS
             ],
         },
     )
@@ -51,7 +64,8 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
         path = raw / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         feather.write_feather(pa.table({"fixture": [f"raw-{index}"]}), path)
-        digest = sha256_file(path)
+        digests = file_digests(path)
+        digest = str(digests["sha256"])
         artifacts.append(
             {
                 "id": artifact_id,
@@ -60,8 +74,8 @@ def _fixture(root: Path, spec_path: Path, *, excessive_peak: bool = False) -> No
                 "expected_bytes": path.stat().st_size,
                 "gcs_generation": str(index + 1),
                 "etag": f"etag-{index}",
-                "md5_base64": f"md5-{index}",
-                "crc32c_base64": f"crc-{index}",
+                "md5_base64": digests["md5_base64"],
+                "crc32c_base64": digests["crc32c_base64"] or f"crc-{index}",
             }
         )
         locked[artifact_id] = {
@@ -184,4 +198,53 @@ def test_build_v0_rejects_clean_rebuild_at_memory_ceiling(tmp_path: Path) -> Non
     _fixture(root, spec, excessive_peak=True)
 
     with pytest.raises(ValidationError, match="exceeded the 3-GiB RSS gate"):
+        build_v0_evidence_bundle(root, spec, tmp_path / "V0.json")
+
+
+def test_build_v0_pins_a_scoped_snapshot_not_the_mutable_registry(tmp_path: Path) -> None:
+    """An unrelated register edit must not invalidate a structural bundle."""
+    root = tmp_path / "data"
+    spec = tmp_path / "project" / "configs" / "datasets" / "spec.json"
+    _fixture(root, spec)
+    bundle = build_v0_evidence_bundle(root, spec, tmp_path / "V0.json")
+
+    names = {artifact["name"] for artifact in bundle.artifacts}
+    assert "v0-foundation-assumptions" in names
+    assert "assumption-registry" not in names
+
+    registry_path = spec.parent.parent / "assumptions.json"
+    payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    payload["assumption_set_id"] = "foundation-v99.0"
+    payload["records"].append({"id": "TRACKA-01", "status": "accepted", "value": {}})
+    registry_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert validate_evidence_bundle(bundle.path)["valid"] is True
+
+
+def test_build_v0_rejects_a_changed_scoped_assumption(tmp_path: Path) -> None:
+    root = tmp_path / "data"
+    spec = tmp_path / "project" / "configs" / "datasets" / "spec.json"
+    _fixture(root, spec)
+    build_v0_evidence_bundle(root, spec, tmp_path / "V0.json")
+
+    registry_path = spec.parent.parent / "assumptions.json"
+    payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    for record in payload["records"]:
+        if record["id"] == "DATA-04":
+            record["value"] = {"annotation_statuses": ["Traced", "Assign"]}
+    registry_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="Traced runtime universe"):
+        build_v0_evidence_bundle(root, spec, tmp_path / "V0-second.json")
+
+
+def test_build_v0_verifies_upstream_md5_against_local_bytes(tmp_path: Path) -> None:
+    root = tmp_path / "data"
+    spec = tmp_path / "project" / "configs" / "datasets" / "spec.json"
+    _fixture(root, spec)
+    payload = json.loads(spec.read_text(encoding="utf-8"))
+    payload["artifacts"][0]["md5_base64"] = "AAAAAAAAAAAAAAAAAAAAAA=="
+    spec.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="Upstream MD5 mismatch"):
         build_v0_evidence_bundle(root, spec, tmp_path / "V0.json")

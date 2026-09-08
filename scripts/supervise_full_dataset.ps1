@@ -7,7 +7,8 @@ param(
     [string]$DatasetRoot = "/srv/flybrain-data",
     [string]$DatasetSpec = "/mnt/i/AI/fly_brain/configs/datasets/malecns-v1.0.json",
     [string]$LogPath = "I:\AI\fly_brain\artifacts\logs\full-dataset-supervisor.log",
-    [int]$RetrySeconds = 30
+    [int]$RetrySeconds = 30,
+    [int]$MaxAttempts = 240
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,10 +29,20 @@ function Invoke-Flysim {
         "--", "env", "PYTHONUNBUFFERED=1",
         $FlysimPath
     ) + $FlysimArguments
-    & wsl.exe @wslArguments 2>&1 |
-        Tee-Object -FilePath $LogPath -Append |
-        Out-Null
-    $exitCode = $LASTEXITCODE
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # `flysim data sync` emits JSONL progress on stderr. Under Windows PowerShell 5.1
+        # each redirected stderr line becomes a NativeCommandError, which terminates the
+        # supervisor when $ErrorActionPreference is Stop. Downgrade for the call only.
+        $ErrorActionPreference = "Continue"
+        & wsl.exe @wslArguments 2>&1 |
+            Tee-Object -FilePath $LogPath -Append |
+            Out-Null
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
     return $exitCode
 }
 
@@ -72,8 +83,16 @@ try {
     }
     Write-SupervisorLog "Supervisor started as PID $PID; WSL remains host-attached."
 
+    $attempt = 0
     while ($true) {
-        Write-SupervisorLog "Checking whether the complete MaleCNS full profile is valid."
+        $attempt++
+        if ($attempt -gt $MaxAttempts) {
+            # An unbounded loop kept a hidden window and a sleep block alive forever on a
+            # terminal failure. Give up loudly instead.
+            Write-SupervisorLog "Giving up after $MaxAttempts attempts without a valid full profile."
+            exit 3
+        }
+        Write-SupervisorLog "Attempt $attempt of $MaxAttempts: checking whether the complete MaleCNS full profile is valid."
         $validateExit = Invoke-Flysim @(
             "data", "validate",
             "--profile", "full",
@@ -109,7 +128,7 @@ try {
             exit 0
         }
 
-        Write-SupervisorLog "Full profile is still incomplete; retrying in $RetrySeconds seconds."
+        Write-SupervisorLog "Full profile is still incomplete; retrying in $RetrySeconds seconds ($attempt of $MaxAttempts)."
         Start-Sleep -Seconds $RetrySeconds
     }
 }

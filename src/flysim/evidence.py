@@ -175,6 +175,59 @@ def build_evidence_bundle(
     )
 
 
+BUNDLE_GLOB = "*evidence*.json"
+_BUNDLE_SCAN_MAX_BYTES = 1024 * 1024
+
+
+def resolve_supported_tier(evidence_root: Path) -> dict[str, Any]:
+    """Resolve the highest tier that a *currently valid* bundle still supports.
+
+    The project tier is never a literal. Every caller that wants to name a tier must
+    ask this function, so that a bundle which stopped validating immediately demotes
+    the claim instead of leaving a stale string in documentation, manifests, or logs.
+    """
+    evidence_root = evidence_root.resolve()
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    if evidence_root.is_dir():
+        for candidate in sorted(evidence_root.glob(BUNDLE_GLOB)):
+            if not candidate.is_file() or candidate.stat().st_size > _BUNDLE_SCAN_MAX_BYTES:
+                continue
+            try:
+                report = validate_evidence_bundle(candidate)
+            except ValidationError as exc:
+                rejected.append({"bundle": str(candidate), "failures": [str(exc)]})
+                continue
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+            record = {
+                "bundle": str(candidate),
+                "bundle_id": payload.get("bundle_id"),
+                "bundle_sha256": report["bundle_sha256"],
+                "tier": report["tier"],
+            }
+            if report["valid"]:
+                accepted.append(record)
+            else:
+                rejected.append({**record, "failures": report["failures"]})
+    order = list(ValidationTier)
+    best: dict[str, Any] | None = None
+    for record in accepted:
+        if best is None or order.index(ValidationTier(record["tier"])) > order.index(
+            ValidationTier(best["tier"])
+        ):
+            best = record
+    return {
+        "schema_version": "1.0",
+        "evidence_root": str(evidence_root),
+        "tier": best["tier"] if best else None,
+        "bundle": best["bundle"] if best else None,
+        "bundle_id": best["bundle_id"] if best else None,
+        "bundle_sha256": best["bundle_sha256"] if best else None,
+        "valid_bundles": len(accepted),
+        "rejected_bundles": rejected,
+    }
+
+
 def validate_evidence_bundle(path: Path) -> dict[str, Any]:
     """Validate bundle structure, required gates, and every referenced artifact hash."""
     path = path.resolve()

@@ -14,7 +14,12 @@ from typing import Any
 
 from flysim.benchmark import estimate_sparse_memory
 from flysim.config import project_root
-from flysim.connectome import SparseConnectome, import_aggregate_graph
+from flysim.connectome import (
+    SparseConnectome,
+    graph_array_hashes,
+    import_aggregate_graph,
+    verify_graph_array_hashes,
+)
 from flysim.contacts import (
     audit_contact_derivatives,
     compare_contact_derivatives,
@@ -31,6 +36,7 @@ from flysim.errors import FlySimError, ReadinessError, ValidationError
 from flysim.evidence import (
     ValidationTier,
     build_evidence_bundle,
+    resolve_supported_tier,
     validate_evidence_bundle,
 )
 from flysim.factory import build_reference_demo, build_track_a_demo
@@ -45,7 +51,12 @@ from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
 from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
 from flysim.render import render_run
-from flysim.runs import attach_run_artifact, write_run
+from flysim.runs import (
+    attach_run_artifact,
+    git_metadata,
+    require_clean_worktree,
+    write_run,
+)
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.stage2 import (
@@ -63,6 +74,7 @@ from flysim.stage2 import (
 )
 from flysim.structural import audit_structural_references
 from flysim.universes import audit_body_universes
+from flysim.v0 import CONTACT_CHECKS as V0_CONTACT_CHECKS
 from flysim.v0 import build_v0_evidence_bundle
 from flysim.validation import validate_run
 
@@ -295,6 +307,13 @@ def _command_evidence_validate(args: argparse.Namespace) -> int:
 
 
 def _command_evidence_build_v0(args: argparse.Namespace) -> int:
+    # A bundle pins repository files, so the code and documents it attests to must be
+    # recoverable from git.
+    git_state = (
+        {**git_metadata(), "clean_worktree_check_waived": True}
+        if args.allow_dirty_tree
+        else require_clean_worktree("Building a V0 evidence bundle")
+    )
     bundle = build_v0_evidence_bundle(args.root, args.spec, args.output)
     _print_json(
         {
@@ -303,6 +322,8 @@ def _command_evidence_build_v0(args: argparse.Namespace) -> int:
             "path": str(bundle.path),
             "sha256": bundle.sha256,
             "artifact_count": len(bundle.artifacts),
+            "git": git_state,
+            "validation": validate_evidence_bundle(bundle.path),
         }
     )
     return 0
@@ -449,8 +470,10 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
         {
             "schema_version": "1.0",
             "dataset_id": spec.dataset_id,
-            "threads": args.threads,
-            "temporary_storage": str(args.temporary_storage),
+            # Normalization is a single-threaded PyArrow IPC stream with no temporary
+            # storage. The DuckDB --threads and --temporary-storage knobs belong to
+            # `data audit-contacts`; recording them here implied they were applied.
+            "normalization_backend": "pyarrow-ipc-stream",
             "results": results,
         }
     )
@@ -481,8 +504,26 @@ def _command_data_audit_contacts(args: argparse.Namespace) -> int:
         threads=args.threads,
         progress=_progress_jsonl,
     )
-    _print_json({**report, "report": str(report_path.resolve())})
-    return 0 if report["valid"] else 2
+    strict_failures: list[str] = []
+    if args.strict:
+        # --strict used to be accepted and ignored while the README and the foundation
+        # supervisor both relied on it. It now requires every registered V0 contact check
+        # to be present and passing, not merely an absent overall failure.
+        checks = report.get("checks", {})
+        for name in V0_CONTACT_CHECKS:
+            if name not in checks:
+                strict_failures.append(f"required contact check did not run: {name}")
+            elif checks[name].get("passed") is not True:
+                strict_failures.append(f"required contact check failed: {name}")
+    _print_json(
+        {
+            **report,
+            "report": str(report_path.resolve()),
+            "strict": bool(args.strict),
+            "strict_failures": strict_failures,
+        }
+    )
+    return 0 if report["valid"] and not strict_failures else 2
 
 
 def _command_data_sync_skeleton_canaries(args: argparse.Namespace) -> int:
@@ -718,6 +759,7 @@ def _command_run_demo(args: argparse.Namespace) -> int:
         output_root=args.output_root,
         ablated_inputs=tuple(sorted(ablated_inputs)),
         ablated_outputs=tuple(sorted(ablated_outputs)),
+        evidence_grade=not args.allow_dirty_tree,
     )
     validation = validate_run(written.directory)
     video: str | None = None
@@ -828,7 +870,10 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
         / "track-a"
         / args.control
     )
-    started = time.perf_counter()
+    # The project tier is resolved from a currently valid evidence bundle. It is never a
+    # literal, so a bundle that stops validating immediately demotes the recorded claim.
+    project_tier = resolve_supported_tier(args.root / "evidence" / "male-cns-v1.0")
+    build_started = time.perf_counter()
     demo = build_track_a_demo(
         seed=args.seed,
         graph_path=args.graph,
@@ -845,8 +890,15 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
     )
     try:
         duration = args.duration_us or demo.duration_us
+        # Graph load, transmitter signs, GeNN code generation and model load are one-off
+        # start-up costs. Reporting them inside the throughput figure understated the
+        # steady-state loop, so both numbers are recorded separately.
+        build_wall_seconds = time.perf_counter() - build_started
+        simulation_started = time.perf_counter()
         result = demo.scheduler.run_until(duration)
-        wall_seconds = time.perf_counter() - started
+        simulation_wall_seconds = time.perf_counter() - simulation_started
+        wall_seconds = time.perf_counter() - build_started
+        biological_seconds = result.final_t_us / 1_000_000.0
         written = write_run(
             result=result,
             scenario=demo.scenario,
@@ -868,17 +920,32 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
                 "population_resolution_sha256": demo.populations.resolution_sha256,
                 "control_variant": demo.variant,
             },
+            evidence_grade=not args.allow_dirty_tree,
             run_metadata={
                 "engineering_track": "A",
-                "project_structural_tier": "V0",
+                "project_evidence_tier": project_tier,
                 "tier_awarded_by_this_run": None,
                 "wall_seconds": wall_seconds,
-                "biological_seconds": result.final_t_us / 1_000_000.0,
+                "model_build_and_load_wall_seconds": build_wall_seconds,
+                "simulation_wall_seconds": simulation_wall_seconds,
+                "biological_seconds": biological_seconds,
                 "biological_seconds_per_wall_second": (
-                    result.final_t_us / 1_000_000.0 / wall_seconds
+                    biological_seconds / simulation_wall_seconds
+                ),
+                "biological_seconds_per_wall_second_cold_start": (
+                    biological_seconds / wall_seconds
+                ),
+                "throughput_definition": (
+                    "biological_seconds_per_wall_second measures the steady-state coupled "
+                    "loop; the cold-start figure additionally includes graph load, GeNN "
+                    "code generation, and model load"
                 ),
                 "food_position_mm": list(food_position) if food_position else None,
                 "central_relay_bypasses": ["DM1_lPN", "GNG588/Fdg"],
+                "groom_net_displacement_limit_mm": float(
+                    demo.registry.value_map("MOTOR-03")["groom_max_net_displacement_mm"]
+                ),
+                **demo.body.groom_displacement(),
             },
         )
         video: str | None = None
@@ -899,17 +966,67 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
             "final_state": result.final_state.value,
             "control_variant": demo.variant,
             "wall_seconds": wall_seconds,
+            "model_build_and_load_wall_seconds": build_wall_seconds,
+            "simulation_wall_seconds": simulation_wall_seconds,
             "biological_seconds_per_wall_second": (
-                result.final_t_us / 1_000_000.0 / wall_seconds
+                biological_seconds / simulation_wall_seconds
+            ),
+            "biological_seconds_per_wall_second_cold_start": (
+                biological_seconds / wall_seconds
             ),
             "validation": validation,
             "video": video,
             "video_sha256": video_sha256,
             "claim": demo.scenario.claim_boundary,
-            "highest_validation_tier": "V0 Structural (project foundation only)",
+            "groom_displacement": demo.body.groom_displacement(),
+            "project_evidence_tier": project_tier,
         }
     )
     return 0 if validation["valid"] and result.completed else 2
+
+
+def _command_data_verify_graph(args: argparse.Namespace) -> int:
+    """Verify, or backfill, the per-array hashes of an imported runtime graph."""
+    graph_path = args.graph
+    manifest_path = graph_path / "manifest.json"
+    if not manifest_path.is_file():
+        raise ValidationError(f"Graph manifest is missing: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    recorded = manifest.get("array_sha256")
+    if not isinstance(recorded, dict) or not recorded:
+        if not args.write_missing_hashes:
+            _print_json(
+                {
+                    "graph": str(graph_path),
+                    "verified": False,
+                    "reason": "the graph manifest records no per-array hashes",
+                    "remedy": "rerun with --write-missing-hashes to pin the arrays in place",
+                }
+            )
+            return 2
+        manifest["array_sha256"] = graph_array_hashes(graph_path)
+        manifest["array_sha256_backfilled"] = True
+        manifest["array_sha256_backfill_note"] = (
+            "Hashes were computed from the arrays already on disk, so they pin the graph "
+            "from this point on but do not independently attest to the original import."
+        )
+        temporary = manifest_path.with_suffix(".json.part")
+        temporary.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + chr(10), encoding="utf-8"
+        )
+        os.replace(temporary, manifest_path)
+        _print_json(
+            {
+                "graph": str(graph_path),
+                "verified": True,
+                "backfilled": True,
+                "array_sha256": manifest["array_sha256"],
+            }
+        )
+        return 0
+    report = verify_graph_array_hashes(graph_path, manifest)
+    _print_json({"graph": str(graph_path), **report, "array_sha256": recorded})
+    return 0 if report.get("verified") else 2
 
 
 def _command_render(args: argparse.Namespace) -> int:
@@ -1051,6 +1168,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     structural.add_argument("--output", type=Path)
     structural.set_defaults(func=_command_data_audit_structural_references)
+
+    verify_graph = data_commands.add_parser(
+        "verify-graph", help="verify or backfill the runtime graph array hashes"
+    )
+    verify_graph.add_argument("--graph", type=Path, required=True)
+    verify_graph.add_argument("--write-missing-hashes", action="store_true")
+    verify_graph.set_defaults(func=_command_data_verify_graph)
 
     resolver = data_commands.add_parser("resolve-populations")
     resolver.add_argument("--root", type=Path, default=default_data_root())
@@ -1199,6 +1323,11 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--headless", action="store_true")
     demo.add_argument("--render", action="store_true")
     demo.add_argument("--fps", type=int, default=30)
+    demo.add_argument(
+        "--allow-dirty-tree",
+        action="store_true",
+        help="record an explicitly non-evidence-grade run from an uncommitted worktree",
+    )
     demo.set_defaults(func=_command_run_demo)
 
     full_vnc = run_commands.add_parser("full-vnc-walk")
@@ -1226,6 +1355,11 @@ def build_parser() -> argparse.ArgumentParser:
     eon_malecns.add_argument("--headless", action="store_true")
     eon_malecns.add_argument("--render", action="store_true")
     eon_malecns.add_argument("--fps", type=int, default=30)
+    eon_malecns.add_argument(
+        "--allow-dirty-tree",
+        action="store_true",
+        help="record an explicitly non-evidence-grade run from an uncommitted worktree",
+    )
     eon_malecns.set_defaults(func=_command_run_eon_malecns)
 
     render = commands.add_parser("render")
@@ -1338,6 +1472,11 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_build_v0.add_argument("--root", type=Path, default=default_data_root())
     evidence_build_v0.add_argument("--spec", type=Path, default=_default_dataset_spec())
     evidence_build_v0.add_argument("--output", type=Path, required=True)
+    evidence_build_v0.add_argument(
+        "--allow-dirty-tree",
+        action="store_true",
+        help="build from an uncommitted worktree; the bundle records that it was waived",
+    )
     evidence_build_v0.set_defaults(func=_command_evidence_build_v0)
     evidence_validate = evidence_commands.add_parser("validate")
     evidence_validate.add_argument("bundle", type=Path)

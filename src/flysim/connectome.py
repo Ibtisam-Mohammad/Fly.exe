@@ -10,6 +10,7 @@ import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -131,7 +132,8 @@ class SparseConnectome:
         np.save(temporary / "target_indices.npy", self.target_indices, allow_pickle=False)
         np.save(temporary / "contact_counts.npy", self.contact_counts, allow_pickle=False)
         manifest = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
+            "array_sha256": graph_array_hashes(temporary),
             "source_release": self.source_release,
             "source_sha256": self.source_sha256,
             "neuron_count": self.neuron_count,
@@ -169,6 +171,7 @@ class SparseConnectome:
                 source_sha256=str(manifest["source_sha256"]),
             )
             graph.validate()
+            verify_graph_array_hashes(path, manifest)
             return graph
         with np.load(path, allow_pickle=False) as data:
             graph = cls(
@@ -189,6 +192,45 @@ def file_sha256(path: Path) -> str:
         while chunk := stream.read(8 * 1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+GRAPH_ARRAY_FILENAMES = (
+    "body_ids.npy",
+    "source_indices.npy",
+    "target_indices.npy",
+    "contact_counts.npy",
+)
+
+
+def graph_array_hashes(path: Path) -> dict[str, str]:
+    """SHA-256 of every runtime array in a graph directory."""
+    return {name: file_sha256(path / name) for name in GRAPH_ARRAY_FILENAMES}
+
+
+def verify_graph_array_hashes(path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    """Verify the runtime arrays against the hashes recorded in their manifest.
+
+    The graph loaded by every Track A run used to carry no per-array hash at all, so a
+    changed ``.npy`` file was undetectable. Manifests written before this check exist on
+    disk; they report ``verified: False`` with a reason instead of silently passing.
+    """
+    recorded = manifest.get("array_sha256")
+    if not isinstance(recorded, dict) or not recorded:
+        return {
+            "verified": False,
+            "reason": "the graph manifest records no per-array hashes",
+        }
+    missing = sorted(set(GRAPH_ARRAY_FILENAMES) - recorded.keys())
+    if missing:
+        raise DatasetError(f"Graph manifest is missing array hashes: {missing}")
+    for name in GRAPH_ARRAY_FILENAMES:
+        observed = file_sha256(path / name)
+        if observed != recorded[name]:
+            raise DatasetError(
+                f"Runtime graph array changed since import: {path / name} "
+                f"(recorded {recorded[name]}, observed {observed})"
+            )
+    return {"verified": True, "arrays": len(GRAPH_ARRAY_FILENAMES)}
 
 
 def import_aggregate_graph(
@@ -440,8 +482,12 @@ def _import_streaming_aggregate_graph(
         array.flush()
     source_hash = file_sha256(source_path)
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "storage": "npy-directory-v1",
+        "array_sha256": graph_array_hashes(temporary),
+        "body_ids_source_sha256": (
+            file_sha256(body_ids_source) if body_ids_source else None
+        ),
         "source_release": source_release,
         "source_path": str(source_path.resolve()),
         "source_sha256": source_hash,

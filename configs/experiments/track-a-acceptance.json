@@ -1,18 +1,32 @@
 {
-  "schema_version": "1.0",
-  "experiment_id": "track-a-eon-malecns-acceptance-v2",
+  "schema_version": "2.0",
+  "experiment_id": "track-a-eon-malecns-acceptance-v3",
   "scenario_id": "eon-malecns-v0.2",
-  "assumption_set": "foundation-v0.5",
+  "assumption_set": "foundation-v0.6",
+  "preregistered_on": "2026-09-08",
+  "supersedes": ["track-a-eon-malecns-acceptance-v2", "track-a-eon-malecns-acceptance-v1"],
+  "supersession_reason": "The v1 and v2 matrices shared the food positions (8,-1), (8,0) and (8,1). Because the v1 sucrose-input-ablation control failed and the feeding gate was then changed, those positions were no longer held out for v2. The v3 positions below have never been used by any Track A run, and none of them is the arena default in BODY-01.",
   "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   "held_out_food_positions_mm": [
-    {"id": "left", "x": 8.0, "y": -1.0},
-    {"id": "center", "x": 8.0, "y": 0.0},
-    {"id": "right", "x": 8.0, "y": 1.0}
+    {"id": "far-left", "x": 7.5, "y": -2.0},
+    {"id": "far-center", "x": 9.5, "y": 0.0},
+    {"id": "far-right", "x": 7.5, "y": 2.0}
+  ],
+  "previously_used_food_positions_mm": [
+    {"x": 8.0, "y": -1.0}, {"x": 8.0, "y": 0.0}, {"x": 8.0, "y": 1.0}
   ],
   "duration_us": 12000000,
   "minimum_successes_per_position": 8,
   "minimum_biological_seconds_per_wall_second": 0.5,
+  "throughput_metric": "steady-state simulation loop, excluding graph load and GeNN model build",
+  "require_clean_worktree": true,
   "required_sequence": ["GROOM", "SEEK_RESUME", "FEED_INITIATION", "COMPLETE"],
+  "behavioral_criteria": {
+    "max_groom_net_displacement_mm": 2.5,
+    "max_groom_net_displacement_rationale": "One adult Drosophila body length. Grooming is a position-controller replay, not a locomotor command, so a bout that translates the body further than its own length is locomotion produced by the replay rather than grooming. The limit is derived from body length and not from any measured run.",
+    "min_pre_groom_seek_displacement_mm": 0.5,
+    "min_pre_groom_seek_displacement_rationale": "The fly must reach the dust patch by seeking. A settled body that is already contaminated has not encountered anything."
+  },
   "required_controls": [
     "contamination-input-ablation",
     "groom-readout-ablation",
@@ -24,5 +38,22 @@
     "neural-bypass",
     "headless-viewer-equivalence"
   ],
+  "control_criteria": {
+    "contamination-input-ablation": {"type": "blocked-transition", "transition": "GROOM"},
+    "groom-readout-ablation": {"type": "blocked-transition", "transition": "GROOM"},
+    "sucrose-input-ablation": {"type": "blocked-transition", "transition": "FEED_INITIATION"},
+    "mn9-readout-ablation": {"type": "blocked-transition", "transition": "FEED_INITIATION"},
+    "zero-weight": {"type": "blocked-transition", "transition": "GROOM"},
+    "shuffled-connectome": {
+      "type": "readout-degradation",
+      "readout": "readout:antennal-grooming-DN",
+      "must_not_complete": true,
+      "max_fraction_of_exact_peak": 0.5,
+      "rationale": "A shuffled connectome preserves degree but destroys individual wiring. Recording only that it fails to complete could never fail, because the previous criterion carried no blocked transition at all. The exact-run reference is the median peak windowed grooming-DN rate across the primary matrix, which is the exact condition rather than any control run."
+    },
+    "controller-only": {"type": "artifact-present"},
+    "neural-bypass": {"type": "graph-unused"},
+    "headless-viewer-equivalence": {"type": "transition-signature-identical"}
+  },
   "claim_boundary": "Engineering integration acceptance only; awards no validation tier."
 }

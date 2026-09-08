@@ -53,6 +53,11 @@ class TrackAGeNNParameters:
             raise ConfigurationError("Track A central-entry gain cannot be below one")
         if values.synaptic_delay_ms * 1000 % values.neural_dt_us != 0:
             raise ConfigurationError("Track A synaptic delay must align with the neural step")
+        if values.delay_steps < 1:
+            raise ConfigurationError(
+                "Track A synaptic delay must be at least one neural step; GeNN cannot "
+                "deliver a spike within the step that emitted it"
+            )
         return values
 
     @property
@@ -62,6 +67,17 @@ class TrackAGeNNParameters:
     @property
     def delay_steps(self) -> int:
         return round(self.synaptic_delay_ms / self.dt_ms)
+
+    @property
+    def axonal_delay_steps(self) -> int:
+        """GeNN ``axonal_delay_steps`` that realises :attr:`delay_steps` of total delay.
+
+        GeNN's generated code presents synaptic input to the postsynaptic neuron on the
+        step after the presynaptic spike even with ``axonal_delay_steps = 0``. Assigning
+        ``delay_steps`` therefore executed the registered 0.1 ms delay as 0.2 ms and put
+        every GeNN backend one step behind NumPy and Brian2.
+        """
+        return self.delay_steps - 1
 
     @property
     def membrane_decay(self) -> float:
@@ -292,7 +308,7 @@ class TrackAGeNNEngine:
                     init_postsynaptic("DeltaCurr"),
                 )
                 synapses.set_sparse_connections(pre, post)
-                synapses.axonal_delay_steps = values.delay_steps
+                synapses.axonal_delay_steps = values.axonal_delay_steps
                 logical_edges += edge_count
                 padded_slots += (
                     int(synapses.max_connections)

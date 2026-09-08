@@ -1,5 +1,18 @@
 # V0 Structural evidence
 
+> **Withdrawn on 2026-09-08.** `flysim evidence validate` rejects bundle
+> `20260906T065413Z_V0`: it pinned `configs/assumptions.json`, the whole mutable project
+> assumption register, which a later unrelated Stage 2 edit changed from 23,560 to 25,853
+> bytes. The bundle could not be rebuilt either, because the builder additionally required the
+> literal assumption set `foundation-v0.3` while the register had moved to `foundation-v0.5`.
+> The structural measurements below were not disputed by the audit; the bundle that attested to
+> them was. The builder now pins an immutable snapshot scoped to the `DATA-*` foundation
+> records and gates on their content, so unrelated register edits cannot invalidate a
+> structural bundle while any change to a scoped record still does. It also recomputes each
+> raw artifact's upstream MD5 from local bytes, which the first revision did not. See
+> [ADR-2026-006](../adr/ADR-2026-006-evidence-chain-repair.md). Until a bundle is reissued and
+> validates, the project awards no tier.
+
 - Award date: 2026-09-06
 - Evidence bundle: `/srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json`
 - Bundle ID: `20260906T065413Z_V0`

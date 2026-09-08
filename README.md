@@ -96,15 +96,28 @@ Scientific tier claims require an immutable evidence bundle. A bundle cannot be 
 all registered gates for its requested tier are explicitly passed and every artifact is hashed:
 
 ```text
-flysim evidence build-v0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json
-flysim evidence build --tier V0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence.json
+flysim evidence build-v0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence-r2.json
+flysim evidence build --tier V0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence-r2.json
 flysim evidence validate PATH
 ```
 
 `build-v0` is the release path for V0: it derives the gates from the canonical reports and clean
-rebuild manifests, re-hashes all seven raw artifacts and morphology canaries, and rejects a clean
-contact build that reached the 3-GiB RSS ceiling. The generic builder remains available for
-reviewed non-V0 tiers and test fixtures; manually supplied booleans are not sufficient for V0.
+rebuild manifests, re-hashes all seven raw artifacts and morphology canaries, recomputes each
+artifact's upstream MD5 from local bytes, and rejects a clean contact build that reached the
+3-GiB RSS ceiling. The generic builder remains available for reviewed non-V0 tiers and test
+fixtures; manually supplied booleans are not sufficient for V0.
+
+A bundle pins an immutable, V0-scoped snapshot of the `DATA-*` foundation records rather than the
+whole mutable assumption register, so unrelated Stage 2 edits cannot invalidate a structural
+bundle while any change to a scoped record still does. No command prints a tier as a literal:
+`flysim run eon-malecns` resolves the project tier by validating the bundles under
+`<root>/evidence/male-cns-v1.0` at run time and records `null` when none of them still validate.
+
+Runtime graph arrays are hashed in their manifest and verified on every load:
+
+```text
+flysim data verify-graph --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
+```
 
 Track A's full-graph `eon-malecns` gate is now open. It uses numeric MaleCNS populations, direct
 PyGeNN, the full traced aggregate graph, FlyGym, and the checksum-locked Ozdil grooming trajectory.
@@ -113,19 +126,21 @@ manifest. Its central sensory relays, direct DNg97 intent drive, odor-gradient s
 controllers are visibly registered engineering scaffolds, so this is an offline engineering
 prototype rather than autonomous connectome-generated behavior.
 
-The preregistered Track A matrix and controls are resumable:
+The preregistered Track A matrix and controls are resumable. Both refuse to start from a
+dirty worktree and will not reuse a run recorded against a different commit:
 
 ```text
-python scripts/run_track_a_acceptance.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-acceptance-v2 --output /srv/flybrain-data/runs/track-a-acceptance-v2/primary-progress.json
-python scripts/run_track_a_controls.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-controls-v2 --primary-progress /srv/flybrain-data/runs/track-a-acceptance-v2/primary-progress.json --output /srv/flybrain-data/evidence/male-cns-v1.0/track-a-controls-v2.json
+python scripts/run_track_a_acceptance.py --root /srv/flybrain-data --output-root /srv/flybrain-data/runs/track-a-acceptance-v3 --progress /srv/flybrain-data/runs/track-a-acceptance-v3/primary-progress.json
+python scripts/run_track_a_controls.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-controls-v3 --primary-progress /srv/flybrain-data/runs/track-a-acceptance-v3/primary-progress.json --output /srv/flybrain-data/evidence/male-cns-v1.0/track-a-controls-v3.json
 ```
 
-All 30 primary runs and every required control passed, but measured throughput remained below the
-0.5 biological-seconds-per-wall-second target. See
-[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) and the local
-[physical MP4](artifacts/track-a/final-run/flygym.mp4). `full-vnc-walk` remains gated;
-there is no synthetic fallback hidden behind that scientific command. `eon-demo` remains the
-semantic engineering storyboard and neural-bypass control.
+The v2 acceptance evidence has been withdrawn. It was produced from an uncommitted worktree,
+at food positions a discarded v1 round had already used, with a shuffled-connectome control
+that could not fail, and with the body settling inside the dust patch. See
+[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) for the withdrawal record
+and [the repair ADR](docs/adr/ADR-2026-006-evidence-chain-repair.md) for what changed.
+`full-vnc-walk` remains gated; there is no synthetic fallback hidden behind that scientific
+command. `eon-demo` remains the semantic engineering storyboard and neural-bypass control.
 
 ## Data and credentials
 

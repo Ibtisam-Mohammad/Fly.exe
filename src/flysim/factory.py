@@ -13,6 +13,7 @@ from flysim.engines.body import KinematicBodyEngine, KinematicParameters
 from flysim.engines.flygym import FlyGymTrackABodyEngine, FlyGymTrackAParameters
 from flysim.engines.genn import TrackAGeNNEngine
 from flysim.engines.reference import ReferenceNeuralEngine
+from flysim.errors import ConfigurationError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
 from flysim.provenance import AssumptionRegistry
 from flysim.scenario import EonDemoController, controller_parameters
@@ -56,6 +57,29 @@ def _merged(*values: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+def _require_registered_effective_delays(
+    scheduler: CausalScheduler, timing: dict[str, Any]
+) -> None:
+    """Refuse to run unless NUM-01 declares the delays the loop actually realises.
+
+    Delay queues are polled once per coupling interval, so a registered 2 ms interface
+    delay is realised as one 15 ms coupling cycle. The realised values are registered
+    explicitly so that the manifest, the register, and the loop cannot drift apart.
+    """
+    expected = {
+        "effective_sensory_delay_us": scheduler.effective_sensory_delay_us,
+        "effective_motor_delay_us": scheduler.effective_motor_delay_us,
+    }
+    for key, realised in expected.items():
+        if key not in timing:
+            raise ConfigurationError(f"NUM-01 must register {key}")
+        if int(timing[key]) != realised:
+            raise ConfigurationError(
+                f"NUM-01 registers {key}={timing[key]} but the scheduler realises {realised} "
+                f"at a {scheduler.coupling_us} us coupling interval"
+            )
+
+
 def build_reference_demo(
     seed: int,
     ablated_inputs: frozenset[str] = frozenset(),
@@ -97,6 +121,10 @@ def build_reference_demo(
             )
         },
         {
+            key: registry.value_map("MOTOR-03")[key]
+            for key in ("max_forward_mm_s", "max_yaw_rad_s")
+        },
+        {
             key: registry.value_map("SENS-03")[key]
             for key in (
                 "source_strength",
@@ -127,7 +155,10 @@ def build_reference_demo(
         body=body,
         controller=controller,
         coupling_us=int(timing["track_a_coupling_us"]),
+        sensory_delay_us=int(timing["sensory_delay_us"]),
+        motor_delay_us=int(timing["motor_delay_us"]),
     )
+    _require_registered_effective_delays(scheduler, timing)
     duration_us = int(registry.value_map("DEMO-01")["duration_us"])
     return ReferenceDemo(
         scenario=scenario,
@@ -270,6 +301,7 @@ def build_track_a_demo(
                 "max_yaw_rad_s",
                 "feed_rostrum_extension_rad",
                 "feed_haustellum_extension_rad",
+                "groom_blend_in_us",
             )
         },
     )
@@ -300,6 +332,7 @@ def build_track_a_demo(
         population_readout=readout,
         output_ids=populations.output_body_ids,
     )
+    _require_registered_effective_delays(scheduler, timing)
     return TrackADemo(
         scenario=scenario,
         registry=registry,

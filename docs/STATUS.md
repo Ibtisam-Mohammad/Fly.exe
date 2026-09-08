@@ -87,7 +87,11 @@ Status date: 2026-09-08
 - Ten fixed 8-nm morphology canaries, body-universe sensitivity, exact annotation canaries,
   source-paper count comparisons, full confidence-threshold sensitivity, and a pinned
   MaleCNS-to-FlyWire central-brain comparison.
-- Immutable V0 evidence bundle `20260906T065413Z_V0`; all twelve required gates pass.
+- Immutable V0 evidence bundle `20260906T065413Z_V0`; all twelve required gates passed when
+  it was built. It is **withdrawn**: it pinned the whole mutable assumption register, which a
+  later unrelated edit changed, so `flysim evidence validate` now rejects it. The V0 builder
+  has been repaired to pin a scoped snapshot instead; see
+  [ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md).
 - Checksum-locked first Stage 2 projection-neuron physiology pack: three published DM1 passive
   model fits plus six official Gugel et al. eLife source workbooks.
 - Lossless Figure 7 derivatives with 7,280 DL5 current/firing-rate rows and 24,012 unitary-EPSC
@@ -182,7 +186,7 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 | Accepted traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| V0 evidence gates | 12 of 12 passing |
+| V0 evidence gates | withdrawn pending reissue |
 | Automated tests | 83 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
@@ -195,8 +199,30 @@ The GPU measurements are topology-allocation results, not biological-time perfor
 
 The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the required 1.5 GB headroom.
 
-Highest validation tier: **V0 Structural**. It establishes dataset identity, lossless structural
+Highest validation tier: **none**. The structural work behind V0 stands, but the bundle that
+awarded it no longer validates and has been withdrawn, so no tier is currently supportable from
+a live bundle. The underlying evidence establishes dataset identity, lossless structural
 transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
-cross-connectome comparison. It makes no physiological or behavioral claim. Stage 1's deliberately
-simple open-loop baseline is complete; Track A is complete as an offline engineering prototype;
-Stage 2 fitted neural dynamics is now active.
+cross-connectome comparison, and it makes no physiological or behavioral claim. Stage 1's
+deliberately simple open-loop baseline is complete, with the gate split disclosed below. Track A
+acceptance evidence is withdrawn pending a rerun from a clean commit. Stage 2 fitted neural
+dynamics is paused until the repair in
+[ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md) completes.
+
+## Repair in progress (2026-09-08)
+
+An independent audit confirmed eight defects that this status page previously did not disclose.
+Each is now tracked, and the claims they supported are withdrawn rather than restated:
+
+| Defect | Status |
+|---|---|
+| The V0 bundle pinned the mutable assumption register and stopped validating | Builder repaired to pin a scoped snapshot; bundle reissue pending |
+| The V0 builder required assumption set `foundation-v0.3` while the register had moved on | Gate is now content-based; the set identifier no longer affects V0 |
+| Every Track A acceptance and control artifact was produced from an uncommitted worktree | Evidence-grade runs and both Track A scripts now refuse a dirty tree |
+| The settled FlyGym body began inside the dust patch, so grooming began on a fixed schedule | Dust patch moved; a startup guard fails closed if clearance is lost |
+| The grooming replay translated the body 5 to 8 mm while the forward command was zero | Displacement is measured, capped at one body length, and enforced in validation |
+| The registered 0.1 ms GeNN synaptic delay executed as 0.2 ms | Corrected, with a one-synapse impulse test across three delays |
+| Registered 2 ms interface delays were realised as 15 ms without being registered | Effective delays are computed, registered, and asserted at build time |
+| The shuffled-connectome control could not fail | Replaced with a preregistered degradation criterion |
+| The forward and yaw commands were labelled mm/s and rad/s | Renamed to normalized descending drives |
+| The Track A held-out positions had already been used by a discarded v1 round | Three genuinely unused positions preregistered as v3 |

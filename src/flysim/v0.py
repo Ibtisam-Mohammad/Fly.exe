@@ -8,9 +8,15 @@ import os
 from pathlib import Path
 from typing import Any
 
-from flysim.datasets import validate_feather_footer
+from flysim.datasets import file_digests, validate_feather_footer
 from flysim.errors import ValidationError
 from flysim.evidence import EvidenceBundle, ValidationTier, build_evidence_bundle, sha256_file
+
+# V0 depends on the data-foundation decisions only. Pinning the whole mutable project
+# registry made an unrelated Stage 2 edit invalidate a structural bundle, so the bundle
+# pins an immutable snapshot of exactly these records instead.
+V0_SCOPED_ASSUMPTION_IDS = ("DATA-01", "DATA-02", "DATA-03", "DATA-04", "DATA-05")
+V0_REQUIRED_ACCEPTED_ASSUMPTION_IDS = ("DATA-01", "DATA-02", "DATA-04", "DATA-05")
 
 CONTACT_ARTIFACTS = (
     "connectome-weights",
@@ -61,6 +67,13 @@ def _write_json_immutable(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _canonical_sha256(payload: Any) -> str:
+    import hashlib
+
+    encoded = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _raw_profile_review(root: Path, spec_path: Path) -> dict[str, Any]:
     raw_root = root / "raw" / "male-cns-v1.0"
     lock = _read_json(raw_root / "dataset-lock.json")
@@ -90,11 +103,27 @@ def _raw_profile_review(root: Path, spec_path: Path) -> dict[str, Any]:
         _require(record.get("filename") == filename, f"Lock filename disagrees: {artifact_id}")
         for identity in ("gcs_generation", "etag", "md5_base64", "crc32c_base64"):
             _require(bool(item.get(identity)), f"Pinned {identity} is missing for {artifact_id}")
-        observed_sha256 = sha256_file(source)
+        digests = file_digests(source)
+        observed_sha256 = str(digests["sha256"])
         _require(
             observed_sha256 == record.get("sha256"),
             f"Raw SHA-256 changed for {artifact_id}",
         )
+        # The upstream MD5 and CRC32C are the only identities that tie local bytes to the
+        # published Google Cloud Storage object. MD5 is recomputed here; CRC32C is only
+        # recomputed when a native implementation is installed and is otherwise reported
+        # as unverified rather than being presented as a passing check.
+        _require(
+            digests["md5_base64"] == item["md5_base64"],
+            f"Upstream MD5 mismatch for {artifact_id}: "
+            f"pinned {item['md5_base64']}, computed {digests['md5_base64']}",
+        )
+        crc32c_observed = digests["crc32c_base64"]
+        if crc32c_observed is not None:
+            _require(
+                crc32c_observed == item["crc32c_base64"],
+                f"Upstream CRC32C mismatch for {artifact_id}",
+            )
         footer_valid, footer_error = validate_feather_footer(artifact_id, source)
         _require(
             footer_valid,
@@ -109,15 +138,26 @@ def _raw_profile_review(root: Path, spec_path: Path) -> dict[str, Any]:
                 "gcs_generation": item["gcs_generation"],
                 "etag": item["etag"],
                 "md5_base64": item["md5_base64"],
+                "md5_verified_against_local_bytes": True,
                 "crc32c_base64": item["crc32c_base64"],
+                "crc32c_verified_against_local_bytes": crc32c_observed is not None,
                 "feather_footer_and_schema_valid": footer_valid,
             }
         )
+    crc32c_verified = all(item["crc32c_verified_against_local_bytes"] for item in records)
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "review": "MaleCNS-v1.0-raw-profile-integrity",
         "dataset_id": "male-cns:v1.0",
         "coordinate_units": "8 nm voxel coordinates for synapse tables",
+        "upstream_identity_verification": {
+            "sha256_recomputed": True,
+            "md5_recomputed_and_matched": True,
+            "crc32c_recomputed_and_matched": crc32c_verified,
+            "crc32c_unverified_reason": (
+                None if crc32c_verified else "no native CRC32C implementation is installed"
+            ),
+        },
         "artifacts": records,
         "valid": True,
     }
@@ -229,29 +269,44 @@ def _validate_clean_manifests(root: Path) -> None:
             )
 
 
-def _validate_foundation_decisions(spec_path: Path) -> tuple[Path, Path]:
+def _foundation_assumption_snapshot(spec_path: Path) -> tuple[dict[str, Any], dict[str, Any], Path]:
+    """Validate the V0 data-foundation decisions and derive an immutable scoped snapshot.
+
+    V0 is a structural claim about the MaleCNS data foundation. It is gated on the
+    *content* of the ``DATA-*`` records, never on the project-wide ``assumption_set_id``,
+    because unrelated Stage 2 edits bump that identifier and previously invalidated an
+    otherwise sound structural bundle. The mutable set identifier is recorded in a
+    separate, unhashed provenance sidecar so that the bundle stays valid while the rest
+    of the register evolves, and any edit to a scoped record still breaks the snapshot.
+    """
     config_root = spec_path.resolve().parents[1]
     project_root = config_root.parent
     assumptions_path = config_root / "assumptions.json"
     adr_path = project_root / "docs" / "adr" / "ADR-2026-002-traced-neuron-universe.md"
     assumptions = _read_json(assumptions_path)
-    _require(
-        assumptions.get("assumption_set_id") == "foundation-v0.3",
-        "V0 requires the reviewed foundation-v0.3 assumption set",
-    )
+    assumption_set_id = str(assumptions.get("assumption_set_id") or "")
+    _require(bool(assumption_set_id), "The assumption registry has no assumption_set_id")
     records = {
         str(record.get("id")): record
         for record in assumptions.get("records", [])
         if isinstance(record, dict)
     }
-    for assumption_id in ("DATA-01", "DATA-02", "DATA-04", "DATA-05"):
+    for assumption_id in V0_SCOPED_ASSUMPTION_IDS:
         _require(
-            records.get(assumption_id, {}).get("status") == "accepted",
+            assumption_id in records,
+            f"V0 scoped assumption is missing from the registry: {assumption_id}",
+        )
+        _require(
+            records[assumption_id].get("status") != "deprecated",
+            f"V0 scoped assumption is deprecated: {assumption_id}",
+        )
+    for assumption_id in V0_REQUIRED_ACCEPTED_ASSUMPTION_IDS:
+        _require(
+            records[assumption_id].get("status") == "accepted",
             f"V0 foundation decision is not accepted: {assumption_id}",
         )
-    data04 = records["DATA-04"]
     _require(
-        data04.get("value", {}).get("annotation_statuses") == ["Traced"],
+        records["DATA-04"].get("value", {}).get("annotation_statuses") == ["Traced"],
         "DATA-04 must select the reviewed Traced runtime universe",
     )
     try:
@@ -263,7 +318,34 @@ def _validate_foundation_decisions(spec_path: Path) -> tuple[Path, Path]:
         "approved_by: project-owner" in adr_text,
         "ADR-2026-002 has no project-owner approval",
     )
-    return assumptions_path, adr_path
+
+    scoped = [records[assumption_id] for assumption_id in V0_SCOPED_ASSUMPTION_IDS]
+    snapshot = {
+        "schema_version": "1.0",
+        "snapshot": "male-cns-v1.0-V0-foundation-assumptions",
+        "scope": (
+            "Data-foundation decisions that V0 Structural depends on. "
+            "Project-wide assumption-set identifiers are deliberately excluded so that "
+            "unrelated register changes cannot invalidate a structural bundle."
+        ),
+        "scoped_assumption_ids": list(V0_SCOPED_ASSUMPTION_IDS),
+        "required_accepted_assumption_ids": list(V0_REQUIRED_ACCEPTED_ASSUMPTION_IDS),
+        "records": scoped,
+        "records_sha256": _canonical_sha256(scoped),
+    }
+    provenance = {
+        "schema_version": "1.0",
+        "provenance_for": "male-cns-v1.0-V0-foundation-assumptions",
+        "observed_assumption_set_id": assumption_set_id,
+        "observed_registry_path": str(assumptions_path),
+        "observed_registry_sha256": sha256_file(assumptions_path),
+        "snapshot_records_sha256": snapshot["records_sha256"],
+        "note": (
+            "This sidecar is not part of the evidence bundle. It records which mutable "
+            "register revision the immutable scoped snapshot was drawn from."
+        ),
+    }
+    return snapshot, provenance, adr_path
 
 
 def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> EvidenceBundle:
@@ -290,10 +372,19 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
     _validate_comparison(batch_compare, "Batch-size reproducibility")
     _validate_structural_reference(structural)
     _validate_clean_manifests(root)
-    assumptions_path, universe_adr_path = _validate_foundation_decisions(spec_path)
+    snapshot, snapshot_provenance, universe_adr_path = _foundation_assumption_snapshot(spec_path)
+    snapshot_path = evidence_root / "v0-foundation-assumptions.json"
+    _write_json_immutable(snapshot_path, snapshot)
+    provenance_path = evidence_root / "v0-foundation-assumptions-provenance.json"
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    provenance_path.write_text(
+        json.dumps(snapshot_provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
     raw_review = _raw_profile_review(root, spec_path.resolve())
-    raw_review_path = evidence_root / "raw-profile-integrity-review.json"
+    # Revision 2 adds recomputed upstream MD5/CRC32C verification. The revision-1 review
+    # stays on disk untouched so the historical bundle remains inspectable.
+    raw_review_path = evidence_root / "raw-profile-integrity-review-r2.json"
     _write_json_immutable(raw_review_path, raw_review)
     artifact_values = (
         f"raw-profile-integrity={raw_review_path}",
@@ -303,7 +394,7 @@ def build_v0_evidence_bundle(root: Path, spec_path: Path, output: Path) -> Evide
         f"canonical-contact-rebuild={original_compare_path}",
         f"batch-size-reproducibility={batch_compare_path}",
         f"structural-reference-audit={structural_path}",
-        f"assumption-registry={assumptions_path}",
+        f"v0-foundation-assumptions={snapshot_path}",
         f"body-universe-decision={universe_adr_path}",
     )
     gate_values = (

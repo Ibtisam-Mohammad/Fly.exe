@@ -14,6 +14,7 @@ from typing import Any
 
 from flysim import __version__
 from flysim.config import ScenarioConfig, project_root
+from flysim.errors import ValidationError
 from flysim.provenance import AssumptionRegistry
 from flysim.scheduler import SchedulerResult
 
@@ -26,7 +27,7 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _git_metadata() -> dict[str, Any]:
+def git_metadata() -> dict[str, Any]:
     root = project_root()
     try:
         commit = subprocess.run(
@@ -51,6 +52,28 @@ def _git_metadata() -> dict[str, Any]:
     return {"commit": commit, "dirty": dirty}
 
 
+def require_clean_worktree(purpose: str) -> dict[str, Any]:
+    """Refuse to produce evidence whose code state cannot be recovered from git.
+
+    Every Track A acceptance and control artifact in the first release was written from
+    an uncommitted tree, so the exact implementation behind the recorded commit could
+    not be reconstructed. Evidence-grade runs now fail closed instead.
+    """
+    state = git_metadata()
+    if state["commit"] is None:
+        raise ValidationError(
+            f"{purpose} requires a resolvable git commit; no repository state was readable"
+        )
+    if state["dirty"]:
+        raise ValidationError(
+            f"{purpose} requires a clean git worktree so that the recorded commit "
+            f"{state['commit'][:8]} reproduces the executed code. Commit or stash the "
+            "changes, or pass --allow-dirty-tree to produce an explicitly "
+            "non-evidence-grade run."
+        )
+    return state
+
+
 @dataclass(frozen=True, slots=True)
 class WrittenRun:
     run_id: str
@@ -69,7 +92,20 @@ def write_run(
     ablated_outputs: tuple[str, ...],
     connectome_metadata: dict[str, Any] | None = None,
     run_metadata: dict[str, Any] | None = None,
+    evidence_grade: bool = False,
 ) -> WrittenRun:
+    """Write a run record. ``evidence_grade`` refuses to write from a dirty worktree.
+
+    The command-line surface, which is what produces released evidence, passes
+    ``evidence_grade=True`` unless the operator explicitly opts out. Library callers and
+    tests default to ``False`` so that development runs stay possible, and the manifest
+    always records which contract applied.
+    """
+    git_state = (
+        require_clean_worktree("An evidence-grade run")
+        if evidence_grade
+        else {**git_metadata(), "clean_worktree_check_waived": True}
+    )
     timestamp = datetime.now(UTC)
     run_id = f"{timestamp.strftime('%Y%m%dT%H%M%SZ')}_{scenario.scenario_id}_seed-{seed}"
     directory = output_root / run_id
@@ -117,7 +153,8 @@ def write_run(
             "highest_validation_tier": None,
             "scientific_validation_passed": False,
         },
-        "git": _git_metadata(),
+        "git": {**git_state, "evidence_grade": evidence_grade},
+        "timing": dict(result.timing),
         "runtime": {
             "python": platform.python_version(),
             "platform": platform.platform(),

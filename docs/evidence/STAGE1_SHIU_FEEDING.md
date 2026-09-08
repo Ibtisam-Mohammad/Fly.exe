@@ -6,7 +6,9 @@
 - Predictions SHA-256: `1cc35c1dfbb94aae6cfa953ea5e11d973fb06a15bd31527a0116cef859edc78a`
 - Final review: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-stage1-review-3da6ffefaf9bdc6d.json`
 - Review SHA-256: `3da6ffefaf9bdc6d753b0341612bd195af3d093a4033b9b3944f47840f7db927`
-- Stage 1 baseline exit: **passed**
+- First review, superseded: `/srv/flybrain-data/evidence/male-cns-v1.0/shiu-feeding-screen-stage1-review-a90789e60865a6e1.json`
+- First review SHA-256: `a90789e60865a6e1c1aea254c6da608fdb153dc8d091df85ed21a20dcb62be94` (status `failed`)
+- Stage 1 baseline exit: **passed under a rule introduced after the preregistered rule failed**
 - Selected V3 specificity review: **failed**
 - Validation tier awarded: **none; V0 Structural remains the project maximum**
 
@@ -41,6 +43,28 @@ All neural states were finite. Halving the neural timestep from 0.1 ms to 0.05 m
 100% classification agreement and zero AUROC change. Zero synaptic weight produced no bilateral
 MN9 response. Excitatory, inhibitory, and seeded-balanced unresolved-sign alternatives were also
 executed and retained in the review artifact.
+
+## Gate-split disclosure, added 2026-09-08
+
+The preregistered pass rule was a single `stage1_pass_rule` that included the control-margin
+requirement. The first review artifact, `a90789e60865a6e1`, evaluated that rule and recorded
+`status: "failed"` with `stage1_exit_gate_passed: false`, because `required_control_margins` was
+false. Five minutes later commit `d8e2d45` split that rule into a weaker `stage1_baseline_gates`
+set and a separate `selected_v3_preregistered_gates` set, and the rerun review `3da6ffefaf9bdc6d`
+recorded `stage1_exit_gate_passed: true` with the same underlying numbers.
+
+Nothing about the measurements changed. What changed was the criterion, after the result was
+known. Both review artifacts are immutable and both remain on disk, which is what makes the
+sequence auditable, but the earlier documentation cited only the second one. The honest statement
+is that the Figure 2 screen is technically complete and that its preregistered pass rule was not
+met; the "Stage 1 baseline exit passed" line describes a criterion written afterwards.
+
+The specificity conclusion is unaffected and was already negative. With 13 positives the
+exact-versus-cell-type-only comparison has almost no power: the two conditions differ by two
+false positives, McNemar's test gives p = 0.5, and a bootstrap 95% confidence interval on the
+AUROC margin is [0, 0.031] against a preregistered 0.05 threshold. The shuffled-connectivity
+control sits at exactly 0.5 because shuffling silences MN9 entirely, so it is a floor rather than
+a comparison.
 
 ## Scientific interpretation
 

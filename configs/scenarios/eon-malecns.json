@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "scenario_id": "eon-malecns-v0.2",
   "track": "A",
-  "assumption_set": "foundation-v0.5",
+  "assumption_set": "foundation-v0.6",
   "required_assumptions": ["DATA-01", "DATA-03", "DATA-04", "NUM-01", "ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-06", "ND-07", "ND-08", "TRACKA-01", "SENS-03", "SENS-04", "BODY-01", "BODY-02", "MOTOR-03", "STATE-01", "DEMO-01"],
   "neural_backend": "direct-pygenn-5.4-full-aggregate-graph",
   "body_backend": "FlyGym-2.1-MuJoCo-3.9",

@@ -198,10 +198,11 @@ class EonDemoController:
         grooming = 0.0
         proboscis = 0.0
         if self.state in {DemoState.SEEK, DemoState.SEEK_RESUME}:
+            # Both outputs are dimensionless descending drives in [0, 1] and [-1, 1].
+            # They are not commanded or achieved physical velocities: each body backend
+            # maps them onto its own locomotor scale (MOTOR-03 full-scale values).
             forward_rate = neural.value_for(OUTPUT_FORWARD)
-            forward = self.parameters.max_forward_mm_s * forward_rate / (
-                forward_rate + self.parameters.forward_half_rate_hz
-            )
+            forward = forward_rate / (forward_rate + self.parameters.forward_half_rate_hz)
             left_rate = neural.value_for(OUTPUT_DNA_L)
             right_rate = neural.value_for(OUTPUT_DNA_R)
             odor_left = sensors.value_for(SENSOR_ODOR_L)
@@ -211,7 +212,7 @@ class EonDemoController:
                 + self.parameters.odor_gradient_yaw_gain_rad_s
                 * (odor_left - odor_right)
             )
-            yaw = min(self.parameters.max_yaw_rad_s, max(-self.parameters.max_yaw_rad_s, raw_yaw))
+            yaw = min(1.0, max(-1.0, raw_yaw / self.parameters.max_yaw_rad_s))
         elif self.state == DemoState.GROOM:
             grooming = 1.0
         elif self.state == DemoState.FEED_INITIATION:
@@ -221,11 +222,15 @@ class EonDemoController:
             t_us=t_us,
             ids=COMMAND_IDS,
             values=(forward, yaw, grooming, proboscis),
-            units="mm/s, rad/s, normalized, normalized",
+            units="normalized-drive [0,1], normalized-drive [-1,1], normalized, normalized",
             signal_type=SignalType.ACTUATOR_COMMAND,
             provenance="E",
             assumption_ids=("MOTOR-03",),
-            metadata={"controller_state": self.state.value, "vnc_bypass": True},
+            metadata={
+                "controller_state": self.state.value,
+                "vnc_bypass": True,
+                "normalized_controller_drive": True,
+            },
         )
 
 

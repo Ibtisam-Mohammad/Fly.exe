@@ -1,8 +1,47 @@
 # Track A full-graph Eon-like demonstration
 
 Evidence date: 2026-09-07  
-Milestone status: complete as an offline engineering prototype  
-Validation tier awarded: none; project-wide highest tier remains V0 Structural
+Revision date: 2026-09-08  
+Milestone status: **acceptance evidence withdrawn**; the integration itself still runs  
+Validation tier awarded: none; the project awards no tier while the V0 bundle is withdrawn
+
+## Withdrawal notice, 2026-09-08
+
+The v2 acceptance matrix and control bundle described below are withdrawn. The measurements are
+real and the artifacts remain on disk, but four defects mean they cannot support the acceptance
+claim they were used for. See [ADR-2026-006](../adr/ADR-2026-006-evidence-chain-repair.md).
+
+1. **The evidence is not reproducible from its recorded commit.** All 30 primary runs, all eight
+   control runs, the viewer run and the final smoke run record commit `aeb7c71` with
+   `dirty=true`. `aeb7c71` is a documentation-only commit; the entire Track A implementation was
+   uncommitted when the runs executed and only landed later in `013fd18`. The runs also carry a
+   scenario hash that differs from the committed scenario.
+2. **The food positions were not held out.** A first 30-run acceptance round exists at
+   `/srv/flybrain-data/runs/track-a-acceptance` using the identical positions `(8,-1)`, `(8,0)`
+   and `(8,1)`. Its `sucrose-input-ablation` control **failed**: with the sucrose input ablated
+   the run still reached `FEED_INITIATION` and `COMPLETE`. The controller then gained a
+   `feed_min_evoked_rate_hz` gate and the whole matrix was rerun as v2 at the same positions. The
+   v2 documentation described those positions as preregistered and held out, and disclosed
+   neither the discarded round nor the gate change.
+3. **The behavioural narrative did not match the traces.** The settled thorax began inside the
+   dust patch, so contamination accrued from the first physics step with a zero forward command,
+   and `GROOM` fired at exactly 135 ms and `SEEK_RESUME` at exactly 3.135 s in all 30 runs. In
+   every run the body then translated 5.2 to 7.8 mm, median 6.5 mm, **during** the grooming bout
+   while the forward command was zero, which is most of the roughly 7 mm path to the food. Two
+   runs were already inside the 1 mm food radius when grooming ended.
+4. **One control could not fail.** The shuffled-connectome control was registered with no
+   blocked transition, so its `passed` field was unconditionally true. The shuffled run in fact
+   reproduced both `GROOM` and `SEEK_RESUME`.
+
+The v3 matrix preregistered in `configs/experiments/track-a-acceptance.json` addresses all four:
+three genuinely unused food positions, a clean-worktree requirement enforced by both scripts, a
+dust patch that leaves checked clearance after settling, a grooming-displacement cap of one body
+length, and a shuffled-connectome criterion that must both fail to complete and degrade its
+grooming readout below half the exact-graph reference.
+
+## Superseded v2 record
+
+Everything below this line describes the withdrawn v2 evidence and is kept for audit.
 
 ## Outcome
 

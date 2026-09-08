@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -102,6 +103,45 @@ def sha256_file(path: Path, chunk_bytes: int = 8 * 1024 * 1024) -> str:
         while chunk := stream.read(chunk_bytes):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _crc32c_checksum() -> Any | None:
+    """Return a fresh incremental CRC32C accumulator, or ``None`` when unavailable.
+
+    The pinned Google Cloud Storage identity includes a Castagnoli CRC32C. Python's
+    standard library has no CRC32C and a pure-Python implementation cannot read the
+    28-GB raw profile in a useful time, so the check is reported as *unavailable*
+    rather than silently skipped when the optional native module is absent.
+    """
+    try:
+        import google_crc32c
+    except ImportError:
+        return None
+    return google_crc32c.Checksum()
+
+
+def file_digests(path: Path, chunk_bytes: int = 8 * 1024 * 1024) -> dict[str, str | None]:
+    """Compute SHA-256 and the upstream-comparable base64 MD5/CRC32C in a single read.
+
+    ``crc32c_base64`` is ``None`` when no native CRC32C implementation is installed;
+    callers must report that as *unverified* rather than as a passing check.
+    """
+    sha = hashlib.sha256()
+    md5 = hashlib.md5(usedforsecurity=False)
+    crc32c = _crc32c_checksum()
+    with path.open("rb") as stream:
+        while chunk := stream.read(chunk_bytes):
+            sha.update(chunk)
+            md5.update(chunk)
+            if crc32c is not None:
+                crc32c.update(chunk)
+    return {
+        "sha256": sha.hexdigest(),
+        "md5_base64": base64.b64encode(md5.digest()).decode("ascii"),
+        "crc32c_base64": (
+            base64.b64encode(crc32c.digest()).decode("ascii") if crc32c is not None else None
+        ),
+    }
 
 
 def _dataset_directory(root: Path, dataset_id: str) -> Path:

@@ -40,6 +40,7 @@ class FlyGymTrackAParameters:
     dust_x_mm: float
     dust_y_mm: float
     dust_radius_mm: float
+    dust_entry_clearance_mm: float
     source_strength: float
     softening_mm2: float
     half_saturation: float
@@ -53,6 +54,7 @@ class FlyGymTrackAParameters:
     max_yaw_rad_s: float
     feed_rostrum_extension_rad: float
     feed_haustellum_extension_rad: float
+    groom_blend_in_us: int
     spawn_height_mm: float
 
 
@@ -98,6 +100,13 @@ class FlyGymTrackABodyEngine:
         self.dust_exposure_complete = False
         self._command = {identifier: 0.0 for identifier in COMMAND_IDS}
         self._groom_started_us: int | None = None
+        self._groom_origin_mm: tuple[float, float] | None = None
+        self._groom_origin_heading_rad: float = 0.0
+        self._groom_net_displacement_mm = 0.0
+        self._groom_path_length_mm = 0.0
+        self._groom_heading_change_rad = 0.0
+        self._settled_pose_mm: tuple[float, float] = (0.0, 0.0)
+        self._settled_dust_clearance_mm = 0.0
         self._render = render
         self._trajectory = load_grooming_trajectory(trajectory_path)
         self._trajectory_columns = {
@@ -200,11 +209,51 @@ class FlyGymTrackABodyEngine:
         simulation.mj_data.qvel[:] = 0.0
         mujoco.mj_forward(simulation.mj_model, simulation.mj_data)
         self._standing_targets = settled_targets.copy()
+        self._last_targets = settled_targets.copy()
+        self._groom_hold_targets = settled_targets.copy()
         controller.reset(seed=seed, init_magnitudes=np.zeros(6, dtype=np.float64))
+        self._assert_settled_outside_dust()
 
     @property
     def t_us(self) -> int:
         return self._t_us
+
+    def _assert_settled_outside_dust(self) -> None:
+        """Fail closed if the settled body already sits in the dust patch.
+
+        The spawn position is the fly's root, while contamination is sensed at the
+        thorax, which the 50 ms settling phase moves forward by roughly 0.85 mm. In the
+        first Track A release that put the thorax inside the dust patch at t=0, so
+        contamination accumulated before the fly had walked anywhere and grooming began
+        on a fixed schedule instead of after an encounter.
+        """
+        x_mm, y_mm, _, _ = self._pose()
+        distance = math.hypot(
+            x_mm - self.parameters.dust_x_mm, y_mm - self.parameters.dust_y_mm
+        )
+        clearance = distance - self.parameters.dust_radius_mm
+        if clearance < self.parameters.dust_entry_clearance_mm:
+            raise ConfigurationError(
+                "The settled Track A body must start outside the dust patch: thorax at "
+                f"({x_mm:.3f}, {y_mm:.3f}) mm is {distance:.3f} mm from the dust centre "
+                f"with radius {self.parameters.dust_radius_mm} mm, leaving {clearance:.3f} mm "
+                f"of clearance below the required {self.parameters.dust_entry_clearance_mm} mm"
+            )
+        self._settled_pose_mm = (x_mm, y_mm)
+        self._settled_dust_clearance_mm = clearance
+
+    def groom_displacement(self) -> dict[str, float]:
+        """Body translation accumulated while the grooming command was active.
+
+        Grooming is a position-controller replay, not a locomotor command, so any
+        translation during a bout is an uncommanded physical artefact and is measured
+        rather than left implicit.
+        """
+        return {
+            "groom_net_displacement_mm": self._groom_net_displacement_mm,
+            "groom_path_length_mm": self._groom_path_length_mm,
+            "groom_heading_change_rad": self._groom_heading_change_rad,
+        }
 
     def _build_source_mapping(self) -> dict[str, int]:
         from flygym.anatomy import BodySegment, JointDOF, RotationAxis
@@ -323,21 +372,38 @@ class FlyGymTrackABodyEngine:
         }
         if old_grooming <= 0.0 < self._command[COMMAND_GROOM]:
             self._groom_started_us = self._t_us
+            x_mm, y_mm, _, heading_rad = self._pose()
+            self._groom_origin_mm = (x_mm, y_mm)
+            self._groom_origin_heading_rad = heading_rad
+            self._groom_hold_targets = self._last_targets.copy()
         elif self._command[COMMAND_GROOM] <= 0.0:
             self._groom_started_us = None
+            self._groom_origin_mm = None
 
     def _groom_targets(self, targets: np.ndarray) -> None:
         if self._groom_started_us is None:
             return
-        elapsed_s = (self._t_us - self._groom_started_us) / 1_000_000.0
+        elapsed_us = self._t_us - self._groom_started_us
+        elapsed_s = elapsed_us / 1_000_000.0
         source_time = self._trajectory["time_s"]
         source_angles = self._trajectory["angles_rad"]
         elapsed_s = min(float(source_time[-1]), max(0.0, elapsed_s))
+        # The published trajectory was recorded from a tethered fly. Snapping a
+        # free-standing body's foreleg position targets onto its first sample delivers an
+        # impulse through the stance legs, so the replay is blended in over a registered
+        # interval. This is an actuator scaffold, not part of the published kinematics.
+        blend = (
+            1.0
+            if self.parameters.groom_blend_in_us <= 0
+            else min(1.0, elapsed_us / self.parameters.groom_blend_in_us)
+        )
         for source_name, actuator_index in self._source_to_actuator.items():
             source_index = self._trajectory_columns[source_name]
-            targets[actuator_index] = np.interp(
-                elapsed_s, source_time, source_angles[:, source_index]
+            replayed = float(
+                np.interp(elapsed_s, source_time, source_angles[:, source_index])
             )
+            held = float(self._groom_hold_targets[actuator_index])
+            targets[actuator_index] = held + blend * (replayed - held)
 
     def _feeding_targets(self, targets: np.ndarray) -> None:
         extension = min(1.0, max(0.0, self._command[COMMAND_PROBOSCIS]))
@@ -352,14 +418,10 @@ class FlyGymTrackABodyEngine:
     def _apply_physics_action(self) -> None:
         from flygym_demo.complex_terrain.hybrid_controller import HybridControllerObservation
 
-        forward = min(
-            1.0,
-            max(0.0, self._command[COMMAND_FORWARD] / self.parameters.max_forward_mm_s),
-        )
-        turn = min(
-            1.0,
-            max(-1.0, self._command[COMMAND_YAW] / self.parameters.max_yaw_rad_s),
-        )
+        # The controller emits normalized descending drives, which are exactly what the
+        # locomotor controller consumes. Neither value is a commanded or achieved speed.
+        forward = min(1.0, max(0.0, self._command[COMMAND_FORWARD]))
+        turn = min(1.0, max(-1.0, self._command[COMMAND_YAW]))
         if self._command[COMMAND_GROOM] > 0.0 or self._command[COMMAND_PROBOSCIS] > 0.0:
             descending = np.zeros(2, dtype=np.float64)
         else:
@@ -387,6 +449,7 @@ class FlyGymTrackABodyEngine:
                 np.ones(6, dtype=bool) if action is None else action.adhesion_onoff
             )
         self._feeding_targets(targets)
+        self._last_targets = targets.copy()
         self._simulation.set_actuator_inputs(
             self._fly_name, self._actuator_type, targets
         )
@@ -424,6 +487,24 @@ class FlyGymTrackABodyEngine:
                     self.contamination = self.parameters.dust_exposure_cap
                     self.dust_exposure_complete = True
             grooming = min(1.0, max(0.0, self._command[COMMAND_GROOM]))
+            if grooming > 0.0 and self._groom_origin_mm is not None:
+                _, _, _, heading_rad = self._pose()
+                self._groom_path_length_mm += distance_moved
+                self._groom_net_displacement_mm = max(
+                    self._groom_net_displacement_mm,
+                    math.hypot(
+                        x_mm - self._groom_origin_mm[0], y_mm - self._groom_origin_mm[1]
+                    ),
+                )
+                self._groom_heading_change_rad = max(
+                    self._groom_heading_change_rad,
+                    abs(
+                        math.atan2(
+                            math.sin(heading_rad - self._groom_origin_heading_rad),
+                            math.cos(heading_rad - self._groom_origin_heading_rad),
+                        )
+                    ),
+                )
             self.contamination -= grooming * self.parameters.groom_removal_per_s * dt_s
             self.contamination = min(1.0, max(0.0, self.contamination))
             self.proboscis_extension = min(
@@ -446,6 +527,8 @@ class FlyGymTrackABodyEngine:
             "backend": "FlyGym-2.1-MuJoCo-3.9",
             "female_body_prior": True,
             "grooming_controller": "Ozdil-2026-Fig1-panel-C-trajectory",
+            "settled_dust_clearance_mm": self._settled_dust_clearance_mm,
+            **self.groom_displacement(),
         }
 
     def save_video(self, output: Path) -> Path:

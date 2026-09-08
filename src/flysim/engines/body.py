@@ -18,8 +18,8 @@ from .reference import (
     SENSOR_TOUCH,
 )
 
-COMMAND_FORWARD = "actuator:forward-velocity"
-COMMAND_YAW = "actuator:yaw-rate"
+COMMAND_FORWARD = "actuator:forward-drive"
+COMMAND_YAW = "actuator:yaw-drive"
 COMMAND_GROOM = "actuator:grooming-intensity"
 COMMAND_PROBOSCIS = "actuator:proboscis-extension"
 COMMAND_IDS = (COMMAND_FORWARD, COMMAND_YAW, COMMAND_GROOM, COMMAND_PROBOSCIS)
@@ -45,6 +45,8 @@ class KinematicParameters:
     single_dust_exposure: bool
     groom_removal_per_s: float
     food_contact_radius_mm: float
+    max_forward_mm_s: float
+    max_yaw_rad_s: float
 
 
 class KinematicBodyEngine:
@@ -123,8 +125,13 @@ class KinematicBodyEngine:
         while self._t_us < t_us:
             next_t = min(t_us, self._t_us + self.parameters.physics_dt_us)
             dt_s = (next_t - self._t_us) / 1_000_000.0
-            forward = self._command[COMMAND_FORWARD]
-            yaw = self._command[COMMAND_YAW]
+            # The controller emits normalized descending drives, not physical rates.
+            # This point body converts them with the registered MOTOR-03 full-scale
+            # values; the FlyGym body feeds the same drives to its locomotor controller.
+            forward_drive = min(1.0, max(-1.0, self._command[COMMAND_FORWARD]))
+            yaw_drive = min(1.0, max(-1.0, self._command[COMMAND_YAW]))
+            forward = forward_drive * self.parameters.max_forward_mm_s
+            yaw = yaw_drive * self.parameters.max_yaw_rad_s
             grooming = min(1.0, max(0.0, self._command[COMMAND_GROOM]))
             self.heading_rad = math.atan2(
                 math.sin(self.heading_rad + yaw * dt_s),

@@ -77,6 +77,17 @@ class TransferLIFParameters:
         return round(self.synaptic_delay_ms / self.dt_ms)
 
     @property
+    def axonal_delay_steps(self) -> int:
+        """GeNN ``axonal_delay_steps`` that realises :attr:`delay_steps` of total delay.
+
+        GeNN delivers a spike to the postsynaptic population on the step after it is
+        emitted even with ``axonal_delay_steps = 0``, so the registered delay maps to one
+        fewer axonal step. Assigning ``delay_steps`` directly is what produced the
+        systematic one-step GeNN offset recorded in the Stage 1 parity reports.
+        """
+        return self.delay_steps - 1
+
+    @property
     def refractory_steps(self) -> int:
         return round(self.refractory_ms / self.dt_ms)
 
@@ -974,7 +985,7 @@ def run_genn_circuit(
         init_postsynaptic("DeltaCurr"),
     )
     synapses.set_sparse_connections(graph.source_indices, graph.target_indices)
-    synapses.axonal_delay_steps = parameters.delay_steps
+    synapses.axonal_delay_steps = parameters.axonal_delay_steps
     build_path.mkdir(parents=True, exist_ok=True)
     model.build(path_to_model=str(build_path), always_rebuild=False)
     model.load(num_recording_timesteps=parameters.steps)
@@ -1164,7 +1175,7 @@ def run_genn_population_screen(
         init_postsynaptic("DeltaCurr"),
     )
     synapses.set_sparse_connections(graph.source_indices, graph.target_indices)
-    synapses.axonal_delay_steps = parameters.delay_steps
+    synapses.axonal_delay_steps = parameters.axonal_delay_steps
     build_path.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     model.build(path_to_model=str(build_path), always_rebuild=False)

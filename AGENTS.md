@@ -28,12 +28,12 @@ These stable keys are intended for agent search and handoff:
 PROJECT_GOAL: MaleCNS-constrained embodied adult-male sensorimotor model
 CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital twin
 CANONICAL_CONNECTOME: MaleCNS v1.0
-CURRENT_STAGE: Stage 2 — fitted neural dynamics (active; Stage 1 baseline complete; V0 Structural remains highest tier)
+CURRENT_STAGE: evidence-chain repair (ADR-2026-006); Stage 2 fitted dynamics paused until the repair completes
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
-HIGHEST_VALIDATION_TIER: V0 Structural
+HIGHEST_VALIDATION_TIER: none; the V0 bundle is withdrawn pending reissue under ADR-2026-006
 ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064 and preserves it at 50 us; it is not complete V1 and no V1/V2 tier is awarded
 NEXT_GATE: lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
-FOUNDATION_JOB: complete; all twelve V0 gates are recorded in immutable evidence bundle 20260906T065413Z_V0
+FOUNDATION_JOB: structural work complete; bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
@@ -147,7 +147,7 @@ normalized ratio of 1.064 and passing the 1.2 F-I sub-gate. The immutable result
 `401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434`. These cells are now
 consumed. The same-paper, chronic-condition result is not an independent-laboratory population
 validation and lacks the resting-voltage, membrane-time-constant, and adaptation evidence required
-for complete V1, so the awarded project tier remains V0 Structural.
+for complete V1, and no tier is currently awarded.
 
 The preregistered numerical review then halved adaptive-model integration from 100 to 50 us
 without changing parameters or acceptance limits. The normalized ratio changes from 1.064444 to

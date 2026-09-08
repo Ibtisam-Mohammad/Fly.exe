@@ -98,7 +98,8 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
                     f"{t_us} at record {index}"
                 )
 
-    event_targets = [event["to_state"] for event in manifest.get("result", {}).get("events", [])]
+    events = manifest.get("result", {}).get("events", [])
+    event_targets = [event["to_state"] for event in events]
     required_order = ["GROOM", "SEEK_RESUME", "FEED_INITIATION"]
     cursor = 0
     for state in event_targets:
@@ -107,6 +108,47 @@ def validate_run(run_directory: Path) -> dict[str, Any]:
     completed = bool(manifest.get("result", {}).get("completed"))
     if completed and cursor != len(required_order):
         failures.append("completed demo lacks the required causal state sequence")
+
+    # A manifest used to be able to claim any sequence of events without the trace
+    # supporting it. Every claimed transition must appear at its stated timestamp.
+    if trace:
+        states_by_t = {
+            int(record["t_us"]): record.get("state")
+            for record in trace
+            if isinstance(record, dict) and "t_us" in record
+        }
+        for event in events:
+            event_t = int(event["t_us"])
+            if event_t not in states_by_t:
+                failures.append(f"claimed event at {event_t} us has no trace record")
+            elif states_by_t[event_t] != event["to_state"]:
+                failures.append(
+                    f"claimed transition to {event['to_state']} at {event_t} us is not in the "
+                    f"trace, which records {states_by_t[event_t]}"
+                )
+    elif events:
+        failures.append("a run that claims transitions must record a trace")
+
+    # A run that says it used the connectome must show a graph-backed neural readout.
+    if manifest.get("connectome", {}).get("graph_used") is True and trace:
+        neural_metadata = trace[0].get("neural", {}).get("metadata", {})
+        if not neural_metadata.get("full_graph"):
+            failures.append(
+                "a run recorded as connectome-backed must trace a full-graph neural readout"
+            )
+
+    metadata = manifest.get("run_metadata", {})
+    groom_limit = metadata.get("groom_net_displacement_limit_mm")
+    groom_observed = metadata.get("groom_net_displacement_mm")
+    if groom_limit is not None:
+        if groom_observed is None:
+            failures.append("a declared grooming-displacement limit requires a measured value")
+        elif float(groom_observed) > float(groom_limit):
+            failures.append(
+                f"grooming-phase body displacement {float(groom_observed):.3f} mm exceeds the "
+                f"registered limit of {float(groom_limit):.3f} mm; the position-controller "
+                "replay moved the body instead of grooming in place"
+            )
     if manifest.get("connectome", {}).get("graph_used") is False:
         tier = manifest.get("result", {}).get("highest_validation_tier")
         if tier is not None:

@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "scenario_id": "eon-demo-v0.1",
   "track": "A",
-  "assumption_set": "foundation-v0.5",
+  "assumption_set": "foundation-v0.6",
   "required_assumptions": ["NUM-01", "ND-08", "SENS-03", "SENS-04", "BODY-01", "MOTOR-03", "STATE-01", "DEMO-01"],
   "neural_backend": "reference-engineering-circuit",
   "body_backend": "kinematic-preview",
