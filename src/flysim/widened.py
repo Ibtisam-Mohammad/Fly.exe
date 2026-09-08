@@ -34,10 +34,10 @@ from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
 from flysim.provenance import parse_provenance
+from flysim.runs import git_metadata, require_clean_worktree
 from flysim.shiu_reference import load_or_build_shiu_figure5g_reference
 from flysim.stage1 import (
     _atomic_json,
-    _code_commit,
     _fit_nd04_contact_scale,
     _immutable_snapshot,
 )
@@ -191,8 +191,17 @@ def run_widened_grooming_transfer(
     population_resolution_path: Path,
     output_path: Path,
     backends: tuple[str, ...],
+    allow_dirty_tree: bool = False,
 ) -> dict[str, Any]:
     """Run the preregistered bounded-path sweep and score its hypotheses."""
+    # A bare `git rev-parse HEAD` records a commit that need not describe the code that
+    # ran. The first v3 round was produced that way from an uncommitted tree and had to be
+    # discarded, so the worktree state is now checked rather than assumed.
+    worktree = (
+        git_metadata()
+        if allow_dirty_tree
+        else require_clean_worktree("The widened-circuit structural sweep")
+    )
     contract = load_json(experiment_path)
     if contract.get("schema_version") not in {"1.0", "1.1"}:
         raise ConfigurationError("Unsupported widened-circuit contract schema")
@@ -439,7 +448,9 @@ def run_widened_grooming_transfer(
         "experiment_id": str(contract["experiment_id"]),
         "experiment_sha256": sha256_json(contract),
         "base_experiment_sha256": sha256_json(base),
-        "code_commit": _code_commit(),
+        "code_commit": worktree["commit"],
+        "worktree_dirty": worktree["dirty"],
+        "evidence_grade": not worktree["dirty"],
         "provenance": str(contract["provenance"]),
         "assumption_ids": list(contract["assumption_ids"]),
         "graph_source_sha256": graph.source_sha256,

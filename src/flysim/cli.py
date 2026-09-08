@@ -310,6 +310,7 @@ def _command_benchmark_widened_circuit(args: argparse.Namespace) -> int:
         population_resolution_path=population_path,
         output_path=args.output,
         backends=tuple(args.backend),
+        allow_dirty_tree=args.allow_dirty_tree,
     )
     _print_json(
         {
@@ -1503,6 +1504,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("numpy", "genn"),
         default=["numpy"],
         help="parity backend; the sweep is blocked unless GeNN parity passes",
+    )
+    widened.add_argument(
+        "--allow-dirty-tree",
+        action="store_true",
+        help="produce an explicitly non-evidence-grade run from an uncommitted worktree",
     )
     widened.set_defaults(func=_command_benchmark_widened_circuit)
 
