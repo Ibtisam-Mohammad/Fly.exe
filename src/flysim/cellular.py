@@ -339,6 +339,130 @@ def _charging_time_constant_ms(
     }
 
 
+@dataclass(frozen=True, slots=True)
+class StepDiagnosticsPolicy:
+    """Preregistered sensitivity diagnostics that sit beside the primary step analysis.
+
+    The primary analysis fixes an asymptote for the relaxation fit and a fixed upstroke
+    velocity for the threshold. Both are assumptions whose effect on the reported value
+    has to be visible, so these diagnostics report the same quantities under the
+    alternative rule without replacing the primary values.
+    """
+
+    spike_threshold_slope_fraction: float
+    relaxation_sensitivity_window_ms: float
+
+    @classmethod
+    def from_mapping(cls, raw: dict[str, Any]) -> StepDiagnosticsPolicy:
+        policy = cls(
+            spike_threshold_slope_fraction=float(raw["spike_threshold_slope_fraction"]),
+            relaxation_sensitivity_window_ms=float(raw["relaxation_sensitivity_window_ms"]),
+        )
+        if not 0.0 < policy.spike_threshold_slope_fraction < 1.0:
+            raise ConfigurationError("Threshold slope fraction must lie strictly between 0 and 1")
+        if not math.isfinite(policy.relaxation_sensitivity_window_ms) or (
+            policy.relaxation_sensitivity_window_ms <= 0.0
+        ):
+            raise ConfigurationError("Relaxation sensitivity window must be positive and finite")
+        return policy
+
+    def as_dict(self) -> dict[str, float]:
+        return {
+            "spike_threshold_slope_fraction": self.spike_threshold_slope_fraction,
+            "relaxation_sensitivity_window_ms": self.relaxation_sensitivity_window_ms,
+        }
+
+
+def free_asymptote_exponential_fit(
+    elapsed_ms: np.ndarray, voltage_mv: np.ndarray
+) -> dict[str, Any]:
+    """Fit ``V(t) = A exp(-t / tau) + C`` with the asymptote ``C`` left free.
+
+    The primary relaxation fit pins the asymptote to the pre-step baseline. When the
+    baseline has drifted during the step that pin biases the time constant, so this fit
+    lets the data choose the asymptote and reports how far the two answers sit apart. It
+    is a sensitivity diagnostic, not a replacement for the gated estimate.
+    """
+    elapsed = np.asarray(elapsed_ms, dtype=np.float64)
+    voltage = np.asarray(voltage_mv, dtype=np.float64)
+    if elapsed.shape != voltage.shape or elapsed.ndim != 1:
+        raise ConfigurationError("Free-asymptote fit needs matching one-dimensional inputs")
+    if elapsed.size < 10:
+        return {
+            "tau_ms": None,
+            "asymptote_mv": None,
+            "amplitude_mv": None,
+            "r_squared": None,
+            "sample_count": int(elapsed.size),
+        }
+    total = float(np.sum((voltage - voltage.mean()) ** 2))
+    best: tuple[float, float, np.ndarray] | None = None
+    for candidate_tau in np.geomspace(0.5, 2_000.0, 600):
+        design = np.column_stack([np.exp(-elapsed / candidate_tau), np.ones_like(elapsed)])
+        coefficients, *_ = np.linalg.lstsq(design, voltage, rcond=None)
+        residual = float(np.sum((voltage - design @ coefficients) ** 2))
+        if best is None or residual < best[0]:
+            best = (residual, float(candidate_tau), coefficients)
+    assert best is not None
+    best_residual, best_tau, best_coefficients = best
+    return {
+        "tau_ms": best_tau,
+        "asymptote_mv": float(best_coefficients[1]),
+        "amplitude_mv": float(best_coefficients[0]),
+        "r_squared": 1.0 - best_residual / total if total > 0.0 else None,
+        "sample_count": int(elapsed.size),
+    }
+
+
+def upstroke_diagnostics(
+    voltage_mv: np.ndarray,
+    spike_indices: np.ndarray,
+    *,
+    sample_interval_us: int,
+    upstroke_criterion_mv_per_ms: float,
+    search_window_ms: float,
+    slope_fraction: float,
+) -> dict[str, Any]:
+    """How the fixed upstroke criterion relates to the spikes it is applied to.
+
+    A criterion that sits at or above the peak upstroke velocity of the recorded spikes
+    reports the voltage near the steepest point of the spike rather than a threshold, and
+    silently drops the spikes that never reach it. The fraction-of-peak-slope rule scales
+    with each spike and is reported alongside so the two can be compared.
+    """
+    voltage = np.asarray(voltage_mv, dtype=np.float64)
+    indices = np.asarray(spike_indices, dtype=np.int64)
+    if indices.size == 0:
+        return {
+            "upstroke_peak_dv_dt_mv_per_ms": None,
+            "spikes_reaching_upstroke_criterion": 0,
+            "spike_threshold_at_slope_fraction_mv": None,
+        }
+    dt_ms = sample_interval_us / 1_000.0
+    span = max(2, round(search_window_ms / dt_ms))
+    derivative = np.gradient(voltage, dt_ms)
+    peak_slopes: list[float] = []
+    reaching = 0
+    fractional: list[float] = []
+    for index in indices:
+        start = max(0, int(index) - span)
+        segment = derivative[start : int(index) + 1]
+        peak_slope = float(np.max(segment))
+        peak_slopes.append(peak_slope)
+        if peak_slope >= upstroke_criterion_mv_per_ms:
+            reaching += 1
+        if peak_slope > 0.0:
+            crossing = np.flatnonzero(segment >= slope_fraction * peak_slope)
+            fractional.append(float(voltage[start + int(crossing[0])]))
+    return {
+        "upstroke_peak_dv_dt_mv_per_ms": float(np.median(peak_slopes)),
+        "spikes_reaching_upstroke_criterion": int(reaching),
+        "spike_threshold_at_slope_fraction_mv": (
+            float(np.median(fractional)) if fractional else None
+        ),
+    }
+
+
 def current_step_features(
     current_pa: np.ndarray,
     voltage_mv: np.ndarray,
@@ -348,8 +472,14 @@ def current_step_features(
     step_policy: StepAnalysisPolicy,
     upstroke_criterion_mv_per_ms: float = 10.0,
     threshold_search_window_ms: float = 5.0,
+    diagnostics: StepDiagnosticsPolicy | None = None,
 ) -> list[dict[str, Any]]:
-    """Per-sweep cellular features from a paired injected-current and voltage protocol."""
+    """Per-sweep cellular features from a paired injected-current and voltage protocol.
+
+    ``diagnostics`` is optional so that a contract written before the diagnostics existed
+    reproduces its recorded output exactly; a contract that registers them gets the extra
+    fields appended to every sweep record.
+    """
     current = np.asarray(current_pa, dtype=np.float64)
     voltage = np.asarray(voltage_mv, dtype=np.float64)
     if current.shape != voltage.shape or current.ndim != 2:
@@ -444,6 +574,32 @@ def current_step_features(
                 ).items()
             }
         )
+        if diagnostics is not None:
+            # The deflection is reported so that a sweep classified as subthreshold only
+            # because the detector missed its spikes is visibly implausible.
+            record["maximum_in_step_deflection_mv"] = float(
+                np.max(trace[start : end + 1]) - baseline
+            )
+            record.update(
+                upstroke_diagnostics(
+                    trace,
+                    in_step,
+                    sample_interval_us=sample_interval_us,
+                    upstroke_criterion_mv_per_ms=upstroke_criterion_mv_per_ms,
+                    search_window_ms=threshold_search_window_ms,
+                    slope_fraction=diagnostics.spike_threshold_slope_fraction,
+                )
+            )
+            free_fit: dict[str, Any] | None = None
+            if after_step.size == 0 and end + 2 < trace.size:
+                window = max(1, round(diagnostics.relaxation_sensitivity_window_ms / dt_ms))
+                tail = trace[end + 1 : end + 1 + window]
+                free_fit = free_asymptote_exponential_fit(
+                    np.arange(tail.size, dtype=np.float64) * dt_ms, tail
+                )
+                free_fit["assumed_asymptote_mv"] = baseline
+                free_fit["window_ms"] = diagnostics.relaxation_sensitivity_window_ms
+            record["relaxation_free_asymptote"] = free_fit
         features.append(record)
     return features
 
@@ -496,7 +652,7 @@ def summarise_current_step_protocol(features: list[dict[str, Any]]) -> dict[str,
     ]
     currents = [float(item["injected_current_pa"]) for item in features]
     rates = [float(item["firing_rate_hz"]) for item in features]
-    return {
+    summary: dict[str, Any] = {
         "sweep_count": len(features),
         "resting_potential_mv": float(np.median(baselines)),
         "resting_potential_range_mv": [float(min(baselines)), float(max(baselines))],
@@ -530,6 +686,56 @@ def summarise_current_step_protocol(features: list[dict[str, Any]]) -> dict[str,
         "minimum_interspike_interval_ms": float(min(minima)) if minima else None,
         "stimulus_resolution": STIMULUS_RESOLVED,
     }
+    if any("relaxation_free_asymptote" in item for item in features):
+        summary.update(_summarise_step_diagnostics(features))
+    return summary
+
+
+def _summarise_step_diagnostics(features: list[dict[str, Any]]) -> dict[str, Any]:
+    """Cell-level view of the sensitivity diagnostics, kept apart from the primary values."""
+    fractional = [
+        float(item["spike_threshold_at_slope_fraction_mv"])
+        for item in features
+        if item.get("spike_threshold_at_slope_fraction_mv") is not None
+    ]
+    peak_slopes = [
+        float(item["upstroke_peak_dv_dt_mv_per_ms"])
+        for item in features
+        if item.get("upstroke_peak_dv_dt_mv_per_ms") is not None
+    ]
+    spikes = sum(int(item["spike_count"]) for item in features)
+    reaching = sum(int(item.get("spikes_reaching_upstroke_criterion", 0)) for item in features)
+    free_fits = [
+        {
+            "sweep_index": int(item["sweep_index"]),
+            "tau_ms": item["relaxation_free_asymptote"]["tau_ms"],
+            "asymptote_mv": item["relaxation_free_asymptote"]["asymptote_mv"],
+            "assumed_asymptote_mv": item["relaxation_free_asymptote"]["assumed_asymptote_mv"],
+            "r_squared": item["relaxation_free_asymptote"]["r_squared"],
+            "gated_tau_ms": item.get("relaxation_membrane_tau_ms"),
+        }
+        for item in features
+        if item.get("relaxation_free_asymptote") is not None
+    ]
+    accepted = [
+        entry for entry in free_fits if entry["gated_tau_ms"] is not None and entry["tau_ms"]
+    ]
+    return {
+        "spike_threshold_at_slope_fraction_mv": (
+            float(np.median(fractional)) if fractional else None
+        ),
+        "upstroke_peak_dv_dt_mv_per_ms": float(np.median(peak_slopes)) if peak_slopes else None,
+        "spikes_reaching_upstroke_criterion_fraction": (
+            reaching / spikes if spikes else None
+        ),
+        "maximum_in_step_deflection_mv": [
+            item.get("maximum_in_step_deflection_mv") for item in features
+        ],
+        "relaxation_free_asymptote_fits": free_fits,
+        "membrane_tau_free_asymptote_on_accepted_sweeps_ms": (
+            [float(entry["tau_ms"]) for entry in accepted] if accepted else None
+        ),
+    }
 
 
 def stimulus_free_features(
@@ -537,8 +743,16 @@ def stimulus_free_features(
     *,
     sample_interval_us: int,
     spike_policy: SpikeDetectionPolicy,
+    report_pre_spike_baseline: bool = False,
 ) -> dict[str, Any]:
-    """Current-independent observables from a trace whose stimulus was never published."""
+    """Current-independent observables from a trace whose stimulus was never published.
+
+    ``report_pre_spike_baseline`` adds the median voltage before the first detected spike.
+    For a trace that carries an unpublished stimulus epoch followed by a long
+    after-hyperpolarization, the whole-trace masked median is pulled toward the
+    post-stimulus level, and the pre-spike segment is the only part that is certainly
+    free of both.
+    """
     voltage = np.asarray(voltage_mv, dtype=np.float64)
     spike_indices = detect_spikes(
         voltage, sample_interval_us=sample_interval_us, policy=spike_policy
@@ -573,6 +787,14 @@ def stimulus_free_features(
             ).items()
         }
     )
+    if report_pre_spike_baseline:
+        half = max(1, round(spike_policy.resting_mask_ms / (sample_interval_us / 1_000.0)))
+        cutoff = int(spike_indices[0]) - half if spike_indices.size else voltage.size
+        segment = voltage[: max(0, cutoff)]
+        record["pre_first_spike_resting_potential_mv"] = (
+            float(np.median(segment)) if segment.size else None
+        )
+        record["pre_first_spike_duration_ms"] = segment.size * sample_interval_us / 1_000.0
     return record
 
 

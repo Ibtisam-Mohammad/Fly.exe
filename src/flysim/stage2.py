@@ -23,6 +23,7 @@ from flysim.cellular import (
     STIMULUS_RESOLVED,
     SpikeDetectionPolicy,
     StepAnalysisPolicy,
+    StepDiagnosticsPolicy,
     current_step_features,
     stimulus_free_features,
     summarise_current_step_protocol,
@@ -939,6 +940,13 @@ def measure_invivo_cellular_pack(
     detection = contract["spike_detection"]
     primary_policy = SpikeDetectionPolicy.from_mapping(detection["primary"])
     step_policy = StepAnalysisPolicy.from_mapping(contract["step_analysis"])
+    # Diagnostics are opt-in per contract so a contract written before they existed keeps
+    # reproducing the artifact it produced.
+    diagnostics = (
+        StepDiagnosticsPolicy.from_mapping(contract["review_diagnostics"])
+        if contract.get("review_diagnostics") is not None
+        else None
+    )
     prominences = [primary_policy.prominence_mv] + [
         float(value) for value in detection["sensitivity_prominence_mv"]
     ]
@@ -989,6 +997,7 @@ def measure_invivo_cellular_pack(
             threshold_search_window_ms=float(
                 contract["step_analysis"]["threshold_search_window_ms"]
             ),
+            diagnostics=diagnostics,
         )
         mbon_by_prominence[f"{prominence:g}"] = {
             "per_sweep": features,
@@ -1016,6 +1025,7 @@ def measure_invivo_cellular_pack(
                         voltages[selection],
                         sample_interval_us=sample_interval_us,
                         spike_policy=primary_policy,
+                        report_pre_spike_baseline=diagnostics is not None,
                     )
                     per_trial.append(
                         {"specimen_id": specimen, "trial_index": int(trial), **record}
@@ -1028,23 +1038,35 @@ def measure_invivo_cellular_pack(
                     for item in rows
                     if item["somatic_spike_amplitude_mv"] is not None
                 ]
-                per_animal.append(
-                    {
-                        "specimen_id": specimen,
-                        "trial_count": len(rows),
-                        "resting_potential_mv": float(
-                            np.median([float(item["resting_potential_mv"]) for item in rows])
-                        ),
-                        "somatic_spike_amplitude_mv": (
-                            float(np.median(amplitudes)) if amplitudes else None
-                        ),
-                        "overshooting_trials": sum(
-                            1 for item in rows if item["overshoots_zero_mv"] is True
-                        ),
-                    }
-                )
+                animal: dict[str, Any] = {
+                    "specimen_id": specimen,
+                    "trial_count": len(rows),
+                    "resting_potential_mv": float(
+                        np.median([float(item["resting_potential_mv"]) for item in rows])
+                    ),
+                    "somatic_spike_amplitude_mv": (
+                        float(np.median(amplitudes)) if amplitudes else None
+                    ),
+                    "overshooting_trials": sum(
+                        1 for item in rows if item["overshoots_zero_mv"] is True
+                    ),
+                }
+                if diagnostics is not None:
+                    pre_spike = [
+                        float(item["pre_first_spike_resting_potential_mv"])
+                        for item in rows
+                        if item.get("pre_first_spike_resting_potential_mv") is not None
+                    ]
+                    animal["pre_first_spike_resting_potential_mv"] = (
+                        float(np.median(pre_spike)) if pre_spike else None
+                    )
+                    animal["pre_first_spike_duration_range_ms"] = [
+                        float(min(item["pre_first_spike_duration_ms"] for item in rows)),
+                        float(max(item["pre_first_spike_duration_ms"] for item in rows)),
+                    ]
+                per_animal.append(animal)
             resting = [item["resting_potential_mv"] for item in per_animal]
-            stimulus_free[relative] = {
+            block: dict[str, Any] = {
                 "stimulus_resolution": STIMULUS_IRRECOVERABLE,
                 "animal_count": len(per_animal),
                 "per_trial": per_trial,
@@ -1055,12 +1077,34 @@ def measure_invivo_cellular_pack(
                     "maximum": float(max(resting)),
                 },
             }
+            if diagnostics is not None:
+                pre_spike_resting = [
+                    float(item["pre_first_spike_resting_potential_mv"])
+                    for item in per_animal
+                    if item.get("pre_first_spike_resting_potential_mv") is not None
+                ]
+                block["pre_first_spike_resting_potential_across_animals_mv"] = (
+                    {
+                        "median": float(np.median(pre_spike_resting)),
+                        "minimum": float(min(pre_spike_resting)),
+                        "maximum": float(max(pre_spike_resting)),
+                        "definition": (
+                            "median voltage before the first detected spike of each trial, "
+                            "so before any unpublished stimulus epoch and its "
+                            "after-hyperpolarization"
+                        ),
+                    }
+                    if pre_spike_resting
+                    else None
+                )
+            stimulus_free[relative] = block
         else:
             by_prominence = {
                 f"{prominence:g}": stimulus_free_features(
                     voltages,
                     sample_interval_us=sample_interval_us,
                     spike_policy=policy_at(prominence),
+                    report_pre_spike_baseline=diagnostics is not None,
                 )
                 for prominence in prominences
             }
@@ -1078,7 +1122,7 @@ def measure_invivo_cellular_pack(
     ]
     result: dict[str, Any] = {
         "schema_version": "1.0",
-        "result_id": "stage2-cellular-observables-v1",
+        "result_id": str(contract["experiment_id"]),
         "experiment_id": str(contract["experiment_id"]),
         "experiment_sha256": sha256_json(contract),
         "provenance": str(contract["provenance"]),
@@ -1118,6 +1162,9 @@ def measure_invivo_cellular_pack(
         "claim_boundary": str(contract["claim_boundary"]),
         "validation_tier_awarded": None,
     }
+    if diagnostics is not None:
+        result["review_diagnostics"] = diagnostics.as_dict()
+        result["disclosure"] = str(contract.get("disclosure", ""))
     result["logical_sha256"] = sha256_json(result)
     _atomic_json(output, result)
     return result

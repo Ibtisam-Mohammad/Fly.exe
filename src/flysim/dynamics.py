@@ -104,10 +104,10 @@ class CellParameterSet:
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> CellParameterSet:
-        values = {key: float(raw["values"][key]) for key in CELL_PARAMETER_KEYS}
         missing = set(CELL_PARAMETER_KEYS) - set(raw["values"])
         if missing:
             raise ConfigurationError(f"Cell parameter set omits {sorted(missing)}")
+        values = {key: float(raw["values"][key]) for key in CELL_PARAMETER_KEYS}
         if any(not math.isfinite(value) for value in values.values()):
             raise ConfigurationError("Cell parameter values must be finite")
         for key in ("membrane_tau_ms", "synapse_tau_ms"):

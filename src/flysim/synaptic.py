@@ -173,7 +173,25 @@ def spearman_rho(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.sum(centred_left * centred_right) / denominator)
 
 
-def epsc_waveform_features(time_ms: np.ndarray, trace_pa: np.ndarray) -> dict[str, float]:
+def receptor_neuron_bodies_per_glomerulus(cell_types: tuple[str, ...]) -> dict[str, int]:
+    """Every body typed ``ORN_<glomerulus>``, whether or not it reaches a given PN.
+
+    The primary convergence count is the number of receptor neurons actually connected to
+    each projection neuron. The published anatomical convergence is the number of receptor
+    neurons in the glomerulus, and the two differ wherever a receptor axon misses some of
+    the glomerulus's projection neurons, so both are reported.
+    """
+    counts: dict[str, int] = {}
+    for label in cell_types:
+        if label.startswith(RECEPTOR_TYPE_PREFIX):
+            glomerulus = label[len(RECEPTOR_TYPE_PREFIX) :]
+            counts[glomerulus] = counts.get(glomerulus, 0) + 1
+    return counts
+
+
+def epsc_waveform_features(
+    time_ms: np.ndarray, trace_pa: np.ndarray, *, baseline_end_ms: float = 40.0
+) -> dict[str, float]:
     """Baseline-corrected unitary-EPSC features.
 
     This is the single definition used by both the frozen post-freeze review and the
@@ -181,7 +199,7 @@ def epsc_waveform_features(time_ms: np.ndarray, trace_pa: np.ndarray) -> dict[st
     """
     times = np.asarray(time_ms, dtype=np.float64)
     trace = np.asarray(trace_pa, dtype=np.float64)
-    baseline = float(np.mean(trace[times < 40.0]))
+    baseline = float(np.mean(trace[times < baseline_end_ms]))
     inward = baseline - trace
     peak_index = int(np.argmax(inward))
     peak = float(inward[peak_index])
@@ -317,17 +335,31 @@ def analyse_synaptic_structure(
     comparison = contract["derived_scale"]["comparison_value"]
     registered_scale = float(comparison["synaptic_mv_per_contact"])
 
+    # Each hypothesis states in the contract whether a true test supports structural
+    # matching. A null there keeps the statistic descriptive, which is how a v1 construct
+    # is carried forward once the published claim it tested turned out to be misstated.
+    h1_rule = contract["hypotheses"][0]
+    h2_rule = contract["hypotheses"][1]
+    h2_expected_sign = str(h2_rule.get("expected_sign", "negative"))
+    if h2_expected_sign not in {"negative", "positive"}:
+        raise ConfigurationError("H2 expected_sign must be 'negative' or 'positive'")
+    h1_test = bool(cv_total < cv_converging)
+    h2_test = bool(rho < 0.0) if h2_expected_sign == "negative" else bool(rho > 0.0)
     hypotheses = {
         "H1": {
-            "statement": contract["hypotheses"][0]["statement"],
+            "statement": h1_rule["statement"],
             "coefficient_of_variation_converging_receptor_neurons": cv_converging,
             "coefficient_of_variation_total_contacts": cv_total,
-            "supports_structural_matching": bool(cv_total < cv_converging),
+            "supports_structural_matching": (
+                h1_test if h1_rule.get("supports_structural_matching_if") is not None else None
+            ),
         },
         "H2": {
-            "statement": contract["hypotheses"][1]["statement"],
+            "statement": h2_rule["statement"],
             "spearman_rho": rho,
-            "supports_structural_matching": bool(rho < 0.0),
+            "supports_structural_matching": (
+                h2_test if h2_rule.get("supports_structural_matching_if") is not None else None
+            ),
         },
         "H3": {
             "statement": contract["hypotheses"][2]["statement"],
@@ -338,9 +370,22 @@ def analyse_synaptic_structure(
             ),
         },
     }
+    sensitivity: dict[str, Any] | None = None
+    if contract.get("convergence_definition_sensitivity") is not None:
+        sensitivity = _convergence_definition_sensitivity(
+            cell_types,
+            summaries,
+            total_contact_values,
+            median_contact_values,
+            cv_total=cv_total,
+            median_of_medians=median_of_medians,
+            tracts=tracts,
+            claim=claim,
+        )
+
     result: dict[str, Any] = {
         "schema_version": "1.0",
-        "result_id": "stage2-synaptic-structure-v1",
+        "result_id": str(contract["experiment_id"]),
         "experiment_id": str(contract["experiment_id"]),
         "experiment_sha256": sha256_json(contract),
         "provenance": str(contract["provenance"]),
@@ -390,9 +435,89 @@ def analyse_synaptic_structure(
         "claim_boundary": str(contract["claim_boundary"]),
         "validation_tier_awarded": None,
     }
+    if sensitivity is not None:
+        result["convergence_definition_sensitivity"] = sensitivity
     result["logical_sha256"] = sha256_json(result)
     write_json_atomic(output, result)
     return result
+
+
+def _convergence_definition_sensitivity(
+    cell_types: tuple[str, ...],
+    summaries: list[dict[str, Any]],
+    total_contact_values: np.ndarray,
+    median_contact_values: np.ndarray,
+    *,
+    cv_total: float,
+    median_of_medians: float,
+    tracts: tuple[str, ...],
+    claim: dict[str, Any],
+) -> dict[str, Any]:
+    """The same two structural statistics under the anatomical convergence definition.
+
+    Also names every receptor or projection population the type-name rule leaves out, so
+    a glomerulus that is silently absent from the analysis is at least visibly absent.
+    """
+    bodies = receptor_neuron_bodies_per_glomerulus(cell_types)
+    body_counts = np.asarray(
+        [bodies.get(str(item["glomerulus"]), 0) for item in summaries], dtype=np.float64
+    )
+    cv_bodies = coefficient_of_variation(body_counts)
+    pattern = projection_type_pattern(tracts)
+    projection_glomeruli = {
+        match.group("glomerulus")
+        for match in (pattern.match(label) for label in set(cell_types))
+        if match is not None
+    }
+    resolved = {str(item["glomerulus"]) for item in summaries}
+    entry: dict[str, Any] = {
+        "alternative_definition": (
+            "all bodies typed ORN_<glomerulus>, connected to the projection neuron or not"
+        ),
+        "receptor_neuron_bodies_per_glomerulus": {
+            str(item["glomerulus"]): int(bodies.get(str(item["glomerulus"]), 0))
+            for item in summaries
+        },
+        "connected_fraction_per_glomerulus": {
+            str(item["glomerulus"]): (
+                float(item["converging_receptor_neurons"])
+                / float(bodies[str(item["glomerulus"])])
+                if bodies.get(str(item["glomerulus"]))
+                else None
+            )
+            for item in summaries
+        },
+        "H1_under_alternative": {
+            "coefficient_of_variation_receptor_neuron_bodies": cv_bodies,
+            "coefficient_of_variation_total_contacts": cv_total,
+            "supports_structural_matching": bool(cv_total < cv_bodies),
+        },
+        "H2_under_alternative": {
+            "spearman_rho_bodies_vs_median_contacts_per_connection": spearman_rho(
+                body_counts, median_contact_values
+            ),
+            "spearman_rho_bodies_vs_total_contacts_per_projection_neuron": spearman_rho(
+                body_counts, total_contact_values
+            ),
+        },
+        "unmatched_populations": {
+            "receptor_glomeruli_without_a_matching_projection_type": sorted(
+                set(bodies) - projection_glomeruli
+            ),
+            "projection_glomeruli_without_a_matching_receptor_type": sorted(
+                projection_glomeruli - set(bodies)
+            ),
+            "glomeruli_resolved": sorted(resolved),
+        },
+    }
+    sites = claim.get("release_sites_per_connection")
+    if sites is not None:
+        entry["published_release_sites_per_connection"] = {
+            "value": float(sites),
+            "median_of_median_contacts_per_connection": median_of_medians,
+            "contacts_over_release_sites": median_of_medians / float(sites),
+        }
+    return entry
 
 
 def evaluate_uepsc_kinetics_holdout(
@@ -434,6 +559,11 @@ def evaluate_uepsc_kinetics_holdout(
     if overlap:
         raise DatasetError(f"The holdout names already consumed recorded cells: {overlap}")
 
+    baseline_window = contract.get("baseline_window_ms", {})
+    baseline_end_ms = float(baseline_window.get("end", 40.0))
+    if float(baseline_window.get("start", 0.0)) != 0.0:
+        raise ConfigurationError("The uEPSC baseline window must start at the record start")
+
     table = pq.read_table(artifact_path)
     payload = table.to_pydict()
     specimens = np.asarray(payload["specimen_id"], dtype=object)
@@ -441,6 +571,7 @@ def evaluate_uepsc_kinetics_holdout(
     currents_all = np.asarray(payload["current_pa"], dtype=np.float64)
     time_ms: np.ndarray | None = None
     observed: list[dict[str, Any]] = []
+    peak_sample_indices: list[int] = []
     for specimen_id in held_out:
         selection = specimens == specimen_id
         if not selection.any():
@@ -450,12 +581,19 @@ def evaluate_uepsc_kinetics_holdout(
             time_ms = specimen_times
         elif not np.array_equal(time_ms, specimen_times):
             raise DatasetError(f"Recorded cell {specimen_id} uses a different sample grid")
-        observed.append(
-            {
-                "specimen_id": specimen_id,
-                **epsc_waveform_features(specimen_times, currents_all[selection]),
-            }
+        trace = currents_all[selection]
+        features = epsc_waveform_features(
+            specimen_times, trace, baseline_end_ms=baseline_end_ms
         )
+        if not all(math.isfinite(float(value)) for value in features.values()):
+            raise DatasetError(
+                f"Recorded cell {specimen_id} never decays to 1/e within the record, so "
+                "the decay criterion is undefined rather than failed"
+            )
+        peak_sample_indices.append(
+            int(np.argmax(float(np.mean(trace[specimen_times < baseline_end_ms])) - trace))
+        )
+        observed.append({"specimen_id": specimen_id, **features})
     assert time_ms is not None
 
     kernel = difference_of_exponentials_kernel(
@@ -465,7 +603,11 @@ def evaluate_uepsc_kinetics_holdout(
         decay_tau_ms=float(kernel_parameters["decay_tau_ms"]),
     )
     amplitude = float(kernel_parameters["population_amplitude_pa"])
-    model_features = epsc_waveform_features(time_ms, -amplitude * kernel)
+    model_features = epsc_waveform_features(
+        time_ms, -amplitude * kernel, baseline_end_ms=baseline_end_ms
+    )
+    if not all(math.isfinite(float(value)) for value in model_features.values()):
+        raise DatasetError("The frozen kernel never decays to 1/e within the record")
 
     peak_time_errors = [
         abs(model_features["peak_time_ms"] - float(item["peak_time_ms"])) for item in observed
@@ -496,7 +638,7 @@ def evaluate_uepsc_kinetics_holdout(
 
     result: dict[str, Any] = {
         "schema_version": "1.0",
-        "result_id": "stage2-uepsc-kinetics-holdout-v1",
+        "result_id": str(contract["experiment_id"]),
         "experiment_id": str(contract["experiment_id"]),
         "experiment_sha256": sha256_json(contract),
         "provenance": str(contract["provenance"]),
@@ -540,6 +682,17 @@ def evaluate_uepsc_kinetics_holdout(
         "claim_boundary": str(contract["claim_boundary"]),
         "validation_tier_awarded": None,
     }
+    if contract.get("report_peak_alignment"):
+        # Source traces that the authors aligned on their peaks put every recorded peak on
+        # the same sample, so a peak-time criterion then measures the alignment convention
+        # and the kernel's own onset, not the biology. The check is reported so a contract
+        # cannot pass a vacuous criterion without saying so.
+        shared = len(set(peak_sample_indices)) == 1
+        result["peak_alignment"] = {
+            "held_out_peak_sample_indices": peak_sample_indices,
+            "all_held_out_peaks_share_one_sample": shared,
+            "peak_time_criterion_informative": not shared,
+        }
     result["logical_sha256"] = sha256_json(result)
     write_json_atomic(output, result)
     return result
@@ -621,7 +774,7 @@ def evaluate_stage2_exit_gate(
     failing = [leg["id"] for leg in legs if not leg["passed"]]
     result: dict[str, Any] = {
         "schema_version": "1.0",
-        "result_id": "stage2-exit-gate-v1",
+        "result_id": str(contract["experiment_id"]),
         "experiment_id": str(contract["experiment_id"]),
         "experiment_sha256": sha256_json(contract),
         "provenance": str(contract["provenance"]),

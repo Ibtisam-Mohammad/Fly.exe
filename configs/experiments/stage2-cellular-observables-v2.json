@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-cellular-observables-v2",
+  "title": "Measured resting voltage, membrane time constant and adaptation from the locked in vivo cellular pack, with the sensitivity diagnostics of the 2026-09-08 review",
+  "provenance": "M/P/I",
+  "assumption_ids": [
+    "ND-01",
+    "ND-02",
+    "ND-05"
+  ],
+  "purpose": "Reproduce every stage2-cellular-observables-v1 value under an unchanged primary policy and add preregistered sensitivity diagnostics beside it, so that the assumptions the primary values embed are visible in the artifact instead of only in a review note.",
+  "supersedes": {
+    "experiment_id": "stage2-cellular-observables-v1",
+    "what_changes": "nothing in the primary policy; three diagnostics are added and the antennal-lobe LN resting potential gains a pre-stimulus estimator",
+    "why": "ADR-2026-009 found that the surviving membrane time constant pins its asymptote to the pre-step baseline, that the 10 mV/ms upstroke criterion sits at the median peak upstroke velocity of the recorded spikes, and that the whole-trace LN resting median is pulled toward the post-stimulus after-hyperpolarization."
+  },
+  "required_artifacts": [
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/mbon-alpha1-current-steps.parquet",
+      "sha256": "bf9b21e2a1257de0de66b72cd428ebe413bfcd6f3d20681abbe07d606ba81b64",
+      "stimulus_resolution": "unit-resolved"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/ln-voltage-traces.parquet",
+      "sha256": "19242204664bbee4f08030e8a89069556468c8981cf5bafd2aabe84b35ba66da",
+      "stimulus_resolution": "irrecoverable"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-invivo-cellular-pack/kc-voltage-trace.parquet",
+      "sha256": "a99ad4fc0c1657585742e8b05d8cf175b87eba28abcf02579590641bf0aa0512",
+      "stimulus_resolution": "irrecoverable"
+    },
+    {
+      "path": "derived/auxiliary/nanami-2024-pn-current-clamp/pn-voltage-trace.parquet",
+      "sha256": "be1ace41668a7238759f406f289c5f9ff091887b7d7d4ab33d2109f7e0cb03c0",
+      "stimulus_resolution": "irrecoverable"
+    }
+  ],
+  "sample_interval_us": 100,
+  "spike_detection": {
+    "primary": {
+      "prominence_mv": 10.0,
+      "prominence_window_ms": 10.0,
+      "refractory_ms": 2.0,
+      "resting_mask_ms": 20.0
+    },
+    "sensitivity_prominence_mv": [
+      5.0,
+      20.0
+    ],
+    "rationale": "Drosophila central neurons attenuate axonally initiated spikes before the soma, so a fixed absolute voltage threshold under-counts in classes with small somatic spikes and over-counts slow depolarizations in others. Prominence is therefore measured against a trailing local minimum.",
+    "window_calibration": {
+      "chosen_prominence_window_ms": 10.0,
+      "rejected_prominence_window_ms": 50.0,
+      "reason": "A trailing window longer than the membrane charging time absorbs the slow step depolarization into the prominence, so ordinary noise on the rising phase clears a 10 mV prominence. At 50 ms the in-step counts were 1, 28, 19, 27, 44 and non-monotonic in injected current; at 10 ms they are 1, 10, 17, 21, 24 and monotonic.",
+      "independent_reference": "Upward crossings of a fixed -35 mV threshold with the same 2 ms refractory give 0, 10, 15, 23, 30 on the same five sweeps. The two detectors agree at 4 pA and differ by 2, 2 and 6 spikes at 6, 8 and 10 pA; the v1 contract described this as agreement, which overstated it.",
+      "corroboration": "The published MBON analysis notebook in the same repository uses a 50-sample rolling maximum at 0.1 ms per sample, which is the same 5 ms order of magnitude and not 50 ms."
+    },
+    "marginality": "The MBON-alpha1 somatic spikes are 8.9 to 13.8 mV high (median 11.2 mV) and rise at 8.5 to 12.9 mV/ms (median 9.9 mV/ms), so the 10 mV prominence and the 10 mV/ms upstroke criterion each sit at the median of the spike population. Every count, interval and threshold from this protocol is detector-marginal and the sensitivity levels are the honest range, not a robustness check that happens to agree.",
+    "disclosure": "The prominence levels and windows recorded here were compared on these traces before the v1 contract was written, and the window was changed from 50 ms to 10 ms as a result. That calibration is reported rather than presented as a blind choice. It cannot bias a model comparison, because this contract fixes no pass/fail threshold on any measured value and no model has been scored against these traces."
+  },
+  "step_analysis": {
+    "baseline_settle_ms": 10.0,
+    "steady_window_ms": 100.0,
+    "charge_fit_low_fraction": 0.1,
+    "charge_fit_high_fraction": 0.9,
+    "minimum_subthreshold_span_mv": 1.0,
+    "minimum_fit_r_squared": 0.9,
+    "maximum_tau_to_window_ratio": 1.0,
+    "quality_gate_rationale": "A single-exponential fit reports a time constant for any monotone-looking segment. The R squared floor rejects a fit to a transient that is not exponential, and the tau-to-window ratio rejects a time constant longer than the transient actually observed, which is what a drifting baseline or a slow after-current produces.",
+    "upstroke_criterion_mv_per_ms": 10.0,
+    "threshold_search_window_ms": 5.0
+  },
+  "review_diagnostics": {
+    "spike_threshold_slope_fraction": 0.1,
+    "relaxation_sensitivity_window_ms": 200.0,
+    "pre_first_spike_baseline": true,
+    "rationale": {
+      "spike_threshold_slope_fraction": "The primary criterion is an absolute 10 mV/ms. For spikes whose peak upstroke velocity is itself near 10 mV/ms the first crossing lies near the steepest point of the spike, and spikes that never reach it are silently dropped. A threshold at a fixed fraction of each spike's own peak slope scales with the spike and is reported beside the primary value together with the fraction of spikes that reach the absolute criterion at all.",
+      "relaxation_sensitivity_window_ms": "The primary relaxation fit pins the asymptote to the pre-step baseline. The MBON-alpha1 baseline drifts by 5.7 mV across the five sweeps, so the post-step resting level need not equal the pre-step one. A three-parameter fit with a free asymptote over the first 200 ms after step offset is reported for every sweep whose relaxation is spike-free, beside the gated value.",
+      "pre_first_spike_baseline": "The stimulus-free LN trials carry an unpublished depolarizing epoch from about 1 to 4 s followed by ten seconds of after-hyperpolarization, so a whole-trace masked median reports the post-stimulus level. The median before the first detected spike is free of both, and is reported per trial and per animal."
+    },
+    "diagnostics_are_not_gates": "None of these values replaces a primary value or sets a pass/fail threshold. They exist so that the registry entry that consumes the primary values can carry the spread the alternative rule produces."
+  },
+  "disclosure": "This contract was written after the 2026-09-08 review had already computed these diagnostics on the same traces: free-asymptote relaxation constants of 47 to 55 ms against the gated 32.6 ms, a median peak upstroke velocity of 9.9 mV/ms against the 10 mV/ms criterion with 44 of 78 spikes never reaching it, and LN pre-stimulus medians 0.4 to 1.9 mV above the whole-trace medians. It is therefore a preregistered reproduction of those diagnostics under one fixed rule, not a blind measurement. No model is scored against any of these values.",
+  "observables": [
+    {
+      "id": "resting_potential_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "resting voltage",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "membrane_tau_ms",
+      "requires_stimulus_units": true,
+      "v1_requirement": "membrane time constant",
+      "sources": [
+        "MBON-alpha1"
+      ]
+    },
+    {
+      "id": "input_resistance_mohm",
+      "requires_stimulus_units": true,
+      "v1_requirement": "input resistance",
+      "sources": [
+        "MBON-alpha1"
+      ]
+    },
+    {
+      "id": "adaptation_ratio",
+      "requires_stimulus_units": false,
+      "v1_requirement": "adaptation",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "somatic_spike_amplitude_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "spiking versus graded signalling evidence",
+      "sources": [
+        "MBON-alpha1",
+        "antennal-lobe local neuron",
+        "Kenyon cell",
+        "olfactory projection neuron"
+      ]
+    },
+    {
+      "id": "spike_threshold_mv",
+      "requires_stimulus_units": false,
+      "v1_requirement": "firing threshold",
+      "sources": [
+        "MBON-alpha1"
+      ]
+    }
+  ],
+  "artifact_validity_criteria": {
+    "all_required_artifacts_match_sha256": true,
+    "all_measured_values_finite": true,
+    "unit_bearing_observables_only_from_unit_resolved_sources": true,
+    "multi_animal_classes_report_per_animal_values": true
+  },
+  "tier_policy": "This contract measures observables. It awards no tier. V1 additionally requires that a fitted model predict these distributions on cells it never saw, for the cell types the model actually claims.",
+  "declared_blockers": [
+    "no unit-resolved current-step protocol exists in the registered sources for any projection-neuron type",
+    "the only unit-resolved protocol is one MBON-alpha1 cell in one animal, so it yields a point measurement and not a distribution",
+    "the four-animal LN set publishes no stimulus amplitudes, so it cannot contribute a membrane time constant",
+    "the MBON-alpha1 spikes are detector-marginal at the primary prominence and upstroke criterion, so its F-I curve, shortest interspike interval and threshold carry the spread between the primary and sensitivity rules rather than a single value",
+    "the one accepted membrane time constant depends on pinning the relaxation asymptote to the pre-step baseline; the free-asymptote diagnostic reports how much"
+  ],
+  "claim_boundary": "Measured cellular observables from female flies of four classes that are not the DM1/DM4 projection-neuron types Track A drives. Supports no V1 award, no MaleCNS-donor claim and no population distribution for any class other than the four-animal LN resting potential.",
+  "last_reviewed": "2026-09-08"
+}

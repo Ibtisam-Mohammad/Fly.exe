@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-synaptic-structure-v2",
+  "title": "Does the MaleCNS ORN-to-PN contact structure implement the published unitary-current scaling of Kazama and Wilson 2008, and what per-contact scale does the published unitary depolarization imply?",
+  "provenance": "M/P/F",
+  "assumption_ids": ["ND-03", "ND-04", "ND-06"],
+  "purpose": "ND-04 asserts that contact count is not synaptic strength and that a type-pair scale must be fitted. This contract tests that assertion against the published physiology of the same synapse using only V0-locked structural data, and derives the first per-contact scale in physical units. It replaces stage2-synaptic-structure-v1, whose statement of the published claim was wrong.",
+  "supersedes": {
+    "experiment_id": "stage2-synaptic-structure-v1",
+    "what_was_wrong": [
+      "v1 cited https://doi.org/10.1016/j.neuron.2008.04.024 as Kazama and Wilson 2008. That DOI is Kruglikov and Rudy 2008, a neocortical GABA-release paper. Kazama and Wilson 2008 is https://doi.org/10.1016/j.neuron.2008.02.030.",
+      "v1 stated the published claim as 'glomeruli with fewer converging ORNs have stronger unitary connections'. The paper reports the opposite direction for unitary current: 'Unitary EPSC amplitude is correlated with the glomerular volume occupied by the PN dendritic tuft (Pearson's r = 0.75, p < 10^-4, n = 39)', together with 'a strong linear correlation between glomerular volume and the number of ORNs presynaptic to each glomerulus'. The matching the title names is between unitary current and dendritic size or input resistance, producing a roughly uniform unitary depolarization across PN types, not a uniform total drive.",
+      "v1's H1 and H2 therefore tested a claim the source does not make. Their statistics are kept here for continuity, H1 as a descriptive comparison and H2 with the sign the source actually implies.",
+      "v1's 'several dozen' bracket of 24 to 100 contacts was this project's operationalisation, not a published interval. The paper gives a mean of 51 release sites per connection from quantal analysis."
+    ]
+  },
+  "required_artifacts": [
+    {
+      "path": "derived/male-cns-v1.0/graph",
+      "role": "V0-locked traced aggregate graph"
+    },
+    {
+      "path": "raw/male-cns-v1.0/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "role": "cell-type labels"
+    }
+  ],
+  "population_rule": {
+    "receptor_neuron_type_pattern": "ORN_<glomerulus>",
+    "projection_neuron_type_pattern": "<glomerulus>_<tract>PN",
+    "tracts": ["ad", "l", "v", "il", "lv", "vl", "m"],
+    "unit": "one connected ORN-to-PN pair; a pair with zero aggregate contacts is not a connection",
+    "minimum_glomeruli": 20,
+    "known_exclusions": "VM6 is dropped because its receptor types are ORN_VM6l, ORN_VM6m and ORN_VM6v while its projection types are VM6_adPN and VM6_lvPN; the VP thermo- and hygrosensory glomeruli have no ORN_ type. Both are reported by name in the result rather than silently absent."
+  },
+  "published_claim_under_test": {
+    "source": "https://doi.org/10.1016/j.neuron.2008.02.030",
+    "source_title": "Kazama H, Wilson RI (2008) Homeostatic matching and nonlinear amplification at identified central synapses. Neuron 58:401-413",
+    "restated_by": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3933953/",
+    "restated_for": "the 5 to 7 mV unitary EPSP range and the 'several dozen synaptic sites' phrasing only; the review does not state a convergence relationship",
+    "glomeruli_recorded": ["DM6", "VM2", "DL5", "DM4"],
+    "claim": "Each ORN spike produces a unitary EPSP of 6.19 +/- 0.45 mV (n = 23) averaged across PN types. Unitary EPSC amplitude is correlated with the glomerular volume occupied by the PN dendritic tuft (r = 0.75, n = 39), and glomerular volume is linearly correlated with the number of presynaptic ORNs, so unitary current rises with ORN number while unitary depolarization is roughly uniform. Quantal analysis gives a mean of 51 release sites per ORN-to-PN connection with release probability 0.79, and short-term depression appears at presynaptic rates above about 50 spikes per second.",
+    "unitary_epsp_mv": {"minimum": 5.0, "maximum": 7.0, "published_mean": 6.19, "published_sem": 0.45, "published_n": 23},
+    "release_sites_per_connection": 51,
+    "release_probability": 0.79,
+    "short_term_depression_onset_hz": 50,
+    "several_dozen_contacts_range": {"minimum": 24, "maximum": 100, "note": "this bracket is the project's v1 operationalisation of 'several dozen' and is retained only so H3 stays comparable; the published point estimate is 51 release sites"}
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "Descriptive: how the spread of total ORN contacts per PN across glomeruli compares with the spread of the converging ORN count. The source makes no claim about total drive, so this statistic supports nothing either way; it is kept because v1 reported it.",
+      "test": "coefficient_of_variation(total_contacts_per_pn) < coefficient_of_variation(converging_orn_count)",
+      "supports_structural_matching_if": null
+    },
+    {
+      "id": "H2",
+      "statement": "If contact number implemented the published unitary-current scaling, contacts per connection would rise with the number of converging ORNs, because unitary current rises with glomerular volume and volume rises with ORN number.",
+      "test": "spearman_rho(converging_orn_count, median_contacts_per_connection) > 0",
+      "expected_sign": "positive",
+      "supports_structural_matching_if": true
+    },
+    {
+      "id": "H3",
+      "statement": "MaleCNS contacts per connection are consistent with the published mean of 51 release sites per connection; the v1 bracket of 24 to 100 is retained for comparability and the ratio to 51 is reported directly.",
+      "test": "the median across glomeruli of median contacts per connection lies within the retained bracket; the ratio to 51 is reported",
+      "supports_structural_matching_if": null
+    }
+  ],
+  "convergence_definition_sensitivity": {
+    "alternative": "all bodies typed ORN_<glomerulus>, whether or not they reach the projection neuron",
+    "reason": "The published convergence is anatomical, the number of ORNs in the glomerulus. The primary rule counts only receptor neurons connected to each PN. In the locked graph fewer than 61 percent of typed receptor bodies reach a given PN in VL2p, DM3, VL2a and DL3, so the two definitions differ and both are reported.",
+    "reported_only": true
+  },
+  "disclosure": "Five glomeruli (DM1, DL5, DM4, DM6, VA6) were inspected while assessing feasibility before v1 was written. The v1 statistics on all 50 glomeruli and the review's alternative-definition statistics (Spearman rho of -0.232 under the connected definition and -0.456 under the anatomical one; coefficients of variation 0.603, 0.687 and 0.695 for connected count, typed bodies and total contacts) were all computed before this contract was written. v2 is therefore a corrected restatement of a test whose data were already seen, not a blind test. It consumes no physiological recording.",
+  "derived_scale": {
+    "formula": "per_contact_mv = published_unitary_epsp_mv / median_contacts_per_connection",
+    "reported_per": "glomerulus, at both ends of the published unitary range",
+    "assumption": "a uniform unitary depolarization across glomeruli, which is what the source reports, applied to all 50 glomeruli from measurements in four",
+    "comparison_value": {
+      "assumption_id": "ND-LIF-01",
+      "synaptic_mv_per_contact": 0.2,
+      "role": "the registered engineering fallback this derivation is compared against"
+    }
+  },
+  "artifact_validity_criteria": {
+    "minimum_glomeruli_resolved": 20,
+    "all_values_finite": true,
+    "every_reported_pair_has_at_least_one_contact": true
+  },
+  "tier_policy": "This is a structural analysis of V0-locked data against a published physiological claim. It awards no tier. A per-contact scale derived from a cross-specimen unitary amplitude is a prior, not a measurement of MaleCNS synapses.",
+  "declared_blockers": [
+    "the unitary amplitude is a published cross-specimen female value from four glomeruli, and is applied here to all of them",
+    "aggregate contact count is not release-site count; a contact may host more or fewer functional release sites, and the ratio of the two is reported rather than assumed",
+    "release probability 0.79 and depression onset near 50 spikes per second are published point estimates from the same paper and are registered here as values ND-06 can be tested against; no deposited trace exists behind them"
+  ],
+  "claim_boundary": "Structural evidence about the MaleCNS ORN-to-PN contact distribution and the per-contact scale a published unitary amplitude would imply. Not a measurement of MaleCNS synaptic strength and not a V2 award.",
+  "last_reviewed": "2026-09-08"
+}
