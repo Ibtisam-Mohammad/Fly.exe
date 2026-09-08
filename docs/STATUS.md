@@ -333,9 +333,24 @@ reissued and validates, and Stage 2 has resumed. Two engineering defects that th
 
 ### Open engineering issues surfaced by the repair
 
-1. **Body station-keeping.** The FlyGym Track A body drifts while standing and cannot hold
-   position during a grooming bout. This is why Track A fails acceptance in every run. It must
-   be fixed in the stance, contact or adhesion model, not by raising the cap.
+1. **Body station-keeping. Diagnosed 2026-09-08, not fixed** — see
+   [the station-keeping report](evidence/TRACK_A_STATION_KEEPING.md). The 6.26 mm grooming
+   displacement decomposes into 2.161 mm of baseline creep while standing under no command,
+   2.756 mm more from lifting front-leg adhesion so the front legs can groom, and only about
+   1.34 mm from the grooming replay itself. Creep runs at about 0.88 mm/s and is linear over six
+   seconds, not a settling transient, and re-zeroing velocities changes it by nothing; the
+   position actuators are saturated at their 240-unit force ceiling while the body is nominally
+   still. **The 2.5 mm cap is unreachable before grooming begins**, since a stationary body
+   passes it after about 2.8 s. Adhesion already suppresses about 85% of the slide — with it off
+   the body travels 14.297 mm in 3 s. The obvious fix was tested and refuted: holding the pose
+   the body actually settles into, rather than the pose the settle phase commanded, doubles the
+   drift to 4.708 mm, because the residual actuator force is load-bearing. A legitimate fix is a
+   closed-loop station-keeping controller, which the FlyGym locomotion scaffold does not have;
+   raising adhesion, stiffening contacts, lifting force limits or welding the body during
+   grooming are all excluded. The analytically correct criterion is a differential against
+   standing displacement, which the report states and deliberately does not adopt, because
+   restating a criterion that has just failed would convert a failing acceptance run into a
+   passing one by fiat.
 2. **Rendered-timing divergence.** Enabling the renderer shifts the last two transitions by
    1.44 s, and no preregistered criterion bounds it. The equivalence control should gain a
    timing tolerance rather than testing the transition signature alone.
