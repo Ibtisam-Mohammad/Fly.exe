@@ -87,11 +87,12 @@ Status date: 2026-09-08
 - Ten fixed 8-nm morphology canaries, body-universe sensitivity, exact annotation canaries,
   source-paper count comparisons, full confidence-threshold sensitivity, and a pinned
   MaleCNS-to-FlyWire central-brain comparison.
-- Immutable V0 evidence bundle `20260906T065413Z_V0`; all twelve required gates passed when
-  it was built. It is **withdrawn**: it pinned the whole mutable assumption register, which a
-  later unrelated edit changed, so `flysim evidence validate` now rejects it. The V0 builder
-  has been repaired to pin a scoped snapshot instead; see
+- Immutable V0 evidence bundle `20260908T060641Z_V0`; all twelve required gates pass, the
+  seven raw artifacts' upstream MD5 values are recomputed from local bytes, and the bundle
+  pins a scoped snapshot of the `DATA-*` records rather than the mutable register. The first
+  bundle, `20260906T065413Z_V0`, is withdrawn and still fails validation; see
   [ADR-2026-006](adr/ADR-2026-006-evidence-chain-repair.md).
+- Runtime graph arrays are SHA-256 pinned in their manifest and verified on every load.
 - Checksum-locked first Stage 2 projection-neuron physiology pack: three published DM1 passive
   model fits plus six official Gugel et al. eLife source workbooks.
 - Lossless Figure 7 derivatives with 7,280 DL5 current/firing-rate rows and 24,012 unitary-EPSC
@@ -186,7 +187,7 @@ First Stage 2 data decisions and evidence boundary: [ADR-2026-004](adr/ADR-2026-
 | Accepted traced neuron bodies | 165,122 |
 | Retained traced-to-traced edges | 25,563,197 |
 | Runtime graph storage | 294 MB |
-| V0 evidence gates | withdrawn pending reissue |
+| V0 evidence gates | 12 of 12 passing in the reissued bundle |
 | Automated tests | 83 passing |
 
 The GPU measurements are topology-allocation results, not biological-time performance for fitted neural dynamics. `DATA-04` and [ADR-2026-002](adr/ADR-2026-002-traced-neuron-universe.md) are accepted; Assign/Anchor and all-segment universes remain explicit sensitivity alternatives.
@@ -199,9 +200,15 @@ The GPU measurements are topology-allocation results, not biological-time perfor
 
 The 100% model left 3,775 MiB GPU memory free during measurement, exceeding the required 1.5 GB headroom.
 
-Highest validation tier: **none**. The structural work behind V0 stands, but the bundle that
-awarded it no longer validates and has been withdrawn, so no tier is currently supportable from
-a live bundle. The underlying evidence establishes dataset identity, lossless structural
+Highest validation tier: **V0 Structural**, reissued on 2026-09-08 as bundle
+`20260908T060641Z_V0` (SHA-256
+`38366a8df86861501ca2fd4eff3e3c9329e0e089ec0e188b4af4f1a66c085958`). It pins an immutable
+snapshot scoped to the `DATA-*` foundation records instead of the whole mutable register, and it
+recomputes each of the seven raw artifacts' upstream MD5 from local bytes; all seven match. The
+superseded bundle `20260906T065413Z_V0` remains on disk and is still rejected by
+`flysim evidence validate`, which is what a withdrawn claim should look like. CRC32C is pinned
+but not recomputed, because no native CRC32C implementation is installed; the review artifact
+records that explicitly rather than implying the check ran. The evidence establishes dataset identity, lossless structural
 transformation, selected identity/motif preservation, confidence sensitivity, and a bounded
 cross-connectome comparison, and it makes no physiological or behavioral claim. Stage 1's
 deliberately simple open-loop baseline is complete, with the gate split disclosed below. Track A
@@ -216,7 +223,7 @@ Each is now tracked, and the claims they supported are withdrawn rather than res
 
 | Defect | Status |
 |---|---|
-| The V0 bundle pinned the mutable assumption register and stopped validating | Builder repaired to pin a scoped snapshot; bundle reissue pending |
+| The V0 bundle pinned the mutable assumption register and stopped validating | Repaired and **reissued** as `20260908T060641Z_V0`, which validates |
 | The V0 builder required assumption set `foundation-v0.3` while the register had moved on | Gate is now content-based; the set identifier no longer affects V0 |
 | Every Track A acceptance and control artifact was produced from an uncommitted worktree | Evidence-grade runs and both Track A scripts now refuse a dirty tree |
 | The settled FlyGym body began inside the dust patch, so grooming began on a fixed schedule | Dust patch moved; a startup guard fails closed if clearance is lost |

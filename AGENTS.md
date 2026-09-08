@@ -30,10 +30,10 @@ CLAIM_BOUNDARY: population-plausible model; not source-fly recovery or digital t
 CANONICAL_CONNECTOME: MaleCNS v1.0
 CURRENT_STAGE: evidence-chain repair (ADR-2026-006); Stage 2 fitted dynamics paused until the repair completes
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
-HIGHEST_VALIDATION_TIER: none; the V0 bundle is withdrawn pending reissue under ADR-2026-006
+HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006
 ENGINEERING_STATUS: ramp-aware adaptive PN distribution passes a preregistered four-cell chronic-condition F-I sub-gate at ratio 1.064 and preserves it at 50 us; it is not complete V1 and no V1/V2 tier is awarded
 NEXT_GATE: lock independent resting-voltage/time-constant/adaptation holdouts for complete V1; resolve Nanami units before its sealed score; source release-failure/STP evidence for V2
-FOUNDATION_JOB: structural work complete; bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
+FOUNDATION_JOB: complete; bundle 20260908T060641Z_V0 pins a scoped DATA-* snapshot. The first bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
 NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explicit unresolved policies; never the physiological default
@@ -558,6 +558,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-05 | Accept ADR-2026-003 for the contact-level storage and audit boundary. | Full contact tables remain immutable CPU-side evidence; bounded lossless derivatives support V0 without entering the GPU runtime graph. |
 | 2026-09-06 | Accept `status=Traced` as the production neural-body universe; retain Assign/Anchor and all-segment alternatives for sensitivity analyses. | Expanding through Anchor changed traced contacts by 0.12% and edges by 0.24%, while all fixed sensorimotor annotation canaries remained uniquely traced. |
 | 2026-09-07 | Accept the `foundation-v0.5` Track A full-graph engineering baseline and classify it as an offline prototype. | The 30-run matrix and required controls pass, but registered neural/body bridges remain non-biological and throughput misses the interactive target. |
+| 2026-09-08 | Accept ADR-2026-006 and withdraw both the first V0 bundle and the Track A v1/v2 acceptance evidence. | An independent audit confirmed the bundle no longer validated and could not be rebuilt, that every Track A artifact came from an uncommitted tree, and that the behavioural narrative was largely a physics artefact. |
 | 2026-09-07 | Accept ADR-2026-004 for the first Stage 2 projection-neuron physiology pack, recorded-cell split, and losses. | DM1 passive model fits and individual-cell DL5 F-I/uEPSC recordings provide complementary priors and held-out data while keeping sex, age, and cell-type transfer explicit. |
 | 2026-09-08 | Accept ADR-2026-005 and freeze the ramp-aware PN revision before external scoring. | Reusing the consumed Gugel holdouts would leak validation; the single external Nanami trace is useful as a challenge but its unresolved current units and sample size prevent a V1 claim. |
 
