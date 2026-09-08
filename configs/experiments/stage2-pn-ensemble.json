@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-pn-uncertainty-ensemble-v1",
+  "title": "VAL-01 uncertainty ensemble for the frozen ramp-aware projection-neuron family",
+  "provenance": "P/F/E",
+  "assumption_ids": [
+    "ND-01",
+    "ND-02",
+    "ND-05",
+    "VAL-01"
+  ],
+  "purpose": "Replace the two-draw projection-neuron family with an ensemble that meets the VAL-01 requirement of five parameter samples by four seeds, using only the two originally registered training cells.",
+  "frozen_fit": {
+    "path": "evidence/stage2/projection-neuron-dynamic-fit-v5.json",
+    "sha256": "8d97c40c094bbc06df9d83aa7b9cc057ef89cfb46b8162d806a9c134ba5f4bac",
+    "role": "supplies the frozen family, candidate bank definition and observation model; not refitted"
+  },
+  "required_artifact": {
+    "path": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-fi-curves.parquet",
+    "sha256": "6fe737e9eb7eb2b2f6ee3597a46af619a2414dd56dcd6378118467c0f77c672f"
+  },
+  "training_specimen_ids": [
+    "gugel-dl5-fi-solvent-01",
+    "gugel-dl5-fi-solvent-02"
+  ],
+  "forbidden_specimen_ids": [
+    "gugel-dl5-fi-solvent-03",
+    "gugel-dl5-fi-solvent-04",
+    "gugel-dl5-fi-exposed-01",
+    "gugel-dl5-fi-exposed-02",
+    "gugel-dl5-fi-exposed-03",
+    "gugel-dl5-fi-exposed-04",
+    "gugel-dl5-uepsc-solvent-05",
+    "gugel-dl5-uepsc-solvent-06",
+    "gugel-dl5-uepsc-solvent-07"
+  ],
+  "ensemble": {
+    "parameter_samples": 5,
+    "seeds_per_condition": 4,
+    "sample_seed": 20260908,
+    "acceptance_tolerance_ratio": 1.25,
+    "acceptance_rule": "A candidate is accepted when its per-cell Huber loss is within the tolerance ratio of the best loss achieved on the same training cell. This is rejection sampling over the parameters the training data cannot distinguish, not a second optimisation.",
+    "initial_condition_distribution": {
+      "voltage_phase": {
+        "kind": "uniform",
+        "low": 0.0,
+        "high": 1.0
+      },
+      "adaptation_state": {
+        "kind": "uniform",
+        "low": 0.0,
+        "high": 0.5
+      },
+      "rationale": "The seed varies the unobserved membrane and adaptation state at protocol onset. That is a real source of run-to-run variability in a deterministic integrator, and it is preferable to injecting a noise process the source data cannot constrain."
+    }
+  },
+  "acceptance": {
+    "meets_val01_parameter_samples": 5,
+    "meets_val01_seeds_per_condition": 4,
+    "all_predictions_finite": true,
+    "no_forbidden_specimen_read": true,
+    "held_out_evaluation": "none available"
+  },
+  "tier_policy": "This contract builds an ensemble and scores nothing. Every registered F-I recording in the corpus has already been consumed, by the first frozen evaluation or by the chronic-condition holdout, so the widened family cannot be evaluated without leaking validation evidence. It stays unscored until a genuinely new holdout is acquired.",
+  "declared_blockers": [
+    "no unconsumed F-I recording exists in any registered source, so the ensemble cannot be scored",
+    "the two training cells come from one paper, one sex and one age, so the ensemble spread reflects parameter uncertainty and not biological population variability"
+  ],
+  "claim_boundary": "A parameter-uncertainty ensemble over a cross-specimen female DL5 projection-neuron family. It satisfies the VAL-01 ensemble shape and nothing else, and supports no V1 award.",
+  "last_reviewed": "2026-09-08"
+}

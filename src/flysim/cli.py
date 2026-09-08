@@ -63,6 +63,7 @@ from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
     NANAMI_REPOSITORY_COMMIT,
     Stage2ExperimentSpec,
+    build_projection_neuron_ensemble,
     evaluate_dynamic_projection_neuron_holdout,
     fit_dynamic_projection_neuron_model,
     fit_projection_neuron_model,
@@ -210,6 +211,34 @@ def _command_stage2_measure_cellular(args: argparse.Namespace) -> int:
         }
     )
     return 0 if all(result["artifact_validity"].values()) else 2
+
+
+def _command_stage2_pn_ensemble(args: argparse.Namespace) -> int:
+    result = build_projection_neuron_ensemble(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "output": str(args.output.resolve()),
+            "logical_sha256": result["logical_sha256"],
+            "accepted_candidate_count": result["accepted_candidate_count"],
+            "ensemble": {
+                "parameter_samples": result["ensemble"]["parameter_samples"],
+                "seeds_per_condition": result["ensemble"]["seeds_per_condition"],
+                "member_count": result["ensemble"]["member_count"],
+            },
+            "parameter_uncertainty": result["parameter_uncertainty"],
+            "training_diagnostics": result["training_diagnostics"],
+            "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    required = (
+        "meets_val01_parameter_samples",
+        "meets_val01_seeds_per_condition",
+        "all_predictions_finite",
+        "no_forbidden_specimen_read",
+    )
+    return 0 if all(result["acceptance"][key] for key in required) else 2
 
 
 def _command_stage2_readiness(args: argparse.Namespace) -> int:
@@ -1435,6 +1464,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
+    stage2_ensemble = stage2_commands.add_parser(
+        "pn-ensemble",
+        help="Widen the frozen PN family into a VAL-01 uncertainty ensemble",
+    )
+    stage2_ensemble.add_argument("--root", type=Path, default=default_data_root())
+    stage2_ensemble.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-pn-ensemble.json",
+    )
+    stage2_ensemble.add_argument("--output", type=Path, required=True)
+    stage2_ensemble.set_defaults(func=_command_stage2_pn_ensemble)
     stage2_import_pack = stage2_commands.add_parser(
         "import-invivo-pack",
         help="Normalize the locked in vivo cellular pack",

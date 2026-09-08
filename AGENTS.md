@@ -32,7 +32,7 @@ CURRENT_STAGE: Stage 2 fitted neural dynamics (active); the ADR-2026-006 evidenc
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006
 ENGINEERING_STATUS: the first measured cellular observables exist under ADR-2026-007 (MBON-alpha1 tau_m 32.566 ms, Vrest -60.354 mV, threshold -38.402 mV; four-animal LN Vrest median -50.789 mV) and both engines carry per-neuron membrane parameters; 0.0024% of the traced graph has a measured parameter set and no V1/V2 tier is awarded
-NEXT_GATE: find a unit-resolved multi-animal current-step source for a projection-neuron type, since no registered source has one; widen the PN family to the VAL-01 five samples by four seeds; source release-failure/STP evidence for V2. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
+NEXT_GATE: acquire an unconsumed F-I holdout, since every registered recording is spent and the VAL-01 ensemble is therefore unscorable; find a unit-resolved multi-animal current-step source for a projection-neuron type, since no registered source has one; source release-failure/STP evidence for V2. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
 FOUNDATION_JOB: complete; bundle 20260908T060641Z_V0 pins a scoped DATA-* snapshot. The first bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical
 NEURAL_PARITY: three-neuron fixture and 41-neuron Shiu transfer pass NumPy/Brian2/PyGeNN at 100 us; numerical evidence only
@@ -40,6 +40,7 @@ NEURAL_SIGN_VARIANT: Shiu transmitter-only regression is executable with explici
 STAGE1_SHIU_REFERENCE: Edmond v3.0 archive checksum-locked; Figure 5g published-output analysis reproduced
 STAGE1_SHIU_TRANSFER: immutable report 1290b8d717eaff49; 41 neurons, 129 edges; three-backend parity passes; global scale fails 0/8 held-out positive-response coverage; no V3 awarded
 STAGE2_CELLULAR_OBSERVABLES: contract stage2-cellular-observables-v1; MBON-alpha1 is the only unit-resolved current-step protocol in any registered source; tau_m 32.566 ms at R2 0.911 from one surviving sweep; input resistance unmeasurable because every sweep is suprathreshold; no tier awarded
+STAGE2_PN_ENSEMBLE: contract stage2-pn-uncertainty-ensemble-v1 meets VAL-01 five-by-four; 130 of 768 candidates accepted at a 25 percent tolerance spanning 26.6-fold refractory and 38.4-fold adaptation tau, zero-adaptation included; unscored because every registered F-I cell is consumed
 STAGE2_NANAMI_UNITS: closed; step levels 3-10 are the dimensionless in-silico PQN model stimulus, the in vivo amplitudes are irrecoverable, and the reserved PN trace is retired as a scoring source
 HETEROGENEOUS_CELLS: cell-dynamics-v0.3 binds MBON07 to a measured parameter set; GeNN promotes eight coefficients to per-neuron vars only when heterogeneous; both engines refuse the graded regime because no graded transmission model is registered
 STAGE1_DYNAMICS_REGISTRY: male-cns-cell-dynamics-v0.1; 39 JO-F bodies have class-level spiking priors and two SAD093 bodies remain unresolved; hybrid execution disabled
@@ -196,6 +197,16 @@ neurons rather than substituting the spiking model. Against the full traced grap
 neurons across 11,752 cell types have a measured parameter set, a measured fraction of 0.0024%,
 and engines report that fraction in run metadata. Stage 1 records the resolution but keeps
 execution on the source-faithful LIF baseline. No V1 or V2 tier is awarded.
+
+The VAL-01 ensemble was then built from the two registered training cells alone, by rejection
+sampling over candidates within 25 percent of the best training loss and by varying the unobserved
+onset state across seeds. It reaches the required five samples by four seeds and exposes that the
+family is not constrained: 130 of 768 candidates are accepted, spanning 3.7-fold in rheobase,
+26.6-fold in refractory period and 38.4-fold in adaptation time constant, and the accepted set
+includes a zero-adaptation model. The ensemble mean scores 18.847 Hz training RMSE against the
+7.630 Hz previously reported, which shows that figure was a property of scoring each per-cell best
+fit on the cell that selected it. The ensemble is unscored because every registered F-I recording
+is consumed.
 
 Useful retrieval commands:
 

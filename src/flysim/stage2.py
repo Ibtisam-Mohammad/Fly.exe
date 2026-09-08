@@ -1348,8 +1348,16 @@ def _simulate_adaptive_bank(
     sample_interval_ms: float,
     rate_window_ms: float,
     initial_voltage_phases: tuple[float, ...],
+    initial_voltage_matrix: np.ndarray | None = None,
+    initial_adaptation_matrix: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Vectorized candidate simulation used only for bounded model fitting."""
+    """Vectorized candidate simulation used only for bounded model fitting.
+
+    ``initial_voltage_matrix`` and ``initial_adaptation_matrix`` give each candidate its own
+    per-trial starting state, which is how the VAL-01 ensemble varies seeds without adding a
+    noise process the source data cannot constrain. Omitting both reproduces the shared-phase
+    behaviour exactly, so every earlier frozen result is unchanged.
+    """
     rheobase = bank["rheobase_pa"][indices]
     membrane_tau = bank["membrane_tau_ms"][indices]
     refractory = bank["refractory_ms"][indices]
@@ -1366,11 +1374,27 @@ def _simulate_adaptive_bank(
     trial_count = len(initial_voltage_phases)
     if trial_count < 1:
         raise ConfigurationError("At least one observation-model trial phase is required")
-    v = np.broadcast_to(
-        np.asarray(initial_voltage_phases, dtype=np.float64),
-        (len(indices), trial_count),
-    ).copy()
-    adaptation = np.zeros((len(indices), trial_count), dtype=np.float64)
+    if initial_voltage_matrix is None:
+        v = np.broadcast_to(
+            np.asarray(initial_voltage_phases, dtype=np.float64),
+            (len(indices), trial_count),
+        ).copy()
+    else:
+        v = np.asarray(initial_voltage_matrix, dtype=np.float64).copy()
+        if v.shape != (len(indices), trial_count):
+            raise ConfigurationError(
+                "Initial voltage matrix must be one row per candidate and one column per trial"
+            )
+    if initial_adaptation_matrix is None:
+        adaptation = np.zeros((len(indices), trial_count), dtype=np.float64)
+    else:
+        adaptation = np.asarray(initial_adaptation_matrix, dtype=np.float64).copy()
+        if adaptation.shape != (len(indices), trial_count):
+            raise ConfigurationError(
+                "Initial adaptation matrix must be one row per candidate and one column per trial"
+            )
+        if np.any(adaptation < 0.0):
+            raise ConfigurationError("Initial adaptation states cannot be negative")
     refractory_remaining = np.zeros((len(indices), trial_count), dtype=np.float64)
     spike_bins = np.zeros((len(indices), len(current_pa)), dtype=np.int16)
     for sample_index, injected_current in enumerate(current_pa):
@@ -2059,6 +2083,235 @@ def fit_projection_neuron_model(
         "claim_boundary": experiment.claim_boundary,
         "validation_tier_awarded": None,
         "tier_review_required": "immutable V1/V2 evidence bundle and feature-level review",
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    return result
+
+
+
+def build_projection_neuron_ensemble(
+    experiment_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Widen the frozen PN family into a VAL-01 uncertainty ensemble, and score nothing.
+
+    VAL-01 asks for five parameter samples by four seeds. The frozen family had two
+    per-cell draws and a deterministic integrator, so it met neither half. The parameter
+    samples come from rejection sampling over the candidates the two training cells cannot
+    distinguish, and the seeds vary the unobserved membrane and adaptation state at protocol
+    onset rather than injecting a noise process the data cannot constrain.
+
+    Every registered F-I recording has already been consumed, so this function deliberately
+    reads no held-out cell and produces no score.
+    """
+    contract = load_json(experiment_path)
+    if contract.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported PN ensemble contract schema")
+    parse_provenance(str(contract["provenance"]))
+
+    frozen_spec = contract["frozen_fit"]
+    fit_path = root / str(frozen_spec["path"])
+    observed_fit_sha256 = sha256_file(fit_path) if fit_path.is_file() else None
+    if observed_fit_sha256 != str(frozen_spec["sha256"]):
+        raise DatasetError(
+            "Frozen PN fit SHA-256 mismatch: "
+            f"expected {frozen_spec['sha256']}, observed {observed_fit_sha256}"
+        )
+    fit = load_json(fit_path)
+    if fit.get("frozen_before_external_evaluation") is not True:
+        raise DatasetError("The PN ensemble must be built from a pre-frozen fit")
+
+    artifact_spec = contract["required_artifact"]
+    artifact_path = root / str(artifact_spec["path"])
+    observed_artifact_sha256 = sha256_file(artifact_path) if artifact_path.is_file() else None
+    if observed_artifact_sha256 != str(artifact_spec["sha256"]):
+        raise DatasetError(
+            "PN ensemble source artifact SHA-256 mismatch: "
+            f"expected {artifact_spec['sha256']}, observed {observed_artifact_sha256}"
+        )
+
+    training_ids = tuple(str(value) for value in contract["training_specimen_ids"])
+    forbidden_ids = frozenset(str(value) for value in contract["forbidden_specimen_ids"])
+    if set(training_ids) & forbidden_ids:
+        raise ConfigurationError("A training cell is also listed as consumed")
+    if set(training_ids) != set(fit["fit_specimen_ids"]):
+        raise ConfigurationError(
+            "The ensemble must use exactly the training cells the frozen fit used"
+        )
+
+    settings = contract["ensemble"]
+    sample_count = int(settings["parameter_samples"])
+    seed_count = int(settings["seeds_per_condition"])
+    tolerance = float(settings["acceptance_tolerance_ratio"])
+    if sample_count < 5 or seed_count < 4:
+        raise ConfigurationError(
+            "VAL-01 requires at least five parameter samples and four seeds per condition"
+        )
+    if tolerance <= 1.0:
+        raise ConfigurationError("Acceptance tolerance must exceed the best achievable loss")
+
+    protocol = fit["protocol"]
+    final_step_us = int(protocol["final_integration_step_us"])
+    sample_interval_ms = float(protocol["sample_interval_ms"])
+    rate_window_ms = float(protocol["rate_window_ms"])
+    bank_settings = fit["candidate_bank"]
+
+    raw_experiment = load_json(
+        experiment_path.parent / "stage2-pn-dynamic-revision.json"
+    )
+    parameter_policy = raw_experiment["parameter_policy"]
+    bank = _adaptive_candidate_bank(
+        int(bank_settings["size"]),
+        int(bank_settings["seed"]),
+        membrane_taus_ms=tuple(float(value) for value in parameter_policy["membrane_tau_ms"]),
+        rheobase_range_pa=tuple(parameter_policy["rheobase_pa_range"]),
+        refractory_range_ms=tuple(parameter_policy["refractory_ms_range"]),
+        adaptation_tau_range_ms=tuple(parameter_policy["adaptation_tau_ms_range"]),
+        adaptation_increment_range=tuple(parameter_policy["adaptation_increment_range"]),
+    )
+    if not bank_settings["selected_indices"]:
+        raise DatasetError("The frozen fit records no selected candidate")
+
+    # The artifact legitimately contains the consumed cells; what matters is that the
+    # grouping below names only training cells, which the disjointness check above fixed.
+    table = pq.read_table(artifact_path)
+    current_pa, training_curves = _group_curves(
+        table, training_ids, "current_pa", "firing_rate_hz"
+    )
+
+    # Re-score the whole candidate bank against the training cells so acceptance is defined
+    # over every candidate, not only the two the frozen fit happened to select.
+    initial_phases = tuple(float(value) for value in protocol["trial_initial_voltage_phases"])
+    all_indices = np.arange(int(bank_settings["size"]))
+    rates = _simulate_adaptive_bank(
+        current_pa,
+        bank,
+        all_indices,
+        integration_step_us=final_step_us,
+        sample_interval_ms=sample_interval_ms,
+        rate_window_ms=rate_window_ms,
+        initial_voltage_phases=initial_phases,
+    )
+    residual = rates[:, None, :] - training_curves[None, :, :]
+    losses = np.mean(
+        np.where(
+            np.abs(residual) <= 5.0, 0.5 * residual**2, 5.0 * (np.abs(residual) - 2.5)
+        ),
+        axis=2,
+    )
+    best_per_cell = np.min(losses, axis=0)
+    accepted = np.flatnonzero(np.any(losses <= best_per_cell[None, :] * tolerance, axis=1))
+    if accepted.size < sample_count:
+        raise DatasetError(
+            f"Rejection sampling accepted only {accepted.size} candidates, fewer than the "
+            f"{sample_count} parameter samples VAL-01 requires"
+        )
+    generator = np.random.default_rng(int(settings["sample_seed"]))
+    selected = np.sort(generator.choice(accepted, size=sample_count, replace=False))
+
+    condition = settings["initial_condition_distribution"]
+    phase_low = float(condition["voltage_phase"]["low"])
+    phase_high = float(condition["voltage_phase"]["high"])
+    adaptation_low = float(condition["adaptation_state"]["low"])
+    adaptation_high = float(condition["adaptation_state"]["high"])
+    seed_generator = np.random.default_rng(int(settings["sample_seed"]) + 1)
+    initial_voltages = seed_generator.uniform(phase_low, phase_high, (sample_count, seed_count))
+    initial_adaptation = seed_generator.uniform(
+        adaptation_low, adaptation_high, (sample_count, seed_count)
+    )
+    member_rates = _simulate_adaptive_bank(
+        current_pa,
+        bank,
+        selected,
+        integration_step_us=final_step_us,
+        sample_interval_ms=sample_interval_ms,
+        rate_window_ms=rate_window_ms,
+        initial_voltage_phases=tuple(float(value) for value in initial_voltages[0]),
+        initial_voltage_matrix=initial_voltages,
+        initial_adaptation_matrix=initial_adaptation,
+    )
+    ensemble_mean = np.mean(member_rates, axis=0)
+    spread_low = np.percentile(member_rates, 5.0, axis=0)
+    spread_high = np.percentile(member_rates, 95.0, axis=0)
+    inside = np.mean(
+        (training_curves >= spread_low[None, :]) & (training_curves <= spread_high[None, :])
+    )
+
+    members = [
+        {
+            "sample_index": index,
+            "candidate_index": int(candidate),
+            "parameters": {key: float(values[candidate]) for key, values in bank.items()},
+            "initial_voltage_phases": [float(value) for value in initial_voltages[index]],
+            "initial_adaptation_states": [float(value) for value in initial_adaptation[index]],
+        }
+        for index, candidate in enumerate(selected)
+    ]
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": "stage2-pn-uncertainty-ensemble-v1",
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "provenance": str(contract["provenance"]),
+        "frozen_fit_path": str(fit_path),
+        "frozen_fit_sha256": observed_fit_sha256,
+        "parameters_refitted": False,
+        "training_specimen_ids": list(training_ids),
+        "specimen_ids_read": list(training_ids),
+        "forbidden_specimen_ids": sorted(forbidden_ids),
+        "candidate_bank_size": int(bank_settings["size"]),
+        "accepted_candidate_count": int(accepted.size),
+        "acceptance_tolerance_ratio": tolerance,
+        "ensemble": {
+            "parameter_samples": sample_count,
+            "seeds_per_condition": seed_count,
+            "member_count": sample_count * seed_count,
+            "members": members,
+        },
+        "parameter_uncertainty": {
+            "described_over": "every candidate the training cells cannot distinguish",
+            "accepted_ranges": {
+                key: {
+                    "minimum": float(np.min(values[accepted])),
+                    "median": float(np.median(values[accepted])),
+                    "maximum": float(np.max(values[accepted])),
+                    "max_to_min_ratio": (
+                        float(np.max(values[accepted]) / np.min(values[accepted]))
+                        if float(np.min(values[accepted])) > 0.0
+                        else None
+                    ),
+                }
+                for key, values in bank.items()
+            },
+            "finding": (
+                "A 25 percent loss tolerance admits candidates spanning several-fold ranges "
+                "in rheobase and adaptation. The two training cells do not constrain this "
+                "family tightly, and the previously reported 7.630 Hz training RMSE is a "
+                "property of scoring each per-cell best fit on the cell that selected it."
+            ),
+        },
+        "training_diagnostics": {
+            "ensemble_mean_rmse_hz": _rmse(training_curves, ensemble_mean[None, :]),
+            "frozen_two_draw_training_rmse_hz": float(fit["training"]["rmse_hz"]),
+            "training_fraction_inside_5_to_95_band": float(inside),
+            "band_is_not_a_gate": (
+                "The training curves selected these candidates, so coverage of the band is a "
+                "descriptive diagnostic and not a validation result."
+            ),
+        },
+        "acceptance": {
+            "meets_val01_parameter_samples": sample_count >= 5,
+            "meets_val01_seeds_per_condition": seed_count >= 4,
+            "all_predictions_finite": bool(np.all(np.isfinite(member_rates))),
+            "no_forbidden_specimen_read": not (forbidden_ids & set(training_ids)),
+            "held_out_evaluation_performed": False,
+        },
+        "tier_policy": str(contract["tier_policy"]),
+        "declared_blockers": [str(value) for value in contract["declared_blockers"]],
+        "claim_boundary": str(contract["claim_boundary"]),
+        "validation_tier_awarded": None,
     }
     result["logical_sha256"] = sha256_json(result)
     _atomic_json(output, result)

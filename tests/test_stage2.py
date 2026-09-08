@@ -294,3 +294,94 @@ def test_dynamic_timestep_review_rejects_wrong_holdout_identity(tmp_path: Path) 
 
     with pytest.raises(DatasetError, match="holdout result SHA-256 mismatch"):
         review_dynamic_projection_neuron_timestep(review, tmp_path, tmp_path / "out.json")
+
+
+def test_explicit_initial_state_reproduces_the_shared_phase_path() -> None:
+    """The VAL-01 seeding must not perturb any frozen result that did not use it."""
+    from flysim.stage2 import _adaptive_candidate_bank, _simulate_adaptive_bank
+
+    bank = _adaptive_candidate_bank(
+        24,
+        7,
+        membrane_taus_ms=(16.432, 21.331, 30.6),
+        rheobase_range_pa=(1.0, 80.0),
+        refractory_range_ms=(1.0, 30.0),
+        adaptation_tau_range_ms=(50.0, 2_000.0),
+        adaptation_increment_range=(0.0, 0.2),
+    )
+    current = np.linspace(0.0, 60.0, 40)
+    indices = np.arange(6)
+    phases = (0.0, 0.25, 0.5, 0.75)
+
+    shared = _simulate_adaptive_bank(
+        current,
+        bank,
+        indices,
+        integration_step_us=100,
+        sample_interval_ms=25.0,
+        rate_window_ms=50.0,
+        initial_voltage_phases=phases,
+    )
+    explicit = _simulate_adaptive_bank(
+        current,
+        bank,
+        indices,
+        integration_step_us=100,
+        sample_interval_ms=25.0,
+        rate_window_ms=50.0,
+        initial_voltage_phases=phases,
+        initial_voltage_matrix=np.tile(np.asarray(phases), (len(indices), 1)),
+        initial_adaptation_matrix=np.zeros((len(indices), len(phases))),
+    )
+
+    assert np.array_equal(shared, explicit)
+
+
+def test_a_misshaped_initial_state_matrix_is_refused() -> None:
+    from flysim.stage2 import _adaptive_candidate_bank, _simulate_adaptive_bank
+
+    bank = _adaptive_candidate_bank(
+        24,
+        7,
+        membrane_taus_ms=(16.432, 21.331, 30.6),
+        rheobase_range_pa=(1.0, 80.0),
+        refractory_range_ms=(1.0, 30.0),
+        adaptation_tau_range_ms=(50.0, 2_000.0),
+        adaptation_increment_range=(0.0, 0.2),
+    )
+    with pytest.raises(ConfigurationError, match="one row per candidate"):
+        _simulate_adaptive_bank(
+            np.linspace(0.0, 60.0, 40),
+            bank,
+            np.arange(6),
+            integration_step_us=100,
+            sample_interval_ms=25.0,
+            rate_window_ms=50.0,
+            initial_voltage_phases=(0.0, 0.5),
+            initial_voltage_matrix=np.zeros((3, 2)),
+        )
+
+
+def test_negative_initial_adaptation_is_refused() -> None:
+    from flysim.stage2 import _adaptive_candidate_bank, _simulate_adaptive_bank
+
+    bank = _adaptive_candidate_bank(
+        24,
+        7,
+        membrane_taus_ms=(16.432, 21.331, 30.6),
+        rheobase_range_pa=(1.0, 80.0),
+        refractory_range_ms=(1.0, 30.0),
+        adaptation_tau_range_ms=(50.0, 2_000.0),
+        adaptation_increment_range=(0.0, 0.2),
+    )
+    with pytest.raises(ConfigurationError, match="cannot be negative"):
+        _simulate_adaptive_bank(
+            np.linspace(0.0, 60.0, 40),
+            bank,
+            np.arange(6),
+            integration_step_us=100,
+            sample_interval_ms=25.0,
+            rate_window_ms=50.0,
+            initial_voltage_phases=(0.0, 0.5),
+            initial_adaptation_matrix=np.full((6, 2), -0.1),
+        )

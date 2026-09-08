@@ -140,6 +140,37 @@ Stage 1 records the same resolution but keeps execution on the source-faithful L
 Enabling type-resolved execution there would change every frozen Stage 1 number with no new
 validation evidence to justify it.
 
+## VAL-01 uncertainty ensemble, and what it exposes
+
+`VAL-01` requires five parameter samples by four seeds. The frozen projection-neuron family had
+two per-cell draws and a deterministic integrator, so it met neither half. Contract
+`stage2-pn-uncertainty-ensemble-v1` widens it using only the two originally registered training
+cells: parameter samples come from rejection sampling over candidates whose training loss is
+within 25% of the best on the same cell, and each seed varies the unobserved membrane and
+adaptation state at protocol onset rather than injecting a noise process the data cannot
+constrain.
+
+130 of the 768 candidates are accepted, and the ranges they span are the finding:
+
+| Parameter | Minimum | Median | Maximum | Max/min |
+|---|---:|---:|---:|---:|
+| Rheobase (pA) | 21.205 | 62.013 | 79.194 | 3.7 |
+| Membrane tau (ms) | 16.432 | 21.331 | 30.600 | 1.9 |
+| Refractory (ms) | 1.124 | 17.050 | 29.942 | 26.6 |
+| Adaptation tau (ms) | 50.676 | 170.498 | 1945.076 | 38.4 |
+| Adaptation increment | 0.000 | 0.068 | 0.197 | — |
+
+**The two training cells do not constrain this family.** A 25% loss tolerance admits a 27-fold
+range of refractory periods and a 38-fold range of adaptation time constants, and the accepted
+set includes `adaptation_increment = 0.0` — a model with no adaptation at all is within 25% of
+the best fit. The ensemble mean scores 18.847 Hz training RMSE against the 7.630 Hz previously
+reported for the two-draw family, which makes plain that the 7.630 Hz figure was a property of
+scoring each per-cell best fit on the cell that selected it, not of a well-determined family.
+
+The ensemble is deliberately **unscored**. Every registered F-I recording has already been
+consumed, by the first frozen evaluation or by the chronic-condition holdout, so evaluating the
+widened family on any of them would leak validation evidence.
+
 ## Claim boundary
 
 No tier is awarded. V1 requires that a fitted model predict resting voltage, membrane time
@@ -155,5 +186,5 @@ of a class Track A does not drive.
    two more Figure 7 files. Dryad now serves downloads behind a proof-of-work bot wall, so
    scripted acquisition under the project checksum-locking rule is currently blocked.
 3. Input resistance is unmeasurable from the MBON protocol because every sweep is suprathreshold.
-4. The VAL-01 ensemble requirement of five parameter samples by four seeds is still unmet by the
-   PN family, which carries two draws.
+4. The VAL-01 ensemble now has the required shape, but it cannot be scored: no unconsumed F-I
+   recording exists in any registered source.
