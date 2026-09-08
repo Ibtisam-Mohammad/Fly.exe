@@ -355,6 +355,38 @@ def test_the_registered_pair_reproduces_the_published_paired_pulse_ratio() -> No
     assert paired_pulse(rule.utilisation) / paired_pulse(0.79) == pytest.approx(2.735, abs=5e-4)
 
 
+def test_the_registry_records_its_failed_external_test_at_7_hz() -> None:
+    """The one external check the ND-06 rule has faced, and it did not pass cleanly.
+
+    Kazama and Wilson 2008 measure about 40% depression at 7 Hz; the registered pair predicts
+    56%. This is recorded rather than refit, because refitting to the failing test would remove
+    the only independent check the rule has.
+    """
+    payload = json.loads(
+        (REPO / "configs" / "neural" / "short-term-plasticity-v0.1.json").read_text()
+    )
+    test = payload["rules"][0]["external_test"]
+
+    assert test["verdict"].startswith("FAILED")
+    assert test["published_depression_fraction"] == 0.40
+    assert test["predicted_depression_fraction"] == pytest.approx(0.559, abs=5e-4)
+
+    # The prediction must follow from the registered parameters, not be a stored number.
+    registry = ShortTermPlasticityRegistry.load(
+        REPO / "configs" / "neural" / "short-term-plasticity-v0.1.json"
+    )
+    (rule,) = registry.rules
+    tau = rule.registered_recovery_tau_ms
+    assert tau is not None
+    isi = 1000.0 / 7.0
+    decay = float(np.exp(-isi / tau))
+    steady = (1.0 - decay) / (1.0 - (1.0 - rule.utilisation) * decay)
+    assert steady == pytest.approx(test["predicted_steady_state_resource"], abs=5e-4)
+    assert 1.0 - steady == pytest.approx(test["predicted_depression_fraction"], abs=5e-4)
+    # The discrepancy is the reportable quantity: about 16 percentage points.
+    assert (1.0 - steady) - test["published_depression_fraction"] == pytest.approx(0.159, abs=2e-3)
+
+
 def test_the_loader_refuses_a_utilisation_outside_its_registered_spread(tmp_path: Path) -> None:
     payload = json.loads(
         (REPO / "configs" / "neural" / "short-term-plasticity-v0.1.json").read_text()

@@ -60,7 +60,7 @@ class ShortTermPlasticityRegistry:
     @classmethod
     def load(cls, path: Path) -> ShortTermPlasticityRegistry:
         payload = load_json(path)
-        if payload.get("schema_version") not in {"1.0", "1.1"}:
+        if payload.get("schema_version") not in {"1.0", "1.1", "1.2"}:
             raise ConfigurationError("Unsupported short-term-plasticity registry schema")
         if "ND-06" not in payload.get("assumption_ids", []):
             raise ConfigurationError("A short-term-plasticity registry must cite ND-06")

@@ -1,8 +1,11 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "registry_id": "male-cns-short-term-plasticity-v0.1",
   "dataset_id": "male-cns:v1.0",
-  "assumption_ids": ["ND-04", "ND-06"],
+  "assumption_ids": [
+    "ND-04",
+    "ND-06"
+  ],
   "purpose": "ND-06 permits class-specific short-term plasticity only where evidence exists. The one synapse class with published quantitative depression parameters in the registered corpus is ORN-to-PN. Nagel, Hong and Wilson 2015 fit the depression-only Tsodyks-Markram equation this registry implements directly to measured EPSC amplitude as a function of stimulus number, so both the utilisation and the recovery time constant are taken from a fit to the depression trajectory itself rather than inferred from a separate quantity. This registry binds that class to those values, records the competing reading of Kazama and Wilson 2008, and carries a preregistered paired-pulse prediction, so the mechanism can be executed as a labelled alternative and never silently.",
   "model": {
     "family": "tsodyks-markram-depression-only",
@@ -22,11 +25,17 @@
       "utilisation": 0.22,
       "utilisation_provenance": "F",
       "utilisation_source": "Nagel, Hong and Wilson 2015, Figure 1c caption: 'Line is a fit of the simple synaptic depression model (Equation 1, see Methods; f = 0.78 and tau = 893 ms)'. Utilisation = 1 - f = 0.22. This is the whole unitary EPSC in control saline under 10 Hz stimulation, which is the quantity a single-rule depression model on the whole edge weight represents.",
-      "utilisation_range": [0.09, 0.23],
+      "utilisation_range": [
+        0.09,
+        0.23
+      ],
       "utilisation_range_derivation": "The three published fits of the same equation to the same synapse: whole EPSC in control saline f = 0.78 (utilisation 0.22); IMI-resistant fast component f = 0.77 (utilisation 0.23); curare-resistant slow component f = 0.91 (utilisation 0.09). The range is the spread across the pharmacological decomposition, not a confidence interval.",
       "recovery_tau_ms": {
         "value": 893.0,
-        "range": [629.0, 1006.0],
+        "range": [
+          629.0,
+          1006.0
+        ],
         "provenance": "F",
         "source": "Nagel, Hong and Wilson 2015, Figure 1c caption: 'f = 0.78 and tau = 893 ms', fit to EPSC amplitude versus stimulus number at 10 Hz in control saline.",
         "derivation": "The range spans the same three fits that set the utilisation range: 893 ms for the whole EPSC in control saline, 1006 ms for the IMI-resistant fast component, 629 ms for the curare-resistant slow component. A run must name the value it uses and the value must lie in this range. The paired utilisation and recovery time constant come from the same fit and must not be mixed across fits."
@@ -43,15 +52,40 @@
       "preregistered_prediction": {
         "quantity": "second-to-first unitary EPSC amplitude ratio at 10 Hz, ORN to uniglomerular PN, control saline",
         "predicted": 0.8033,
-        "predicted_at": {"utilisation": 0.22, "recovery_tau_ms": 893.0, "interstimulus_interval_ms": 100.0},
+        "predicted_at": {
+          "utilisation": 0.22,
+          "recovery_tau_ms": 893.0,
+          "interstimulus_interval_ms": 100.0
+        },
         "status": "consistent with the fit it was derived from, so it is not independent evidence; it becomes a test only against a paired-pulse or train recording not used by Nagel and colleagues",
         "steady_state_predictions": {
           "regular_train_10hz_exact": 0.3501,
           "regular_train_50hz_exact": 0.0933
         }
       },
-      "glomeruli_recorded": ["DM6", "VM2", "VM7", "DL5", "DM4"],
-      "claim_boundary": "Female cross-specimen values from a handful of glomeruli applied to every same-glomerulus ORN-to-uniglomerular-PN edge in MaleCNS. Not a measurement of MaleCNS synapses. Nagel and colleagues fitted the fast component in imidacloprid and the slow component in curare; the adopted whole-EPSC value is control saline but still a two-component response collapsed onto one resource variable."
+      "glomeruli_recorded": [
+        "DM6",
+        "VM2",
+        "VM7",
+        "DL5",
+        "DM4"
+      ],
+      "claim_boundary": "Female cross-specimen values from a handful of glomeruli applied to every same-glomerulus ORN-to-uniglomerular-PN edge in MaleCNS. Not a measurement of MaleCNS synapses. Nagel and colleagues fitted the fast component in imidacloprid and the slow component in curare; the adopted whole-EPSC value is control saline but still a two-component response collapsed onto one resource variable.",
+      "external_test": {
+        "source": "https://doi.org/10.1016/j.neuron.2008.02.030",
+        "quantity": "steady-state depression of the unitary EPSC under a 7 Hz train, the basal firing rate of a typical ORN",
+        "published": "Kazama and Wilson 2008: 'At frequencies mimicking the basal firing rate of a typical ORN (7 Hz), synaptic responses depress by about 40% but remain relatively strong.' That is depression to about 60% of rest.",
+        "published_depression_fraction": 0.4,
+        "predicted_depression_fraction": 0.559,
+        "predicted_steady_state_resource": 0.4409,
+        "predicted_by": "the registered utilisation 0.22 and recovery 893 ms, exact discrete steady state (1-c)/(1-(1-U)c) with c = exp(-142.86/893) = 0.85216",
+        "verdict": "FAILED. The registered rule over-predicts depression at 7 Hz by about 16 percentage points against an independent measurement from a different paper. This is the first external test the rule has faced and it does not pass cleanly.",
+        "independence": "Genuinely independent of the fit: Kazama and Wilson measured 7 Hz trains in VM2, while the registered parameters come from Nagel and colleagues' 10 Hz fit in DM6 and VM2. It is not a clean falsification either, because 'about 40%' is a discussion-section round number with no error bar.",
+        "values_that_would_reproduce_it": "utilisation about 0.107 at the registered 893 ms, which lies inside the registered utilisation range [0.09, 0.23]; or recovery about 433 ms at the registered utilisation, which lies outside the registered range [629, 1006].",
+        "not_acted_on": "No parameter is changed on this basis. Refitting to the failing test would remove the only external check the rule has. It is recorded so the next registry revision starts from a known discrepancy."
+      },
+      "model_form_independently_supported": "Kazama and Wilson 2008 Figure 8G: 7 Hz stimulation decreases 1/CV^2 and the decrease correlates with the decrease in uEPSC amplitude (Pearson r = 0.79, p < 1e-4), implying a presynaptic locus. That independently supports the presynaptic-depletion form of the Tsodyks-Markram model used here, separately from its parameter values.",
+      "two_component_conflict_resolved": "Kazama and Wilson 2008 inferred from evoked-stimulation failure modes that the fast and slow EPSC decay components 'originate from different synapses', the slow one polysynaptic. Nagel and colleagues measured both components in spontaneous EPSCs, each of which 'arises from a single ORN spike, and any dynamics present in these EPSCs must therefore arise from unitary ORN-to-PN connections', and separated them pharmacologically at the same synapse. The spontaneous measurement is monosynaptic by construction, so the whole-EPSC parameter choice registered here is sound."
     }
   ],
   "engine_coverage": {
@@ -62,5 +96,5 @@
   },
   "validation_status": "The parameters are now fitted values from a published recording of this synapse class rather than an unresolved engineering range, but no MaleCNS rate-dependent ORN-to-PN recording is registered and no recording independent of Nagel and colleagues has been located, so this rule remains an executable labelled alternative for sensitivity ensembles and awards no validation tier. The open prediction is the paired-pulse ratio above against a recording not used in the fit.",
   "revision_note": "Issued at schema 1.0 with utilisation 0.79 taken from the Kazama and Wilson release probability and recovery_tau_ms left unresolved in an invented [25, 500] ms window. Corrected to schema 1.1 before first commit, so no artifact was ever produced under the superseded values. The correction followed verification of Nagel, Hong and Wilson 2015 against the open-access full text: that paper fits this registry's exact equation and publishes both parameters, its recovery time constant of 893 ms fell outside the invented ceiling, and the superseded utilisation was a different physical quantity that mispredicts the measured paired-pulse ratio by a factor of 2.735.",
-  "last_reviewed": "2026-09-08"
+  "last_reviewed": "2026-09-09"
 }

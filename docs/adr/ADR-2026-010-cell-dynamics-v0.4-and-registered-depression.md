@@ -92,6 +92,22 @@ resistance a fitting artifact of the single-compartment LIF form rather than a m
 the cell. A conductance-based or multi-compartment form is what would resolve it; nothing in
 v0.4 claims it is resolved.
 
+**Superseding note, 2026-09-09.** The comparison above leaned on another model's constant, which
+was the weakest part of the argument. A measured value is now in the corpus: Gouwens and Wilson
+2009 report a PN input resistance of **598.0 +/- 69.3 MOhm (n = 14)**, which is 7 to 15 times
+below the 4.4 to 6.4 GOhm this fit implies. The fitting-artifact conclusion therefore rests on a
+measurement rather than on a modelling choice, and it is strengthened rather than changed. The
+same paper adds a second correction candidate that cuts the other way: the electrode seal
+conductance depolarises measured somatic resting potentials by about 10 mV, from -47.8 +/- 1.6 mV
+to a true -57.8 +/- 1.5 mV (n = 12), because *Drosophila* input resistances approach the seal
+resistance. The error is a divider toward a seal reversal near 0 mV, so it is larger at more
+hyperpolarised potentials, which means the true threshold-to-rest distance is **wider** than a
+whole-cell recording shows. For v0.4's MBON07 that widens the 18.5 mV gap and makes the rheobase
+inconsistency worse, not better. No registry value is changed on this basis yet, because
+Nanami's recording conditions have to be checked first, but every `resting_mv` in
+`configs/neural/` is now a correction candidate. See
+[the literature parameter corpus](../evidence/LITERATURE_PARAMETER_CORPUS.md) section 3.
+
 Every value in v0.4 carries its rule-dependent range in `value_ranges`, which the loader
 validates contains the registered value, so no downstream report can quote a value as tighter
 than the measurement rules left it.
@@ -167,11 +183,31 @@ Because the registry was corrected before it was ever committed, no artifact was
 the superseded values; `revision_note` records the correction so the history is not silently
 clean.
 
-**What this does not establish.** No MaleCNS synapse was measured, no recording independent of
-Nagel and colleagues has been located, and the adopted whole-EPSC value collapses a genuinely
-two-component response onto one resource variable. The rule awards no tier. Its one open
-prediction is the 0.8033 paired-pulse ratio against a recording not used in the fit — which is
-not evidence today, since the value was fitted to the trajectory that ratio comes from.
+**What this does not establish.** No MaleCNS synapse was measured, and the adopted whole-EPSC
+value collapses a genuinely two-component response onto one resource variable. The rule awards no
+tier. Its one open prediction is the 0.8033 paired-pulse ratio against a recording not used in
+the fit — which is not evidence today, since the value was fitted to the trajectory that ratio
+comes from.
+
+**Superseding note, 2026-09-09: the rule has now faced an external test and did not pass
+cleanly.** Kazama and Wilson 2008 independently measure depression under a 7 Hz train, the basal
+firing rate of a typical ORN: *"synaptic responses depress by about 40% but remain relatively
+strong."* The registered pair predicts a steady-state resource of 0.4409, so 55.9% depression,
+**over-predicting by about 16 percentage points**. Utilisation near 0.107 would reproduce the
+measurement at the registered 893 ms, and that value lies inside the registered utilisation range
+[0.09, 0.23]; a recovery near 433 ms would also reproduce it but lies outside the registered
+range. Nothing is refit on this basis, because refitting to the failing test would remove the
+only independent check the rule has; the discrepancy is recorded in the registry under
+`external_test` and asserted by a test so it cannot be quietly dropped.
+
+Two things in the same paper support the rule rather than undermining it. Its Figure 8G shows
+that 7 Hz stimulation decreases 1/CV-squared in step with the uEPSC amplitude decrease (Pearson
+r = 0.79, p < 1e-4), which independently confirms a presynaptic locus and therefore the
+depletion *form* of the model, separately from its parameters. And the apparent conflict over the
+two EPSC decay components is resolved in the registry's favour: Kazama and Wilson inferred from
+evoked-stimulation failure modes that they "originate from different synapses", but Nagel and
+colleagues measured both in *spontaneous* EPSCs, each of which "arises from a single ORN spike",
+making them monosynaptic by construction. The whole-EPSC choice stands.
 
 Depression is implemented on the NumPy circuit runner only. The Brian2 and GeNN runners and the
 Track A engine must refuse a run that asks for it, and `engine_coverage` says so.

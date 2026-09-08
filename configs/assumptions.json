@@ -242,13 +242,13 @@
       "units": "categorical",
       "provenance": "M/P/F",
       "applies_to": "chemical synaptic edges",
-      "source": "project scientific rule",
-      "biological_mismatch": "Postsynaptic receptor evidence is incomplete.",
-      "uncertainty": "Unresolved edge signs are latent model alternatives.",
+      "source": "project scientific rule; ADR-2026-010; docs/evidence/LITERATURE_PARAMETER_CORPUS.md section 7",
+      "biological_mismatch": "The transmitter term is supported: receptor class matches the neurotransmitter used by the presynaptic input. The receptor refinement is not obtainable at connectome scale, because different receptors for the same transmitter localise to different dendritic domains receiving different presynaptic partners, so the quantity is partner-specific rather than cell-specific.",
+      "uncertainty": "Unresolved edge signs remain latent model alternatives. The refinement beyond the transmitter term is a stated boundary rather than a pending action: no bulk expression atlas can supply a partner-specific quantity, and the domain-resolved measurement exists only for a handful of visual-system neurons. The MaleCNS receptorType annotation carries 752 non-null entries, all gustatory (ppk23, ppk25, IR52b), and none olfactory.",
       "status": "accepted",
-      "validation": "paired physiology and causal perturbation",
+      "validation": "paired physiology and causal perturbation; the receptor term additionally requires domain-resolved and partner-resolved localisation, which is not available at scale",
       "owner": "neural",
-      "last_reviewed": "2026-09-04"
+      "last_reviewed": "2026-09-09"
     },
     {
       "id": "ND-04",
