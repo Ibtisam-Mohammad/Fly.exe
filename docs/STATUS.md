@@ -579,3 +579,34 @@ biased upward where completeness is low, and DM4 has the lowest completeness of 
 extent or meshes and which this analysis did not compute. That would test Kazama and Wilson's
 actual r = 0.75 correlation over all 50 glomeruli instead of an ordering over four, and it is the
 indicated next experiment for the synaptic tier.
+
+### The uEPSC kernel family, executed (2026-09-09)
+
+`stage2-uepsc-kernel-family-v2`, artifact `evidence/stage2/uepsc-kernel-family-v2.json`
+SHA-256 `d5081097f07147aa70f70e54b4c4786d6ef35dd3850382231a6c8cf53744b9aa`. All four hypotheses
+pass and the fit converges on the interior of its grid.
+
+| | single decay (frozen family) | two decays | published target |
+|---|---|---|---|
+| Huber training loss | 0.58737 | **0.45875** (−21.9%) | — |
+| kernel half-decay | 12.20 ms | **9.00 ms** | ~7 ms |
+| population amplitude | 30.25 pA (−17.4%) | **32.39 pA (−11.5%)** | direct measurement 36.61 pA |
+| decay constants | 16.5 ms | fast 8.0 / slow 40.0 ms, fast fraction 0.85 | Nagel 9.3 / 80 ms, 0.786 |
+
+The fitted fast constant of 8.0 ms sits close to Nagel and colleagues' 9.3 ms. The slow constant
+does not, and that is a limitation of the recordings rather than a contradiction: the traces span
+about 200 ms, so a 40 ms component cannot be separated from an 80 ms one with confidence, and the
+contract says so.
+
+**What it settles.** ADR-2026-008 recorded the frozen kernel's decay as failing its holdout at
+0.463 median fractional error against a 0.30 limit and read that as a measured inadequacy. It is
+substantially a misspecification both source papers predicted: the family had one decay where the
+synapse has two. **What it does not settle:** neither family is validated, because both are
+fitted to all twelve already-consumed cells, and even two decays leave the amplitude 11.5% below
+the direct measurement and the half-decay 29% above the published value. A better prior, not a
+tested model.
+
+**Two process notes.** The v1 run hit a grid boundary — its slow decay pinned at the 30 ms floor —
+so v2 widens the grid, converges interior, and adds H5 to make a future boundary hit fail a
+criterion rather than appear only as a flag. And the contract declares in three places that it is
+not blind: the comparison was explored before it was written.
