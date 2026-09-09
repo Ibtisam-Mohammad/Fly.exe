@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-exit-gate-v4",
+  "title": "Stage 2 exit gate rebuilt on structural predictions, with the two data-blocked physiology legs retired to recorded priors",
+  "provenance": "E",
+  "assumption_ids": [
+    "ND-01",
+    "ND-02",
+    "ND-03",
+    "ND-04",
+    "ND-05",
+    "ND-06",
+    "VAL-01",
+    "DATA-03"
+  ],
+  "purpose": "ADR-2026-011 retires the cellular and synaptic legs as gates because the raw traces they need are not public for anyone, a reason independent of whether they pass, and rebuilds the gate on structural predictions against the locked connectome. The retired legs are still read and still checksum-verified; they are no longer scored. The gate is 0 of 3 after this change, so nothing is gained by it.",
+  "supersedes": {
+    "experiment_id": "stage2-exit-gate-v3",
+    "what_changes": "the leg composition: cellular and synaptic move to retired_legs, a structural leg is added, and the circuit and ensemble legs are unchanged including their artifact pins",
+    "what_does_not_change": "no verdict is withdrawn. The v3 result of 0 of 4 stands as recorded, and every artifact keeps its checksum and its caveats.",
+    "why": "Two of the four legs could not be satisfied or refuted by anyone, so they measured the availability of somebody else's unpublished data rather than this model. ADR-2026-011 records the decision, its justification against the September 2026 audit finding of gate redefinition, and what is lost by it."
+  },
+  "gate_statement": {
+    "source": "AGENTS.md section 9, Stage 2",
+    "text": "Held-out cellular, synaptic and circuit responses are predicted in time and amplitude, not merely activation order. Key predictions survive plausible parameter/model ensembles. A cellular or synaptic prediction counts only if it beats the training-cohort mean on the held-out cells."
+  },
+  "composition_rule": "A structural leg may only enter the gate at a criterion registered before the test that scores it was run. Without that rule this restructure would be criterion-shopping at the highest level, because every other structural result available when it was written already had a known outcome.",
+  "legs": [
+    {
+      "id": "circuit",
+      "requirement": "A held-out circuit response is predicted, not merely the activation order.",
+      "artifact": {
+        "path": "evidence/male-cns-v1.0/shiu-antennal-grooming-transfer-delayfix.json",
+        "sha256": "a734ea71f21146e7e743d52463ea41077bdd97568f81ccc1c360bb1668d9cfe2"
+      },
+      "read": [
+        "stage1_gate_assessment",
+        "held_out_positive_response_coverage"
+      ],
+      "expect_at_least": 0.8,
+      "sufficiency_caveats": [
+        "the reference is archived FlyWire simulation output, not biological response data, so even a pass here would not settle the circuit leg biologically",
+        "the 0.8 coverage threshold is set by this contract and is not derived from any source; positive-response coverage asks only whether the readout fires at frequencies where the reference fires, which is weaker than the gate statement's 'time and amplitude'",
+        "the transferred circuit is a one-hop induced subgraph of 41 neurons between mapped inputs and readouts, while the reference simulated the whole brain, so a rate mismatch between the two is structural before any biophysical mechanism is invoked"
+      ]
+    },
+    {
+      "id": "ensemble",
+      "requirement": "Key predictions survive a plausible parameter and model ensemble of the VAL-01 shape.",
+      "artifact": {
+        "path": "evidence/stage2/projection-neuron-ensemble-v1.json",
+        "sha256": "066046f8809edf51260caaacff78c805cf30ae85e9164c9feb7b43f0cac031d4"
+      },
+      "read": [
+        "acceptance",
+        "held_out_evaluation_performed"
+      ],
+      "expect": true,
+      "sufficiency_caveats": [
+        "the ensemble has the required five-by-four shape but every registered held-out recording is consumed, so no prediction has been scored across it",
+        "the accepted members span a 27-fold range of refractory period and a 38-fold range of adaptation time constant at a 25 percent loss tolerance, so a future score across this ensemble would report the width of an unconstrained family rather than the robustness of a prediction"
+      ]
+    },
+    {
+      "id": "structural",
+      "requirement": "A structural prediction drawn from the published physiology holds on the checksum-locked connectome, at a criterion registered before the test that scores it was run.",
+      "artifact": {
+        "path": "evidence/male-cns-v1.0/stage2-bilateral-symmetry-v1.json",
+        "sha256": "c74a4c55fd9c3a19404628c4346093aa2c331a5b8fdc3d5c2b772cd15859d11c"
+      },
+      "read": [
+        "hypotheses",
+        "H1",
+        "passed"
+      ],
+      "expect": true,
+      "registered_before_the_run": "The bilateral-symmetry contract was committed at 564bdb9 and the run executed afterwards, so H1 could not be chosen to fit the outcome. That ordering is the composition rule ADR-2026-011 adopts, and it is the reason this leg is allowed into the gate at all.",
+      "sufficiency_caveats": [
+        "a structural test exercises the connectome and the published anatomy, not this project's simulator; no membrane parameter, synaptic kernel or integration step is touched, so a pass here could never validate the model",
+        "it rests on identifying one anatomical contact with one vesicular release site, which two independent results now put under quantitative pressure: the completeness correction gives corrected contact counts about 2.06 times the Kazama and Wilson release-site estimate, and this leg's own H1 finds a 1.56-fold ipsilateral bias where they measured none",
+        "the Kazama and Wilson figure of p > 0.54 is a failure to reject rather than a demonstration of equality, so this rejection is not necessarily a disagreement with their data; it is a quantitative prediction their experiment may not have had the power to test",
+        "H1 is rejected at p = 2.7e-31 with a median ipsilateral-to-contralateral ratio of 1.561, so this leg fails"
+      ]
+    }
+  ],
+  "retired_legs": [
+    {
+      "id": "cellular",
+      "requirement": "A held-out cellular response is predicted in amplitude by a model frozen beforehand, better than the training-cohort mean predicts it.",
+      "artifact": {
+        "path": "evidence/stage2/projection-neuron-dynamic-condition-holdout-v1.json",
+        "sha256": "401812a90bd8bffa77ab6381676f7717e62368089545d04a50595eec41c0a434"
+      },
+      "read": [
+        "metrics",
+        "normalized_error_ratio"
+      ],
+      "sufficiency_caveats": [
+        "the held-out cells come from the same paper under a chronic-exposure condition that the paper reports leaves firing-rate curves and input resistance unchanged, so this is a same-population holdout",
+        "only firing rate is scored; resting voltage, membrane time constant and adaptation are not predicted by this model at all",
+        "the frozen family's held-out RMSE is 13.17 Hz against 12.38 Hz for the two-cell training mean, ratio 1.064; the holdout's own preregistered limit of 1.2 was met and is recorded in its artifact, but under this gate the leg fails"
+      ],
+      "retired_because": "The leg requires raw patch-clamp traces from a population independent of the training cells. No public repository holds raw Drosophila projection-neuron traces; confirmed absent for Kazama and Wilson 2008 and 2009, Gouwens and Wilson 2009, and Nagel and Wilson 2015. What the leg is built from is published figure data, which makes it a same-population holdout scoring firing rate alone, as its own caveats record. No work available to this project changes that, so the leg is a wait rather than a test.",
+      "reinstate_when": "Raw Drosophila projection-neuron recordings become available, publicly or by collaboration, from a population independent of the two-cell training cohort. The leg then returns at a criterion at least as strict as the v3 normalized error ratio below 1.0."
+    },
+    {
+      "id": "synaptic",
+      "requirement": "A held-out synaptic response is predicted in time and amplitude against preregistered numeric feature limits.",
+      "artifact": {
+        "path": "evidence/stage2/uepsc-kinetics-holdout-v1.json",
+        "sha256": "68877f888a3080100df85dd01f91308d215596b81744cd1b7299abea4dcc9275"
+      },
+      "read": [
+        "acceptance",
+        "v2_kinetics_subgate_pass"
+      ],
+      "sufficiency_caveats": [
+        "the source traces were aligned on their peaks by the authors, so every one of the twelve recorded waveforms peaks on the same sample; the peak-time criterion therefore measures the alignment convention and the kernel's own onset, and the inward-sign criterion is satisfied by selection; only the decay criterion is informative, and it fails",
+        "the amplitude leg was excluded on a state-confound argument that the source paper does not support: it reports unitary amplitudes and kinetics indistinguishable between solvent and exposed cells, so the kernel's 13.6 pA median underprediction on these five cells is a model error, not a state difference",
+        "even a pass would leave release failure and short-term plasticity untested; the source paper's release probability of 0.79 and depression onset near 50 spikes per second are registered but unmodelled"
+      ],
+      "retired_because": "The leg requires raw ORN-to-PN unitary EPSC traces. None are public, and the twelve source waveforms available were peak-aligned by their authors, so the peak-time criterion measures the alignment convention and the inward-sign criterion is satisfied by selection, as its own caveats record. The holdout cohort is empty and cannot be filled from figure data.",
+      "reinstate_when": "Raw unitary EPSC traces become available from a preparation not used to fit the kernel. The leg then returns at a criterion at least as strict as the v3 one, with a genuinely held-out cohort and without peak alignment."
+    }
+  ],
+  "structural_results_deliberately_not_scored": [
+    {
+      "id": "orn_pn_convergence",
+      "path": "evidence/male-cns-v1.0/orn-pn-convergence-v1.json",
+      "why_not_scored": "Its outcome was known before this leg existed, so scoring it would breach the composition rule. Recorded as context: both preregistered hypotheses fail globally, minimum completeness 0.485 against a required 1.0, while four glomeruli are exactly complete and the prediction holds precisely where the reconstruction permits it to be tested."
+    },
+    {
+      "id": "glomerular_volume_scaling",
+      "path": "evidence/male-cns-v1.0/glomerular-volume-scaling-v1.json",
+      "why_not_scored": "Same reason, and it is unsettled rather than failed: the correlation sits at p = 0.066 to 0.146 depending on the correction model, which is want of power at 50 glomeruli."
+    },
+    {
+      "id": "completeness_corrected_contacts",
+      "path": "evidence/male-cns-v1.0/completeness-corrected-contacts-v1.json",
+      "why_not_scored": "Same reason. It also fails its own gate: 45 of 50 glomeruli have a measured completeness below the floor the thinning model can produce at any survival rate."
+    }
+  ],
+  "supporting_evidence": [
+    {
+      "id": "cellular_observables",
+      "path": "evidence/stage2/cellular-observables-v2.json",
+      "sha256": "7cbacca867818a3927b83bfe75cc8fbaf99b03768de8b57e8cd9bacd497c482b",
+      "role": "records which V1 observables are measured at all and for which cell classes, with the review diagnostics that show what the primary values assume"
+    },
+    {
+      "id": "synaptic_structure",
+      "path": "evidence/stage2/synaptic-structure-v2.json",
+      "sha256": "0d55155008591c4ea389e8d055b452c0cffbc53a290296a2e66d45dd636a137c",
+      "role": "records whether contact number could carry the type-pair scale ND-04 requires, against the corrected statement of the published claim"
+    }
+  ],
+  "acceptance": {
+    "stage2_exit_gate_passed": "every scored leg passes",
+    "partial_pass_is_not_a_pass": "Stage 2 does not exit on a subset. A leg that passes is recorded so the remaining work is visible, not so the stage can be declared complete.",
+    "retiring_a_leg_is_not_passing_it": "The cellular and synaptic legs are not passed, waived or satisfied. They are unscored for want of input and reported at every evaluation, and any statement of Stage 2 must say which legs were scored.",
+    "narrower_than_the_gate_statement": "The gate statement in AGENTS.md section 9 requires held-out cellular, synaptic and circuit responses. This contract scores one of those three. A pass here is therefore weaker than the statement it is drawn from, and AGENTS.md must be amended to say so rather than left to imply otherwise."
+  },
+  "review": "ADR-2026-011, to be read with ADR-2026-009 and ADR-2026-010",
+  "tier_policy": "This contract evaluates a stage exit gate and awards no validation tier. Tiers are awarded only by immutable evidence bundles.",
+  "claim_boundary": "A mechanical re-evaluation of a restructured Stage 2 exit gate against checksum-pinned artifacts. It awards no tier, and it does not assert that the restructured gate is sufficient for Stage 2; ADR-2026-011 records explicitly what is lost.",
+  "last_reviewed": "2026-09-09"
+}

@@ -1293,6 +1293,42 @@ def evaluate_stage2_exit_gate(
             }
         )
 
+    # Retired legs are still read and still checksum-verified; they are simply not scored.
+    # ADR-2026-011 retires the cellular and synaptic legs because the raw traces they need
+    # are not public for anyone, which is a reason independent of whether they pass. Dropping
+    # their verification along with their scoring would turn a disclosed narrowing of the
+    # gate into a silent one.
+    retired: list[dict[str, Any]] = []
+    for leg in contract.get("retired_legs", []):
+        artifact = leg["artifact"]
+        path = root / str(artifact["path"])
+        observed = sha256_file(path) if path.is_file() else None
+        if observed != str(artifact["sha256"]):
+            raise DatasetError(
+                f"Retired exit-gate leg {leg['id']!r} artifact SHA-256 mismatch for "
+                f"{artifact['path']}: expected {artifact['sha256']}, observed {observed}"
+            )
+        for required in ("retired_because", "reinstate_when"):
+            if not str(leg.get(required, "")).strip():
+                raise ConfigurationError(
+                    f"Retired exit-gate leg {leg['id']!r} must declare {required!r}"
+                )
+        retired_value = _read_path(load_json(path), [str(key) for key in leg["read"]])
+        retired.append(
+            {
+                "id": str(leg["id"]),
+                "requirement": str(leg["requirement"]),
+                "artifact_path": str(artifact["path"]),
+                "artifact_sha256": observed,
+                "read": list(leg["read"]),
+                "observed_value": retired_value,
+                "scored": False,
+                "retired_because": str(leg["retired_because"]),
+                "reinstate_when": str(leg["reinstate_when"]),
+                "sufficiency_caveats": [str(item) for item in leg["sufficiency_caveats"]],
+            }
+        )
+
     supporting: list[dict[str, Any]] = []
     for item in contract.get("supporting_evidence", []):
         path = root / str(item["path"])
@@ -1316,6 +1352,7 @@ def evaluate_stage2_exit_gate(
         "provenance": str(contract["provenance"]),
         "gate_statement": dict(contract["gate_statement"]),
         "legs": legs,
+        "retired_legs": retired,
         "supporting_evidence": supporting,
         "legs_passed": [leg["id"] for leg in legs if leg["passed"]],
         "legs_failed": failing,

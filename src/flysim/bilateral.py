@@ -55,7 +55,6 @@ def load_sided_olfactory_populations(
     instances = table.column("instance").to_pylist()
     receptors: dict[tuple[str, str], list[int]] = {}
     projections: dict[tuple[str, str], list[int]] = {}
-    unsided_receptors = 0
     for body, label, status, root_side, instance in zip(
         body_ids, types, statuses, root_sides, instances, strict=True
     ):
@@ -63,7 +62,9 @@ def load_sided_olfactory_populations(
             continue
         if label.startswith(RECEPTOR_PREFIX):
             if root_side not in SIDES:
-                unsided_receptors += 1
+                # 409 of 2,635 ORN bodies carry rootSide 'unknown'. They are dropped
+                # because the test is about which antenna, and the contract records the
+                # count.
                 continue
             key = (label[len(RECEPTOR_PREFIX) :], str(root_side))
             receptors.setdefault(key, []).append(int(body))
@@ -88,6 +89,11 @@ def _sign_test(differences: np.ndarray) -> tuple[int, int, float]:
 
     Hand-rolled because scipy is not a declared dependency of this project. Ties are
     discarded, which is the standard convention and is conservative here.
+
+    The tail is summed in log space. The obvious form, an exact binomial coefficient
+    divided by ``2.0 ** total``, overflows above about a thousand observations, which is
+    not hypothetical: the within-ORN version of this comparison has some two thousand
+    paired observations and raised OverflowError on the first attempt.
     """
     positive = int(np.count_nonzero(differences > 0.0))
     negative = int(np.count_nonzero(differences < 0.0))
@@ -95,8 +101,19 @@ def _sign_test(differences: np.ndarray) -> tuple[int, int, float]:
     if total == 0:
         return 0, 0, 1.0
     smaller = min(positive, negative)
-    tail = sum(math.comb(total, k) for k in range(smaller + 1)) / (2.0**total)
-    return positive, negative, min(1.0, 2.0 * tail)
+    log_half = total * math.log(0.5)
+    log_terms = [
+        math.lgamma(total + 1)
+        - math.lgamma(k + 1)
+        - math.lgamma(total - k + 1)
+        + log_half
+        for k in range(smaller + 1)
+    ]
+    largest = max(log_terms)
+    log_tail = largest + math.log(
+        math.fsum(math.exp(term - largest) for term in log_terms)
+    )
+    return positive, negative, min(1.0, 2.0 * math.exp(log_tail))
 
 
 def _pair_contacts(

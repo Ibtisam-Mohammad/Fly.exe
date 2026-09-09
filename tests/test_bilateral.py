@@ -55,6 +55,29 @@ def test_no_observations_cannot_reject() -> None:
     assert _sign_test(np.empty(0))[2] == 1.0
 
 
+def test_the_sign_test_survives_more_than_a_thousand_observations() -> None:
+    """The first implementation divided an exact binomial coefficient by 2.0 ** n and
+    raised OverflowError above about a thousand paired observations, which the within-ORN
+    version of this comparison exceeds."""
+    values = np.concatenate([np.ones(1200), -np.ones(1100)])
+
+    positive, negative, p_value = _sign_test(values)
+
+    assert (positive, negative) == (1200, 1100)
+    assert 0.0 <= p_value <= 1.0
+    # 1200 of 2300 is a mild excess; it should not be significant.
+    assert p_value > 0.01
+    # And an extreme split at the same size must underflow to zero rather than overflow.
+    assert _sign_test(np.ones(3000))[2] == pytest.approx(0.0, abs=1e-300)
+
+
+def test_the_sign_test_matches_a_published_critical_value() -> None:
+    """Fifteen of eighteen in one direction: two-sided p is 0.0075 to four decimals."""
+    values = np.concatenate([np.ones(15), -np.ones(3)])
+
+    assert _sign_test(values)[2] == pytest.approx(0.007538, abs=5e-6)
+
+
 def test_the_sign_test_is_calibrated_against_the_null() -> None:
     generator = np.random.default_rng(19)
     rejects = 0
