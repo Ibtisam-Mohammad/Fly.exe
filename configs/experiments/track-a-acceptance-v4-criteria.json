@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "track-a-acceptance-v4-criteria",
+  "title": "Split the conflated grooming-displacement criterion into one that tests the replay and one that tests station-keeping",
+  "status": "preregistered, not executed",
+  "provenance": "E",
+  "assumption_ids": ["BODY-01", "MOTOR-03", "DEMO-01"],
+  "registered_before": "any station-keeping controller exists. This contract is written first, deliberately, so the criterion cannot be chosen after seeing what a controller achieves.",
+  "problem": {
+    "summary": "The v3 criterion caps total body displacement during a 3-second grooming bout at 2.5 mm, one adult body length, and 0 of 30 runs clear it. The diagnosis in docs/evidence/TRACK_A_STATION_KEEPING.md shows the criterion is not principally measuring what it was introduced to measure.",
+    "decomposition": {
+      "standing_no_command_all_six_legs_adhered_mm": 2.161,
+      "grooming_adhesion_pattern_no_replay_mm": 4.917,
+      "full_grooming_bout_with_replay_v3_median_mm": 6.26,
+      "adhesion_fully_off_standing_mm": 14.297,
+      "replay_own_contribution_mm": 1.34,
+      "adhesion_pattern_contribution_mm": 2.756,
+      "baseline_creep_contribution_mm": 2.161
+    },
+    "why_the_criterion_is_wrong": "The cap exists to bound how far the grooming joint replay translates the body. The replay contributes about 1.34 mm of the 6.26 mm, the smallest of the three terms. Baseline creep runs at about 0.88 mm/s and is linear over six seconds, so a stationary body under no command passes 2.5 mm after roughly 2.8 seconds. A 3-second bout therefore cannot clear the cap whatever the replay does, and the criterion is dominated by a stance defect it was never meant to test.",
+    "why_this_is_not_simply_relaxing_a_failed_criterion": "Because the failure does not go away. The conflated criterion is split into two, and the second one fails until a station-keeping controller exists. The absolute displacement continues to be measured and reported at every run. Nothing that currently fails becomes unreported; what changes is that two distinct defects stop being scored as one."
+  },
+  "disclosure": {
+    "not_blind": "Every number above was measured before this contract was written, and applying the new B1 criterion to the existing v3 data would yield about 1.34 mm against a 2.5 mm allowance, which passes. Restating a criterion after it fails, in the direction that makes it pass, is exactly the move this project has had to repair twice. It is done here only because the diagnosis identifies a specific measurement error - two mechanisms summed into one number - and only alongside B2, which is new, which fails, and which cannot be cleared without fixing the underlying defect.",
+    "prior_repairs_of_this_kind": "ADR-2026-006 replaced a shuffled control that could not fail, and ADR-2026-009 plus the widened-sweep v2 contract corrected two criteria satisfied by degenerate outcomes. This contract is the third such correction and must be read with that history in view.",
+    "reviewer_instruction": "A reviewer should check that B2 is genuinely failable and currently failing, that B1's paired control is exact rather than statistical, and that the absolute displacement is still recorded. If any of those is untrue, this contract is criterion-shopping and should be rejected."
+  },
+  "criteria": [
+    {
+      "id": "B1",
+      "name": "grooming replay does not translate the body",
+      "statement": "The displacement attributable to the grooming joint replay, isolated as the difference between a grooming run and a paired control identical in every respect except that the joint replay is suppressed, must not exceed one adult body length.",
+      "measure": "groom_net_displacement_mm(with replay) - groom_net_displacement_mm(replay suppressed, same seed, same food position, same adhesion pattern, same bout window)",
+      "limit_mm": 2.5,
+      "limit_rationale": "One adult Drosophila body length, unchanged from v3. The limit is derived from body length and not from any measured run.",
+      "paired_control_is_exact": "The FlyGym body is deterministic given seed and food position, so the paired control is an exact matched reference rather than a statistical one. Each of the 30 acceptance conditions needs exactly one paired control run.",
+      "tests": "the replay, which is what the original cap was introduced to bound"
+    },
+    {
+      "id": "B2",
+      "name": "the body holds station",
+      "statement": "The body must not translate more than one body length while standing under no descending command for the duration of a grooming bout, with all six legs adhered.",
+      "measure": "net thorax displacement over a 3-second window with zero forward and yaw drive and no grooming command",
+      "limit_mm": 2.5,
+      "currently_observed_mm": 2.161,
+      "currently_passes": true,
+      "note": "At 3 seconds this is 2.161 mm and passes, marginally. It is registered at the bout duration for comparability with B1, and the sub-criterion B3 is what actually exposes the defect."
+    },
+    {
+      "id": "B3",
+      "name": "station-keeping is not a slow leak",
+      "statement": "Standing drift must not be a persistent velocity. The body's displacement while standing under no command must be sublinear in time, so that a longer bout does not accumulate without bound.",
+      "measure": "net displacement at 3 s and at 6 s under zero command; the criterion is that displacement at 6 s is less than 1.5 times displacement at 3 s, which a settling transient satisfies and a constant drift velocity does not",
+      "currently_observed": {
+        "displacement_3s_mm": 2.161,
+        "displacement_6s_mm": 5.311,
+        "ratio": 2.458,
+        "limit": 1.5,
+        "passes": false
+      },
+      "why_this_criterion": "The diagnosis found the drift is a persistent net force, not a transient: displacement grows about 0.88 mm/s roughly linearly across six seconds, and re-zeroing velocities changes the 3-second figure by nothing. A criterion on the total at one duration cannot distinguish a settling transient from a constant leak; a criterion on the ratio between two durations can. This is the criterion the station-keeping defect actually violates, and it fails at 2.458 against a limit of 1.5.",
+      "fails_now": true,
+      "must_not_be_cleared_by": [
+        "raising adhesion force",
+        "stiffening contacts",
+        "raising actuator force limits",
+        "adding floor damping",
+        "welding or freezing the body during any phase",
+        "shortening the bout"
+      ],
+      "may_be_cleared_by": "a closed-loop station-keeping controller that senses thorax pose and corrects it, which is a controller addition rather than a physics change. Such a controller is an engineering scaffold with no biological content, provenance E, and must be labelled so: real flies hold station with load-sensing reflexes this model does not have."
+    },
+    {
+      "id": "B4",
+      "name": "the fly reaches the dust by seeking",
+      "statement": "unchanged from v3",
+      "measure": "pre-groom seek displacement",
+      "minimum_mm": 0.5
+    }
+  ],
+  "reporting_requirements": {
+    "absolute_displacement_still_recorded": "Every run must continue to record groom_net_displacement_mm, the absolute figure the v3 criterion capped, and the acceptance report must state it alongside B1. Removing it would hide the defect this split is accused of hiding.",
+    "v3_verdict_stands": "The v3 acceptance matrix failed 0 of 30 on the absolute cap and that result is not withdrawn, revised or superseded. It is reinterpreted: the runs failed a criterion that conflated a replay defect with a stance defect, and the stance defect is real and is now B3.",
+    "acceptance_requires_all": "Track A is not an accepted milestone unless B1, B2, B3 and B4 all pass, plus the nine existing controls. Passing B1 alone changes nothing."
+  },
+  "renderer_control_amendment": {
+    "problem": "The headless-viewer-equivalence control compares transition identities and reasons but not their times, so it passes while the last two transitions diverge by 1.44 s between rendered and headless runs, up from 30 ms in v2 - a 48-fold growth the control cannot see.",
+    "criterion": "Every matched transition must occur within 100 ms between rendered and headless runs at the same seed and position.",
+    "limit_ms": 100.0,
+    "limit_rationale": "The scheduler's coupling cycle is 2 ms and the physics step 500 microseconds, so 100 ms is 200 physics steps: loose enough that render-loop scheduling jitter does not fail it, tight enough that a 1.44 s divergence does.",
+    "currently_observed_ms": 1440.0,
+    "currently_passes": false,
+    "note": "This is a strictly added criterion. Nothing that previously passed is relaxed, and it fails now."
+  },
+  "claim_boundary": "Criteria only. No run is executed by this contract, no artifact is produced, and no verdict changes on registration. Track A remains not an accepted milestone, and both B3 and the renderer amendment fail at the moment of registration.",
+  "last_reviewed": "2026-09-09"
+}

@@ -245,8 +245,10 @@ connection. Those are the same physical quantity measured two ways, so the compa
 and it is currently favourable — 43 sits inside the MPFA estimate's spread and above
 `Rozenfeld2023`'s range.
 
-**P3 — Homeostatic matching, restated correctly (`KW2008`). Partly done; see
-[STATUS](../STATUS.md).** A post-hoc ordinal check found that contacts per connection reproduce
+**P3 — Homeostatic matching (`KW2008`). Done and inconclusive; see
+[GLOMERULAR_VOLUME_SCALING.md](GLOMERULAR_VOLUME_SCALING.md). Volume was measured blind, both preregistered hypotheses failed, and the earlier proxy-failure explanation is withdrawn: volume does track ORN count. The contact statistic turns out to be contaminated by reconstruction incompleteness, so the question is not settleable on this connectome without a completeness-corrected contact estimate.** The superseded reasoning follows.
+
+**Superseded:** A post-hoc ordinal check found that contacts per connection reproduce
 `KW2008`'s stated uEPSC ordering on their four recorded glomeruli with clean separation
 (DL5 81 > DM4 63 > VM2 40 > DM6 28), and that the project's earlier negative result came from
 substituting ORN count for glomerular volume — a proxy that anti-correlates with contacts across

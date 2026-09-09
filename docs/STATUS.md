@@ -535,7 +535,30 @@ Chasing an apparent independent validation found a real defect instead. Recorded
   better prior, not a test, and even two decays leave the amplitude 7% low and the half-decay 40%
   above the published value.
 
-### Homeostatic matching: the recorded negative was a proxy failure (2026-09-09)
+### Homeostatic matching: the proxy-failure explanation is WITHDRAWN (2026-09-09)
+
+**The section immediately below is superseded and must be read with this note.** A preregistered
+blind measurement of glomerular volume, reported in
+[GLOMERULAR_VOLUME_SCALING.md](evidence/GLOMERULAR_VOLUME_SCALING.md), withdraws its central
+claim. Volume **does** track converging ORN count in MaleCNS, at Spearman +0.329 (p = 0.020) and
++0.481 (p = 0.013) among well-reconstructed glomeruli, exactly as Kazama and Wilson report. ORN
+count was therefore a directionally valid proxy, so the earlier test was not testing the wrong
+variable and the "proxy failure" reading is wrong. The four-glomerulus contact ordering is also
+withdrawn as evidence: the measured volumes for those same four order DM4 > DL5 > DM6 > VM2 while
+the contacts order DL5 > DM4 > VM2 > DM6, so two of three adjacent pairs disagree.
+
+What replaces it is not the old negative either. Contacts per connection show no correlation with
+volume across all 50 glomeruli (+0.070, p = 0.63), so H1 fails as preregistered — but the
+statistic is contaminated. Stratifying by convergence completeness, the contacts-versus-ORN-count
+correlation collapses from −0.475 (p < 0.001) over all 50 to −0.046 (p = 0.89) over the
+best-reconstructed eleven, so it was reading reconstruction quality as biology. Contacts versus
+volume moves the other way, +0.070 to +0.381 to +0.527, in the direction Kazama and Wilson
+predict, but never reaches p < 0.05 and n = 11 settles nothing. **The honest verdict is that this
+question is not settleable on this connectome with this measurement**, and it fails precisely
+where the effect should be largest: the big glomeruli are the badly reconstructed ones. A
+completeness-corrected contact estimate is the indicated next step.
+
+### Superseded: homeostatic matching read as a proxy failure (2026-09-09)
 
 This status page recorded that "contact number does not implement the published homeostatic
 matching". That conclusion rests on a proxy the project substituted for the variable Kazama and
@@ -610,3 +633,38 @@ tested model.
 so v2 widens the grid, converges interior, and adds H5 to make a future boundary hit fail a
 criterion rather than appear only as a flag. And the contract declares in three places that it is
 not blind: the comparison was explored before it was written.
+
+### Track A v4 criteria, preregistered before any controller exists (2026-09-09)
+
+[`track-a-acceptance-v4-criteria.json`](../configs/experiments/track-a-acceptance-v4-criteria.json)
+splits the conflated grooming-displacement criterion. No run is executed and nothing is accepted
+by registering it; Track A remains not an accepted milestone.
+
+The v3 criterion capped total displacement during a grooming bout at 2.5 mm and failed 0 of 30.
+The station-keeping diagnosis showed why that is the wrong measurement: the 6.26 mm decomposes
+into 2.161 mm of baseline creep, 2.756 mm from lifting front-leg adhesion so the front legs can
+groom, and about 1.34 mm from the replay itself — the smallest of the three. At 0.88 mm/s of
+creep, a stationary body passes 2.5 mm after 2.8 s, so a 3-second bout cannot clear the cap
+whatever the replay does.
+
+- **B1** caps the replay's own contribution at 2.5 mm, isolated against a paired control identical
+  but for replay suppression. The body is deterministic given seed and position, so the pairing is
+  exact rather than statistical.
+- **B3 is the point of the split and it fails now.** Standing drift must be sublinear in time:
+  displacement at 6 s under 1.5x displacement at 3 s, which a settling transient satisfies and a
+  constant leak does not. Observed 5.311/2.161 = 2.458 against a limit of 1.5. A criterion on the
+  total at one duration cannot tell a transient from a leak; this one can, and it is what the
+  defect actually violates. Physics escapes are named and forbidden — adhesion force, contact
+  stiffness, actuator limits, floor damping, welding, shortening the bout — leaving a closed-loop
+  station-keeping controller as the only permitted fix, labelled provenance E.
+- **The renderer control gains a 100 ms timing tolerance**, justified against the 2 ms coupling
+  cycle, and it fails now at 1,440 ms. Strictly added; nothing relaxed.
+- The absolute displacement is still recorded at every run, the v3 0-of-30 verdict is not
+  withdrawn, and acceptance requires B1, B2, B3 and B4 together.
+
+**This is the third criterion correction in this project's history and the contract says so.** It
+discloses that it is not blind, that applying B1 to existing v3 data would give 1.34 mm and pass,
+and it carries a reviewer instruction: check that B3 is genuinely failing, that B1's pairing is
+exact, and that the absolute figure is retained, or reject the contract as criterion-shopping.
+Nine tests enforce exactly those three things plus the decomposition arithmetic, so a later edit
+that quietly weakens any of them breaks the suite.
