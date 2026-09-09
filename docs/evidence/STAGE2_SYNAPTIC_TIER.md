@@ -363,3 +363,15 @@ already names and whose components Nagel and colleagues published separately.
 **Nothing will be refitted on the outcome.** That is the rule the 7 Hz failure was recorded
 under and it holds here: refitting to an external test converts the only external check into
 a training set.
+
+## The two artifacts this produced
+
+Both were built from the clean tree at `c32db5f` and are evidence-grade.
+
+| artifact | sha256 | what it holds |
+|---|---|---|
+| `evidence/stage2/stage2-reservations-v1.json` | `998ba22288490073908ecde31d680a9a8336621b9c66b5f191aa91b77ca4b9a7` | 20 reserved files across 4 datasets, each with its checksum, byte count and structure; every declaration check passes |
+| `evidence/stage2/stage2-depression-prediction-v1.json` | `d58655d1b01f1be9b2e382a7bc7169ba11f56ca1ddd97477ea6affafffcbca5d` | the predictions above, with `measured_values_read: false` |
+
+The Stage 2 exit gate was re-evaluated after the assumption-set bump and is unchanged at
+**0 of 3**: circuit 0.0 against 0.8, ensemble false, structural false.

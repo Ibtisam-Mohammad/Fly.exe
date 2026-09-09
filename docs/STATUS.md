@@ -389,6 +389,12 @@ No tier is awarded and no gate changes verdict.
   current controller would fail it at 2 of 7 poses. **Track A remains not an accepted
   milestone**: B2 passes, B3 fails, B1 and B4 are unmeasured, and the 30-run matrix was not
   executed because it would spend hours reproducing a known failure.
+- **Both new artifacts are evidence-grade at `c32db5f`.**
+  `evidence/stage2/stage2-reservations-v1.json`, sha256 `998ba222...7ca4b9a7`, records 20
+  reserved files across 4 datasets with every declaration check passing;
+  `evidence/stage2/stage2-depression-prediction-v1.json`, sha256 `d58655d1...ffcbca5d`,
+  carries the predictions with `measured_values_read: false`. The Stage 2 exit gate was
+  re-evaluated after the assumption-set bump and is unchanged at 0 of 3.
 - **Reserved observations are now recorded before they are opened.**
   `configs/datasets/stage2-reservations-v1.json` declares every reserved file and every
   reserved variable or column inside it, and `flysim stage2 reservations` writes a manifest
