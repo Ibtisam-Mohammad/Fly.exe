@@ -259,3 +259,38 @@ Before that contract is written, the duplicate-array guard must be run against t
 arrays and Fig3B's, and the published animal counts compared. Eighteen animals appear in
 every train array in the file, at every frequency, which is itself a pattern worth
 checking rather than assuming.
+
+## Addendum, 2026-09-10 — the audit that should have come first, run across all of Figure 3
+
+Decision 7 said the guard must be run against the train arrays before the contract that
+opens them is written. Deferring that would have been the fourth instance of the pattern
+this ADR records, so it was run immediately. It is in
+`configs/datasets/stage2-reservations-v1.json` under `known_duplications_audited_2026_09_10`.
+
+**A second identical pair, in a different observable.** `Fig3B.mat`'s
+`all_flies_1Hz_control` is bit-identical to `Fig3I.mat`'s. Figure 3B is the 2-to-4-day
+wild-type absolute amplitude and Figure 3I is the 1-day one, and the legends give both
+n = 17. Same reuse, different quantity.
+
+So the pattern is systematic and it can be stated in one line: **the day-1 wild-type
+controls in this repository are reused copies of the 2-to-4-day wild-type controls, and
+the day-0 wild-type controls are genuinely separate recordings.** That holds in both
+places it can be checked — the paired-pulse arrays (3D/3J against 3D/3H) and the amplitude
+arrays (3B/3I against 3B/3G). It is not misconduct; the authors compared each perturbation
+cohort against a wild-type reference and reused that reference for the day-1 comparison.
+It does mean the repository ships fewer independent wild-type cohorts than its figure count
+suggests, and that is now recorded where the next contract will read it.
+
+**The trains are clean.** All 24 arrays in `Fig3E_and_F.mat` are stored distinctly: no
+train duplicates another, no latency or jitter array duplicates a train, and the 1 Hz
+arrays there are distinct from `Fig3B.mat`'s despite sharing both variable names — so
+opening the trains does not spend the amplitude file or the reverse. The wild-type trains
+at 1, 10, 20 and 60 Hz survive as a genuine unspent holdout, and they are the only one
+left for this synapse.
+
+**What the digest audit still cannot do.** It catches reuse of the same stored bytes. It
+cannot catch two files holding the same animals recorded twice, and it cannot catch a
+legend that misdescribes a cohort. Every train array reports 18 animals at every frequency;
+the digests confirm 24 distinct arrays, and the counts should still be reconciled against
+the paper's stated n before those arrays are scored. That part is not automatable and
+saying so is the point of this addendum.

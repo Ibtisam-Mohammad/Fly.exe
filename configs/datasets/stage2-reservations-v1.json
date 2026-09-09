@@ -150,7 +150,12 @@
             "histamine",
             "nitric_oxide"
           ],
-          "unreserved_names": ["species", "region", "hemilineage", "cell_type"]
+          "unreserved_names": [
+            "species",
+            "region",
+            "hemilineage",
+            "cell_type"
+          ]
         },
         {
           "path": "drosophila-neurotransmitters/gt_sources/male_cns/202509-male_cns_gt_data.csv",
@@ -190,7 +195,12 @@
             "known_nt_source",
             "known_nt_confidence"
           ],
-          "unreserved_names": ["species", "region", "hemilineage", "cell_type"]
+          "unreserved_names": [
+            "species",
+            "region",
+            "hemilineage",
+            "cell_type"
+          ]
         },
         {
           "path": "drosophila-neurotransmitters/inst/extdata/cell_type_cross_matching.csv",
@@ -237,5 +247,78 @@
     }
   ],
   "claim_boundary": "A declaration and a record. It scores nothing, opens nothing, and awards no tier.",
-  "last_reviewed": "2026-09-09"
+  "last_reviewed": "2026-09-09",
+  "known_duplications_audited_2026_09_10": {
+    "why_this_exists": "A holdout was preregistered, committed, opened and scored against Figure 3J's wild-type paired-pulse arrays on 2026-09-10 before anyone noticed that they are bit-identical to Figure 3D's, which had already been spent. The published legends gave both the same animal counts and the coincidence was noticed and not acted on. This block is the audit that should have preceded that run, extended to every file in Figure 3 that shares a variable name with another.",
+    "how_it_was_measured": "flysim.reservations.stored_element_digests, which digests each variable's stored element bytes without decompressing or decoding any payload. Equal stored bytes prove equal data. Unequal stored bytes do not prove unequal data, so a clean result here is a screen and not a certificate of independence.",
+    "the_pattern": "The day-1 wild-type controls are reused copies of the 2-to-4-day wild-type controls. The day-0 wild-type controls are genuinely separate recordings. This holds in both places it can be checked: the paired-pulse arrays and the absolute amplitude arrays. It is not misconduct -- the authors compared each perturbation cohort against a wild-type reference and reused that reference for the day-1 comparison -- but it means the repository ships fewer independent wild-type cohorts than its figure count suggests.",
+    "findings": [
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+          "rozenfeld2023-repo/Figure 3/Fig3J.mat"
+        ],
+        "cohorts": "2 to 4 days post eclosion, and 1 day post eclosion",
+        "variables": [
+          "new_all_flies_PP_10ms_control",
+          "new_all_flies_PP_30ms_control",
+          "new_all_flies_PP_100ms_control",
+          "new_all_flies_PP_300ms_control",
+          "new_all_flies_PP_1000ms_control"
+        ],
+        "verdict": "IDENTICAL at all five. Fig3J's wild-type arrays carry no new animals.",
+        "consequence": "Fig3J is not a holdout for anything and is recorded as spent along with Fig3D. The RNAi arrays in the two files do differ, 28 animals against 22."
+      },
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+          "rozenfeld2023-repo/Figure 3/Fig3I.mat"
+        ],
+        "cohorts": "2 to 4 days post eclosion, and 1 day post eclosion",
+        "variables": [
+          "all_flies_1Hz_control"
+        ],
+        "verdict": "IDENTICAL. The same reuse, in the absolute-amplitude arrays. The RNAi arrays differ.",
+        "consequence": "Fig3I's wild-type amplitude array is not a holdout for anything either. Both files stay sealed because ND-04 carries no absolute conductance scale for this synapse, but the reuse is recorded so a future contract cannot treat them as two cohorts."
+      },
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+          "rozenfeld2023-repo/Figure 3/Fig3H.mat"
+        ],
+        "cohorts": "2 to 4 days post eclosion, and 0 days post eclosion",
+        "verdict": "DISTINCT at all five intervals.",
+        "consequence": "Fig3H was a genuine unseen cohort. It was scored on 2026-09-10 and is now spent."
+      },
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+          "rozenfeld2023-repo/Figure 3/Fig3G.mat"
+        ],
+        "cohorts": "2 to 4 days post eclosion, and 0 days post eclosion",
+        "verdict": "DISTINCT.",
+        "consequence": "consistent with the day-0 cohorts being separate recordings"
+      },
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+          "rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat"
+        ],
+        "variables": [
+          "all_flies_1Hz_control",
+          "all_flies_1Hz_RNAi"
+        ],
+        "verdict": "DISTINCT, despite sharing both variable names.",
+        "consequence": "The 1 Hz array in the train file is not the 1 Hz array in the amplitude file, so opening the trains does not spend Fig3B and vice versa."
+      },
+      {
+        "files": [
+          "rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat"
+        ],
+        "verdict": "All 24 arrays within the file are stored distinctly: no train array duplicates another, and no latency or jitter array duplicates a train.",
+        "consequence": "The wild-type train arrays at 1, 10, 20 and 60 Hz are a genuine unspent holdout, and after 2026-09-10 they are the only unspent wild-type ORN-to-PN holdout in the corpus."
+      }
+    ],
+    "what_still_has_to_be_done_by_hand": "Comparing the published animal counts. The digest audit catches reuse of the same stored bytes; it cannot catch two files holding the same animals recorded twice, or a legend that misdescribes a cohort. Every train array in Fig3E_and_F reports 18 animals at every frequency, which the digests confirm are 24 distinct arrays but which should still be reconciled against the paper's stated n before those arrays are scored."
+  }
 }
