@@ -1170,6 +1170,7 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
         food_position_mm=food_position,
         render=args.render,
         fps=args.fps,
+        suppress_groom_replay=args.suppress_groom_replay,
         dynamics_registry_path=args.cell_dynamics,
         annotations_path=(
             args.annotations
@@ -1238,6 +1239,8 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
                     demo.registry.value_map("MOTOR-03")["groom_max_net_displacement_mm"]
                 ),
                 **demo.body.groom_displacement(),
+                **demo.body.station_keeping(),
+                "groom_replay_suppressed": args.suppress_groom_replay,
             },
         )
         video: str | None = None
@@ -1271,6 +1274,7 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
             "video_sha256": video_sha256,
             "claim": demo.scenario.claim_boundary,
             "groom_displacement": demo.body.groom_displacement(),
+            "station_keeping": demo.body.station_keeping(),
             "project_evidence_tier": project_tier,
         }
     )
@@ -1717,6 +1721,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--control",
         choices=("exact", "zero-weight", "shuffled-connectome"),
         default="exact",
+    )
+    eon_malecns.add_argument(
+        "--suppress-groom-replay",
+        action="store_true",
+        help=(
+            "Run the B1 paired control: hold the grooming pose instead of replaying the "
+            "published joint trajectory, leaving the adhesion pattern, bout window, seed "
+            "and food position identical. The difference in body displacement is what the "
+            "replay itself contributes."
+        ),
     )
     eon_malecns.add_argument("--food-x-mm", type=float)
     eon_malecns.add_argument("--food-y-mm", type=float)

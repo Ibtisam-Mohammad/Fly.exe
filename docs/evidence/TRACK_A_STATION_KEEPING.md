@@ -129,3 +129,152 @@ Not addressed here. Enabling the renderer shifts the last two Track A transition
 from 30 ms in v2, and the equivalence control passes because it compares transition identities
 and reasons rather than times. The control needs a timing tolerance; a rendered run is not a
 timing replica of a headless one, and until the control says so it is not testing what it claims.
+
+---
+
+# The controller, built 2026-09-09, and what it refutes
+
+Status: the station-keeping defect is **fixed**. B2 passes at every pose tested. **B3 does
+not pass as written, and this section shows that B3's statistic does not measure what it
+claims to.** Track A is therefore still not an accepted milestone.
+
+No physics parameter was changed. Adhesion force, contact stiffness, actuator force
+limits, floor damping and the bout duration are all untouched, and nothing is welded.
+The change is `MOTOR-04`, provenance `E`, a closed-loop controller in the standing branch.
+
+## What the controller is
+
+Proportional-integral feedback on thorax pose against the pose held when standing began,
+acting through the **femur-tibia (FTi) pitch of all six legs**: common mode shifts the
+body fore-aft over planted feet, differential mode yaws it. Registered gains:
+
+```
+station_keeping_gain_rad_per_mm            0.02
+station_keeping_integral_rad_per_mm_s      0.06
+station_keeping_yaw_gain_rad_per_rad       0.05
+station_keeping_yaw_integral_rad_per_rad_s 0.4
+station_keeping_max_offset_rad             0.07
+station_keeping_max_yaw_offset_rad         0.02
+station_keeping_settle_us                  2000000
+```
+
+The channel was not guessed. Every leg joint group was perturbed in common and
+differential mode and the resulting 3-second drift measured; FTi pitch has the largest
+authority in each mode, about -37.5 mm/rad fore-aft and -20 rad/rad yaw.
+
+## Three design choices that are load-bearing, and why
+
+**1. The offset limit is part of the control law, not a safety margin.** The plant is not
+monotone. Static common-mode offset against measured fore-aft drift velocity:
+
+```
+offset (rad)   0.00   0.02   0.04   0.05   0.06   0.08   0.10   0.12   0.16   0.20
+v (mm/s)      +1.016 +0.385 +0.478 +0.195 -0.210 -0.142 +0.353 +1.396 -0.353 -2.036
+```
+
+Zero crossing near 0.055 rad, then the sign reverses twice more. **At 0.12 rad the drift
+is +1.40 mm/s, worse than no control at all.** The first PI sweep used a 0.12 rad limit,
+the integral wound to the ceiling, and the controller sat on the single worst operating
+point available to it in every run. The limit is 0.07 rad because that is the upper edge
+of the first monotone branch.
+
+**2. The integral persists across stances; only the position reference is released.** The
+integral converges on the actuator bias that cancels the drift force, and that force is a
+property of the standing configuration and the body's load, not of a position. Discarding
+it on every walk makes each stance re-converge from zero, and the re-convergence
+excursion is itself most of the displacement being measured.
+
+**3. There is a 2-second settle window before t=0, and it changes nothing about the
+body.** Its only purpose is to charge the integral. Every physics state it touches --
+`qpos`, `qvel`, `act`, `ctrl`, `time` -- is saved and restored, so the body enters the run
+exactly as it did before. The first attempt restored nothing, and the 2 s of drift it let
+through moved the thorax about 1.2 mm into the dust patch; the settled-body guard caught
+it, which is the guard doing its job.
+
+**A rate term was implemented and rejected.** Differentiating thorax pose over a 500 us
+step measures per-step contact jitter far more than drift, and injecting that at 2 kHz
+into a near-saturated channel destroys the loop:
+
+| damping gain | 3 s | 6 s | 12 s | heading |
+|---|---|---|---|---|
+| 0.00 | **0.357 mm** | 0.783 | 1.074 | 0.225 rad |
+| 0.01 | 5.926 mm | 7.252 | 9.091 | 1.201 rad |
+| 0.03 | 12.611 mm | 11.780 | 21.381 | 2.687 rad |
+| 0.08 | 16.672 mm | 30.617 | 30.795 | 2.597 rad |
+
+**A signed lateral channel exists and is deliberately unused.** Differential
+coxa-trochanter roll gives clean antisymmetric lateral authority: +0.03 rad gives
++7.84 mm, -0.03 rad gives -7.97 mm, about 263 mm/rad. It is not used because lateral
+error is only about 0.7 mm of the worst residual, and a 263 mm/rad actuator on a
+contact-mode-switching plant is a stability risk for a 17 percent improvement. It is
+recorded so it need not be rediscovered.
+
+## What it achieves
+
+Standing under no command, all six legs adhered, across seven settled poses. The spawn
+heading and position are varied because **the seed does not reach the standing branch at
+all** -- it only seeds the CPG, so every seed gives bit-identical standing runs. Pose is
+the variation that matters, and the acceptance matrix produces it by walking to three
+different food positions.
+
+| pose | 3 s off to on | 6 s off to on | 12 s off to on |
+|---|---|---|---|
+| registered | 2.161 to **0.357** | 5.311 to 0.783 | 9.703 to 1.074 |
+| heading +0.6 | 2.814 to **1.413** | 4.653 to 1.230 | 10.140 to 1.940 |
+| heading -0.6 | 1.559 to **0.226** | 3.856 to 0.249 | 8.326 to 3.163 |
+| heading +1.57 | 2.835 to **1.120** | 5.518 to 1.676 | 10.618 to 3.038 |
+| heading -1.57 | 1.714 to **0.721** | 3.905 to 0.836 | 8.060 to 2.066 |
+| shifted +2 mm | 2.738 to **0.395** | 5.097 to 0.668 | 9.293 to 1.362 |
+| heading +0.3, -1 mm | 2.753 to **0.420** | 4.926 to 0.476 | 9.108 to 1.027 |
+
+**B2, at most 2.5 mm at 3 s, fails at 4 of 7 poses uncontrolled and passes at 7 of 7
+controlled.** Worst-case 12-second displacement falls from 10.6 mm to 3.2 mm. The
+0.88 mm/s creep is gone: at the registered pose the residual velocity decays from
+0.119 to 0.049 mm/s across 12 s, against a flat 0.72 to 1.05 mm/s uncontrolled.
+
+## B3's statistic is refuted, by three independent demonstrations
+
+B3 measures whether displacement at 6 s is less than 1.5 times displacement at 3 s. It
+fails at 2 of the 7 poses above: registered, ratio 2.193, and shifted +2 mm, ratio 1.693.
+Before concluding anything about the criterion, the controller was pushed to pass it,
+which is what produced the damping sweep above. It cannot be passed that way. What the
+data show instead is that the ratio is not a measure of station-keeping:
+
+1. **It fails the better controller and passes a worse one.** An earlier build without the
+   settle window gave 0.561 to 0.657 mm, ratio 1.171, **passing**. The current build gives
+   0.357 to 0.783 mm, ratio 2.193, **failing** -- while being better at 3 s, better at
+   12 s and better at every pose tested. Dividing by a smaller numerator is not a defect
+   in the body.
+2. **It passes a case that is leaking badly.** At heading -0.6 the ratio is 1.100, a
+   comfortable pass, while displacement at 12 s is 3.163 mm, a 12 s over 3 s ratio of
+   14.0. The six-second window is simply too short to see that leak.
+3. **It passes a diverged controller.** At damping 0.03 the body has travelled 30.8 mm,
+   twelve body lengths, and rotated 2.69 rad. The ratio is 0.934. **B3 passes.**
+
+A criterion that a 30 mm runaway satisfies is not testing that drift is bounded. This is
+the same defect class the project has repaired three times, a criterion satisfiable by a
+degenerate outcome, and it was found the same way: by registering the criterion first and
+then measuring against it.
+
+## What is not done here, deliberately
+
+**B3 is not restated, and no replacement is adopted.** Restating a criterion after it
+fails, in the direction that makes it pass, is the move ADR-2026-006, ADR-2026-009 and the
+widened-sweep v2 contract each had to repair, and the v4 contract itself was the third
+such correction. That the case for changing it is strong this time does not make it a
+decision to take while writing up the run that failed it. The analytically correct
+statistic, an absolute bound on displacement at a long horizon, which none of the three
+degenerate cases above would satisfy, is preregistered in
+`configs/experiments/track-a-acceptance-v5-criteria.json` and marked **not adopted**.
+
+**The 30-run acceptance matrix was not executed.** It would consume hours of GPU time to
+reproduce a known B3 failure. B1 and B4 remain unmeasured. The paired control B1 requires
+is implemented -- `--suppress-groom-replay` holds the grooming pose while leaving the
+adhesion pattern, bout window, seed and food position identical -- but not yet run.
+
+**Track A remains not an accepted milestone.** B2 passes, B3 fails as written, B1 and B4
+are unmeasured, and the rendered-timing amendment is separately unresolved. The renderer
+has however now been cleared as its cause: a rendered and a headless body driven with an
+identical command sequence stay bit-identical in `qpos` for the whole run, maximum
+absolute difference exactly zero, so the 1.44 s transition divergence originates elsewhere
+in the brain-body loop and not in the renderer.

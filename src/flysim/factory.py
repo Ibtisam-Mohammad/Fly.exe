@@ -213,6 +213,7 @@ def build_track_a_demo(
     food_position_mm: tuple[float, float] | None = None,
     render: bool = False,
     fps: int = 30,
+    suppress_groom_replay: bool = False,
     assumptions_path: Path | None = None,
     scenario_path: Path | None = None,
     dynamics_registry_path: Path | None = None,
@@ -326,6 +327,7 @@ def build_track_a_demo(
                 "groom_blend_in_us",
             )
         },
+        **registry.value_map("MOTOR-04"),
     )
     if food_position_mm is not None:
         parameters = replace(
@@ -339,6 +341,7 @@ def build_track_a_demo(
         seed=seed,
         render=render,
         fps=fps,
+        suppress_groom_replay=suppress_groom_replay,
     )
     controller = EonDemoController(
         controller_parameters(motor_values, sensory_contact)

@@ -28,6 +28,19 @@ from flysim.engines.reference import (
 from flysim.errors import CausalityError, ConfigurationError
 from flysim.grooming import load_grooming_trajectory
 
+# The station-keeping controller acts through the femur-tibia pitch of every leg:
+# common mode shifts the body fore-aft over planted feet, differential mode yaws it.
+# Both were chosen by measuring the drift response of all six leg joint groups
+# (docs/evidence/TRACK_A_STATION_KEEPING.md); FTi pitch has the largest authority in
+# each mode. This is an engineering scaffold with no biological content.
+STATION_KEEPING_LEGS: tuple[str, ...] = ("lf", "lm", "lh", "rf", "rm", "rh")
+STATION_KEEPING_LEFT_LEGS: frozenset[str] = frozenset({"lf", "lm", "lh"})
+STATION_KEEPING_DOF = "{leg}_trochanterfemur-{leg}_tibia-pitch"
+
+
+def _clamp(value: float, limit: float) -> float:
+    return min(limit, max(-limit, value))
+
 
 @dataclass(frozen=True, slots=True)
 class FlyGymTrackAParameters:
@@ -56,6 +69,13 @@ class FlyGymTrackAParameters:
     feed_haustellum_extension_rad: float
     groom_blend_in_us: int
     spawn_height_mm: float
+    station_keeping_gain_rad_per_mm: float
+    station_keeping_integral_rad_per_mm_s: float
+    station_keeping_yaw_gain_rad_per_rad: float
+    station_keeping_yaw_integral_rad_per_rad_s: float
+    station_keeping_max_offset_rad: float
+    station_keeping_max_yaw_offset_rad: float
+    station_keeping_settle_us: int
 
 
 class FlyGymTrackABodyEngine:
@@ -69,6 +89,7 @@ class FlyGymTrackABodyEngine:
         seed: int,
         render: bool = False,
         fps: int = 30,
+        suppress_groom_replay: bool = False,
     ) -> None:
         if parameters.physics_dt_us <= 0:
             raise ConfigurationError("FlyGym physics timestep must be positive")
@@ -76,6 +97,14 @@ class FlyGymTrackABodyEngine:
             raise ConfigurationError("FlyGym command normalization scales must be positive")
         if fps <= 0:
             raise ConfigurationError("FlyGym render FPS must be positive")
+        if parameters.station_keeping_max_offset_rad < 0.0:
+            raise ConfigurationError("Station-keeping offset limit must not be negative")
+        if parameters.station_keeping_max_yaw_offset_rad < 0.0:
+            raise ConfigurationError("Station-keeping yaw offset limit must not be negative")
+        if parameters.station_keeping_settle_us % parameters.physics_dt_us:
+            raise ConfigurationError(
+                "Station-keeping settle window must be a whole number of physics steps"
+            )
         import mujoco
         from flygym import Simulation
         from flygym.anatomy import (
@@ -106,8 +135,21 @@ class FlyGymTrackABodyEngine:
         self._groom_path_length_mm = 0.0
         self._groom_heading_change_rad = 0.0
         self._settled_pose_mm: tuple[float, float] = (0.0, 0.0)
+        self._station_reference: tuple[float, float, float] | None = None
+        self._station_offsets_rad: tuple[float, float] = (0.0, 0.0)
+        self._station_error_mm = 0.0
+        self._station_peak_error_mm = 0.0
+        self._station_fore_aft_integral_mm_s = 0.0
+        self._station_yaw_integral_rad_s = 0.0
+        self._station_settle_us = 0
         self._settled_dust_clearance_mm = 0.0
         self._render = render
+        # B1's paired control. Suppressing only the joint replay isolates what the replay
+        # itself translates the body by, leaving the adhesion pattern, the bout window,
+        # the seed and the food position identical. Because the FlyGym body is
+        # deterministic given those, the control is an exact matched reference rather
+        # than a statistical one.
+        self._suppress_groom_replay = suppress_groom_replay
         self._trajectory = load_grooming_trajectory(trajectory_path)
         self._trajectory_columns = {
             str(name): index for index, name in enumerate(self._trajectory["column_names"])
@@ -199,6 +241,7 @@ class FlyGymTrackABodyEngine:
         )
         self._actuator_index = {dof.name: index for index, dof in enumerate(self._actuated_dofs)}
         self._source_to_actuator = self._build_source_mapping()
+        self._station_keeping_channel = self._build_station_keeping_channel()
         settled_targets = self._neutral_targets.copy()
         settled_targets[: len(leg_dofs)] = (
             controller.preprogrammed_steps.default_pose_by_dof_order(leg_dofs)
@@ -211,8 +254,61 @@ class FlyGymTrackABodyEngine:
         self._standing_targets = settled_targets.copy()
         self._last_targets = settled_targets.copy()
         self._groom_hold_targets = settled_targets.copy()
+        self._converge_station_keeping()
         controller.reset(seed=seed, init_magnitudes=np.zeros(6, dtype=np.float64))
         self._assert_settled_outside_dust()
+
+    def _converge_station_keeping(self) -> None:
+        """Charge the station-keeping integral before the run starts, changing nothing else.
+
+        Without this the first stance of every run spends a second or two converging on
+        the actuator bias that holds the body still, and that excursion is most of the
+        displacement the standing criteria measure - a controller startup transient
+        scored as a stance defect.
+
+        The window is a calibration, not simulated behaviour, so the body must come out
+        of it exactly as it went in. Every physics state the settle touches is saved and
+        restored, and the only thing carried forward is the controller's own integral.
+        The first attempt at this did not restore anything, and the 2 s of drift it let
+        through moved the thorax about 1.2 mm into the dust patch, which the settled-body
+        guard caught.
+        """
+        import mujoco
+
+        settle_us = self.parameters.station_keeping_settle_us
+        if settle_us <= 0 or not any(
+            (
+                self.parameters.station_keeping_gain_rad_per_mm,
+                self.parameters.station_keeping_integral_rad_per_mm_s,
+                self.parameters.station_keeping_yaw_gain_rad_per_rad,
+                self.parameters.station_keeping_yaw_integral_rad_per_rad_s,
+            )
+        ):
+            return
+        data = self._simulation.mj_data
+        saved = (
+            np.array(data.qpos, copy=True),
+            np.array(data.qvel, copy=True),
+            np.array(data.act, copy=True),
+            np.array(data.ctrl, copy=True),
+            float(data.time),
+        )
+        adhered = np.ones(6, dtype=bool)
+        for _ in range(settle_us // self.parameters.physics_dt_us):
+            targets = self._standing_targets.copy()
+            self._apply_station_keeping(targets)
+            self._simulation.set_actuator_inputs(self._fly_name, self._actuator_type, targets)
+            self._simulation.set_leg_adhesion_states(self._fly_name, adhered)
+            self._simulation.step()
+        data.qpos[:] = saved[0]
+        data.qvel[:] = saved[1]
+        data.act[:] = saved[2]
+        data.ctrl[:] = saved[3]
+        data.time = saved[4]
+        mujoco.mj_forward(self._simulation.mj_model, data)
+        self._release_station_reference()
+        self._station_peak_error_mm = 0.0
+        self._station_settle_us = settle_us
 
     @property
     def t_us(self) -> int:
@@ -254,6 +350,150 @@ class FlyGymTrackABodyEngine:
             "groom_path_length_mm": self._groom_path_length_mm,
             "groom_heading_change_rad": self._groom_heading_change_rad,
         }
+
+    def _build_station_keeping_channel(self) -> tuple[tuple[int, float], ...]:
+        """Actuator index and differential sign for each leg the controller acts through."""
+        channel: list[tuple[int, float]] = []
+        for leg in STATION_KEEPING_LEGS:
+            name = STATION_KEEPING_DOF.format(leg=leg)
+            try:
+                index = self._actuator_index[name]
+            except KeyError as exc:
+                raise ConfigurationError(
+                    f"Station-keeping channel {name} is not an actuated Track A DOF"
+                ) from exc
+            channel.append((index, 1.0 if leg in STATION_KEEPING_LEFT_LEGS else -1.0))
+        return tuple(channel)
+
+    def station_keeping(self) -> dict[str, float]:
+        """What the station-keeping controller is currently doing, for the run record."""
+        common, differential = self._station_offsets_rad
+        return {
+            "station_keeping_active": float(self._station_reference is not None),
+            "station_keeping_common_offset_rad": common,
+            "station_keeping_differential_offset_rad": differential,
+            "station_keeping_error_mm": self._station_error_mm,
+            "station_keeping_peak_error_mm": self._station_peak_error_mm,
+            "station_keeping_fore_aft_integral_mm_s": self._station_fore_aft_integral_mm_s,
+            "station_keeping_yaw_integral_rad_s": self._station_yaw_integral_rad_s,
+            "station_keeping_settle_us": float(self._station_settle_us),
+        }
+
+    def _release_station_reference(self) -> None:
+        """Forget where the body was standing, but keep the bias that holds it up.
+
+        The integral converges on the actuator bias that cancels the drift force, and
+        that force is a property of the standing configuration and the body's load rather
+        than of any particular position. Discarding it on every walk would make each new
+        stance re-converge from zero, and the re-convergence excursion is itself most of
+        the displacement B3 measures. So the position reference is released and the bias
+        is carried forward.
+        """
+        self._station_reference = None
+        self._station_offsets_rad = (0.0, 0.0)
+
+    def _reset_station_keeping(self) -> None:
+        self._release_station_reference()
+        self._station_fore_aft_integral_mm_s = 0.0
+        self._station_yaw_integral_rad_s = 0.0
+
+    def _apply_station_keeping(self, targets: np.ndarray) -> None:
+        """Null uncommanded body drift by shifting the stance legs, not the physics.
+
+        The standing branch is otherwise an open-loop pose hold, so the persistent net
+        force diagnosed in docs/evidence/TRACK_A_STATION_KEEPING.md integrates without
+        opposition at about 0.88 mm/s. This is proportional-integral feedback on thorax
+        pose against the pose held when standing began, acting through the femur-tibia
+        pitch of all six legs: common mode shifts the body fore-aft over planted feet,
+        differential mode yaws it.
+
+        The integral term is what does the real work, and it is not decoration. The
+        channel's response reverses sign at about 0.055 rad, so its useful band is narrow
+        and a proportional gain stiff enough to hold a small error saturates that band
+        and limit-cycles. The integral discovers the bias that cancels the drift force
+        instead of it being chosen by hand, which also means it re-derives that bias for
+        whatever pose the fly stopped walking in.
+
+        The offset limit is not a safety margin, it is part of the control design. The
+        measured response is non-monotone: drift velocity falls from +1.02 mm/s at zero
+        offset through zero near 0.055 rad, but at 0.12 rad it is +1.40 mm/s, worse than
+        no control at all. The limit therefore has to keep both the proportional term and
+        the wound-up integral inside the first monotone branch, or the controller
+        saturates onto the worst operating point available to it. That is not a
+        hypothetical: it is what the first PI sweep did.
+
+        There is deliberately no rate term. One was implemented and swept: at the
+        smallest gain tried it moved the body 5.9 mm instead of 0.36 mm and rotated it
+        1.2 rad. Differentiating the thorax pose over a 500 us step measures per-step
+        contact jitter far more than it measures drift, so the term injects noise at 2 kHz
+        into a channel that is already near saturation.
+
+        Provenance E. There is no biological content here. A real fly holds station with
+        load-sensing campaniform sensilla and femoral chordotonal reflexes distributed
+        through the VNC; nothing in a fly resembles one thorax pose estimate driving the
+        femur-tibia pitch of all six legs in common mode.
+        """
+        proportional = self.parameters.station_keeping_gain_rad_per_mm
+        integral = self.parameters.station_keeping_integral_rad_per_mm_s
+        yaw_proportional = self.parameters.station_keeping_yaw_gain_rad_per_rad
+        yaw_integral = self.parameters.station_keeping_yaw_integral_rad_per_rad_s
+        if not any((proportional, integral, yaw_proportional, yaw_integral)):
+            self._reset_station_keeping()
+            return
+        x_mm, y_mm, _, heading_rad = self._pose()
+        if self._station_reference is None:
+            # Latch where standing began, so the fly holds wherever it stopped rather
+            # than being pulled back towards its spawn.
+            self._station_reference = (x_mm, y_mm, heading_rad)
+            self._station_offsets_rad = (0.0, 0.0)
+            self._station_error_mm = 0.0
+            return
+        reference_x, reference_y, reference_heading = self._station_reference
+        delta_x = x_mm - reference_x
+        delta_y = y_mm - reference_y
+        # Fore-aft in the frame the reference pose defined, so a body that has rotated
+        # corrects along its own axis rather than the world's.
+        fore_aft_mm = delta_x * math.cos(reference_heading) + delta_y * math.sin(
+            reference_heading
+        )
+        yaw_error_rad = math.atan2(
+            math.sin(heading_rad - reference_heading),
+            math.cos(heading_rad - reference_heading),
+        )
+        limit = self.parameters.station_keeping_max_offset_rad
+        yaw_limit = self.parameters.station_keeping_max_yaw_offset_rad
+        dt_s = self.parameters.physics_dt_us / 1_000_000.0
+        self._station_fore_aft_integral_mm_s = self._clamped_integral(
+            self._station_fore_aft_integral_mm_s + fore_aft_mm * dt_s, integral, limit
+        )
+        self._station_yaw_integral_rad_s = self._clamped_integral(
+            self._station_yaw_integral_rad_s + yaw_error_rad * dt_s, yaw_integral, yaw_limit
+        )
+        common = _clamp(
+            proportional * fore_aft_mm + integral * self._station_fore_aft_integral_mm_s,
+            limit,
+        )
+        differential = _clamp(
+            yaw_proportional * yaw_error_rad + yaw_integral * self._station_yaw_integral_rad_s,
+            yaw_limit,
+        )
+        for index, sign in self._station_keeping_channel:
+            targets[index] += _clamp(common + sign * differential, limit)
+        self._station_offsets_rad = (common, differential)
+        self._station_error_mm = math.hypot(delta_x, delta_y)
+        self._station_peak_error_mm = max(self._station_peak_error_mm, self._station_error_mm)
+
+    @staticmethod
+    def _clamped_integral(accumulated: float, gain: float, limit: float) -> float:
+        """Anti-windup: the integral may never demand more than the offset limit allows.
+
+        Without this the accumulator keeps growing while the offset is clamped, and the
+        controller cannot respond when the error later reverses.
+        """
+        if gain == 0.0:
+            return 0.0
+        ceiling = limit / abs(gain)
+        return min(ceiling, max(-ceiling, accumulated))
 
     def _build_source_mapping(self) -> dict[str, int]:
         from flygym.anatomy import BodySegment, JointDOF, RotationAxis
@@ -381,7 +621,7 @@ class FlyGymTrackABodyEngine:
             self._groom_origin_mm = None
 
     def _groom_targets(self, targets: np.ndarray) -> None:
-        if self._groom_started_us is None:
+        if self._groom_started_us is None or self._suppress_groom_replay:
             return
         elapsed_us = self._t_us - self._groom_started_us
         elapsed_s = elapsed_us / 1_000_000.0
@@ -434,7 +674,9 @@ class FlyGymTrackABodyEngine:
         if is_standing:
             action = None
             targets = self._standing_targets.copy()
+            self._apply_station_keeping(targets)
         else:
+            self._release_station_reference()
             observation = HybridControllerObservation.from_sim(
                 self._simulation, self._fly_name
             )
@@ -526,9 +768,15 @@ class FlyGymTrackABodyEngine:
             "command": dict(self._command),
             "backend": "FlyGym-2.1-MuJoCo-3.9",
             "female_body_prior": True,
-            "grooming_controller": "Ozdil-2026-Fig1-panel-C-trajectory",
+            "grooming_controller": (
+                "suppressed-for-B1-paired-control"
+                if self._suppress_groom_replay
+                else "Ozdil-2026-Fig1-panel-C-trajectory"
+            ),
+            "groom_replay_suppressed": self._suppress_groom_replay,
             "settled_dust_clearance_mm": self._settled_dust_clearance_mm,
             **self.groom_displacement(),
+            **self.station_keeping(),
         }
 
     def save_video(self, output: Path) -> Path:

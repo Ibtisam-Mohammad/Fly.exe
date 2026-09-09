@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "track-a-acceptance-v5-criteria",
+  "title": "A well-conditioned replacement for the B3 ratio statistic, preregistered and not adopted",
+  "status": "preregistered, NOT ADOPTED, not executed",
+  "adopted": false,
+  "provenance": "E",
+  "assumption_ids": ["BODY-01", "MOTOR-03", "MOTOR-04", "DEMO-01"],
+  "supersedes_nothing": "This contract supersedes nothing. track-a-acceptance-v4-criteria B3 remains the registered criterion and remains failed. Nothing here changes any verdict.",
+  "why_this_exists": {
+    "summary": "The v4 B3 criterion measures whether standing displacement at 6 s is less than 1.5 times displacement at 3 s. A station-keeping controller was then built (MOTOR-04) and measured across seven settled poses. B3 turns out not to measure what it claims to, and this contract records the statistic that would, so that the alternative is written down before anyone decides whether to adopt it.",
+    "demonstrations_that_b3_is_degenerate": [
+      {
+        "id": "D1",
+        "claim": "B3 fails a strictly better controller and passes a worse one",
+        "worse_controller": {"displacement_3s_mm": 0.561, "displacement_6s_mm": 0.657, "ratio": 1.171, "passes": true},
+        "better_controller": {"displacement_3s_mm": 0.357, "displacement_6s_mm": 0.783, "ratio": 2.193, "passes": false},
+        "note": "The better controller is better at 3 s, better at 12 s and better at every pose tested. The ratio worsens because its denominator shrank."
+      },
+      {
+        "id": "D2",
+        "claim": "B3 passes a case that is leaking badly, because its window is too short",
+        "pose": "spawn heading -0.6 rad",
+        "observed": {"displacement_3s_mm": 0.226, "displacement_6s_mm": 0.249, "ratio": 1.100, "passes": true, "displacement_12s_mm": 3.163, "ratio_12s_over_3s": 13.978}
+      },
+      {
+        "id": "D3",
+        "claim": "B3 passes a controller that has lost the body entirely",
+        "configuration": "station-keeping with a rate term at gain 0.03 rad per mm/s",
+        "observed": {"displacement_3s_mm": 12.611, "displacement_6s_mm": 11.780, "ratio": 0.934, "passes": true, "displacement_12s_mm": 21.381, "heading_change_rad": 2.687},
+        "note": "Twelve body lengths of travel and 154 degrees of rotation satisfy the criterion. This is the decisive case: a criterion a 30 mm runaway can satisfy is not a criterion on bounded drift."
+      }
+    ],
+    "defect_class": "A criterion satisfiable by a degenerate outcome. The project has repaired three of these before: ADR-2026-006 replaced a shuffled control that could not fail, and ADR-2026-009 plus the widened-sweep v2 contract corrected two criteria satisfied by degenerate outcomes. The v4 contract was itself the third such correction, which is exactly why this one is not being adopted unilaterally."
+  },
+  "proposed_criterion": {
+    "id": "B3-v5",
+    "name": "standing drift is bounded at four times the bout duration",
+    "statement": "The body must not translate more than one adult body length while standing under no descending command for four times the duration of a grooming bout, with all six legs adhered.",
+    "measure": "net thorax displacement over a 12-second window with zero forward and yaw drive and no grooming command",
+    "limit_mm": 2.5,
+    "limit_rationale": "One adult Drosophila body length, the same limit as B1 and B2, derived from body length and not from any measured run. The horizon is four bout durations, which is long enough that a constant leak at the diagnosed 0.88 mm/s reaches 10.6 mm and fails by a factor of four.",
+    "why_this_is_well_conditioned": "It is an absolute bound rather than a ratio, so it has no small denominator to divide by, and it cannot be satisfied by making the early measurement worse. Longer is strictly harder, which is the direction 'does not accumulate without bound' should point in.",
+    "would_reject_all_three_degenerate_cases": {
+      "D1_better_controller": {"displacement_12s_mm": 1.074, "passes": true},
+      "D1_worse_controller_note": "not measured at 12 s under the same build; the comparison D1 rests on is at 3 s and 6 s",
+      "D2_leaking_case": {"displacement_12s_mm": 3.163, "passes": false},
+      "D3_diverged_case": {"displacement_12s_mm": 21.381, "passes": false},
+      "uncontrolled_baseline": {"displacement_12s_mm": 9.703, "passes": false}
+    }
+  },
+  "disclosure": {
+    "not_blind": "Every number in this contract was measured before it was written, and the controller registered as MOTOR-04 would pass the proposed criterion at 5 of the 7 poses tested and fail at 2 of them (heading -0.6 rad at 3.163 mm and heading +1.57 rad at 3.038 mm). That is stated up front because it is the point: the proposed criterion is not one the current controller passes. Adopting it would not close Track A, it would relocate the failure to a statistic that can be believed.",
+    "who_decides": "Not the author of the controller, and not in the same commit that reports the controller. Adoption is an explicit project decision, to be taken with the v4 B3 failure and these three demonstrations in view.",
+    "reviewer_instruction": "A reviewer should check three things. First, that the three demonstrations reproduce, in particular D3, since it is the one that settles the argument. Second, that the proposed criterion is not merely easier: it must reject the uncontrolled baseline, and it must reject at least one configuration the current controller produces, or it is criterion-shopping wearing a longer horizon. Third, that adopting it does not withdraw the v4 verdict, which stands as a failure either way."
+  },
+  "what_stays_unchanged": [
+    "B1, the paired differential on the grooming replay, limit 2.5 mm",
+    "B2, standing displacement at the bout duration, limit 2.5 mm",
+    "B4, the pre-groom seek minimum, 0.5 mm",
+    "the nine existing controls",
+    "the renderer timing amendment at 100 ms",
+    "the requirement that acceptance needs every criterion, not the new one alone"
+  ],
+  "claim_boundary": "Criteria only, and not adopted criteria. No run is executed by this contract, no artifact is produced, and no verdict changes on registration. Track A remains not an accepted milestone. v4 B3 remains the registered criterion and remains failed.",
+  "last_reviewed": "2026-09-09"
+}
