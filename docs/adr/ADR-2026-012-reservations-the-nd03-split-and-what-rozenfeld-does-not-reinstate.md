@@ -298,13 +298,19 @@ read off the file rather than off the column. Second, 6,107 is the parent table'
 count and it is not joinable by MaleCNS cell type at all, so it was never a validation set
 for this connectome in the first place.
 
-**What it changes.** The joinable set is about 205 rows over roughly 181 distinct MaleCNS
-cell types, four fifths of them optic lobe. That is still a real validation set and it is
-worth scoring — an agreement rate over 181 types with a Wilson interval is a measurement
-where the project currently has none. What it is not is a validation of the transmitter
-labels in the circuits this project models: there are essentially no antennal-lobe
-olfactory types in it, so `ND-03` will remain unvalidated precisely where stage 2 and
-stage 3 use it. That is why the contract this amendment accompanies,
+**What it changes.** The joinable set is about 205 rows over **169** distinct MaleCNS
+cell types — 135 from the current slice and 46 from the older file, twelve of which appear
+in both, which is why the first arithmetic here said 181. Of those 169, 89 match an
+optic-lobe naming pattern and **exactly zero** match any antennal-lobe pattern: no `ORN_`,
+no `HRN_`, no uniglomerular or multiglomerular projection neuron, no antennal-lobe local
+neuron. The remainder is largely central complex. That was measured against the naming
+conventions rather than estimated, and cell type names are unreserved so it spent nothing.
+
+It is still a real validation set and worth scoring: an agreement rate over 169 types with
+a Wilson interval is a measurement where the project currently has none. What it is not,
+and not by a narrow margin, is a validation of the transmitter labels in the circuits this
+project models. `ND-03` will remain unvalidated precisely where stage 2 and stage 3 use
+it. That is why the contract this amendment accompanies,
 `stage2-nd03-transmitter-validation-v1`, requires the coverage to be reported
 neuron-weighted and edge-weighted as well as type-weighted, and makes the coverage report
 a hypothesis of its own with no pass condition so it cannot be dropped from a write-up.

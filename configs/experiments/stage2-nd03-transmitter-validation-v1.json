@@ -6,7 +6,10 @@
   "provenance": "M/P",
   "preregistered_on": "2026-09-10",
   "values_opened": false,
-  "assumption_ids": ["ND-03", "ND-10"],
+  "assumption_ids": [
+    "ND-03",
+    "ND-10"
+  ],
   "why_this_exists": {
     "what_nd03_asserts": "That the per-body consensus transmitter carried by the MaleCNS annotation is the transmitter the presynaptic neuron releases. Every edge in every circuit this project builds inherits that label, so its error rate is an upper bound on the correctness of everything downstream.",
     "what_it_has_never_had": "A measurement. ND-03's provenance is M/P: the annotation is a classifier prediction from electron-microscopy image features, and the project has never compared it against an independent determination of what a neuron actually releases.",
@@ -19,15 +22,26 @@
       "male_cns_slice_rows": 3523,
       "rows_carrying_a_malecns_cell_type": 158,
       "distinct_malecns_cell_types": 135,
-      "region_of_those_rows": {"optic_lobe": 134, "central_brain": 24},
+      "region_of_those_rows": {
+        "optic_lobe": 134,
+        "central_brain": 24
+      },
       "older_malecns_file_rows": 47,
       "older_malecns_file_distinct_cell_types": 46,
-      "older_malecns_file_regions": {"midbrain": 30, "optic_lobes": 17},
+      "older_malecns_file_regions": {
+        "midbrain": 30,
+        "optic_lobes": 17
+      },
       "parent_table_rows": 6107,
-      "parent_table_larval_rows": 804
+      "parent_table_larval_rows": 804,
+      "distinct_joinable_malecns_cell_types": 169,
+      "types_in_both_malecns_files": 12,
+      "joinable_types_matching_an_optic_lobe_naming_pattern": 89,
+      "joinable_types_matching_an_antennal_lobe_naming_pattern": 0
     },
     "the_correction_this_forced": "ND-03 recorded that the ground truth supplies 6,107 verified assignments 'of which 3,523 rows carry a MaleCNS cell type'. Both halves were wrong in the same direction. 6,107 is the parent table's row count, it is not joinable on MaleCNS cell type at all, and 804 of its rows are larval and cannot validate an adult connectome. 3,523 is the MaleCNS slice's own row count, not the number carrying a MaleCNS cell type; that number is 158. The registry and ADR-2026-012 are amended.",
-    "what_it_means_for_this_contract": "The joinable validation set is about 205 rows over roughly 181 distinct MaleCNS cell types, four fifths of them optic lobe. That is a small and unrepresentative slice, and it contains essentially no antennal-lobe olfactory types, so this contract cannot validate the transmitter labels of the circuit the project's stage-2 and stage-3 work actually uses. Saying so in advance is the point of measuring feasibility before writing criteria."
+    "what_it_means_for_this_contract": "The joinable validation set is about 205 rows over 169 distinct MaleCNS cell types (135 from the current slice and 46 from the older file, 12 of which appear in both), of which 89 match an optic-lobe naming pattern and, measured rather than assumed, exactly zero match any antennal-lobe pattern: no ORN, no HRN, no uniglomerular or multiglomerular projection neuron, no antennal-lobe local neuron. The remainder is largely central complex. So this contract cannot validate the transmitter labels of the circuit the project's stage-2 and stage-3 work actually uses, and it is not a near miss: the count is zero. Saying so in advance is the point of measuring feasibility before writing criteria.",
+    "how_the_zero_was_measured": "By matching every joinable type name against the antennal-lobe naming conventions MaleCNS uses: the ORN_, HRN_ and TRN_ prefixes, the uniglomerular projection-neuron suffixes _adPN, _lPN, _vPN, _ilPN, _lvPN, _vlPN and _mPN, the local-neuron prefixes, and the glomerulus-name prefixes DA, DL, DM, DC, DP, VA, VC, VL and VM. Cell type names are unreserved, so the measurement spent nothing."
   },
   "the_independence_problem_and_the_audit": {
     "the_risk": "The MaleCNS consensus transmitter is predicted from electron-microscopy image features. If a ground-truth row's own evidence is an electron-microscopy prediction, or is an annotation propagated from MaleCNS or from the hemibrain, then comparing the two measures a classifier against itself. An agreement rate contaminated that way would be the most flattering and least informative number this project could produce.",
@@ -82,7 +96,7 @@
       "primary": false,
       "statement": "The neuron-weighted and edge-weighted coverage of the validated types are reported, together with the fraction of MaleCNS bodies and of MaleCNS outgoing synaptic weight that belong to a type with any verified assignment at all.",
       "no_threshold": "This hypothesis has no pass or fail. It exists so that the coverage cannot be omitted from the write-up, and so that T1's rate is never quoted without it.",
-      "expected_before_the_run": "Small, and concentrated in the optic lobe. The antennal-lobe olfactory types the project's stage-2 and stage-3 work depends on are expected to have no verified assignment at all, in which case the honest conclusion is that ND-03 remains unvalidated exactly where the project uses it."
+      "expected_before_the_run": "Small, and concentrated in the optic lobe and the central complex. The antennal-lobe olfactory types the project's stage-2 and stage-3 work depends on have already been measured to be absent from the joinable set entirely, so the conclusion that ND-03 remains unvalidated where the project uses it does not depend on this run's outcome. What this run can still establish is the label's error rate on the types it does cover, which is a measurement the project does not currently have anywhere."
     }
   ],
   "expected_outcome_stated_before_the_run": {

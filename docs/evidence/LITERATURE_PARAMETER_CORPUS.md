@@ -316,9 +316,10 @@ set. `ND-10` carries postsynaptic receptor identity and functional edge polarity
 stated boundary. The section above is the evidence for `ND-10`, not for `ND-03`.
 
 One consequence is worth stating plainly, because the intake of the flyconnectome ground truth
-got it wrong. Verified transmitter assignments validate `ND-03` — but for about **181**
-MaleCNS cell types, not the 6,107 rows of the parent table, which carries no MaleCNS
-column at all and includes 804 larval rows. See ADR-2026-012 third amendment. They do
+got it wrong. Verified transmitter assignments validate `ND-03` — but for **169** MaleCNS
+cell types, none of them in the antennal lobe, not the 6,107 rows of the parent table,
+which carries no MaleCNS column at all and includes 804 larval rows. See ADR-2026-012
+third amendment. They do
 **not** validate edge sign: a correct transmitter label still leaves the sign unresolved wherever
 the postsynaptic receptor is unknown, which the paragraphs above establish is the normal case
 rather than the exception. An agreement rate on transmitter identity is an upper bound on sign
