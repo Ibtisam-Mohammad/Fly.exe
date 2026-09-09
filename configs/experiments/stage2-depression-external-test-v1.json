@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "experiment_id": "stage2-depression-external-test-v1",
   "title": "External test of the frozen ND-06 depression rule against wild-type paired-pulse and train recordings from a laboratory that contributed nothing to its parameters",
-  "status": "preregistered, NOT EXECUTED. The predictions are committed and the reserved values are unopened.",
+  "status": "preregistered and AMENDED 2026-09-09, NOT EXECUTED. The predictions are committed, the reserved values are unopened, and the amendment corrected the observation-model bias account before anything was opened.",
   "provenance": "E",
   "preregistered_on": "2026-09-09",
   "values_opened": false,
@@ -106,7 +106,7 @@
     "paired_pulse": "The measured amplitude ratio is taken to equal the model's resource ratio. Each animal contributes one ratio and the cohort mean is compared to the prediction.",
     "train_normalisation_fixed_now": "Per animal, the steady state is the mean of the final ten pulses divided by the first pulse. This convention is fixed before the values are opened; choosing it afterwards would be a free parameter worth several tenths at 60 Hz.",
     "nan_handling_fixed_now": "The authors' own scripts use nanmean, so the arrays contain missing entries. A missing first pulse voids that animal; missing entries inside the final ten are skipped; an animal with fewer than five of the final ten present is excluded and the exclusion count is reported.",
-    "known_biases_and_their_direction": "Receptor saturation, receptor desensitisation and presynaptic recruitment failure all deepen a measured ratio relative to vesicle depletion alone, so all three bias the measurement downward against the prediction. A measured ratio ABOVE the prediction therefore cannot be explained by any of them. A measured ratio below it is attributable to either the model or the observation, and the contamination is worst at the shortest intervals, which is why the primary sits at 100 ms."
+    "known_biases_and_why_the_direction_is_not_one_sided": "Not one-sided, and the first version of this contract wrongly said they were. Postsynaptic receptor saturation raises a measured ratio, because the transfer from released vesicles to current is concave and the larger first response is compressed more than the smaller second one. Receptor desensitisation lowers it. Recruitment can do either: axons that fail to fire again lower the ratio, stimulus-dependent excitability changes can raise it, and variable recruitment adds variance without a sign. The withdrawn claim was that a measured ratio ABOVE the prediction could not be explained by observation error; saturation explains exactly that, so the claim is gone and no direction of disagreement is privileged. What remains is that all of these effects shrink with interval."
   },
   "hypotheses": [
     {
@@ -117,7 +117,8 @@
       "why_blind": "The number 0.8033 was committed at fb01944, before the Rozenfeld files were staged at a24249f. Neither the value nor the interval was chosen with any knowledge of this dataset.",
       "criterion": "The Student-t 95 percent confidence interval of the per-animal mean, over about 22 animals, contains 0.8033.",
       "degenerate_outcome_check": "A wide interval passes this trivially. If the 95 percent half-width exceeds 0.10, H1 is scored as NO VERDICT rather than passed, and the half-width is reported either way. This is the check that the equivalent Track A criterion needed and did not originally have.",
-      "this_is_the_primary": true
+      "this_is_the_primary": true,
+      "why_100_ms_is_the_primary": "Reduced response overlap, not a one-sided bias. At 10 and 30 ms the second response rises from the decaying tail of the first, so the measured second amplitude depends on a baseline convention that the authors' code does not state, and the estimate can be biased either way by that choice alone. At 100 ms a nicotinic ORN-to-PN EPSC has largely returned to baseline, so the second amplitude is measured from near rest and the convention barely matters. Receptor occupancy has also recovered further than at the two shorter intervals. The interval was in any case not chosen here: it is the one the registry's open prediction was written for at commit fb01944."
     },
     {
       "id": "H2",
@@ -125,8 +126,8 @@
       "statement": "No wild-type mean paired-pulse ratio, at any of the five intervals, lies below 0.7700.",
       "blind": true,
       "criterion": "The ratio is 1 - U exp(-dt/tau), which approaches 1 - U as the interval shrinks. Across the three published fits the smallest attainable value is 1 - 0.23 = 0.7700. A measured cohort mean below that refutes the rule as registered, at every member of its parameter family, with no threshold chosen by this contract.",
-      "why_this_is_the_sharpest_test": "It is a bound rather than an interval, so it cannot be passed by lack of power and cannot be tuned. It is also the criterion most likely to fail, which is why it is registered rather than omitted.",
-      "confound_disclosed": "At 10 and 30 ms a failure is attributable to the model or to VAL-02's downward biases. At 300 and 1000 ms those biases are small and a failure would be attributable to the model."
+      "why_this_is_the_sharpest_test": "It is a bound rather than an interval, so it cannot be passed for lack of power and this contract chooses no threshold to set it: the number follows from 1 - U across the registered family. It is also the criterion most likely to fail, which is why it is registered rather than omitted. What it is not is immune to observation error. It is immune to the one bias that inflates a ratio, since saturation cannot push a measurement below the floor, and it is not immune to desensitisation or to recruitment failure.",
+      "confound_disclosed": "A cohort mean below the floor refutes the rule as registered, and it does not on its own say which term is wrong. Saturation would push a measured ratio up and therefore cannot produce a failure of this floor; desensitisation and recruitment failure both can. So a failure here is attributable to the registered single-resource rule or to the postsynaptic and presynaptic terms of VAL-02, in an unknown mixture, and the mixture is least favourable at 10 and 30 ms. At 300 and 1000 ms the observation terms are smallest and a failure would bear most directly on the rule."
     },
     {
       "id": "H3",
@@ -156,14 +157,14 @@
     }
   ],
   "expected_outcome_stated_before_the_run": {
-    "prediction": "H2 is expected to FAIL, and it is the most likely failure. Kazama and Wilson's variance-derived release probability of 0.79 at this synapse, which the registry records as the competing reading, implies paired-pulse depression far deeper than a utilisation of 0.22 permits, and VAL-02's biases all push the measurement in the same direction.",
-    "what_a_joint_outcome_would_mean": "The existing 7 Hz test says the rule OVER-predicts steady-state depression. If this test says it UNDER-predicts paired-pulse depression, then the synapse depresses faster than the rule and settles higher than it, which no single exponential resource can do. That is not a parameter error; it is the one-resource collapse of a two-component response, which the registry's own claim boundary already names, and Nagel and colleagues published both components' parameters. The remedy would be a two-resource rule with the fast and slow components fitted separately, not a refit of the single one.",
-    "why_this_is_written_down": "So that the outcome cannot be presented as a surprise in either direction, and so that the diagnosis is fixed before the data can suggest one."
+    "prediction": "H2 is expected to FAIL, and it is the most likely failure. Kazama and Wilson's variance-derived release probability of 0.79 at this synapse, which the registry records as the competing reading, implies paired-pulse depression far deeper than a utilisation of 0.22 permits. Receptor desensitisation and recruitment failure would deepen the measurement further; receptor saturation would work against the prediction of failure, which is part of why the expectation is stated as a probability rather than a certainty.",
+    "what_a_joint_outcome_would_mean": "The existing 7 Hz test says the rule OVER-predicts steady-state depression. If this test says it UNDER-predicts paired-pulse depression, the pattern is a synapse that depresses faster than the rule and settles higher than it, which no single exponential resource can produce. The candidate explanation is the one-resource collapse of a two-component response, which this registry's claim boundary already names and whose components Nagel and colleagues published separately. It is a candidate and not a conclusion: because the observation biases run in both directions, a two-sided discrepancy can also be produced by saturation at one interval and desensitisation at another, and separating the two readings needs the saturation control VAL-02 names as unregistered.",
+    "why_this_is_written_down": "So that the outcome cannot be presented as a surprise in either direction, and so that the candidate diagnosis and its limits are fixed before the data can suggest one."
   },
   "acceptance": {
     "what_a_pass_would_establish": "That a depression rule whose parameters were taken from one laboratory's 10 Hz fit predicts another laboratory's paired-pulse and train measurements at intervals spanning two orders of magnitude. That is the first genuinely external quantitative agreement any dynamical parameter in this project would have.",
     "what_a_pass_would_not_establish": "No tier, and not the retired synaptic leg. The recordings are compound evoked responses through an observation model that is itself an assumption, and the synapse measured is in a different specimen and a different sex from MaleCNS.",
-    "what_a_failure_would_establish": "That the registered rule does not describe this synapse's short-term dynamics as parameterised. Combined with the 7 Hz failure it would locate the defect in the single-resource form rather than in the numbers.",
+    "what_a_failure_would_establish": "That the registered single-resource depression rule, as parameterised, does not predict compound evoked ORN-to-PN paired-pulse and train ratios under the VAL-02 observation model. That is narrower than it sounds and the narrowing is deliberate: it is NOT a falsification of presynaptic vesicle depletion as the mechanism. The depletion form has independent support at this synapse that this test does not touch, in Kazama and Wilson's finding that 7 Hz stimulation decreases 1 over CV squared in step with the uEPSC amplitude decrease at Pearson r = 0.79, which locates the depression presynaptically. A failure here bears on the parameters, on the collapse of two measured components onto one resource variable, and on the observation model, and it cannot distinguish among those three without the controls VAL-02 names as unregistered.",
     "no_refitting": "No parameter is changed on this outcome. That is the rule the 7 Hz failure was recorded under and it holds here: refitting to an external test converts the only external check into a training set. A revision may be issued as a new registry version with its own predictions, and it must not claim this test as evidence.",
     "no_criterion_may_be_restated": "If a criterion fails it is reported failed. The project has had to reissue a criterion once already for being satisfiable by a degenerate outcome, and the rule since then is that a failed criterion is never rewritten after the fact."
   },
@@ -175,5 +176,13 @@
     "5. Leave every other reserved file sealed."
   ],
   "claim_boundary": "Design and predictions only. Nothing is opened, nothing is scored, no artifact of a measurement is produced, and no tier is awarded by this contract.",
-  "last_reviewed": "2026-09-09"
+  "last_reviewed": "2026-09-09",
+  "amendment": {
+    "amended_on": "2026-09-09",
+    "values_opened_before_the_amendment": false,
+    "what_changed": "The observation-model bias account, and every inference that rested on it. The first version said receptor saturation, desensitisation and recruitment failure all deepen a measured paired-pulse ratio, and concluded that a measured ratio above the prediction could not be explained by observation error. Saturation does the opposite: it inflates the ratio, because the concave transfer from released vesicles to current compresses the larger first response more than the smaller second one. Recruitment has no safe direction either.",
+    "why_it_mattered": "The withdrawn claim would have licensed reading a high measured ratio as agreement with the model while attributing a low one to the observation. That is a one-directional escape hatch, and it is the same shape as the criterion drift this project has had to repair before.",
+    "what_did_not_change": "No numeric prediction, no criterion and no threshold. The 100 ms primary stays primary and its interval was never chosen here; what changed is its justification, which is now reduced response overlap rather than a one-sided bias. The floor of 0.7700 is unchanged. What narrowed is the inference drawn from failing it.",
+    "withdrawn_text_preserved": "Receptor saturation, receptor desensitisation and presynaptic recruitment failure all deepen a measured ratio relative to vesicle depletion alone, so all three bias the measurement downward against the prediction. A measured ratio ABOVE the prediction therefore cannot be explained by any of them."
+  }
 }

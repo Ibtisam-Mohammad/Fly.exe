@@ -442,8 +442,44 @@ No tier is awarded and no gate changes verdict.
   it. One question closed while classifying: the MaleCNS join does not go through the
   cross-matching table, whose header has no MaleCNS column, but through
   `gt_sources/male_cns/202509-male_cns_gt_data.csv` and its `cell_type_mcns` column across
-  3,523 rows. `VAL-02` newly registers the evoked-EPSC observation model as an assumption,
-  with the direction of each of its three biases stated, which is what makes it usable.
+  3,523 rows. `VAL-02` newly registers the evoked-EPSC observation model as an assumption.
+- **`VAL-02`'s bias account was wrong and is amended, before any value was opened.** It
+  claimed receptor saturation, desensitisation and recruitment failure all deepen a measured
+  paired-pulse ratio, and concluded that a measurement *above* the prediction could not be
+  explained by observation error. Saturation does the opposite: the transfer from released
+  vesicles to current is concave, so the larger first response is compressed more than the
+  smaller second one and the measured ratio comes out too high. Desensitisation lowers it and
+  recruitment can do either. The withdrawn claim was the dangerous kind — a one-directional
+  escape hatch that would have licensed reading a high measurement as agreement. No
+  prediction, criterion or threshold changed: the 0.7700 floor stands and 100 ms is still the
+  primary interval, now justified by reduced response overlap, since at 10 and 30 ms the
+  second response rises from the decay of the first and its amplitude depends on a baseline
+  convention the source code does not state. What narrowed is the inference. A failure
+  against Rozenfeld establishes that the registered **single-resource rule as parameterised**
+  does not predict compound evoked ORN-to-PN ratios under `VAL-02`; it does **not** falsify
+  presynaptic depletion, which has independent support this test does not touch in Kazama and
+  Wilson's 1/CV² correlation at r = 0.79.
+- **The evidence gate no longer trusts `git status`.** `require_clean_worktree` now re-hashes
+  every tracked file through git's own clean filters and compares the result with the index,
+  compares the index with HEAD, and refuses outright when any path carries an
+  assume-unchanged or skip-worktree bit, because in that state a clean report carries no
+  information. It says so explicitly when `git status` claims clean and the byte audit
+  disagrees, which is the failure observed on 2026-09-09. `git_metadata`, which serves runs
+  that are not claiming evidence grade, stays cheap and now records that it is the cheap
+  check, so a development artifact cannot be mistaken for a byte-verified one.
+  `create_evidence_worktree` adds a detached worktree at a named commit, and the audit
+  records whether a run came from one; 15 new tests cover the same-length edit, both index
+  bits, and an edit made inside the detached worktree.
+- **MOTOR-05's validation seed will be a commitment, not plaintext.**
+  `configs/experiments/motor-05-validation-protocol-v1.json` registers the scheme:
+  `sha256(domain:nonce:seed)` with at least 128 bits of nonce, because a date-shaped seed
+  would otherwise be brute-forced straight out of the digest. It keeps **fixation** and
+  **blinding** apart and refuses to let one be reported as the other — a digest proves the
+  seed was fixed before the freeze whoever holds the secret, and proves the poses were unseen
+  only if another party held it or the seed came from a public source whose value postdated
+  the freeze. A single-party commitment is labelled `blinding: "none"` and must not be called
+  a blind holdout. That is exactly what MOTOR-04's plaintext seed was: fixation without
+  blinding, with the holdout resting on discipline.
 - **The Track A validation failure is enforced, not merely recorded.** Seed 20260910 is
   listed in `flysim.station_validation.SPENT_VALIDATION_SEEDS` with the outcome it produced,
   and the draw refuses it for development, which would make it training data, and for

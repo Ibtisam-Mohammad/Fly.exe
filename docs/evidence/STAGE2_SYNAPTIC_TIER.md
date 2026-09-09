@@ -350,15 +350,45 @@ model does not generate them: response latency and its jitter, miniature amplitu
 frequency, absolute evoked amplitude in picoamps, and Bruchpilot puncta counts. Scoring an
 observable a model cannot produce turns a test into a choice of what to report.
 
+**The observation model is two-directional, and the first version of this contract got
+that wrong.** It said receptor saturation, desensitisation and recruitment failure all
+deepen a measured ratio, and concluded that a measured ratio *above* the prediction could
+not be explained by observation error. That is withdrawn. Saturation works the other way:
+the transfer from released vesicles to measured current is concave, so the larger first
+response is compressed more than the smaller second one and the measured ratio comes out
+*higher* than the underlying release ratio. Desensitisation lowers it. Recruitment can do
+either — axons that fail to fire again lower the ratio, stimulus-dependent excitability
+changes can raise it. So no direction of disagreement is privileged, and the withdrawn
+claim was the dangerous kind: it would have licensed reading a high measurement as
+agreement while attributing a low one to the apparatus.
+
+**Why 100 ms is still the primary interval: reduced response overlap.** At 10 and 30 ms the
+second response rises from the decaying tail of the first, so its measured amplitude depends
+on a baseline convention the authors' code does not state, and that choice alone can bias the
+estimate either way. At 100 ms a nicotinic ORN-to-PN EPSC has largely returned to baseline
+and the convention barely matters. The interval was in any case not chosen here — it is the
+one the registry's open prediction was written for at `fb01944`.
+
 **The expected outcome is written down.** H2, the floor, is expected to fail: Kazama and
 Wilson's variance-derived release probability of 0.79 implies paired-pulse depression far
-deeper than a utilisation of 0.22 permits, and every bias in the `VAL-02` observation model
-pushes the measurement the same way. If it does fail, the diagnosis is fixed in advance —
-the existing 7 Hz test says the rule *over*-predicts steady-state depression, so an
-*under*-prediction of paired-pulse depression would mean the synapse depresses faster than
-the rule and settles higher than it, which no single exponential resource can do. That is the
-one-resource collapse of a two-component response, which this registry's claim boundary
-already names and whose components Nagel and colleagues published separately.
+deeper than a utilisation of 0.22 permits, and desensitisation and recruitment failure would
+deepen the measurement further. Saturation works against that expectation, which is why it
+is stated as a probability and not a certainty.
+
+**What a failure would and would not establish.** It would establish that the registered
+single-resource rule, as parameterised, does not predict *compound evoked* ORN-to-PN
+paired-pulse and train ratios under the `VAL-02` observation model. It would **not** falsify
+presynaptic vesicle depletion as the mechanism. The depletion form has independent support
+this test does not touch: Kazama and Wilson found that 7 Hz stimulation decreases 1/CV² in
+step with the uEPSC amplitude decrease at r = 0.79, which locates the depression
+presynaptically. A failure bears on the parameters, on the collapse of two measured
+components onto one resource variable, and on the observation model, and it cannot
+distinguish among the three without the saturation and desensitisation controls `VAL-02`
+names as unregistered. The candidate diagnosis is still recorded in advance — the 7 Hz test
+says the rule *over*-predicts steady-state depression, so an *under*-prediction here would
+describe a synapse that depresses faster than the rule and settles higher than it, which no
+single exponential resource can do — but it is a candidate, because a two-sided discrepancy
+can equally be produced by saturation at one interval and desensitisation at another.
 
 **Nothing will be refitted on the outcome.** That is the rule the 7 Hz failure was recorded
 under and it holds here: refitting to an external test converts the only external check into

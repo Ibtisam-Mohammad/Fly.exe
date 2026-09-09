@@ -282,4 +282,69 @@ def test_the_train_normalisation_is_fixed_before_the_values_are_opened(
     assert model["assumption_id"] == "VAL-02"
     assert "final ten pulses" in model["train_normalisation_fixed_now"]
     assert "nan_handling_fixed_now" in model
-    assert "downward" in model["known_biases_and_their_direction"]
+
+
+def test_the_bias_account_is_two_directional(contract: dict[str, Any]) -> None:
+    model = contract["observation_model"]
+    assert "known_biases_and_their_direction" not in model
+    biases = model["known_biases_and_why_the_direction_is_not_one_sided"]
+    assert "raises a measured ratio" in biases
+    assert "desensitisation lowers it" in biases.lower()
+    assert "can do either" in biases
+    assert "no direction of disagreement is privileged" in biases
+
+
+def test_the_primary_interval_is_justified_by_overlap_not_by_bias(
+    contract: dict[str, Any],
+) -> None:
+    primary = next(item for item in contract["hypotheses"] if item["id"] == "H1")
+    justification = primary["why_100_ms_is_the_primary"]
+    assert "Reduced response overlap, not a one-sided bias" in justification
+    assert "baseline convention" in justification
+    # And the interval was not chosen by this contract at all.
+    assert "fb01944" in justification
+
+
+def test_the_amendment_preserves_the_withdrawn_text_and_changed_no_number(
+    contract: dict[str, Any],
+) -> None:
+    amendment = contract["amendment"]
+    assert amendment["values_opened_before_the_amendment"] is False
+    assert "cannot be explained by any of them" in amendment["withdrawn_text_preserved"]
+    unchanged = amendment["what_did_not_change"]
+    assert "No numeric prediction, no criterion and no threshold" in unchanged
+    assert "0.7700 is unchanged" in unchanged
+    # The floor itself must still be the floor.
+    floor = next(item for item in contract["hypotheses"] if item["id"] == "H2")
+    assert "0.7700" in floor["statement"]
+
+
+def test_a_failure_is_scoped_to_the_parameterised_rule_not_to_depletion(
+    contract: dict[str, Any],
+) -> None:
+    meaning = contract["acceptance"]["what_a_failure_would_establish"]
+    assert "single-resource depression rule, as parameterised" in meaning
+    assert "compound evoked" in meaning
+    assert "NOT a falsification of presynaptic vesicle depletion" in meaning
+    # The independent support for the depletion form must be named, not merely asserted.
+    assert "CV squared" in meaning
+    assert "0.79" in meaning
+
+
+def test_the_joint_diagnosis_is_a_candidate_rather_than_a_conclusion(
+    contract: dict[str, Any],
+) -> None:
+    joint = contract["expected_outcome_stated_before_the_run"][
+        "what_a_joint_outcome_would_mean"
+    ]
+    assert "candidate and not a conclusion" in joint
+    assert "saturation at one interval and desensitisation at another" in joint
+
+
+def test_the_floor_test_admits_which_bias_it_is_immune_to(contract: dict[str, Any]) -> None:
+    floor = next(item for item in contract["hypotheses"] if item["id"] == "H2")
+    sharpest = floor["why_this_is_the_sharpest_test"]
+    assert "What it is not is immune to observation error" in sharpest
+    # Saturation cannot push a measurement below a floor; the other two can.
+    assert "saturation cannot push a measurement below the floor" in sharpest
+    assert "cannot produce a failure of this floor" in floor["confound_disclosed"]

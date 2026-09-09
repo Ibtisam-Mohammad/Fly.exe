@@ -38,8 +38,16 @@ SPENT_VALIDATION_SEEDS: dict[int, dict[str, Any]] = {
         "artifact": "evidence/male-cns-v1.0/track-a-station-keeping-validation-v1.json",
         "successor_rule": (
             "A successor controller is registered as MOTOR-05 with a fresh development set "
-            "and a separately frozen validation set drawn from a new registered seed, both "
-            "registered before tuning begins. This failure stays on the record either way."
+            "and a separately frozen validation set, both registered before tuning begins, "
+            "and the validation seed registered as a commitment rather than in plaintext. "
+            "This failure stays on the record either way."
+        ),
+        "how_this_seed_was_registered": (
+            "In plaintext, in the contract, before tuning. That establishes that the set "
+            "was fixed in advance and nothing more: the poses were drawable by whoever was "
+            "tuning, so the holdout rested on discipline rather than on the protocol. "
+            "MOTOR-05 replaces it with commit-reveal; see "
+            "configs/experiments/motor-05-validation-protocol-v1.json."
         ),
     }
 }
@@ -85,6 +93,42 @@ def draw_validation_poses(
             {"attempt": attempt + 1, "initial_heading_rad": heading, "initial_y_mm": lateral}
         )
     return poses
+
+
+def draw_committed_validation_poses(
+    *,
+    commitment: dict[str, Any],
+    seed: int,
+    nonce_hex: str,
+    count: int,
+    max_attempts: int,
+    purpose: str = "validation",
+) -> dict[str, Any]:
+    """Reveal a committed seed, check it against its commitment, then draw.
+
+    MOTOR-04's seed was registered in plaintext, which fixed the set in advance and left
+    the poses drawable by whoever was tuning. This is the successor path: the digest goes
+    into the pre-tuning commit and the seed arrives here only at reveal. The returned
+    record carries what the commitment does and does not establish, so a run cannot
+    describe a single-party commitment as a blind holdout.
+    """
+    from flysim.commit_reveal import SeedCommitment, verify_seed
+
+    registered = SeedCommitment.from_contract(commitment)
+    verify_seed(commitment=registered.commitment, seed=seed, nonce_hex=nonce_hex)
+    poses = draw_validation_poses(
+        seed=seed, count=count, max_attempts=max_attempts, purpose=purpose
+    )
+    return {
+        "seed": seed,
+        "poses": poses,
+        "commitment": registered.as_dict(),
+        "claim_boundary": (
+            "The commitment establishes that this seed was fixed before the freeze. It "
+            "establishes that the poses were unseen during tuning only if the blinding "
+            "field says so."
+        ),
+    }
 
 
 def _build_body(

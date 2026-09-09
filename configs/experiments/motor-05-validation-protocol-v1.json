@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "motor-05-validation-protocol-v1",
+  "title": "Commit-reveal protocol for the MOTOR-05 validation seed, replacing the plaintext registration used for MOTOR-04",
+  "status": "registered protocol, NOT EXECUTED. MOTOR-05 does not exist; this fixes how its validation set will be drawn before any of it is written.",
+  "provenance": "E",
+  "registered_on": "2026-09-09",
+  "assumption_ids": ["MOTOR-04", "VAL-01"],
+  "why_this_exists": {
+    "what_went_weakly_right": "MOTOR-04's twelve validation poses were drawn from seed 20260910, registered in plaintext in the criteria contract before any further tuning. That fixed the set in advance, and the evaluation was run once and reported as it came out. But the protocol never required that: the seed was in the contract, so whoever was tuning could draw the twelve poses and look at them at any time. The holdout rested on discipline.",
+    "what_a_commitment_changes": "A digest in the pre-tuning commit fixes the seed without publishing it. The seed arrives only at reveal, after the controller is frozen and committed.",
+    "what_it_does_not_change_by_itself": "A commitment does not make a seed unknown to the party that generated it. Whoever holds the secret can still draw the poses. So fixation and blinding are recorded separately and one is never reported as the other."
+  },
+  "two_properties_kept_apart": {
+    "fixation": "The seed could not be changed after the freeze. A digest in a pre-tuning commit establishes this whoever holds the secret, and it is the property MOTOR-04's plaintext registration also had.",
+    "blinding": "The tuner did not know the seed while tuning. A digest establishes this only if the secret was held by another party, or if the seed did not exist yet.",
+    "why_the_distinction_is_load_bearing": "MOTOR-04's validation failed, so nothing was gained by any weakness in its protocol. The next controller might pass, and a pass is exactly the case where the difference between 'the set was fixed' and 'the set was unseen' decides what the result is worth."
+  },
+  "commitment_scheme": {
+    "digest": "sha256(b'flysim-validation-seed-v1' + b':' + nonce_hex + b':' + str(seed))",
+    "nonce": "at least 32 lowercase hex characters; flysim.commit_reveal.new_nonce draws 256 bits",
+    "why_a_nonce_at_all": "The seed space a run would plausibly use is small enough to brute-force from a bare digest. A date-shaped seed like 20260910 would be recovered in microseconds, and the commitment would then publish the thing it exists to hide.",
+    "seed_range": "[0, 2**64)",
+    "verification": "flysim.commit_reveal.verify_seed refuses a reveal whose digest does not match, and flysim.station_validation.draw_committed_validation_poses will not draw without that check passing."
+  },
+  "seed_sources_in_order_of_strength": [
+    {
+      "id": "public-beacon",
+      "blinding": "public-beacon",
+      "how": "Register, before tuning, the name of a public randomness source and a future instant: for example a specific NIST randomness-beacon pulse time, or a named block height not yet mined. The seed is then flysim.commit_reveal.derive_seed_from_beacon of that value, which anyone can recompute.",
+      "why_strongest": "There is no secret and nothing to reveal, because the value did not exist when the controller was frozen. No party could have known the poses.",
+      "cost": "The reveal needs network access to a third party at a stated time, and the source must still be resolvable years later or the result becomes uncheckable."
+    },
+    {
+      "id": "second-party-secret",
+      "blinding": "second-party-secret",
+      "how": "Another party draws the seed and the nonce, gives only the digest for the pre-tuning commit, and reveals both after the freeze commit exists.",
+      "why_strong": "The tuner is genuinely blind, and the reveal is verifiable against the committed digest.",
+      "cost": "It needs a second party who will actually hold the secret and reveal it. If the same person plays both roles the property is not obtained, whatever the contract says."
+    },
+    {
+      "id": "single-party",
+      "blinding": "none",
+      "how": "The tuning party draws the seed and the nonce and commits the digest.",
+      "what_it_establishes": "Fixation only. It is a real improvement on plaintext, because the set cannot be swapped for a friendlier one after a result is seen.",
+      "what_it_must_not_be_called": "A blind holdout. flysim.commit_reveal records blinding 'none' for this route and the recorded justification must say who held the secret."
+    }
+  ],
+  "protocol": [
+    "1. Choose a seed source from the list above and register it. If it is public-beacon, register the source and the instant. Otherwise register the digest, the blinding claim, the party holding the secret, and the reveal trigger.",
+    "2. Register the MOTOR-05 development set in the same commit, in plaintext, because it is meant to be tuned against. The seven poses that chose MOTOR-04's gains may be reused as development; they are already training data and cannot become less so.",
+    "3. Tune MOTOR-05 against development without limit. Record refuted variants as MOTOR-04 recorded its rejected secondary channel.",
+    "4. Freeze: commit the controller and the criteria. This commit is the reveal trigger, and it must be named as such before tuning starts so the reveal cannot be timed to suit a result.",
+    "5. Reveal, verify against the commitment, draw the poses, evaluate once, report whatever comes out.",
+    "6. Add the revealed seed to flysim.station_validation.SPENT_VALIDATION_SEEDS with its outcome, which retires it from both tuning and rescoring."
+  ],
+  "requirements_inherited_from_the_v5_contract": [
+    "The evaluation happens exactly once and is reported whatever it is.",
+    "Seed 20260910 stays permanently retired, and MOTOR-04's failed validation stays on the record whatever MOTOR-05 achieves.",
+    "The development and validation seeds are distinct from each other.",
+    "The acceptance threshold is registered before the run, with the degenerate-outcome check that a criterion satisfiable by a trivial outcome is not a criterion.",
+    "The evidence-grade run happens from a clean worktree verified by re-hashing the file bytes, and preferably from a detached worktree at the freeze commit."
+  ],
+  "what_this_protocol_cannot_fix": "It governs the seed, not the model. A controller can still be tuned until it happens to generalise, and repeated MOTOR-0n attempts each with a fresh blind holdout would eventually produce a pass by selection across attempts. The defence against that is the count of attempts, which must be reported: MOTOR-05 is the second attempt and every later one says which number it is.",
+  "claim_boundary": "A protocol. It scores nothing, awards no tier, and does not itself register a seed or a commitment.",
+  "last_reviewed": "2026-09-09"
+}

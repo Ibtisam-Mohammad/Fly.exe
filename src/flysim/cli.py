@@ -714,6 +714,33 @@ def _command_evidence_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_evidence_worktree(args: argparse.Namespace) -> int:
+    from flysim.runs import audit_worktree, create_evidence_worktree, remove_evidence_worktree
+
+    if args.remove:
+        _print_json(remove_evidence_worktree(path=args.path))
+        return 0
+    created = create_evidence_worktree(path=args.path, commit=args.commit)
+    _print_json({**created, "audit": audit_worktree(args.path).as_dict()})
+    return 0
+
+
+def _command_evidence_audit_worktree(args: argparse.Namespace) -> int:
+    from flysim.runs import audit_worktree
+
+    audit = audit_worktree(args.path)
+    _print_json(
+        {
+            "commit": audit.commit,
+            "clean": audit.clean,
+            "status_reported_clean": audit.status_reported_clean,
+            "status_disagrees_with_the_bytes": audit.status_disagrees,
+            **audit.as_dict(),
+        }
+    )
+    return 0 if audit.clean else 2
+
+
 def _command_evidence_validate(args: argparse.Namespace) -> int:
     result = validate_evidence_bundle(args.bundle)
     _print_json(result)
@@ -2238,6 +2265,24 @@ def build_parser() -> argparse.ArgumentParser:
     evidence_validate = evidence_commands.add_parser("validate")
     evidence_validate.add_argument("bundle", type=Path)
     evidence_validate.set_defaults(func=_command_evidence_validate)
+
+    evidence_worktree = evidence_commands.add_parser(
+        "worktree",
+        help="add a detached worktree at a commit so an evidence run cannot see later edits",
+    )
+    evidence_worktree.add_argument("path", type=Path)
+    evidence_worktree.add_argument("--commit", default="HEAD")
+    evidence_worktree.add_argument(
+        "--remove", action="store_true", help="remove the worktree at PATH instead"
+    )
+    evidence_worktree.set_defaults(func=_command_evidence_worktree)
+
+    evidence_audit = evidence_commands.add_parser(
+        "audit-worktree",
+        help="re-hash every tracked file and report whether git status is telling the truth",
+    )
+    evidence_audit.add_argument("path", type=Path, nargs="?", default=project_root())
+    evidence_audit.set_defaults(func=_command_evidence_audit_worktree)
     return parser
 
 

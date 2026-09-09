@@ -215,12 +215,15 @@
     "successor_id": "MOTOR-05",
     "why_a_new_id": "MOTOR-04 is frozen at the values it was validated under, and its validation failed. Changing those values in place would make the recorded failure unattributable to any controller, so a successor is a new registered assumption rather than an edit.",
     "requirements": [
-      "A new development set, drawn from a newly registered seed and registered before any tuning begins. The seven poses that chose MOTOR-04's gains may be reused as development, because they are already training data and cannot become less so.",
-      "A separately frozen validation set drawn from a different newly registered seed, untouched until the controller is frozen and committed.",
-      "The two sets are registered in the same commit, before tuning, so neither can be chosen after a result is seen.",
+      "A new development set, drawn from a newly registered seed and registered in plaintext before any tuning begins, because it is meant to be tuned against. The seven poses that chose MOTOR-04's gains may be reused as development, since they are already training data and cannot become less so.",
+      "A separately frozen validation set whose seed is registered as a COMMITMENT rather than in plaintext, under motor-05-validation-protocol-v1. This contract registered seed 20260910 in plaintext, which fixed the set in advance and left the poses drawable by whoever was tuning; the holdout rested on discipline rather than on the protocol.",
+      "The commitment records what it establishes. A digest proves the seed was fixed before the freeze whoever holds the secret; it proves the poses were unseen during tuning only if the secret was held by another party or the seed came from a public source whose value postdated the freeze. A single-party commitment is labelled blinding 'none' and must not be called a blind holdout.",
+      "The development seed and the validation commitment are registered in the same commit, before tuning, so neither can be chosen after a result is seen, and the reveal trigger is named then too so the reveal cannot be timed to suit a result.",
       "The seeds are distinct from each other and from 20260910, and 20260910 stays permanently retired.",
-      "Evaluation once, reported whatever it is, exactly as this contract required."
+      "Evaluation once, reported whatever it is, exactly as this contract required, from a clean worktree verified by re-hashing the file bytes and preferably from a detached worktree at the freeze commit."
     ],
-    "what_stays_on_the_record": "This failed validation, whatever MOTOR-05 achieves. A later success does not withdraw an earlier failure; it is a second result about a different controller."
+    "what_stays_on_the_record": "This failed validation, whatever MOTOR-05 achieves. A later success does not withdraw an earlier failure; it is a second result about a different controller.",
+    "protocol": "configs/experiments/motor-05-validation-protocol-v1.json",
+    "attempt_number": "MOTOR-05 is the second attempt. Repeated attempts each with a fresh holdout would eventually produce a pass by selection across attempts, so every successor reports which number it is."
   }
 }

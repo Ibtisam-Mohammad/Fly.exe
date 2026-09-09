@@ -149,11 +149,17 @@ be true that are all false in detail: linear summation, identical recruitment on
 pulses, no receptor desensitisation, and amplitude ratio equal to resource ratio. Leaving
 them implicit would have hidden them inside a "measurement".
 
-What makes the assumption usable is that the **direction** of each bias is known even
-though its size is not. Saturation, desensitisation and recruitment failure all deepen a
-measured ratio relative to vesicle depletion alone. So a measured ratio *above* the
-prediction cannot be explained by any of them, and the contamination is worst at the
-shortest intervals — which is why the primary test sits at 100 ms and not at 10 ms.
+**Amended the same day, before any value was opened — see the amendment at the end of
+this record.** The paragraph that stood here claimed the direction of every bias was known
+and ran the same way, and concluded that a measured ratio above the prediction could not be
+explained by observation error. It is withdrawn. Saturation raises a measured ratio, because
+the transfer from released vesicles to current is concave and compresses the larger first
+response more than the smaller second one; desensitisation lowers it; recruitment can do
+either. No direction of disagreement is privileged.
+
+What survives is weaker: every one of these effects shrinks as the interval grows, because
+receptor occupancy recovers and the second response stops riding on the decay of the first.
+That, and not a one-sided bias, is why the primary test sits at 100 ms.
 
 ## What is not decided here
 
@@ -178,3 +184,41 @@ shortest intervals — which is why the primary test sits at 100 ms and not at 1
   utilisation from one pharmacological component with a recovery constant from another.
 - The V0 evidence bundle is unaffected: it is gated on `DATA-*` record content and never on
   the set identifier, which is exactly the case ADR-2026-006 designed for.
+
+## Amendment, 2026-09-09 — the observation bias is not one-directional
+
+Recorded before any reserved value was opened, so no measurement was interpreted under the
+withdrawn reasoning.
+
+**Withdrawn text, preserved verbatim:** *"Receptor saturation, receptor desensitisation and
+presynaptic recruitment failure all deepen a measured ratio relative to vesicle depletion
+alone, so all three bias the measurement downward against the prediction. A measured ratio
+ABOVE the prediction therefore cannot be explained by any of them."*
+
+**Why it was wrong.** Postsynaptic receptor saturation biases a measured paired-pulse ratio
+*upward*, not downward. The transfer from released vesicles to measured current is concave,
+so the larger first response is compressed more than the smaller second one and the measured
+amplitude ratio exceeds the underlying release ratio. Desensitisation biases it downward.
+Recruitment has no safe direction: failure of stimulated axons to fire again lowers the
+ratio, stimulus-dependent changes in axonal excitability can raise it, and variable
+recruitment adds variance with no sign at all.
+
+**Why it mattered.** The withdrawn claim was a one-directional escape hatch. It would have
+licensed reading a high measured ratio as agreement with the model while attributing a low
+one to the apparatus, which is the same shape as the criterion drift this project has had to
+repair before.
+
+**What changed and what did not.** No numeric prediction, no criterion and no threshold
+moved. The 0.7700 floor is unchanged and the 100 ms interval is still primary — its
+justification is now reduced response overlap, since at 10 and 30 ms the second response
+rises from the decay of the first and its amplitude depends on a baseline convention the
+source code does not state. What narrowed is the inference: a failure against these
+recordings establishes that the registered **single-resource rule as parameterised** does not
+predict compound evoked ORN-to-PN paired-pulse and train ratios under `VAL-02`. It is **not**
+a falsification of presynaptic vesicle depletion, which has independent support this test
+does not touch in Kazama and Wilson's 1/CV² correlation at r = 0.79.
+
+`VAL-02` also gained an explicit `postsynaptic_saturation_contributes_nothing` clause, so the
+assumption is listed rather than hidden inside "linear summation", and its validation field
+now names the control that would bound it: a low-affinity competitive antagonist that
+relieves receptor occupancy without changing release.

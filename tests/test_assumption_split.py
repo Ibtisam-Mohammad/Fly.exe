@@ -89,8 +89,33 @@ def test_val02_declares_the_observation_model_as_an_assumption(
     assert record["provenance"] == "E"
     assert record["status"] == "proposed"
     assert "Every clause is false in detail" in record["biological_mismatch"]
-    # The direction of the bias is what makes the assumption usable, so it must be stated.
-    assert "bias a measured paired-pulse ratio downward" in record["uncertainty"]
+    assert record["value"]["postsynaptic_saturation_contributes_nothing"] is True
+    assert record["value"]["postsynaptic_desensitisation_contributes_nothing"] is True
+
+
+def test_val02_no_longer_claims_the_bias_runs_one_way(
+    records: dict[str, dict[str, Any]],
+) -> None:
+    uncertainty = records["VAL-02"]["uncertainty"]
+    # Saturation inflates a measured ratio, desensitisation deflates it, recruitment does
+    # either. The withdrawn claim was that a high measurement could not be observation
+    # error, which would have been a one-directional escape hatch.
+    assert "AMENDED" in uncertainty
+    assert "WITHDRAWN" in uncertainty
+    assert "UPWARD" in uncertainty
+    assert "DOWNWARD" in uncertainty
+    assert "not safely one-directional" in uncertainty
+    assert "no measured value is protected from observation error in either" in uncertainty
+    assert "above the prediction could not be explained" in uncertainty
+
+
+def test_val02_names_the_control_that_would_bound_it(
+    records: dict[str, dict[str, Any]],
+) -> None:
+    validation = records["VAL-02"]["validation"]
+    assert "low-affinity competitive antagonist" in validation
+    assert "minimal and under compound stimulation" in validation
+    assert "None of the three is registered" in validation
 
 
 def test_motor04_records_the_failed_validation_and_the_successor_rule(
