@@ -389,6 +389,34 @@ No tier is awarded and no gate changes verdict.
   current controller would fail it at 2 of 7 poses. **Track A remains not an accepted
   milestone**: B2 passes, B3 fails, B1 and B4 are unmeasured, and the 30-run matrix was not
   executed because it would spend hours reproducing a known failure.
+- **The v5 criteria are adopted prospectively and the frozen controller fails validation.**
+  Adoption withdraws nothing: the v3 matrix stays 0 of 30, the v4 B3 ratio stays failed, the
+  Stage 2 gate stays 0 of 3. The seven poses MOTOR-04 was tuned on are registered as
+  development, twelve validation poses were drawn from a seeded rule before any further
+  tuning, and the controller was frozen at `4c4a53f` and evaluated once. **B2 passes 12 of
+  12** unseen poses with a worst 3-second displacement of 0.957 mm. **B3-v5 passes 8 of 12
+  against the 10 required, so validation fails**, exactly the 8 or 9 the contract predicted
+  in writing beforehand. Development was 5 of 7 and validation 8 of 12, so this is a
+  capability limit at the twelve-second horizon rather than an overfitting gap. The twelve
+  poses are now spent: further tuning requires a new seed and this failure stays recorded.
+  An improvement attempt before the freeze also failed and is recorded — a second fore-aft
+  channel looked like a clean win on the three poses it was swept over, which had been
+  selected from the failing set, and was worse across all seven.
+- **The newly indexed Stage 2 datasets are staged, checksummed and classified.**
+  `configs/datasets/stage2-2026-09-09-intake.json` separates what is already used from what
+  is genuinely unseen, under a rule that structure may be read and values may not, so
+  classifying costs no holdout. Already used: Gugel 2023, whose re-downloaded Figure 7
+  checksum matched the registered value end to end, and Nanami 2024, which is **not**
+  training data as this session first assumed but a retired scoring source. Reserved unseen:
+  Rozenfeld 2023, with per-animal paired-pulse ratios at five intervals and train responses
+  at four frequencies, which is the strongest available test of the registered depression
+  parameters and matches the synaptic leg's recorded reinstatement condition; Takagi 2024,
+  with matched OSN and PN calcium responses in four glomeruli plus GABA-blockade and
+  antenna-ablation conditions; and 6,107 verified cell-type transmitter assignments, which
+  make ND-03 sign assignment testable for the first time. Liu 2022 is lateral-horn, not PN,
+  and its per-recording waveforms could not be obtained because PMC blocks scripted access.
+  **The stage-3 activity-prediction design's data-availability finding is now false and must
+  be revised**: a per-PN response target does exist.
 - **The renderer is cleared as the cause of the 1.44 s rendered-timing divergence.** A rendered
   and a headless body driven with identical commands stay bit-identical in `qpos` for a whole
   run, maximum absolute difference exactly zero. The divergence originates elsewhere in the

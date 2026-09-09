@@ -278,3 +278,110 @@ has however now been cleared as its cause: a rendered and a headless body driven
 identical command sequence stay bit-identical in `qpos` for the whole run, maximum
 absolute difference exactly zero, so the 1.44 s transition divergence originates elsewhere
 in the brain-body loop and not in the renderer.
+
+
+---
+
+# Validation on unseen poses: B2 generalises, B3-v5 does not
+
+Status: **evaluated once, and it fails.** Track A remains not an accepted milestone.
+
+Artifact: `evidence/male-cns-v1.0/track-a-station-keeping-validation-v1.json`
+Frozen commit `4c4a53f`, clean worktree, evidence-grade. 12 poses, 0 rejected by the
+settled-outside-dust guard.
+
+## Why this run exists
+
+Every one of the seven poses in the table above also chose MOTOR-04's gains, its control
+channel and its offset limit. Those numbers are training performance and cannot support a
+claim about a pose the controller has not seen. The v5 criteria contract was adopted
+prospectively, the seven poses were registered as development, twelve validation poses
+were drawn from a seeded rule, the controller was frozen at `4c4a53f`, and the validation
+set was evaluated once.
+
+The acceptance threshold was registered before the run: **10 of 12**, which is the same 80
+percent the v3 matrix already requires as 8 successes of 10 seeds per position. It was
+declared informed rather than blind, and set at a level the development set fails — 5 of 7
+is 71 percent. The contract also recorded the expected outcome before the run: *"the
+expected validation pass count is about 8 or 9 of 12, which would fail the threshold."*
+
+## The result
+
+```
+ pose   heading    y_mm |      3s      6s     12s |  ratio | B2 B3v5
+  v01   -3.0990  +1.217 |   0.580   1.840   1.398 |  3.173 | ok ok
+  v02   +3.0246  +0.836 |   0.554   1.572   1.667 |  2.837 | ok ok
+  v03   -3.0765  -0.534 |   0.669   1.273   2.308 |  1.904 | ok ok
+  v04   -0.1664  +1.207 |   0.088   1.393   3.634 | 15.812 | ok NO
+  v05   -0.7219  -0.189 |   0.309   0.837   1.511 |  2.709 | ok ok
+  v06   +0.3136  +0.523 |   0.790   2.040   3.284 |  2.582 | ok NO
+  v07   +2.4915  -0.877 |   0.506   2.376   3.951 |  4.692 | ok NO
+  v08   -2.9403  -0.760 |   0.647   0.831   2.601 |  1.285 | ok NO
+  v09   -0.3820  +0.965 |   0.175   0.649   1.517 |  3.701 | ok ok
+  v10   -0.9210  -1.331 |   0.531   0.318   1.335 |  0.599 | ok ok
+  v11   +1.5906  +0.977 |   0.464   1.276   1.602 |  2.749 | ok ok
+  v12   -2.5797  -1.413 |   0.957   0.821   0.943 |  0.858 | ok ok
+```
+
+| criterion | passes | required | verdict |
+|---|---|---|---|
+| **B2**, displacement at 3 s within 2.5 mm | **12 of 12** | 10 | **passes** |
+| **B3-v5**, displacement at 12 s within 2.5 mm | **8 of 12** | 10 | **fails** |
+
+**The predicted count was 8 or 9 and the observed count was 8.**
+
+## What the numbers say, and what they do not
+
+**B2 generalises, comfortably.** Worst 3-second displacement across twelve unseen poses is
+0.957 mm, against a 2.5 mm limit and against 2.835 mm uncontrolled at the worst
+development pose. On the criterion that fails at 4 of 7 development poses without the
+controller, the controller passes at 12 of 12 poses it never saw.
+
+**B3-v5 does not, and this is a capability limit rather than an overfitting artifact.**
+Development gives 5 of 7, which is 71 percent; validation gives 8 of 12, which is 67
+percent. Those are the same number within the resolution of twelve samples. If the
+controller had been overfitted to the development poses the validation rate would have
+collapsed, and it did not. The controller is simply not good enough at the twelve-second
+horizon at roughly a third of standing poses, and it was not good enough on development
+either.
+
+**The four failures are all late-time leaks.** v04 is the clearest: 0.088 mm at 3 s, the
+tightest hold in the whole set, then 3.634 mm at 12 s. The diagnosis recorded above
+applies unchanged — the common-mode offset saturates at the edge of its monotone branch
+and the plant's restoring velocity there caps near 0.2 mm/s, which is less than the drift
+force at some poses.
+
+**The retired ratio disagrees with the adopted criterion on half the set.** It would have
+passed only 3 of 12. It passes v08 at 1.285 while v08 has drifted 2.601 mm, and it passes
+v10 and v12 while failing v01, v02, v05, v09 and v11, all of which end under 1.7 mm. That
+is the fourth independent demonstration that the ratio does not measure bounded drift, and
+it is why the number is now reported as a diagnostic rather than scored.
+
+## What must not happen next
+
+**These twelve poses are now spent.** The contract's terms are explicit: tuning against
+them would make them development data, so any further work on MOTOR-04 requires a new
+validation set drawn from a new registered seed, and this failed validation stays on the
+record either way.
+
+The improvement attempt that preceded the freeze is also on the record and it failed. A
+second fore-aft channel on coxa roll at weight −1.0 cut the worst development displacement
+from 3.163 to 1.710 mm on the three poses it was swept over, and those three had been
+selected from the failing set: across all seven it was worse, at 3.893 mm and 3 of 7
+passing. The channel ships implemented and disabled at weight 0.0.
+
+## Where Track A stands
+
+| | status |
+|---|---|
+| B1, grooming replay differential | **unmeasured**; the paired control is implemented as `--suppress-groom-replay` and not yet run |
+| B2, standing at the bout duration | **passes**, 12 of 12 unseen poses |
+| B3-v5, standing at four bout durations | **fails**, 8 of 12 against 10 required |
+| B4, pre-groom seek minimum | **unmeasured** |
+| renderer timing amendment | **fails**; the renderer itself is cleared as the cause |
+| the nine controls | not re-run |
+
+**Track A is not an accepted milestone.** The 30-run matrix was not executed, as
+instructed, and executing it now would be premature: B3-v5 fails on poses the fly reaches
+by standing still, and the matrix would spend hours confirming it against a criterion
+already known to fail.

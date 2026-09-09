@@ -1,0 +1,226 @@
+{
+  "schema_version": "1.0",
+  "manifest_id": "stage2-2026-09-09-intake",
+  "title": "Intake of the Stage 2 dataset index supplied 2026-09-09, classified by whether it is raw, summary, already used or reserved",
+  "staged_at": "/srv/flybrain-data/incoming/stage2-2026-09-09",
+  "index_supplied_by_user": "C:/Users/ibtis/Downloads/papers/supplementary.md",
+  "status": "staged and classified; nothing is promoted to raw/ or derived/, nothing is fitted, and every reserved observation is unread",
+  "inspection_rule": {
+    "rule": "Structure may be read; values may not. File names, formats, sizes, checksums, variable names, array shapes, column headers and row counts are metadata and were read. No numeric value of any reserved observable was read, printed or summarised.",
+    "why": "A holdout is spent the moment its observations are looked at. Classifying a file as raw or summary needs its schema, not its contents, so the classification below costs nothing.",
+    "what_this_does_not_protect_against": "Reading a variable name can still be informative: knowing that Rozenfeld records paired-pulse ratios at five intervals tells the reader that recovery kinetics were measured, which is already in the paper. The rule protects the values, which is what a holdout is."
+  },
+  "already_used_and_therefore_not_a_holdout": [
+    {
+      "id": "gugel-2023-elife-85443",
+      "status": "already registered and already local; no intake needed",
+      "registered_as": "configs/datasets/gugel-2023-elife-85443.json, dryad_version 5",
+      "local_paths": [
+        "/srv/flybrain-data/raw/auxiliary/gugel-2023-elife-85443-source-data",
+        "/srv/flybrain-data/raw/auxiliary/gugel-2023-dryad-v15dv420q"
+      ],
+      "fit_role": "Figure 7 solvent-control DL5 recordings, split by recorded cell before fitting",
+      "held_out_role": "preregistered solvent-control recorded cells excluded from fitting; this is the existing cellular-leg holdout and it is consumed",
+      "integrity_check_performed": "elife-85443-fig7-data1-v2.xlsx was re-downloaded independently during this intake and its SHA-256 a8ae6fcd3bf0d8effab7a0ecbfa88fccf192f134144072282758ca8125bd8c78 matches the value registered earlier, which confirms the registered artifact end to end",
+      "dryad_api_note": "The Dryad bulk-download endpoint returned HTTP 401 during intake. It did not matter: the dataset was already downloaded and checksum-locked in an earlier session."
+    },
+    {
+      "id": "nanami-2024",
+      "status": "already registered; repository re-cloned during intake for completeness",
+      "registered_as": [
+        "configs/datasets/nanami-2024-pn-current-clamp.json",
+        "configs/datasets/nanami-2024-invivo-cellular-pack.json"
+      ],
+      "correction_to_an_earlier_assumption_in_this_session": "This intake initially assumed Nanami was training data for the cellular tier. It is not. Both packs carry fit_role none. The cellular pack supplied the measured observables, and the PN current-clamp trace was retired as a scoring source by ADR-2026-007 because the recorded step levels are the in-silico PQN model's dimensionless amplitudes and the real amplitudes are irrecoverable. So the planned sealed evaluation cannot happen and this is neither training data nor a usable holdout.",
+      "held_out_role": "none available; retired"
+    },
+    {
+      "id": "kazama-wilson-2008-2009",
+      "status": "summaries only, already used",
+      "used_for": "the complete-convergence prediction, the release-site scaling, the volume test and the bilateral symmetry test",
+      "raw_data_available": false,
+      "note": "Only published summary statistics exist. This is one of the two sources whose absence retired the cellular and synaptic legs under ADR-2026-011."
+    }
+  ],
+  "reserved_as_validation_genuinely_unseen": [
+    {
+      "id": "rozenfeld-2023-orn-pn-synaptic-physiology",
+      "priority": "highest, because it bears directly on the retired synaptic leg",
+      "paper": "Homeostatic synaptic plasticity rescues neural coding reliability, Nature Communications 2023, doi 10.1038/s41467-023-38575-6",
+      "previous_use_in_this_project": "the 10 to 30 release-sites-per-connection range only, a summary quoted in the convergence contract. No Rozenfeld measurement has ever been read into a fit or a score.",
+      "staged": [
+        {
+          "path": "rozenfeld2023-repo",
+          "kind": "git clone",
+          "commit": "4e53fd71d6a8ad062543fe9e989ef2299eca75ba",
+          "contents": "MATLAB .mat source data per figure panel plus the .m analysis scripts"
+        },
+        {
+          "path": "rozenfeld2023-source-data.rar",
+          "bytes": 201111757,
+          "sha256": "b32f667b065a446c59f0de685ab8b2dff1d6103b9d5d8c00be518f4dca9abe3b",
+          "extracted": false,
+          "note": "No unrar or 7z in the environment. Not extracted, and probably redundant: the paper names the GitHub repository as the source-data location and the repository is staged."
+        }
+      ],
+      "raw_per_observation_arrays": [
+        {
+          "file": "Figure 3/Fig3D.mat",
+          "variables": "new_all_flies_PP_10ms/30ms/100ms/300ms/1000ms_control, shapes (20 to 22, 1); same five at _RNAi",
+          "what_it_is": "paired-pulse ratio per fly at five interstimulus intervals from 10 ms to 1000 ms",
+          "why_it_matters": "This is a direct measurement of synaptic recovery kinetics across three orders of magnitude of interval, per animal. ND-06 registers a recovery time constant of 893 ms with range 629 to 1006 ms, fitted to Nagel, Hong and Wilson 2015, and its one external test at 7 Hz failed. Five intervals from an independent laboratory is the strongest available test of that parameter.",
+          "classification": "raw per-animal observations"
+        },
+        {
+          "file": "Figure 3/Fig3E_and_F.mat",
+          "variables": "all_flies_1Hz/10Hz/20Hz/60Hz_control, shapes (18, 32) to (18, 112); matching _RNAi; plus mean_rise_time_* and std_rise_time_*",
+          "what_it_is": "per-fly response amplitude across a stimulus train at four frequencies, 18 flies per condition",
+          "why_it_matters": "Depression across a train at 1, 10, 20 and 60 Hz is exactly the observable the registered depression rule predicts, and the four frequencies constrain utilisation and recovery jointly rather than singly.",
+          "classification": "raw per-animal observations; the mean_rise_time and std_rise_time arrays are derived summaries of the same recordings"
+        },
+        {
+          "file": "Figure 1/Fig1H.mat and Fig1I.mat",
+          "variables": "IAA_IC(22, 70001), IAA_VC(22, 70001)",
+          "what_it_is": "22 recordings of 70001 samples each, in current clamp and in voltage clamp",
+          "classification": "raw traces",
+          "why_it_matters": "Voltage-clamp traces are the form the uEPSC kernel was fitted in. These are candidate held-out waveforms from a preparation that did not contribute to the fit."
+        },
+        {
+          "file": "Figure 3/Fig3B.mat, Fig3G.mat, Fig3I.mat",
+          "variables": "all_flies_1Hz_control and _RNAi, shapes (17 to 22, 32)",
+          "classification": "raw per-animal observations"
+        },
+        {
+          "file": "Figure 5/Fig5B.mat, Fig5D.mat",
+          "variables": "mini_control(6,1), mini_freq_control(6,1), intensity/size/num_brp_control(7,1)",
+          "what_it_is": "miniature EPSC amplitude and frequency per animal, and Bruchpilot puncta counts, intensities and sizes per animal",
+          "why_it_matters": "Quantal size and release-site number measured in the same preparation. This is the second independent handle on the contact-to-release-site identification that two results this session put under pressure.",
+          "classification": "raw per-animal observations"
+        }
+      ],
+      "derived_summaries_not_reserved": [
+        "Figure 1/Fig1E.mat and Figure 2/Fig2C.mat, Fig2F.mat, Figure 4/Fig4D.mat, Fig4G.mat: *_knee arrays, which are fitted knee points rather than observations"
+      ],
+      "restriction_that_must_be_honoured": "Only the _control arrays are wild-type comparable. The _RNAi arrays are a cacophony calcium-channel knockdown, which changes release probability by design, so they are a manipulation and not a target for a wild-type model.",
+      "reservation": "Reserved. No value in any file above has been read. Scoring requires a preregistered contract naming the file, the variable, the metric and the limit before the values are opened.",
+      "license": "check before redistribution; the repository ships analysis code and figure source data without an explicit LICENSE file, so it must not be copied into a GPL release until that is resolved"
+    },
+    {
+      "id": "takagi-2024-osn-expansion-pn-adaptation",
+      "priority": "high, and it changes a finding recorded earlier in this session",
+      "paper": "Olfactory sensory neuron population expansions influence projection neuron adaptation and enhance odour tracking, Nature Communications 2024, doi 10.1038/s41467-024-50808-w",
+      "previous_use_in_this_project": "none. The name appears nowhere in the repository.",
+      "staged": [
+        {"path": "takagi2024-source-data.zip", "bytes": 241951407, "sha256": "6c21a1ea454dc8379c6e0f17e4d8880e92cf486d80fb2b1e318d164342965c77"},
+        {"path": "takagi2024-supp-data1.xlsx", "bytes": 15212, "sha256": "e13fccc06b359f3218738df189527c30f3d1193a8fcf4c31408480f9c0fbb4af"},
+        {"path": "takagi2024-supp-data2.xlsx", "bytes": 15431, "sha256": "e46b8b55f5e3515a3ade23c2275358e5b3b5bb31887c47b2c1b21ff1ca8a5ba9"}
+      ],
+      "structure": "194 zip entries, 39 data files, in three groups: calcium imaging, tethered flight and wind tunnel flight",
+      "raw_per_observation_arrays": [
+        {
+          "files": "Source Data/calcium imaging/dataframe_VM5d OSN_pulses (Figure 5i).csv and dataframe_VM5d PN_pulses (Figure 5j).csv",
+          "what_it_is": "paired OSN and PN calcium responses to odour pulses in the same glomerulus",
+          "why_it_matters": "Input and output of the same transformation, measured in the same preparation. This is the observable the stage-3 activity-prediction design said did not exist."
+        },
+        {
+          "files": "dataframe_DM2 PN_pulses (5k), dataframe_DM4 PN_pulses (5l), dataframe_VA2 PN_pulses (5m)",
+          "what_it_is": "PN pulse responses in three further glomeruli"
+        },
+        {
+          "files": "dataframe_VM5d OSN_dose-response (SuppFig 8a), dataframe_VM5d PN_dose-response (8b), dataframe_DM2 OSN_dose-response (8c), dataframe_DM2 PN_dose-response (8d), DM4 (11c-d), VA2 (11a-b)",
+          "what_it_is": "matched OSN and PN dose-response curves in the same glomeruli",
+          "why_it_matters": "A dose-response pair is the input-output curve H1 of the stage-3 design asks for, measured rather than inferred."
+        },
+        {
+          "files": "dataframe_VM5d PN_PTX+CGP54626 (Figure 6a) and dataframe_VM5d PN_mecamylamine (Figure 6b)",
+          "what_it_is": "PN responses under GABA-A and GABA-B blockade, and under nicotinic blockade",
+          "why_it_matters": "Removing GABAergic inhibition is the direct test of divisive normalisation, which is H2 of the stage-3 design and the only discriminating hypothesis of its three, because it requires the local-interneuron network to be wired and signed correctly."
+        },
+        {
+          "files": "dataframe_VM5d PN_pulses_antenna ablation (Figure 6c)",
+          "why_it_matters": "An ipsilateral-versus-contralateral manipulation, which bears on the 1.56-fold contact asymmetry this session measured in the bilateral test."
+        }
+      ],
+      "corrects_an_earlier_finding": "The stage-3 design contract, registered earlier today, states that DoOR contains no projection-neuron recordings and concludes there is no downloadable per-PN response target. The first half stands and the conclusion does not: Takagi 2024 supplies matched OSN and PN responses in four glomeruli with pharmacological controls. The contract must be revised rather than left standing.",
+      "caveats_that_must_be_resolved_before_use": [
+        "The observable is calcium fluorescence, not firing rate, so scoring needs an observation model and that model is an assumption.",
+        "The paper compares Drosophila melanogaster and D. sechellia and the calcium-imaging filenames do not carry the species. Which files are melanogaster must be established from the readme and the analysis code before any of it is used against a melanogaster connectome.",
+        "The two wind-tunnel CSVs are 153 MB and 322 MB and are behavioural trajectories, not physiology; they are staged but out of scope."
+      ],
+      "reservation": "Reserved. No value has been read. The classification above comes from filenames, sizes and the zip index."
+    },
+    {
+      "id": "drosophila-neurotransmitter-ground-truth",
+      "priority": "high, because it tests the assumption every edge in the simulation depends on",
+      "source": "github.com/flyconnectome/drosophila_neurotransmitters",
+      "staged": {"path": "drosophila-neurotransmitters", "kind": "git clone", "commit": "a9417412c8a70fcc9f80a65ca5bc6064eba07be3"},
+      "previous_use_in_this_project": "none",
+      "structure": [
+        {
+          "file": "gt_data.csv",
+          "rows": 6107,
+          "columns": "species, region, hemilineage, cell_type, neurotransmitter_verified_source, neurotransmitter_verified_evidence, neurotransmitter_verified_confidence, then one column per transmitter: acetylcholine, glutamate, gaba, glycine, dopamine, serotonin, octopamine, tyramine, histamine, nitric_oxide",
+          "classification": "verified per-cell-type ground truth with provenance and a confidence grade"
+        },
+        {
+          "file": "inst/extdata/cell_type_cross_matching.csv",
+          "rows": 16902,
+          "columns": "cell_type, hemibrain_type, morphology_group, hemilineage, region, in_fafb, in_hemibrain, in_banc, in_l1",
+          "classification": "cross-dataset cell-type mapping"
+        },
+        {
+          "file": "gt_sources/banc/*.csv and gt_sources/bates_2024/*.csv",
+          "rows": "9,759 to 129,571 per dated snapshot",
+          "classification": "per-body source snapshots behind the aggregated ground truth"
+        }
+      ],
+      "why_it_matters": "ND-03 assigns every edge's sign from a *predicted* transmitter identity, and that sign determines whether each of 25.6 million edges excites or inhibits. This is *verified* transmitter identity for 6,107 cell types with a stated evidence class. Joining it to the MaleCNS predictions gives a direct measurement of how often the sign assignment is right, which no result in this project currently has.",
+      "reservation": "Reserved as the validation set for ND-03 sign assignment. No transmitter value has been read. A contract must fix the join key, the confidence floor, the metric and the limit before the values are opened, because the accuracy figure is exactly the number a fit would otherwise be tuned against.",
+      "open_question": "The repository README claims MaleCNS mappings. The cross-matching table's columns list in_fafb, in_hemibrain, in_banc and in_l1 with no MaleCNS column in the header, so how MaleCNS types are reached must be established before use.",
+      "license": "the repository ships a LICENSE file; check its terms before redistribution"
+    },
+    {
+      "id": "liu-2022-connectomic-features-of-synaptic-strength",
+      "priority": "high for the contact-to-release-site question, and only partly obtained",
+      "paper": "Connectomic features underlying diverse synaptic connection strengths and subcellular computation, PMC8825683",
+      "previous_use_in_this_project": "none",
+      "correction_to_the_supplied_index": "The index describes this as physiology plus morphology plus synapse-location data and highlights Data S2 for mean EPSP waveforms. That is right, but the recordings are from **lateral horn neurons** while stimulating projection neurons, so the synapse measured is PN-to-LHN and not the ORN-to-PN synapse this project parameterises. Its value is as a test of whether contact count predicts physiological strength at all, not as a holdout for the registered uEPSC kernel.",
+      "the_finding_that_makes_it_relevant": "The paper reports that synapse *density*, meaning count normalised by postsynaptic membrane surface area, predicts mean uEPSP amplitude at r squared 0.77. Two results this session put the identification of one contact with one release site under quantitative pressure, at 2.06 times the published release-site count and a 1.56-fold contact asymmetry where no amplitude asymmetry was measured. A paper that measured both count and amplitude in one preparation is the natural arbiter, and it says the normalisation by membrane area is what carries the prediction.",
+      "not_obtained": [
+        {
+          "item": "Data S2, mean EPSP waveform data for each recording of each connection, MAT, 208.3 KB",
+          "reason": "The PMC supplementary binary paths were probed and all returned HTTP 404 with an error page. PMC blocks scripted access to these files.",
+          "how_to_get_it": "Download Data S1 to S4 manually from https://pmc.ncbi.nlm.nih.gov/articles/PMC8825683/ and stage them; the intake script will checksum whatever is placed in the staging directory."
+        },
+        {"item": "Data S1 skeletons ZIP 15.1 MB, Data S3 simulated mEPSP amplitudes MAT 483 KB, Data S4 LHLN anatomy XLSX 16.7 KB", "reason": "same"}
+      ],
+      "zenodo_records_are_code_not_physiology": "Records 5711439, 5716323 and 5716321 were queried and hold NBLAST matching code with a 592 MB RData, NEURON model code with SWC morphologies, and barbell-model MATLAB respectively. None contains the EPSP waveforms. The three files-archive endpoints returned HTTP 403; the per-file endpoints are known and listed in the fetch log.",
+      "reservation": "Reserved once obtained. Nothing has been read because nothing physiological was obtained."
+    }
+  ],
+  "staged_but_out_of_scope_or_summary_only": [
+    {
+      "id": "davis-2020-transcriptomic-cell-types",
+      "staged": {"path": "davis2020-supp1.xlsx", "bytes": 57861, "sha256": "8f7890472d7b07e4a04a0fd38716dd5f5e46d94995467a5ceba54d01ab15d361"},
+      "previous_use": "read as prose in the literature corpus, which records it as the closest existing resource to what ND-03 would need and explains why it is insufficient: receptor identity is partner- and dendritic-domain-specific, so no bulk expression atlas can settle an edge's sign.",
+      "classification": "cell-type-resolved transcriptomic tables; summary-level for this project's purposes",
+      "reservation": "not reserved as a holdout, because it cannot score an edge sign. Useful as a prior on which transmitters a type can express."
+    },
+    {
+      "id": "flyvis-2024-connectome-constrained-visual-model",
+      "staged": {"path": "flyvis2024-supplementary-data.zip", "bytes": 26522689, "sha256": "77a71cc7b215a3f9264c2a0135b570885a57c396e5d7fbd7ced9494fdc3de53b"},
+      "classification": "method reference and a worked example of the connectome-constrained route, for the fly visual system",
+      "relevance": "It is the reference implementation of the argument the stage-3 design borrows, including experimental response references and predictions for 64 cell types. It is not a target for this project's olfactory work and must not be scored against one.",
+      "reservation": "not reserved; it is a method reference, and treating another model's predictions as ground truth would be circular."
+    }
+  ],
+  "what_this_intake_changes": [
+    "The synaptic leg may be reinstatable. Rozenfeld 2023 supplies per-animal paired-pulse ratios at five intervals and per-animal train responses at four frequencies, from a laboratory that contributed nothing to the registered depression parameters. ADR-2026-011 retired the synaptic leg for want of exactly this, and its recorded reinstatement condition is raw traces from a preparation not used to fit the kernel.",
+    "The cellular leg is not reinstated by anything here. Takagi 2024 is calcium imaging, not current clamp, so it cannot supply resting voltage, membrane time constant or adaptation in physical units.",
+    "The stage-3 activity-prediction design must be revised. Its data-availability finding that no per-PN response target is downloadable is now false.",
+    "ND-03 sign assignment becomes testable for the first time, against 6,107 verified cell-type transmitter assignments.",
+    "Nothing above changes any verdict. No tier moves, the Stage 2 gate stays 0 of 3, and no fit has been touched."
+  ],
+  "fetch_log": "/srv/flybrain-data/incoming/stage2-2026-09-09/fetch-log.txt",
+  "last_reviewed": "2026-09-09"
+}
