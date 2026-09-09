@@ -191,3 +191,37 @@ a circuit whose excitatory partners and sensory inputs are among the worst, and 
 balance is consistent with that asymmetry rather than independent of it. Establishing the true
 balance needs either a reconstruction-corrected estimate or a circuit whose partners are
 uniformly well reconstructed.
+
+## Scaling this to K = 4 and to the whole graph, costed
+
+The obvious next moves are to test whether the suppression reverses at K = 4, which caveat 3
+above lists as untested, and to run the protocol on the whole graph, which would remove the
+selection rule from the question entirely. Both were costed rather than attempted, and the
+answers differ.
+
+GeNN's `SPARSE` connectivity pads every presynaptic row to the maximum out-degree, so the device
+cost is `max_out_degree x neurons x 8` bytes for indices and weights:
+
+| circuit | neurons | edges | max out-degree | padded slots | device cost |
+|---|---|---|---|---|---|
+| K = 2 | 322 | 11,140 | 158 | 50,876 | negligible |
+| K = 3 | 1,706 | 139,215 | 648 | 1,105,488 | 0.01 GiB |
+| **K = 4** | 35,425 | 6,458,359 | 6,563 | 232,494,275 | **1.73 GiB** |
+| whole graph | 165,122 | 25,563,197 | 11,203 | 1,849,861,766 | **13.8 GiB** |
+
+**K = 4 is affordable** at 1.73 GiB on a 12 GiB RTX 3060. What blocks it is not the GPU but the
+parity gate: this sweep refuses to run the ND-04 fit unless NumPy and GeNN agree, and the NumPy
+runner steps 6.46 million edges 30,000 times per condition, which is around 2e11 edge operations
+and not viable. A K = 4 contract would therefore have to permit a GeNN-only run and record
+unestablished parity as a limitation, having established it at K = 3. That is a defensible
+contract but it is a weaker one, and it must say so rather than inherit this sweep's parity
+claim.
+
+**The whole graph does not fit unbucketed.** 13.8 GiB exceeds the device. This is the same wall
+the Track A runtime hit and solved: its nine-bucket, 81-projection layout cuts padding from 1.849
+billion slots to 128,941,699 and measured 7,165 MiB on the full graph. So the whole-graph
+protocol is reachable, but only through `TrackAGeNNEngine` rather than `run_genn_circuit`, and
+that engine's input surface is the Track A named-population encoder rather than direct spike
+injection into arbitrary bodies. Running Shiu's protocol on the whole connectome therefore needs
+a spike-injection path and an arbitrary-body rate readout added to the bucketed engine — real
+work, not a configuration change, and the reason this report stops at K = 3.
