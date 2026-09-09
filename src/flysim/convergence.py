@@ -35,9 +35,14 @@ def load_olfactory_populations(
 ) -> tuple[dict[str, list[int]], dict[str, list[int]]]:
     """Traced ORN and uniglomerular PN body IDs, keyed by glomerulus.
 
+    The prediction is bilateral, so this loader pools both antennae.
+
     ORN somata sit in the antenna, outside the imaged volume, so every ORN body carries a null
-    ``somaSide`` and the populations cannot be split by antenna. The prediction is bilateral in
-    any case.
+    ``somaSide``. An earlier version of this docstring concluded from that alone that the
+    populations cannot be split by antenna, which is too strong and is corrected here: only
+    ``somaSide`` is unusable. ``rootSide`` carries the side for 2,226 of 2,635 ORN bodies and
+    the PN side is in the ``instance`` suffix, which is what
+    :func:`flysim.bilateral.load_sided_olfactory_populations` uses.
     """
     table = feather.read_table(
         annotations_path, columns=["bodyId", "type", "status"]

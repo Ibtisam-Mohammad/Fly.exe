@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-bilateral-symmetry-v1",
+  "title": "Ipsilateral and contralateral ORN input onto a shared projection neuron, tested against the published equality",
+  "status": "preregistered",
+  "provenance": "M/P",
+  "assumption_ids": ["DATA-01", "DATA-03", "DATA-04"],
+  "preregistered_on": "2026-09-09",
+  "preregistration": {
+    "blind": "No ipsilateral or contralateral contact count has been computed in this repository. The ORN side counts in the graph were inspected while writing this contract and are recorded below, because they bear on H3 and it would be dishonest to present H3 as blind. Nothing about contacts per pair, on either side, has been looked at.",
+    "known_before_registration": {
+      "orn_bodies_by_side": {"R": 1343, "L": 883, "unknown": 409},
+      "projection_bodies_by_side": {"R": 137, "L": 139},
+      "why_this_matters": "Right-side ORNs outnumber left-side ORNs in the graph by 1.52 to 1, which is a reconstruction asymmetry rather than a biological one: a fly has two comparable antennae. So any test of bilateral symmetry on this connectome has to separate a per-connection strength claim, which H1 tests, from a recovery-rate asymmetry, which H3 measures."
+    }
+  },
+  "prediction": {
+    "source": "Kazama and Wilson 2008",
+    "claim_quoted": "ipsilateral and contralateral ORN projections produce uEPSCs of equal amplitude (p > 0.54)",
+    "structural_form": "Under the identification of one anatomical contact with one release site, and given that Kazama and Wilson found release probability and quantal size constant across glomeruli, equal uEPSC amplitude implies an equal number of contacts per ORN-to-PN connection from each antenna onto the same PN.",
+    "why_this_is_a_good_test": "It is parameter-free, needs no physiology, no fitting and no simulation, and it is a within-PN paired comparison, so it is insensitive to the glomerulus-to-glomerulus variation that has confounded every previous contact-based test in this project. It also doubles as an internal consistency check on the connectome, because a fly's two antennae are equivalent and any asymmetry that is not ipsi-versus-contra is a reconstruction artifact."
+  },
+  "method": {
+    "population": "the glomeruli carrying both an ORN_ type and a uniglomerular PN type, restricted to ORNs with a resolved rootSide and PNs whose instance suffix gives a side",
+    "statistic": "for each PN, the mean contacts per realised ORN-to-PN pair from same-side ORNs (ipsilateral) and from opposite-side ORNs (contralateral), and the log2 of their ratio",
+    "test": "a two-sided exact sign test on the per-PN log2 ratios, plus the median log2 ratio",
+    "excluded_and_why": "ORNs with rootSide 'unknown' (409 of 2635) are excluded because their side cannot be assigned; the count is reported. PNs receiving no realised pair on one side contribute to H3 but not to H1, because a ratio needs both terms."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "blind": true,
+      "statement": "Contacts per ORN-to-PN connection are equal from each antenna onto the same projection neuron.",
+      "criterion": "The median per-PN log2(ipsi/contra) ratio lies within +/- 0.3, a factor of 1.23, and the two-sided exact sign test does not reject at p < 0.05.",
+      "two_sided": "Both outcomes are informative and neither is assumed. Equality supports the published result and the contact-as-release-site identification together. A systematic asymmetry is a finding about either the fly or the reconstruction, and H2 is what distinguishes those."
+    },
+    {
+      "id": "H2",
+      "blind": true,
+      "statement": "Any ipsilateral-versus-contralateral asymmetry has the same sign for left-side and right-side projection neurons. That is what it means for the asymmetry to be about ipsi versus contra rather than about left versus right.",
+      "criterion": "Report the median log2 ratio separately for left-side and right-side PNs. If the two medians have the same sign, H1's reading stands as an ipsi-versus-contra statement. If they have opposite signs, the effect is a left-versus-right asymmetry of the reconstruction and H1's reading is withdrawn in favour of that.",
+      "why_this_control": "It cannot be satisfied by a degenerate outcome, and it is the control that decides what H1 means rather than merely whether it passed. Without it a reconstruction asymmetry between the two antennal nerves would be reported as fly biology."
+    },
+    {
+      "id": "H3",
+      "blind": false,
+      "not_blind_disclosure": "The ORN side counts in the graph, 1343 right against 883 left, were inspected while writing this contract, so a recovery asymmetry is expected and this hypothesis is registered expecting to fail. It exists so that the asymmetry is measured and reported rather than left as an unexamined caveat on H1.",
+      "statement": "Pair completeness is equal on the two sides: a PN recovers the same fraction of its possible ipsilateral and contralateral ORN partners.",
+      "criterion": "The median per-PN difference between ipsilateral and contralateral pair completeness lies within +/- 0.05. Given the 1.52-to-1 ORN count asymmetry this is expected to fail, and the magnitude is the reportable quantity.",
+      "what_a_failure_means": "That the connectome's two antennal nerves are not reconstructed equally well, which qualifies every bilateral claim made on this dataset and is worth recording independently of H1."
+    }
+  ],
+  "claim_boundary": "A structural test on the locked connectome. It awards no validation tier, fits nothing, and simulates nothing. A pass would be agreement between the connectome and an independent physiological measurement, not validation of any model this project has built.",
+  "last_reviewed": "2026-09-09"
+}

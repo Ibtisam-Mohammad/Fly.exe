@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from flysim.benchmark import estimate_sparse_memory
+from flysim.bilateral import run_bilateral_symmetry
 from flysim.completeness import run_completeness_correction
 from flysim.config import project_root
 from flysim.connectome import (
@@ -362,6 +363,28 @@ def _command_benchmark_glomerular_volume(args: argparse.Namespace) -> int:
             "rarefaction": result["rarefaction"],
             "hypotheses": result["hypotheses"],
             "hypotheses_descriptive": result["hypotheses_descriptive"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_benchmark_bilateral_symmetry(args: argparse.Namespace) -> int:
+    result = run_bilateral_symmetry(
+        root=args.root,
+        graph_path=args.graph,
+        experiment_path=args.experiment,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "glomeruli_with_both_sides": result["glomeruli_with_both_sides"],
+            "projection_neurons": result["projection_neurons"],
+            "hypotheses": result["hypotheses"],
             "output": result["output"],
             "sha256": result["sha256"],
             "validation_tier_awarded": None,
@@ -1680,6 +1703,28 @@ def build_parser() -> argparse.ArgumentParser:
     volume.add_argument("--output", type=Path, required=True)
     volume.add_argument("--allow-dirty-tree", action="store_true")
     volume.set_defaults(func=_command_benchmark_glomerular_volume)
+
+    bilateral = benchmark_commands.add_parser(
+        "bilateral-symmetry",
+        help="test the published ipsilateral/contralateral ORN-to-PN equality on the graph",
+    )
+    bilateral.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-bilateral-symmetry-v1.json",
+    )
+    bilateral.add_argument("--root", type=Path, default=default_data_root())
+    bilateral.add_argument(
+        "--graph",
+        type=Path,
+        default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
+    )
+    bilateral.add_argument("--output", type=Path, required=True)
+    bilateral.add_argument("--allow-dirty-tree", action="store_true")
+    bilateral.set_defaults(func=_command_benchmark_bilateral_symmetry)
 
     correction = benchmark_commands.add_parser(
         "completeness-corrected-contacts",
