@@ -389,12 +389,14 @@ def fit_two_component_kernel(
     )
     # Anchored on Nagel, Hong and Wilson's published fast and slow decay constants.
     fast_candidates = (
-        np.asarray((5.0, 7.0, 9.3, 11.0, 13.0, 15.0))
+        np.asarray((4.0, 5.0, 6.0, 7.0, 8.0, 9.3, 10.0, 11.0, 13.0, 15.0))
         if fast_grid_ms is None
         else np.asarray(fast_grid_ms, dtype=np.float64)
     )
+    # The slow grid reaches well below Nagel's 80 ms because the v1 run pinned against a
+    # 30 ms floor. It converges interior at 40 ms on these recordings.
     slow_candidates = (
-        np.asarray((30.0, 50.0, 80.0, 120.0))
+        np.asarray((14.0, 18.0, 22.0, 26.0, 30.0, 40.0, 50.0, 65.0, 80.0, 100.0, 120.0, 160.0))
         if slow_grid_ms is None
         else np.asarray(slow_grid_ms, dtype=np.float64)
     )
@@ -486,6 +488,7 @@ def compare_uepsc_kernel_families(
     contract = load_json(contract_path)
     if contract.get("schema_version") != "1.0":
         raise ConfigurationError("Unsupported kernel-family contract schema")
+    supersedes = contract.get("supersedes")
     parse_provenance(str(contract["provenance"]))
     recordings = contract["recordings"]
     artifact_path = root / str(recordings["artifact"])
@@ -586,6 +589,11 @@ def compare_uepsc_kernel_families(
                     < abs(single["population_amplitude_pa"] - direct_mean)
                 ),
             },
+            "H5": {
+                "statement": "the two-component fit converges on the interior of its grid",
+                "at_boundary": two["continuous_parameter_at_search_boundary"],
+                "passed": not two["continuous_parameter_at_search_boundary"],
+            },
         },
         "hypotheses_descriptive": {
             "H4": {
@@ -598,6 +606,8 @@ def compare_uepsc_kernel_families(
             }
         },
         "not_blind": str(contract["observed_before_registration"]["note"]),
+        "supersedes": supersedes,
+        "known_limitation": contract.get("known_limitation"),
         "claim_boundary": str(contract["claim_boundary"]),
         "validation_tier_awarded": None,
     }
