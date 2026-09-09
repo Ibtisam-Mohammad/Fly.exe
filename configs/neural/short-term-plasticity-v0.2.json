@@ -1,0 +1,273 @@
+{
+  "schema_version": "1.3",
+  "registry_id": "male-cns-short-term-plasticity-v0.2",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": [
+    "ND-04",
+    "ND-06"
+  ],
+  "supersedes": {
+    "registry_id": "male-cns-short-term-plasticity-v0.1",
+    "why": "v0.1 bound this synapse class to a depression-only Tsodyks-Markram rule with Nagel, Hong and Wilson's published utilisation of 0.22 and recovery constant of 893 ms. It faced two independent external tests and passed neither, and the second failure was structural rather than numerical: the measured paired-pulse ratios exceed one at three of five intervals and decrease with interval, and a single depleting resource can do neither at any parameter setting. No refitting could repair it, which is why this is a new registry rather than new values in the old one.",
+    "v0_1_is_preserved_unchanged": "Its failing predictions, its two external tests and its verdicts stay exactly as recorded. Nothing here rewrites them.",
+    "what_the_successor_search_also_refuted": "The minimal repair does not work. A family that keeps the published utilisation and recovery constant exactly as v0.1 registers them and adds the missing facilitation is capped at a paired-pulse ratio of 1.388 by that pinning, against a measured 10 ms cohort mean of 1.5139, and it lands outside the fit set's own interval. So the diagnosis recorded on 2026-09-09 -- a missing mechanism rather than wrong parameters -- was half right. The mechanism was missing and the parameters are also wrong for this synapse as these recordings measure it."
+  },
+  "purpose": "To carry a short-term-plasticity rule for the ORN-to-PN synapse that was frozen before it was tested. Both rules below are fitted values, both are frozen with their predictions written down, and their only test is the sealed day-1 and day-0 wild-type cohorts under stage2-stp-developmental-holdout-v1. Until that test returns, this registry awards no tier and is an executable labelled alternative exactly as v0.1 was.",
+  "how_these_rules_were_obtained": {
+    "contract": "configs/experiments/stage2-stp-family-selection-v1.json",
+    "artifact": "evidence/stage2/stage2-stp-family-selection-v1.json",
+    "artifact_sha256": "0fdfa14c0ad7481c05b4e3b8c4ed71da728b68b9cd892f716168dc92916a53d9",
+    "code_commit": "d47e14ec8c97db5328eb7bcf232f38e5afffb366",
+    "fit_set": "the five wild-type paired-pulse cohort means of Rozenfeld and colleagues' Figure 3D, 2 to 4 days post eclosion, which were opened and scored on 2026-09-09 and are therefore spent",
+    "families_screened": 7,
+    "families_eligible": [
+      "facilitation-depression",
+      "two-timescale-facilitation-free"
+    ],
+    "screens": {
+      "e1": "the fitted curve must lie inside the fit set's 95 percent interval at 5 of 5 intervals",
+      "e2": "the bootstrap 95 percent band on the frozen prediction must be no wider at any interval than the fit set's own 95 percent interval there. This screen carries no threshold of its own: it scales to the data.",
+      "e3": "every constant a family pins rather than fits must be refitted across its declared sweep and move the five predictions by at most 0.01",
+      "pinned_constants": {
+        "parallel-release-components/share": 0.5,
+        "recovery_tau_ms": 20000.0,
+        "two-timescale-facilitation/fast_tau_ms": 5.0
+      },
+      "reported_not_gating": "parameter-level identifiability, the chi-square goodness of fit, the leave-one-interval-out error, and the comparison against Kazama and Wilson's measured release probability",
+      "selection": "among eligible families the lowest weighted residual is the primary and the fewest parameters is the secondary"
+    },
+    "selection": {
+      "primary_rule": "lowest weighted residual among eligible families",
+      "secondary_rule": "fewest parameters among the rest, ties by weighted residual",
+      "eligible": [
+        "facilitation-depression",
+        "two-timescale-facilitation-free"
+      ],
+      "why": "two-timescale-facilitation-free carries the lowest weighted residual of the eligible families and is frozen as the primary. facilitation-depression is frozen alongside it as the secondary so an unseen cohort can adjudicate between them, which the fit set cannot."
+    },
+    "why_two_rules_are_frozen": "The fit set cannot choose between a four-parameter and a five-parameter account of five cohort means. On data the five-parameter family generates it wins 99 times in 100; on data the four-parameter family generates the five-parameter one still wins, because it nests it. That asymmetry is exactly what nesting predicts and it means the fit set is not an arbiter. Both are frozen and an unseen cohort decides. The primary carries the verdict."
+  },
+  "the_observation_model": {
+    "assumption_id": "VAL-02",
+    "protocol_is_simulated": "Twenty pairs at a 5000 ms repetition period, because the methods state that paired-pulse recordings were made at 0.2 Hz with twenty traces averaged per interval. The reported ratio is the mean second response over the mean first across those twenty, and the earlier pairs leave the resource partly depleted. Every prediction in this registry is computed that way. At 1000 ms the correction is about 0.028 in ratio units, larger than that cohort's own standard error, so it is not cosmetic.",
+    "the_from_rest_value_is_recorded_beside_each_prediction": true
+  },
+  "rules": [
+    {
+      "rule_id": "orn-to-uniglomerular-pn",
+      "role": "primary",
+      "source_type_prefix": "ORN_",
+      "target_type_regex": "^[A-Za-z0-9]+_(?:ad|l|v|il|lv|vl|m)PN$",
+      "same_glomerulus_only": true,
+      "family": "two-timescale-facilitation-free",
+      "title": "M4f: M4 with the fast facilitation constant fitted rather than pinned",
+      "mechanism": "The same two facilitating components as M4 over the same depleting resource, with the fast time constant fitted. It exists so that the decision to pin that constant is itself under test rather than assumed.",
+      "parameters": {
+        "fast_step": 1.3696839927815274,
+        "fast_tau_ms": 7.730421302895598,
+        "slow_step": 0.3385413831036268,
+        "slow_tau_ms": 115.01353924478315,
+        "utilisation": 0.10242927028921349
+      },
+      "provenance": "F",
+      "provenance_note": "Every value is a fitted value, fitted to the wild-type paired-pulse cohort means of Rozenfeld and colleagues' Figure 3D, which were already spent. Not one of them is a measurement of a MaleCNS synapse and not one is taken from a published fit.",
+      "parameters_that_may_be_reported_as_measurements": [],
+      "parameters_carried_as_fitted_nuisance_values": [
+        "fast_step",
+        "fast_tau_ms",
+        "slow_step",
+        "slow_tau_ms",
+        "utilisation"
+      ],
+      "what_that_split_means": "A parameter in the second list could not be recovered when the family was refitted to data it generated itself at the measured noise level. It is a number the fit needs and the observable does not determine, and quoting it as a measured synaptic property would be an overclaim. The predictions are nevertheless sharp: the bootstrap band on the frozen curve is narrower than the fit set's own interval at every one of the five intervals, which is the eligibility screen this rule had to pass. Unidentifiable parameters with well-determined predictions is the ordinary condition of a mechanistic model fitted to a few summary statistics, and separating the two is the point.",
+      "pinned_constants": {
+        "PINNED_RECOVERY_TAU_MS": {
+          "value": 20000.0,
+          "swept_over": [
+            5000.0,
+            10000.0,
+            20000.0,
+            50000.0
+          ],
+          "largest_prediction_shift": 1.3372765117480867e-09,
+          "harmless": true
+        }
+      },
+      "frozen_paired_pulse_predictions": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.513877254063259,
+          "from_rest": 1.5134197065660075,
+          "bootstrap_ci95": [
+            1.40965031705388,
+            1.6122211510951845
+          ]
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.158285745042283,
+          "from_rest": 1.1572359447533072,
+          "bootstrap_ci95": [
+            1.0719084565292847,
+            1.2511941871780239
+          ]
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 1.0286333632736784,
+          "from_rest": 1.0255301024309722,
+          "bootstrap_ci95": [
+            0.9612976138179475,
+            1.0781398696507576
+          ]
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9298971977884574,
+          "from_rest": 0.9215143255727812,
+          "bootstrap_ci95": [
+            0.8972942391837366,
+            0.9699161480474187
+          ]
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9302046855691857,
+          "from_rest": 0.9026174396203434,
+          "bootstrap_ci95": [
+            0.8941304844098008,
+            0.9533097852342793
+          ]
+        }
+      ],
+      "fit_quality_on_the_spent_fit_set": {
+        "weighted_sse": 3.6249703024063755e-16,
+        "degrees_of_freedom": 0,
+        "goodness_of_fit_p": null,
+        "this_is_not_evidence": "The fit set is spent. A good fit to it is a property of the fitting, not of the synapse."
+      },
+      "effective_first_pulse_utilisation": 0.10242927028921349,
+      "against_the_measured_release_probability": {
+        "fitted": 0.10242927028921349,
+        "measured": 0.79,
+        "ratio": 7.712639148647654,
+        "source": "Kazama and Wilson 2008, multiple-probability fluctuation analysis",
+        "the_tension_is_recorded_not_resolved": "Every family that could reproduce this paired-pulse curve needed an effective first-pulse utilisation between 0.07 and 0.13, which is eight to eleven times below the release probability Kazama and Wilson measured at this synapse. Mapping a fitted utilisation onto a per-site release probability needs one vesicle per site and no within-pair recovery, which the v0.1 registry already records as the reason the variance-derived value was not adopted, so this is not a clean contradiction. It is a large unexplained gap and it is recorded here rather than left out. A synapse with a release probability near 0.79 should barely facilitate at all, and these recordings facilitate by fifty per cent at 10 ms."
+      },
+      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and unbounded, so it diverges in a long train."
+    },
+    {
+      "rule_id": "orn-to-uniglomerular-pn",
+      "role": "secondary",
+      "source_type_prefix": "ORN_",
+      "target_type_regex": "^[A-Za-z0-9]+_(?:ad|l|v|il|lv|vl|m)PN$",
+      "same_glomerulus_only": true,
+      "family": "facilitation-depression",
+      "title": "M1: release-probability facilitation over a depleting resource",
+      "mechanism": "The standard two-state Markram-Tsodyks synapse. Residual calcium raises release probability for tens of milliseconds while the vesicle pool is depleted for hundreds, so a facilitating short interval and a depressing long one arise from one mechanism with two time constants.",
+      "parameters": {
+        "facilitation_increment": 0.07402413277178853,
+        "facilitation_tau_ms": 31.045464885165433,
+        "recovery_tau_ms": 19999.99999999832,
+        "resting_utilisation": 0.006867133131882726
+      },
+      "provenance": "F",
+      "provenance_note": "Every value is a fitted value, fitted to the wild-type paired-pulse cohort means of Rozenfeld and colleagues' Figure 3D, which were already spent. Not one of them is a measurement of a MaleCNS synapse and not one is taken from a published fit.",
+      "parameters_that_may_be_reported_as_measurements": [
+        "facilitation_increment",
+        "facilitation_tau_ms"
+      ],
+      "parameters_carried_as_fitted_nuisance_values": [
+        "recovery_tau_ms",
+        "resting_utilisation"
+      ],
+      "what_that_split_means": "A parameter in the second list could not be recovered when the family was refitted to data it generated itself at the measured noise level. It is a number the fit needs and the observable does not determine, and quoting it as a measured synaptic property would be an overclaim. The predictions are nevertheless sharp: the bootstrap band on the frozen curve is narrower than the fit set's own interval at every one of the five intervals, which is the eligibility screen this rule had to pass. Unidentifiable parameters with well-determined predictions is the ordinary condition of a mechanistic model fitted to a few summary statistics, and separating the two is the point.",
+      "pinned_constants": {},
+      "frozen_paired_pulse_predictions": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.4844626849298324,
+          "from_rest": 1.4840126350740297,
+          "bootstrap_ci95": [
+            1.3558163741693117,
+            1.5434303000937442
+          ]
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.2170774567314262,
+          "from_rest": 1.2160916471058956,
+          "bootstrap_ci95": [
+            1.1080458340523098,
+            1.3095721990786462
+          ]
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 0.9533744142270119,
+          "from_rest": 0.9511146944156728,
+          "bootstrap_ci95": [
+            0.9248871237935518,
+            1.0705241524491178
+          ]
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9273313079784775,
+          "from_rest": 0.920863392126475,
+          "bootstrap_ci95": [
+            0.8936354558765927,
+            0.9528675076060702
+          ]
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9452959929175264,
+          "from_rest": 0.9235373895410564,
+          "bootstrap_ci95": [
+            0.9183071511659218,
+            0.9645858292258043
+          ]
+        }
+      ],
+      "fit_quality_on_the_spent_fit_set": {
+        "weighted_sse": 6.2352566974691115,
+        "degrees_of_freedom": 1,
+        "goodness_of_fit_p": 0.012523143941590313,
+        "this_is_not_evidence": "The fit set is spent. A good fit to it is a property of the fitting, not of the synapse."
+      },
+      "effective_first_pulse_utilisation": 0.08038293232895521,
+      "against_the_measured_release_probability": {
+        "fitted": 0.08038293232895521,
+        "measured": 0.79,
+        "ratio": 9.827956969360638,
+        "source": "Kazama and Wilson 2008, multiple-probability fluctuation analysis",
+        "the_tension_is_recorded_not_resolved": "Every family that could reproduce this paired-pulse curve needed an effective first-pulse utilisation between 0.07 and 0.13, which is eight to eleven times below the release probability Kazama and Wilson measured at this synapse. Mapping a fitted utilisation onto a per-site release probability needs one vesicle per site and no within-pair recovery, which the v0.1 registry already records as the reason the variance-derived value was not adopted, so this is not a clean contradiction. It is a large unexplained gap and it is recorded here rather than left out. A synapse with a release probability near 0.79 should barely facilitate at all, and these recordings facilitate by fifty per cent at 10 ms."
+      },
+      "structural_limits": "The four parameters are in bijection with the four quantities a paired-pulse curve can identify, so nothing here is a fitted direction the observable cannot see. The ceiling of two is approached only as the resting utilisation goes to zero, where the response itself vanishes."
+    }
+  ],
+  "flat_null": {
+    "family_id": "flat-null",
+    "level": 0.9784834240370348,
+    "parameter_count": 1,
+    "weighted_sse_on_the_fit_set": 121.01069851974259,
+    "why_it_is_here": "A model that cannot beat a horizontal line on the holdout has not been tested by the holdout. This level is frozen with everything else so the comparison on unseen cohorts is between two predictions made in advance."
+  },
+  "engine_coverage": {
+    "numpy_circuit_runner": "not implemented for these families; only the v0.1 depression-only rule has a runner",
+    "brian2_circuit_runner": "not implemented",
+    "genn_circuit_runner": "not implemented",
+    "track_a_genn_engine": "not implemented",
+    "why_this_is_recorded_now": "Neither frozen rule can yet be executed inside a circuit simulation. They exist as closed-form and state-machine predictors of a paired-pulse ratio. Wiring them into the runners is work that should not be done until the holdout says whether either of them survives."
+  },
+  "validation_status": "FROZEN AND UNTESTED as of 2026-09-10. Both rules are fitted to spent data and neither has faced a holdout. This registry awards no validation tier and must not be cited as one. Its test is stage2-stp-developmental-holdout-v1, which scores it once against the sealed day-1 and day-0 wild-type cohorts; a pass there would be worth a V1-limited tier on the paired-pulse observable in one laboratory and nothing more. The decisive test after that is the sealed train arrays at 1, 10, 20 and 60 Hz, which measure the recovery constant these rules cannot identify and which would immediately expose the unbounded facilitation both of them carry.",
+  "what_this_registry_does_not_do": [
+    "It does not reinstate the retired synaptic leg of the Stage 2 gate, which needs unitary waveforms this repository does not ship. The gate stays at v4 and 0 of 3.",
+    "It does not resolve edge sign, which is ND-10 and stays unresolved wherever receptor evidence is absent.",
+    "It does not predict trains, latencies, jitter, absolute amplitudes, miniature EPSCs or any perturbation.",
+    "It does not apply to ORN-to-local-neuron synapses, which are a different class with no registered parameters at all.",
+    "It carries no glomerulus specificity. The recordings pool an unstated mixture of glomeruli through the GH146-QF driver, which labels about 60 per cent of projection neurons, while Nagel and colleagues fitted DM6 and VM2."
+  ],
+  "last_reviewed": "2026-09-10"
+}

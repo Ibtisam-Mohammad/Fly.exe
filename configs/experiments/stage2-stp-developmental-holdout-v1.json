@@ -14,8 +14,8 @@
     "fit_contract": "configs/experiments/stage2-stp-family-selection-v1.json",
     "fit_artifact": "evidence/stage2/stage2-stp-family-selection-v1.json",
     "rule": "The models scored here are the ones that artifact froze. Their parameters may not be changed, refitted, nudged or reselected, and this contract records their predictions numerically so that the comparison cannot drift.",
-    "fit_artifact_sha256": null,
-    "fit_artifact_sha256_note": "Filled in from the immutable snapshot of the fit artifact before this contract is committed. The scorer refuses to run against any other file, so the models it scores are demonstrably the models that were frozen."
+    "fit_artifact_sha256": "0fdfa14c0ad7481c05b4e3b8c4ed71da728b68b9cd892f716168dc92916a53d9",
+    "fit_artifact_code_commit": "d47e14ec8c97db5328eb7bcf232f38e5afffb366"
   },
   "why_this_exists": {
     "the_position_before_this_run": "ND-06 v0.1, a depression-only rule with parameters taken from a published fit, has faced two independent external tests and passed neither: it over-predicts steady-state depression at 7 Hz by about 16 percentage points, and it fails structurally against wild-type paired-pulse ratios because those exceed one and decrease with interval while a single depleting resource can do neither. Every quantitative dynamical claim this project has made has failed. No tier above V0 is supported.",
@@ -68,10 +68,168 @@
     "the_10_ms_measurement_differs_from_the_others": "The methods state that at 10 ms the second amplitude was measured from the peak to the point of interception with the extrapolated first response. That is recorded again here, in advance, so that it can never be invoked afterwards as a reason to drop an interval a model failed on. All five intervals are scored on the same footing."
   },
   "frozen_models": {
-    "note": "Filled in from the committed fit artifact before this contract is committed and before any cohort is opened. Each entry carries the family, its parameters, and its predicted ratio at each of the five intervals under the twenty-pair protocol.",
-    "primary": null,
-    "secondary": null,
-    "flat_null": null
+    "note": "Copied from the fit artifact named in depends_on, not recomputed. The scorer re-derives each curve from the parameters below and refuses to run if the two disagree, which is how a change in the simulator between the freeze and the score is caught rather than absorbed.",
+    "selection": {
+      "primary_rule": "lowest weighted residual among eligible families",
+      "secondary_rule": "fewest parameters among the rest, ties by weighted residual",
+      "eligible": [
+        "facilitation-depression",
+        "two-timescale-facilitation-free"
+      ],
+      "why": "two-timescale-facilitation-free carries the lowest weighted residual of the eligible families and is frozen as the primary. facilitation-depression is frozen alongside it as the secondary so an unseen cohort can adjudicate between them, which the fit set cannot."
+    },
+    "primary": {
+      "family_id": "two-timescale-facilitation-free",
+      "title": "M4f: M4 with the fast facilitation constant fitted rather than pinned",
+      "mechanism": "The same two facilitating components as M4 over the same depleting resource, with the fast time constant fitted. It exists so that the decision to pin that constant is itself under test rather than assumed.",
+      "parameters": {
+        "fast_step": 1.3696839927815274,
+        "fast_tau_ms": 7.730421302895598,
+        "slow_step": 0.3385413831036268,
+        "slow_tau_ms": 115.01353924478315,
+        "utilisation": 0.10242927028921349
+      },
+      "parameters_that_may_be_reported_as_measurements": [],
+      "parameters_carried_as_fitted_nuisance_values": [
+        "fast_step",
+        "fast_tau_ms",
+        "slow_step",
+        "slow_tau_ms",
+        "utilisation"
+      ],
+      "predicted": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.513877254063259,
+          "from_rest": 1.5134197065660075,
+          "bootstrap_ci95": [
+            1.40965031705388,
+            1.6122211510951845
+          ]
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.158285745042283,
+          "from_rest": 1.1572359447533072,
+          "bootstrap_ci95": [
+            1.0719084565292847,
+            1.2511941871780239
+          ]
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 1.0286333632736784,
+          "from_rest": 1.0255301024309722,
+          "bootstrap_ci95": [
+            0.9612976138179475,
+            1.0781398696507576
+          ]
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9298971977884574,
+          "from_rest": 0.9215143255727812,
+          "bootstrap_ci95": [
+            0.8972942391837366,
+            0.9699161480474187
+          ]
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9302046855691857,
+          "from_rest": 0.9026174396203434,
+          "bootstrap_ci95": [
+            0.8941304844098008,
+            0.9533097852342793
+          ]
+        }
+      ],
+      "weighted_sse_on_the_fit_set": 3.6249703024063755e-16,
+      "goodness_of_fit_p_on_the_fit_set": null,
+      "degrees_of_freedom_on_the_fit_set": 0,
+      "effective_first_pulse_utilisation": 0.10242927028921349,
+      "against_the_measured_release_probability": 7.712639148647654,
+      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and unbounded, so it diverges in a long train."
+    },
+    "secondary": {
+      "family_id": "facilitation-depression",
+      "title": "M1: release-probability facilitation over a depleting resource",
+      "mechanism": "The standard two-state Markram-Tsodyks synapse. Residual calcium raises release probability for tens of milliseconds while the vesicle pool is depleted for hundreds, so a facilitating short interval and a depressing long one arise from one mechanism with two time constants.",
+      "parameters": {
+        "facilitation_increment": 0.07402413277178853,
+        "facilitation_tau_ms": 31.045464885165433,
+        "recovery_tau_ms": 19999.99999999832,
+        "resting_utilisation": 0.006867133131882726
+      },
+      "parameters_that_may_be_reported_as_measurements": [
+        "facilitation_increment",
+        "facilitation_tau_ms"
+      ],
+      "parameters_carried_as_fitted_nuisance_values": [
+        "recovery_tau_ms",
+        "resting_utilisation"
+      ],
+      "predicted": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.4844626849298324,
+          "from_rest": 1.4840126350740297,
+          "bootstrap_ci95": [
+            1.3558163741693117,
+            1.5434303000937442
+          ]
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.2170774567314262,
+          "from_rest": 1.2160916471058956,
+          "bootstrap_ci95": [
+            1.1080458340523098,
+            1.3095721990786462
+          ]
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 0.9533744142270119,
+          "from_rest": 0.9511146944156728,
+          "bootstrap_ci95": [
+            0.9248871237935518,
+            1.0705241524491178
+          ]
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9273313079784775,
+          "from_rest": 0.920863392126475,
+          "bootstrap_ci95": [
+            0.8936354558765927,
+            0.9528675076060702
+          ]
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9452959929175264,
+          "from_rest": 0.9235373895410564,
+          "bootstrap_ci95": [
+            0.9183071511659218,
+            0.9645858292258043
+          ]
+        }
+      ],
+      "weighted_sse_on_the_fit_set": 6.2352566974691115,
+      "goodness_of_fit_p_on_the_fit_set": 0.012523143941590313,
+      "degrees_of_freedom_on_the_fit_set": 1,
+      "effective_first_pulse_utilisation": 0.08038293232895521,
+      "against_the_measured_release_probability": 9.827956969360638,
+      "structural_limits": "The four parameters are in bijection with the four quantities a paired-pulse curve can identify, so nothing here is a fitted direction the observable cannot see. The ceiling of two is approached only as the resting utilisation goes to zero, where the response itself vanishes."
+    },
+    "flat_null": {
+      "family_id": "flat-null",
+      "level": 0.9784834240370348,
+      "parameter_count": 1,
+      "weighted_sse_on_the_fit_set": 121.01069851974259,
+      "why_it_is_here": "A model that cannot beat a horizontal line on the holdout has not been tested by the holdout. This level is frozen with everything else so the comparison on unseen cohorts is between two predictions made in advance."
+    }
   },
   "hypotheses": [
     {
