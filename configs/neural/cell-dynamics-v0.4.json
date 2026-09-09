@@ -2,7 +2,14 @@
   "schema_version": "1.2",
   "registry_id": "male-cns-cell-dynamics-v0.4",
   "dataset_id": "male-cns:v1.0",
-  "assumption_ids": ["ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "ND-09"],
+  "assumption_ids": [
+    "ND-01",
+    "ND-02",
+    "ND-03",
+    "ND-04",
+    "ND-05",
+    "ND-09"
+  ],
   "supersedes": {
     "registry_id": "male-cns-cell-dynamics-v0.3",
     "decision": "ADR-2026-010",
@@ -47,10 +54,22 @@
         "tonic_drive_mv": 0.0
       },
       "value_ranges": {
-        "resting_mv": [-63.174, -57.506],
-        "threshold_mv": [-41.838, -38.402],
-        "membrane_tau_ms": [32.566, 47.577],
-        "refractory_ms": [14.4, 15.8]
+        "resting_mv": [
+          -63.174,
+          -57.506
+        ],
+        "threshold_mv": [
+          -41.838,
+          -38.402
+        ],
+        "membrane_tau_ms": [
+          32.566,
+          47.577
+        ],
+        "refractory_ms": [
+          14.4,
+          15.8
+        ]
       },
       "value_provenance": {
         "resting_mv": "M",
@@ -68,6 +87,21 @@
         "membrane_tau_ms": "Free-asymptote fit chosen because the pre-step baseline the pinned fit assumes drifts by 5.7 mV across sweeps, and because a LIF with 47.6 ms fits the cell's F-I better than one with 32.6 ms under every detector (1.80 vs 4.48, 1.61 vs 3.06, 2.46 vs 2.72 Hz RMSE). One sweep of one cell either way.",
         "refractory_ms": "Detector-dependent bound: 15.8 ms at 10 mV prominence, 14.4 ms at a fixed -35 mV crossing. Used as the value because the LIF needs it to bend the F-I curve the way the cell's does; that bend may be adaptation rather than refractoriness, which a LIF cannot represent. It caps the modelled rate at about 63 Hz.",
         "fitted_input_resistance": "Not a registry parameter. The LIF F-I fit that selected these values places the input resistance at 5.1 to 6.4 GOhm; that is inconsistent with the observed single spike at 2 pA, which under the LIF would need at least 9.3 GOhm, so the 2 pA event is not reproduced by any candidate set."
+      },
+      "measurement_bias": {
+        "issue": "Every voltage in this set comes from an in vivo whole-cell recording (Nanami et al. 2024). Gouwens and Wilson 2009 show that the electrode seal conductance depolarises whole-cell somatic voltages in Drosophila central neurons, because their input resistances approach the seal resistance, and that the error is a divider toward a seal reversal near 0 mV.",
+        "direction": "Measured voltages are less negative than the truth, and the error grows with distance from 0 mV, so the measured threshold-to-rest gap is SMALLER than the true gap. Both values scale by the same divider factor k < 1, so the gap scales by 1/k.",
+        "only_available_scale": "Gouwens and Wilson measured PN resting potential at -47.8 +/- 1.6 mV whole-cell against a true -57.8 +/- 1.5 mV (n = 12) inferred by matching cell-attached firing rate, giving k = 0.827 and a gap inflation of 1/k = 1.209, i.e. +20.9%.",
+        "not_applied": "No correction is applied. The divider depends on this cell's own input and seal resistances, neither of which is available for MBON-alpha1, and Gouwens and Wilson measured projection neurons rather than mushroom-body output neurons. Transferring their k would be an assumption, not a measurement.",
+        "if_the_pn_divider_transferred": {
+          "true_resting_mv": -72.98,
+          "true_threshold_mv": -50.591,
+          "true_threshold_minus_resting_mv": 22.39,
+          "registered_threshold_minus_resting_mv": 18.516
+        },
+        "effect_on_the_rheobase_inconsistency": "It widens it. The observed 2 pA rheobase requires an input resistance of 9.26 GOhm at the registered gap and 11.19 GOhm at the divider-corrected gap. Gouwens and Wilson measure Drosophila PN input resistance at 598.0 +/- 69.3 MOhm (n = 14), so the registered parameter set is inconsistent with measured fly central-neuron input resistance by a factor of 15.5, rising to 18.7 under the correction. That is more than an order of magnitude either way.",
+        "what_would_resolve_it": "A cell-attached firing-rate comparison or a reported seal resistance for this recording would let the divider be measured rather than assumed. An input-resistance measurement for MBON-alpha1 specifically would establish whether the order-of-magnitude gap is a property of this cell type or an artifact of the single-compartment LIF form.",
+        "scope": "This bias applies to every whole-cell-derived voltage in every cell-dynamics registry, not only to this set."
       }
     }
   ],
@@ -80,7 +114,10 @@
     "source": null,
     "evidence_scope": "No type-specific signaling evidence registered.",
     "biological_mismatch": "A simulator fallback cannot establish whether an unregistered neuron spikes or signals with graded voltage.",
-    "alternatives": ["lif-spiking-fallback", "passive-graded-fallback"]
+    "alternatives": [
+      "lif-spiking-fallback",
+      "passive-graded-fallback"
+    ]
   },
   "records": [
     {
@@ -131,7 +168,10 @@
       "source": null,
       "evidence_scope": "The registered evidence does not distinguish the DM4 vPN signaling regime.",
       "biological_mismatch": "adPN evidence must not be silently transferred to vPN.",
-      "alternatives": ["projection-neuron-spiking-candidate", "passive-graded-fallback"],
+      "alternatives": [
+        "projection-neuron-spiking-candidate",
+        "passive-graded-fallback"
+      ],
       "parameter_prior_id": null,
       "parameter_set_id": null
     }
@@ -146,5 +186,6 @@
     "provenance": "M/F",
     "fit_status": "First frozen fit evaluated: steady-state LIF F-I gate failed; uEPSC kernel failed its preregistered decay limit and underpredicts amplitude (ADR-2026-009); contact number shown to move opposite to the published unitary-current scaling",
     "canonical_values": null
-  }
+  },
+  "last_reviewed": "2026-09-09"
 }

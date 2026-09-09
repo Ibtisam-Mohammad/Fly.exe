@@ -79,6 +79,7 @@ from flysim.stage2 import (
 from flysim.structural import audit_structural_references
 from flysim.synaptic import (
     analyse_synaptic_structure,
+    compare_uepsc_kernel_families,
     evaluate_stage2_exit_gate,
     evaluate_uepsc_kinetics_holdout,
     fit_uepsc_prior,
@@ -281,6 +282,50 @@ def _command_stage2_uepsc_holdout(args: argparse.Namespace) -> int:
         }
     )
     return 0 if result["acceptance"]["v2_kinetics_subgate_pass"] else 2
+
+
+def _command_stage2_uepsc_kernel_family(args: argparse.Namespace) -> int:
+    result = compare_uepsc_kernel_families(args.experiment, args.root, args.output)
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "direct_peak_amplitude_pa": {
+                key: result["direct_peak_amplitude_pa"][key]
+                for key in ("mean", "median", "sem")
+            },
+            "single_component": {
+                key: result["single_component"][key]
+                for key in (
+                    "onset_ms",
+                    "rise_tau_ms",
+                    "decay_tau_ms",
+                    "kernel_half_decay_ms",
+                    "population_amplitude_pa",
+                    "training_huber_pa2",
+                )
+            },
+            "two_component": {
+                key: result["two_component"][key]
+                for key in (
+                    "onset_ms",
+                    "rise_tau_ms",
+                    "fast_decay_tau_ms",
+                    "slow_decay_tau_ms",
+                    "fast_fraction",
+                    "kernel_half_decay_ms",
+                    "population_amplitude_pa",
+                    "training_huber_pa2",
+                    "continuous_parameter_at_search_boundary",
+                )
+            },
+            "hypotheses": result["hypotheses"],
+            "hypotheses_descriptive": result["hypotheses_descriptive"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
 
 
 def _command_stage2_uepsc_prior(args: argparse.Namespace) -> int:
@@ -1716,6 +1761,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_uepsc_prior.add_argument("--output", type=Path, required=True)
     stage2_uepsc_prior.set_defaults(func=_command_stage2_uepsc_prior)
+    stage2_kernel_family = stage2_commands.add_parser(
+        "uepsc-kernel-family",
+        help="compare the single-decay and two-decay uEPSC kernel families on the same data",
+    )
+    stage2_kernel_family.add_argument("--root", type=Path, default=default_data_root())
+    stage2_kernel_family.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-uepsc-kernel-family-v1.json",
+    )
+    stage2_kernel_family.add_argument("--output", type=Path, required=True)
+    stage2_kernel_family.set_defaults(func=_command_stage2_uepsc_kernel_family)
     stage2_ensemble = stage2_commands.add_parser(
         "pn-ensemble",
         help="Widen the frozen PN family into a VAL-01 uncertainty ensemble",

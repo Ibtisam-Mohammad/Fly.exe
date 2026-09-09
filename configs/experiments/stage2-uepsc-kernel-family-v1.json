@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-uepsc-kernel-family-v1",
+  "title": "Is the single-decay uEPSC kernel family misspecified, as both source papers imply?",
+  "provenance": "M/F",
+  "assumption_ids": ["ND-04", "ND-05", "VAL-01"],
+  "purpose": "ADR-2026-008 recorded the frozen unitary-EPSC kernel's decay as failing its preregistered holdout at 0.463 median fractional error against a 0.30 limit, and treated that as an empirical result about the model's accuracy. Both papers behind this synapse describe the ORN-to-PN EPSC as having two decay components, and the project's kernel has one. This contract tests whether the recorded failure is substantially a misspecification of the kernel family rather than an open empirical question, by fitting both families to the same recordings under the same loss.",
+  "primary_sources": [
+    {
+      "key": "KW2008",
+      "citation": "Kazama H, Wilson RI 2008, Neuron 58:401-413",
+      "claim_quoted": "The decay phase of these evoked EPSCs typically had two components, fast and slow."
+    },
+    {
+      "key": "Nagel2015",
+      "citation": "Nagel KI, Hong EJ, Wilson RI 2015, Nat Neurosci 18:56-65",
+      "claim_quoted": "fast component tau_g = 9.3 ms and slow component tau_g = 80 ms, with amplitudes prior to depression set to 0.22 nS (fast) and 0.06 nS (slow)",
+      "implied_fast_fraction": 0.786,
+      "note": "Nagel and colleagues also establish that both components are monosynaptic, having measured them in spontaneous EPSCs each of which arises from a single ORN spike."
+    },
+    {
+      "key": "Gugel2023",
+      "citation": "Gugel ZV et al. 2023, eLife 12:e85443",
+      "claim_quoted": "the amplitude (~40 pA), rise time (~2 ms), and half decay time (t 1/2 ~7 ms) of uEPSCs in DL5 PNs in the control condition were similar to previous measurements made using conventional electrical stimulation of the antennal nerve (Kazama and Wilson, 2008)",
+      "note": "These are the source paper's own stated values for the very recordings this project holds, so they are the comparison targets."
+    }
+  ],
+  "recordings": {
+    "artifact": "derived/auxiliary/gugel-2023-elife-85443/figure7/dl5-uepsc-traces.parquet",
+    "sha256": "4e9d363f3d404dfacec30f0dee4e3e8f52ee93a809e39fff206a94b82d6786b0",
+    "cells": 12,
+    "note": "All twelve are already consumed as training by the frozen fit and the prior refit, so nothing here is a holdout and nothing here can validate a model. This contract compares two families on the same data; it does not test either against unseen data."
+  },
+  "observed_before_registration": {
+    "note": "The direct per-cell peak measurement and an exploratory comparison of the two families were computed before this contract was written, so no hypothesis here is blind. This contract exists to execute the comparison reproducibly under the project's contract discipline and to record it as an artifact, not to preregister a prediction. It must not be reported as a preregistered result.",
+    "direct_peak_amplitude_mean_pa": 36.61,
+    "direct_peak_amplitude_sem_pa": 2.92,
+    "direct_peak_amplitude_median_pa": 36.13,
+    "direct_peak_control_cells_only_mean_pa": 34.92,
+    "exploratory_single_decay_sse_ratio": 1.0,
+    "exploratory_two_decay_sse_ratio": 0.768
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "The two-decay family fits the same recordings better than the single-decay family under the same Huber loss and the same per-cell amplitude treatment.",
+      "test": "two-component training Huber loss < single-component training Huber loss",
+      "not_blind": true
+    },
+    {
+      "id": "H2",
+      "statement": "The two-decay family's kernel half-decay is closer than the single-decay family's to the ~7 ms that Gugel and colleagues report for these very recordings.",
+      "test": "|two_component_half_decay - 7.0| < |single_component_half_decay - 7.0|",
+      "published_half_decay_ms": 7.0,
+      "not_blind": true
+    },
+    {
+      "id": "H3",
+      "statement": "The two-decay family's population amplitude is closer than the single-decay family's to the directly measured per-cell peak amplitude of these recordings.",
+      "test": "|two_component_amplitude - direct| < |single_component_amplitude - direct|",
+      "not_blind": true,
+      "note": "The direct measurement is a property of the traces, computed as the peak deflection from a pre-stimulus baseline. It is the least model-dependent amplitude available and agrees with the ~40 pA the source paper states."
+    },
+    {
+      "id": "H4",
+      "statement": "Descriptive: the fitted fast and slow decay constants and fast fraction against Nagel and colleagues' published 9.3 ms, 80 ms and 0.786.",
+      "test": "none"
+    }
+  ],
+  "protocol": {
+    "shared": "identical time grid, identical baseline window of t < 40 ms, identical inward-current convention, identical per-cell least-squares amplitude, identical Huber delta of 1.0 pA, identical onset grid",
+    "single_component_grid": "the frozen defaults, so the single-component arm reproduces the existing fit exactly",
+    "two_component_grid": "rise 0.2 to 3.0 ms; fast decay 5 to 15 ms spanning Nagel's 9.3; slow decay 30 to 120 ms spanning Nagel's 80; fast fraction 0.5 to 0.95 spanning Nagel's 0.786",
+    "requires_clean_worktree": true
+  },
+  "claim_boundary": "A model-family comparison on twelve already-consumed recordings. It awards no validation tier, validates neither family, and cannot: both are fitted to all twelve cells. A better-fitting family yields a better prior, not a tested model. Even if the two-decay family wins on every hypothesis, the correct reading is that the recorded decay failure was substantially a misspecification rather than a measured inadequacy of a correct model.",
+  "last_reviewed": "2026-09-09"
+}

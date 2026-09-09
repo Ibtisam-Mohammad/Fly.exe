@@ -32,6 +32,8 @@ from flysim.connectome import SparseConnectome
 from flysim.datasets import sha256_file
 from flysim.errors import ConfigurationError, DatasetError
 from flysim.provenance import parse_provenance
+from flysim.runs import require_clean_worktree
+from flysim.stage1 import _atomic_json, _immutable_snapshot
 
 RECEPTOR_TYPE_PREFIX = "ORN_"
 
@@ -307,10 +309,307 @@ def fit_difference_of_exponentials_kernel(
     }
 
 
+def two_component_kernel(
+    time_ms: np.ndarray,
+    *,
+    onset_ms: float,
+    rise_tau_ms: float,
+    fast_decay_tau_ms: float,
+    slow_decay_tau_ms: float,
+    fast_fraction: float,
+) -> np.ndarray:
+    """Unit-peak causal kernel with one rise and two decays.
+
+    Both source papers describe the ORN-to-PN EPSC as biphasic. Kazama and Wilson 2008: "The
+    decay phase of these evoked EPSCs typically had two components, fast and slow." Nagel,
+    Hong and Wilson 2015 fit them at 9.3 ms and 80 ms with conductances of 0.22 and 0.06 nS.
+    A single-decay kernel cannot represent that shape, and fitting one to it returns an
+    intermediate decay and a depressed peak.
+    """
+    if not 0.0 < fast_fraction <= 1.0:
+        raise ConfigurationError("fast_fraction must lie in (0, 1]")
+    if rise_tau_ms <= 0.0:
+        raise ConfigurationError("The rise time constant must be positive")
+    if fast_decay_tau_ms <= rise_tau_ms:
+        raise ConfigurationError("The fast decay constant must exceed the rise constant")
+    if slow_decay_tau_ms <= fast_decay_tau_ms:
+        raise ConfigurationError("The slow decay constant must exceed the fast one")
+    times = np.asarray(time_ms, dtype=np.float64)
+    elapsed = np.maximum(0.0, times - onset_ms)
+    kernel = (
+        fast_fraction * np.exp(-elapsed / fast_decay_tau_ms)
+        + (1.0 - fast_fraction) * np.exp(-elapsed / slow_decay_tau_ms)
+        - np.exp(-elapsed / rise_tau_ms)
+    )
+    kernel[times < onset_ms] = 0.0
+    peak = float(np.max(kernel))
+    if peak <= 0.0:
+        raise ConfigurationError("The two-component kernel has no positive peak")
+    return np.asarray(kernel / peak, dtype=np.float64)
+
+
+def _kernel_half_decay_ms(kernel: np.ndarray, times: np.ndarray) -> float:
+    """Time from the kernel peak to half its peak value, the quantity sources report."""
+    peak_index = int(np.argmax(kernel))
+    tail = kernel[peak_index:]
+    below = tail <= 0.5 * float(kernel[peak_index])
+    if not below.any():
+        return float("nan")
+    return float(times[peak_index + int(np.argmax(below))] - times[peak_index])
+
+
+def fit_two_component_kernel(
+    time_ms: np.ndarray,
+    fit_curves: np.ndarray,
+    *,
+    baseline_end_ms: float = 40.0,
+    onset_grid_ms: np.ndarray | None = None,
+    rise_grid_ms: np.ndarray | None = None,
+    fast_grid_ms: np.ndarray | None = None,
+    slow_grid_ms: np.ndarray | None = None,
+    fast_fraction_grid: np.ndarray | None = None,
+    huber_delta_pa: float = 1.0,
+) -> dict[str, Any]:
+    """Grid-fit one unit-peak two-decay kernel with a free amplitude per recorded cell.
+
+    Mirrors :func:`fit_difference_of_exponentials_kernel` exactly except for the kernel
+    family, so the two are directly comparable on the same loss.
+    """
+    times = np.asarray(time_ms, dtype=np.float64)
+    curves = np.asarray(fit_curves, dtype=np.float64)
+    if curves.ndim != 2 or curves.shape[1] != times.size:
+        raise ConfigurationError("Kernel fit needs one row per cell on the shared time grid")
+    onset_candidates = (
+        np.linspace(45.0, 51.0, 25) if onset_grid_ms is None else np.asarray(onset_grid_ms)
+    )
+    rise_candidates = (
+        np.asarray((0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0))
+        if rise_grid_ms is None
+        else np.asarray(rise_grid_ms, dtype=np.float64)
+    )
+    # Anchored on Nagel, Hong and Wilson's published fast and slow decay constants.
+    fast_candidates = (
+        np.asarray((5.0, 7.0, 9.3, 11.0, 13.0, 15.0))
+        if fast_grid_ms is None
+        else np.asarray(fast_grid_ms, dtype=np.float64)
+    )
+    slow_candidates = (
+        np.asarray((30.0, 50.0, 80.0, 120.0))
+        if slow_grid_ms is None
+        else np.asarray(slow_grid_ms, dtype=np.float64)
+    )
+    fraction_candidates = (
+        np.asarray((0.5, 0.6, 0.7, 0.786, 0.85, 0.9, 0.95))
+        if fast_fraction_grid is None
+        else np.asarray(fast_fraction_grid, dtype=np.float64)
+    )
+    baseline = np.mean(curves[:, times < baseline_end_ms], axis=1)
+    inward_current = baseline[:, None] - curves
+    best: tuple[Any, ...] | None = None
+    for onset in onset_candidates:
+        for rise in rise_candidates:
+            for fast in fast_candidates:
+                if fast <= rise:
+                    continue
+                for slow in slow_candidates:
+                    if slow <= fast:
+                        continue
+                    for fraction in fraction_candidates:
+                        kernel = two_component_kernel(
+                            times,
+                            onset_ms=float(onset),
+                            rise_tau_ms=float(rise),
+                            fast_decay_tau_ms=float(fast),
+                            slow_decay_tau_ms=float(slow),
+                            fast_fraction=float(fraction),
+                        )
+                        denominator = float(kernel @ kernel)
+                        amplitudes = np.maximum(
+                            0.0, inward_current @ kernel / denominator
+                        )
+                        predicted = amplitudes[:, None] * kernel[None, :]
+                        loss = _huber_mean(inward_current - predicted, huber_delta_pa)
+                        candidate = (
+                            loss,
+                            float(onset),
+                            float(rise),
+                            float(fast),
+                            float(slow),
+                            float(fraction),
+                            amplitudes,
+                            kernel,
+                        )
+                        if best is None or candidate[:6] < best[:6]:
+                            best = candidate
+    if best is None:
+        raise DatasetError("No valid two-component EPSC kernel candidate")
+    loss, onset, rise, fast, slow, fraction, amplitudes, kernel = best
+    return {
+        "family": "one rise, two decays, unit peak, one amplitude per cell",
+        "onset_ms": onset,
+        "rise_tau_ms": rise,
+        "fast_decay_tau_ms": fast,
+        "slow_decay_tau_ms": slow,
+        "fast_fraction": fraction,
+        "kernel_half_decay_ms": _kernel_half_decay_ms(kernel, times),
+        "training_amplitudes_pa": [float(value) for value in amplitudes],
+        "population_amplitude_pa": float(np.median(amplitudes)),
+        "training_huber_pa2": loss,
+        "continuous_parameter_at_search_boundary": bool(
+            onset in {float(onset_candidates[0]), float(onset_candidates[-1])}
+            or rise in {float(rise_candidates[0]), float(rise_candidates[-1])}
+            or fast in {float(fast_candidates[0]), float(fast_candidates[-1])}
+            or slow in {float(slow_candidates[0]), float(slow_candidates[-1])}
+            or fraction in {float(fraction_candidates[0]), float(fraction_candidates[-1])}
+        ),
+    }
+
+
 def _grid_from_contract(spec: Any) -> np.ndarray:
     if isinstance(spec, dict):
         return np.linspace(float(spec["start"]), float(spec["stop"]), int(spec["count"]))
     return np.asarray([float(value) for value in spec], dtype=np.float64)
+
+
+def compare_uepsc_kernel_families(
+    contract_path: Path,
+    root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Fit the single- and two-decay families to the same recordings under the same loss.
+
+    Both source papers describe this EPSC as biphasic and the project's kernel has one decay,
+    so the recorded decay failure may be a misspecification rather than a measured inadequacy.
+    Neither arm is validated by this: both are fitted to all twelve already-consumed cells.
+    """
+    worktree = require_clean_worktree("The uEPSC kernel-family comparison")
+    contract = load_json(contract_path)
+    if contract.get("schema_version") != "1.0":
+        raise ConfigurationError("Unsupported kernel-family contract schema")
+    parse_provenance(str(contract["provenance"]))
+    recordings = contract["recordings"]
+    artifact_path = root / str(recordings["artifact"])
+    observed = sha256_file(artifact_path) if artifact_path.is_file() else None
+    if observed != str(recordings["sha256"]):
+        raise DatasetError(
+            f"uEPSC artifact SHA-256 mismatch: expected {recordings['sha256']}, "
+            f"observed {observed}"
+        )
+    payload = pq.read_table(artifact_path).to_pydict()
+    specimens = np.asarray(payload["specimen_id"], dtype=object)
+    times_all = np.asarray(payload["time_ms"], dtype=np.float64)
+    currents_all = np.asarray(payload["current_pa"], dtype=np.float64)
+    cell_ids = sorted({str(value) for value in specimens})
+    if len(cell_ids) != int(recordings["cells"]):
+        raise DatasetError(
+            f"Expected {recordings['cells']} recorded cells, found {len(cell_ids)}"
+        )
+    time_ms: np.ndarray | None = None
+    curves: list[np.ndarray] = []
+    for cell in cell_ids:
+        selection = specimens == cell
+        cell_times = times_all[selection]
+        if time_ms is None:
+            time_ms = cell_times
+        elif not np.array_equal(time_ms, cell_times):
+            raise DatasetError(f"Recorded cell {cell} uses a different sample grid")
+        curves.append(currents_all[selection])
+    assert time_ms is not None
+    stacked = np.stack(curves)
+
+    # The least model-dependent amplitude available: peak deflection from a pre-stimulus
+    # baseline, which is a property of the traces rather than of any fitted family.
+    baseline = np.mean(stacked[:, time_ms < 40.0], axis=1, keepdims=True)
+    deflection = baseline - stacked
+    direct_peaks = np.max(np.abs(deflection), axis=1)
+
+    single = fit_difference_of_exponentials_kernel(time_ms, stacked)
+    single_kernel = difference_of_exponentials_kernel(
+        time_ms,
+        onset_ms=single["onset_ms"],
+        rise_tau_ms=single["rise_tau_ms"],
+        decay_tau_ms=single["decay_tau_ms"],
+    )
+    single["kernel_half_decay_ms"] = _kernel_half_decay_ms(single_kernel, time_ms)
+    two = fit_two_component_kernel(time_ms, stacked)
+
+    published_half = float(
+        next(h for h in contract["hypotheses"] if h["id"] == "H2")["published_half_decay_ms"]
+    )
+    direct_mean = float(direct_peaks.mean())
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "result_id": str(contract["experiment_id"]),
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "code_commit": worktree["commit"],
+        "worktree_dirty": worktree["dirty"],
+        "evidence_grade": not worktree["dirty"],
+        "provenance": str(contract["provenance"]),
+        "assumption_ids": list(contract["assumption_ids"]),
+        "artifact_sha256": observed,
+        "recorded_cells": cell_ids,
+        "direct_peak_amplitude_pa": {
+            "per_cell": [float(value) for value in direct_peaks],
+            "mean": direct_mean,
+            "median": float(np.median(direct_peaks)),
+            "sem": float(direct_peaks.std(ddof=1) / np.sqrt(direct_peaks.size)),
+        },
+        "single_component": single,
+        "two_component": two,
+        "hypotheses": {
+            "H1": {
+                "single_huber": single["training_huber_pa2"],
+                "two_huber": two["training_huber_pa2"],
+                "loss_ratio": two["training_huber_pa2"] / single["training_huber_pa2"],
+                "passed": bool(two["training_huber_pa2"] < single["training_huber_pa2"]),
+            },
+            "H2": {
+                "published_half_decay_ms": published_half,
+                "single_half_decay_ms": single["kernel_half_decay_ms"],
+                "two_half_decay_ms": two["kernel_half_decay_ms"],
+                "passed": bool(
+                    abs(two["kernel_half_decay_ms"] - published_half)
+                    < abs(single["kernel_half_decay_ms"] - published_half)
+                ),
+            },
+            "H3": {
+                "direct_mean_pa": direct_mean,
+                "single_amplitude_pa": single["population_amplitude_pa"],
+                "two_amplitude_pa": two["population_amplitude_pa"],
+                "single_shortfall_percent": 100.0
+                * (single["population_amplitude_pa"] / direct_mean - 1.0),
+                "two_shortfall_percent": 100.0
+                * (two["population_amplitude_pa"] / direct_mean - 1.0),
+                "passed": bool(
+                    abs(two["population_amplitude_pa"] - direct_mean)
+                    < abs(single["population_amplitude_pa"] - direct_mean)
+                ),
+            },
+        },
+        "hypotheses_descriptive": {
+            "H4": {
+                "fitted_fast_decay_ms": two["fast_decay_tau_ms"],
+                "fitted_slow_decay_ms": two["slow_decay_tau_ms"],
+                "fitted_fast_fraction": two["fast_fraction"],
+                "nagel_fast_decay_ms": 9.3,
+                "nagel_slow_decay_ms": 80.0,
+                "nagel_fast_fraction": 0.786,
+            }
+        },
+        "not_blind": str(contract["observed_before_registration"]["note"]),
+        "claim_boundary": str(contract["claim_boundary"]),
+        "validation_tier_awarded": None,
+    }
+    result["logical_sha256"] = sha256_json(result)
+    _atomic_json(output, result)
+    snapshot, digest = _immutable_snapshot(output)
+    return {
+        **result,
+        "output": str(output.resolve()),
+        "sha256": digest,
+        "immutable_snapshot": str(snapshot),
+    }
 
 
 def fit_uepsc_prior(
