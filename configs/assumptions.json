@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.7",
+  "assumption_set_id": "foundation-v0.8",
   "records": [
     {
       "id": "DATA-01",
@@ -245,11 +245,11 @@
       "applies_to": "the presynaptic neuron of a chemical synaptic edge",
       "source": "project scientific rule; ADR-2026-010; ADR-2026-012; docs/evidence/LITERATURE_PARAMETER_CORPUS.md section 7",
       "biological_mismatch": "The MaleCNS consensus transmitter is a classifier prediction from electron-microscopy image features, not a measurement of the transmitter a given body releases. Co-transmission is not represented: one label per body, where a real neuron can release a small molecule and a peptide together.",
-      "uncertainty": "This record was narrowed by ADR-2026-012. It previously bundled transmitter identity with the postsynaptic receptor term and was cited wherever an edge sign was asserted, which made an untestable claim look like a tested one. Transmitter identity is testable and now has a reserved validation set: 6,107 verified per-cell-type assignments with a stated evidence class, of which 3,523 rows carry a MaleCNS cell type in the cell_type_mcns column. That set measures how often the transmitter label is right. It cannot measure whether an edge excites or inhibits, which additionally requires ND-10.",
+      "uncertainty": "This record was narrowed by ADR-2026-012 and its validation set was corrected by ADR-2026-012 amendment 3 on 2026-09-10. It previously bundled transmitter identity with the postsynaptic receptor term and was cited wherever an edge sign was asserted, which made an untestable claim look like a tested one. Transmitter identity is testable, but the reserved validation set is much smaller than first recorded: about 205 rows over roughly 181 MaleCNS cell types, four fifths of them optic lobe, against the 3,523 rows previously claimed. That set can measure how often the transmitter label is right for the cell types it covers, which is a small and unrepresentative slice of the connectome, and the coverage must be reported neuron-weighted and edge-weighted as well as type-weighted so the smallness is visible. It cannot measure whether an edge excites or inhibits, which additionally requires ND-10.",
       "status": "accepted",
-      "validation": "verified per-cell-type transmitter assignments, joined on cell type at a stated confidence floor. Reserved and unopened; see configs/datasets/stage2-reservations-v1.json.",
+      "validation": "verified per-cell-type transmitter assignments, joined on MaleCNS cell type at a stated confidence floor and restricted to a stratum whose evidence is independent of electron-microscopy classification. Reserved and unopened; preregistered as stage2-nd03-transmitter-validation-v1. CORRECTED 2026-09-10. The join is far smaller than this record previously claimed. The MaleCNS slice of the ground truth holds 3,523 rows, of which 158 carry a value in cell_type_mcns, covering 135 distinct MaleCNS cell types; 134 of those 158 rows are optic lobe and 24 are central brain. The older MaleCNS file adds 47 rows over 46 distinct cell types, 30 midbrain and 17 optic lobe. So the joinable validation set is about 205 rows over roughly 181 cell types, dominated by the optic lobe, and not the 3,523 this record used to assert. The parent table's 6,107 rows are not joinable by MaleCNS cell type at all and include 804 larval rows that cannot validate an adult connectome. The correction was measured from unreserved columns only.",
       "owner": "neural",
-      "last_reviewed": "2026-09-09"
+      "last_reviewed": "2026-09-10"
     },
     {
       "id": "ND-10",
@@ -802,6 +802,32 @@
       "validation": "causal transition and ablation tests",
       "owner": "scenario",
       "last_reviewed": "2026-09-04"
+    },
+    {
+      "id": "VAL-03",
+      "name": "calcium-indicator observation model for scoring a rate against a fluorescence trace",
+      "value": {
+        "policy": "unspecified. The record exists so that the restricted stage-3 contract's dependence on it is visible in the registry rather than only in the contract, and so that no run can quietly proceed without it.",
+        "status": "named, not specified"
+      },
+      "units": "dimensionless fluorescence change over baseline, per unit firing rate",
+      "provenance": "P",
+      "applies_to": "any comparison between a firing rate the simulator produces and a calcium fluorescence trace a paper reports",
+      "source": "configs/experiments/stage3-antennal-lobe-restricted-v1.json, precondition P3",
+      "biological_mismatch": "A calcium indicator reports a nonlinear, slow and saturating function of spike rate, not the rate. The mismatch is not a detail here: the antennal lobe's input-output transformation is compressive, and a compressive indicator transform can reproduce that compression from a perfectly linear circuit. Any test of circuit compression that does not sweep the indicator's nonlinearity is measuring the indicator.",
+      "uncertainty": "Everything. No indicator, exponent, saturation point or kinetics is registered. What is registered is the requirement: the model must state the indicator and its parameters with a provenance class, and must specify a sensitivity sweep wide enough to contain the published spread of those parameters. The restricted stage-3 contract additionally requires that if the sweep's range of predicted exponents is wider than the acceptance band, the hypothesis is recorded as NOT SCORED rather than as a pass or a failure.",
+      "status": "proposed",
+      "validation": "simultaneous electrophysiology and imaging in the same neurons, which is the only thing that measures this transform rather than assuming it. Not available in the registered corpus.",
+      "owner": "neural",
+      "last_reviewed": "2026-09-10"
+    }
+  ],
+  "revision_history": [
+    {
+      "from": "foundation-v0.7",
+      "to": "foundation-v0.8",
+      "on": "2026-09-10",
+      "why": "ND-03's recorded validation-set size was wrong by a factor of about seventeen and its composition was not recorded at all. VAL-03 was added as a named but unwritten precondition of the restricted stage-3 contract."
     }
   ]
 }

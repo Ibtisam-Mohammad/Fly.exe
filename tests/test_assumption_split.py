@@ -27,7 +27,7 @@ def records() -> dict[str, dict[str, Any]]:
 
 def test_the_set_identifier_moved_with_the_split() -> None:
     payload = json.loads(REGISTRY.read_text(encoding="utf-8"))
-    assert payload["assumption_set_id"] == "foundation-v0.7"
+    assert payload["assumption_set_id"] == "foundation-v0.8"
 
 
 def test_nd03_is_transmitter_identity_and_disclaims_edge_sign(
@@ -56,10 +56,32 @@ def test_only_the_transmitter_record_claims_a_validation_set(
     records: dict[str, dict[str, Any]],
 ) -> None:
     assert "Reserved and unopened" in records["ND-03"]["validation"]
-    assert "6,107" in records["ND-03"]["uncertainty"]
     polarity = records["ND-10"]
     assert "Not available at scale" in polarity["validation"]
     assert "6,107" not in polarity["uncertainty"]
+
+
+def test_the_transmitter_validation_set_is_recorded_at_its_corrected_size(
+    records: dict[str, dict[str, Any]],
+) -> None:
+    """The count was wrong by about seventeen-fold and the correction must stay visible.
+
+    ND-03 recorded 3,523 joinable rows. The MaleCNS slice holds 3,523 rows in total and
+    158 of them carry a MaleCNS cell type, over 135 distinct types, four fifths of them
+    optic lobe. Both the corrected number and the fact that it is a correction have to
+    survive in the registry, or the next reader inherits the original claim.
+    """
+    record = records["ND-03"]
+    assert "CORRECTED 2026-09-10" in record["validation"]
+    assert "158" in record["validation"]
+    assert "135 distinct" in record["validation"]
+    assert "optic lobe" in record["validation"]
+    assert "3,523 this record used to assert" in record["validation"]
+    # The larval rows cannot validate an adult connectome and that must be said.
+    assert "804 larval" in record["validation"]
+    # The coverage has to be reported three ways so the smallness is visible.
+    assert "neuron-weighted" in record["uncertainty"]
+    assert "edge-weighted" in record["uncertainty"]
 
 
 def test_the_transmitter_only_sign_rule_stays_a_named_control(
@@ -74,7 +96,7 @@ def test_the_live_scenario_requires_both_halves() -> None:
     scenario = json.loads(
         (REPO / "configs" / "scenarios" / "eon-malecns.json").read_text(encoding="utf-8")
     )
-    assert scenario["assumption_set"] == "foundation-v0.7"
+    assert scenario["assumption_set"] == "foundation-v0.8"
     required = scenario["required_assumptions"]
     assert "ND-03" in required
     assert "ND-10" in required

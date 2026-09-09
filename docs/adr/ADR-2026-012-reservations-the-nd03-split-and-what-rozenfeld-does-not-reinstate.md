@@ -96,7 +96,9 @@ edge's sign was leaning on the half that cannot.
 | `ND-03` | presynaptic transmitter identity, per body, from the connectome annotation | `M/P` | **yes**, and a validation set is now reserved |
 | `ND-10` | postsynaptic receptor identity and functional edge polarity | `P/F` | **no**, not at connectome scale |
 
-**What the 6,107 verified assignments can and cannot do.** They pin the presynaptic
+**What the verified assignments can and cannot do.** (The count stated in this
+paragraph is corrected by the third amendment below: the joinable set is about 205 rows
+over roughly 181 MaleCNS cell types, not 6,107.) They pin the presynaptic
 transmitter. They cannot measure an edge's sign, because a correct transmitter label still
 leaves the sign unresolved wherever the postsynaptic receptor is unknown, and receptor
 identity is partner- and dendritic-domain-specific rather than cell-specific. An agreement
@@ -109,6 +111,8 @@ about how MaleCNS types are reached, because `cell_type_cross_matching.csv` has 
 FAFB, hemibrain, BANC and L1 and none for MaleCNS. The join does not go through that
 table: `gt_sources/male_cns/202509-male_cns_gt_data.csv` carries a `cell_type_mcns` column
 across 3,523 rows. Established from headers and row counts, so nothing was spent.
+(Corrected by the third amendment: 158 of those 3,523 rows carry a MaleCNS cell type.
+Establishing it from a row count rather than from the column is exactly the error.)
 
 **Edge sign stays unresolved where receptor evidence is absent.** That is not a pending
 action, it is a boundary: the measurement required exists for a handful of visual-system
@@ -261,3 +265,63 @@ interception with the extrapolated first response"*.
 code and variable labels while a methods section sat unread in the local corpus. Published
 prose is not a reserved observation and reading it costs nothing. The reservation discipline
 protects values; it was never a reason not to read the paper.
+
+## Third amendment, 2026-09-10 — the transmitter validation set is about seventeen times smaller than recorded
+
+Decision 3 split `ND-03` and claimed a validation set for the half that is testable. The
+claim about that set's size was wrong, in the flattering direction, twice over.
+
+**What was written.** Above, under Decision 3: "the MaleCNS-specific ground-truth slice
+resolves it: MaleCNS cell types are reached through that file's `cell_type_mcns` column
+… across 3,523 rows." And: "the 6,107 verified assignments … pin the presynaptic
+transmitter." The registry record repeated both numbers.
+
+**What is actually there.** Measured on 2026-09-10 from unreserved columns only —
+`species`, `region`, `hemilineage`, `cell_type_source`, `gt_celltype`, `cell_type_mcns`
+and `cell_type`, every one of them declared unreserved by the reservation contract on the
+recorded ground that a holdout is spent by seeing the measurement and not by seeing which
+cells were measured. No transmitter column was opened.
+
+| file | rows | joinable on a MaleCNS cell type | distinct types |
+|---|---|---|---|
+| `gt_sources/male_cns/202509-male_cns_gt_data.csv` | 3,523 | **158** | 135 |
+| `gt_sources/male_cns/malecns_extra.csv` | 47 | 47 | 46 |
+| `gt_data.csv` (parent) | 6,107 | **0** — no MaleCNS column | — |
+
+The 158 joinable rows are 134 optic lobe and 24 central brain. The older file's 47 are 30
+midbrain and 17 optic lobe. The parent table's 6,107 rows include 804 larval rows, which
+cannot validate an adult connectome under any join.
+
+**So the two errors were.** First, 3,523 is that file's *total* row count, not the number
+carrying a MaleCNS cell type; the header said the column existed and the row count was
+read off the file rather than off the column. Second, 6,107 is the parent table's row
+count and it is not joinable by MaleCNS cell type at all, so it was never a validation set
+for this connectome in the first place.
+
+**What it changes.** The joinable set is about 205 rows over roughly 181 distinct MaleCNS
+cell types, four fifths of them optic lobe. That is still a real validation set and it is
+worth scoring — an agreement rate over 181 types with a Wilson interval is a measurement
+where the project currently has none. What it is not is a validation of the transmitter
+labels in the circuits this project models: there are essentially no antennal-lobe
+olfactory types in it, so `ND-03` will remain unvalidated precisely where stage 2 and
+stage 3 use it. That is why the contract this amendment accompanies,
+`stage2-nd03-transmitter-validation-v1`, requires the coverage to be reported
+neuron-weighted and edge-weighted as well as type-weighted, and makes the coverage report
+a hypothesis of its own with no pass condition so it cannot be dropped from a write-up.
+
+**What it does not change.** The split itself, which was the substance of Decision 3 and
+which this makes more rather than less necessary. `ND-10` is untouched: it claimed no
+validation set and the test suite asserts it still claims none. The reservation regime is
+untouched and did its job here — the error was in a prose count, and it was caught by
+measuring the column rather than by trusting the header.
+
+**The general lesson, recorded because it has now happened twice.** A row count is not a
+column count. The first Rozenfeld error was inferring the preparation from a plotting
+label instead of reading the methods; this one is inferring a join size from a file size
+instead of reading the column. Both were cheap to check and neither was checked, and in
+both cases the unchecked version was the one that made the project's position look better.
+
+The assumption set moves `foundation-v0.7` → `foundation-v0.8`. `VAL-03` is added in the
+same revision as a named, deliberately unspecified record, so that the restricted stage-3
+contract's dependence on a calcium observation model is visible in the registry rather
+than only inside that contract.

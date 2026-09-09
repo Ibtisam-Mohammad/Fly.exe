@@ -428,6 +428,50 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_stp_holdout(args: argparse.Namespace) -> int:
+    from flysim.stp_holdout import run_stp_developmental_holdout
+
+    result = run_stp_developmental_holdout(
+        contract_path=args.experiment,
+        fit_artifact_path=args.fit_artifact,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "frozen_models": result["frozen_models"],
+            "cohorts": {
+                role: {
+                    "cohort": entry["cohort"],
+                    "unsealing": entry["unsealing"],
+                    "by_interval": [
+                        {
+                            "interval_ms": row["interval_ms"],
+                            "animals_scored": row["animals_scored"],
+                            "mean": row["mean"],
+                            "ci95": [row["ci95_low"], row["ci95_high"]],
+                        }
+                        for row in entry["by_interval"]
+                    ],
+                }
+                for role, entry in result["cohorts"].items()
+            },
+            "scores": result["scores"],
+            "degenerate_outcome_checks": result["degenerate_outcome_checks"],
+            "verdict": result["verdict"],
+            "verdict_note": result["verdict_note"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_stp_fit(args: argparse.Namespace) -> int:
     from flysim.stp_fit import run_stp_family_selection
 
@@ -2131,6 +2175,40 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_stp_holdout = stage2_commands.add_parser(
+        "stp-holdout",
+        help="open the sealed day-1 and day-0 wild-type cohorts once and score the frozen models",
+    )
+    stage2_stp_holdout.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-stp-developmental-holdout-v1.json",
+    )
+    stage2_stp_holdout.add_argument(
+        "--fit-artifact",
+        type=Path,
+        default=default_data_root()
+        / "evidence"
+        / "stage2"
+        / "stage2-stp-family-selection-v1.json",
+    )
+    stage2_stp_holdout.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_stp_holdout.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_stp_holdout.add_argument("--output", type=Path, required=True)
+    stage2_stp_holdout.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_stp_holdout.set_defaults(func=_command_stage2_stp_holdout)
 
     stage2_stp_fit = stage2_commands.add_parser(
         "stp-fit",

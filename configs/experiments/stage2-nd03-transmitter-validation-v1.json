@@ -1,0 +1,135 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-nd03-transmitter-validation-v1",
+  "title": "Validate the ND-03 presynaptic transmitter label against verified assignments, with an independence audit and three coverage weightings",
+  "status": "PREREGISTERED. Committed before any reserved transmitter column is read.",
+  "provenance": "M/P",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": ["ND-03", "ND-10"],
+  "why_this_exists": {
+    "what_nd03_asserts": "That the per-body consensus transmitter carried by the MaleCNS annotation is the transmitter the presynaptic neuron releases. Every edge in every circuit this project builds inherits that label, so its error rate is an upper bound on the correctness of everything downstream.",
+    "what_it_has_never_had": "A measurement. ND-03's provenance is M/P: the annotation is a classifier prediction from electron-microscopy image features, and the project has never compared it against an independent determination of what a neuron actually releases.",
+    "what_this_contract_does_not_do": "It does not validate edge sign. ND-10 records that sign is a function of the transmitter and the postsynaptic receptor and that partner-resolved receptor localisation does not exist at connectome scale. A perfect transmitter agreement rate would leave sign unresolved wherever the receptor is unknown. The agreement rate measured here is an upper bound on sign correctness and not a measurement of it, and the artifact must say so."
+  },
+  "the_feasibility_measurement_that_shaped_this_contract": {
+    "done_on": "2026-09-10",
+    "read": "species, region, hemilineage, cell_type_source, gt_celltype, cell_type_mcns and cell_type, every one of them declared unreserved by configs/datasets/stage2-reservations-v1.json on the recorded ground that a holdout is spent by seeing the measurement and not by seeing which cells were measured. No transmitter column was read.",
+    "found": {
+      "male_cns_slice_rows": 3523,
+      "rows_carrying_a_malecns_cell_type": 158,
+      "distinct_malecns_cell_types": 135,
+      "region_of_those_rows": {"optic_lobe": 134, "central_brain": 24},
+      "older_malecns_file_rows": 47,
+      "older_malecns_file_distinct_cell_types": 46,
+      "older_malecns_file_regions": {"midbrain": 30, "optic_lobes": 17},
+      "parent_table_rows": 6107,
+      "parent_table_larval_rows": 804
+    },
+    "the_correction_this_forced": "ND-03 recorded that the ground truth supplies 6,107 verified assignments 'of which 3,523 rows carry a MaleCNS cell type'. Both halves were wrong in the same direction. 6,107 is the parent table's row count, it is not joinable on MaleCNS cell type at all, and 804 of its rows are larval and cannot validate an adult connectome. 3,523 is the MaleCNS slice's own row count, not the number carrying a MaleCNS cell type; that number is 158. The registry and ADR-2026-012 are amended.",
+    "what_it_means_for_this_contract": "The joinable validation set is about 205 rows over roughly 181 distinct MaleCNS cell types, four fifths of them optic lobe. That is a small and unrepresentative slice, and it contains essentially no antennal-lobe olfactory types, so this contract cannot validate the transmitter labels of the circuit the project's stage-2 and stage-3 work actually uses. Saying so in advance is the point of measuring feasibility before writing criteria."
+  },
+  "the_independence_problem_and_the_audit": {
+    "the_risk": "The MaleCNS consensus transmitter is predicted from electron-microscopy image features. If a ground-truth row's own evidence is an electron-microscopy prediction, or is an annotation propagated from MaleCNS or from the hemibrain, then comparing the two measures a classifier against itself. An agreement rate contaminated that way would be the most flattering and least informative number this project could produce.",
+    "the_audit": "Before any transmitter column is scored, the reserved provenance columns neurotransmitter_verified_source and neurotransmitter_verified_evidence are opened and every row is assigned to one of two strata: INDEPENDENT if its evidence is an experimental determination of transmitter content or release that does not depend on connectome image classification, and DEPENDENT otherwise. The full mapping from every distinct evidence and source string to its stratum is recorded in the artifact, so the classification can be checked rather than trusted.",
+    "which_evidence_classes_are_independent": "Immunohistochemistry, in-situ hybridisation, single-cell or bulk transcriptomics, reporter lines for transmitter-synthesis or transporter genes, electrophysiological or pharmacological determination of released transmitter, and genetic knockdown of a transmitter pathway. Each of these measures the cell rather than the picture of it.",
+    "which_are_dependent": "Any electron-microscopy-derived prediction, any label propagated from a MaleCNS or hemibrain annotation, any inference from hemilineage identity where the hemilineage transmitter was itself predicted, and anything whose source string names a connectome dataset. When a string cannot be classified from the file alone it is assigned DEPENDENT, which is the conservative direction: an unclassifiable row cannot support an independence claim.",
+    "why_opening_the_provenance_columns_is_not_opening_the_measurement": "The source and evidence columns say how a transmitter was determined; they do not say which transmitter it is. Reading them cannot tell anyone the answer the agreement rate depends on. They are nevertheless declared reserved by the reservation contract, so this contract names them explicitly and they are opened only under it.",
+    "the_primary_stratum": "INDEPENDENT. The DEPENDENT stratum is scored and reported separately and awards nothing, because a high agreement rate there is the expected consequence of circularity rather than evidence of correctness."
+  },
+  "the_join": {
+    "left": "MaleCNS v1.0 per-body annotation: the body's type string and its consensus_nt, from the registered derived graph at the registered confidence threshold",
+    "right": "cell_type_mcns in gt_sources/male_cns/202509-male_cns_gt_data.csv, and cell_type in gt_sources/male_cns/malecns_extra.csv",
+    "key": "exact case-sensitive string equality on the cell type. No fuzzy matching, no stripping of suffixes, no manual curation of near-misses.",
+    "why_exact_only": "Any relaxation of the key is a decision made with the answer in view. A near-miss that would have agreed is worth less than a recorded join rate that can be checked.",
+    "multiplicity_rule": "A MaleCNS type matching more than one ground-truth row is scored once per distinct ground-truth transmitter set for that type; if those sets disagree with each other, the type is recorded as GROUND TRUTH CONFLICTED and excluded from the agreement rate, with the count reported.",
+    "the_join_rate_is_a_reported_result": "The fraction of ground-truth rows that find a MaleCNS type, and the fraction of MaleCNS types that find a ground-truth row, are both reported. They are the two numbers that say how much of the connectome this exercise can speak for, and they are expected to be small."
+  },
+  "the_confidence_floor": {
+    "column": "neurotransmitter_verified_confidence",
+    "floor": "the primary agreement rate is computed over rows at the highest confidence grade the column carries, and the rate over all grades is reported beside it",
+    "why_the_floor_is_defined_relatively": "The column's grade vocabulary has not been read, so naming an absolute grade now would either be a guess or would require opening the column first. Defining the floor as the top grade fixes the rule without needing to know the vocabulary, and the vocabulary and the row counts at each grade are recorded in the artifact.",
+    "what_this_forbids": "Choosing the floor after seeing which floor gives the better agreement rate. The rule is fixed here and both the top-grade and the all-grade rates are reported whatever they are."
+  },
+  "the_metric_and_the_three_weightings": {
+    "agreement": "A MaleCNS type agrees with its ground-truth row when the consensus transmitter equals the single transmitter the ground-truth row marks. A ground-truth row marking more than one transmitter is a co-transmission case: ND-03 represents one label per body and cannot represent it, so the row is scored as DISAGREEING and counted separately, because recording it as excluded would hide a real limitation of the assumption.",
+    "unclear_is_a_disagreement_not_an_abstention": "A MaleCNS consensus of 'unclear' against a verified transmitter is scored as a disagreement. ND-03's policy leaves 'unclear' unresolved downstream, so it is not a wrong answer in the model; but it is a failure to supply the label the ground truth has, and counting it as an abstention would inflate the rate. The count is reported separately so both readings are available.",
+    "type_weighted": "one unit per distinct MaleCNS cell type. This is the rate the ground truth is naturally sampled at and it is the primary.",
+    "neuron_weighted": "each type weighted by the number of MaleCNS bodies carrying it. This says how many neurons in the connectome the validated labels cover.",
+    "edge_weighted": "each type weighted by the total synaptic weight on edges leaving bodies of that type at the registered confidence threshold. This says how much of the connectome's signal flow the validated labels cover, which is the quantity that actually matters for a circuit model.",
+    "why_all_three": "A type-weighted rate over 181 optic-lobe-dominated types can look respectable while covering a negligible fraction of the neurons and of the edges. Reporting only the type-weighted rate would be the single most misleading way to present this result."
+  },
+  "hypotheses": [
+    {
+      "id": "T1",
+      "name": "the transmitter label agrees with independent verified assignments",
+      "primary": true,
+      "statement": "In the INDEPENDENT stratum at the top confidence grade, the type-weighted agreement rate between the MaleCNS consensus transmitter and the verified transmitter is at least 0.85, with the lower bound of its two-sided 95 percent Wilson interval at least 0.75.",
+      "why_0_85": "It is the level at which the label is usable as a modelling assumption with its error rate stated, and it is below the agreement rates published for the hemibrain's transmitter classifier, so it is not a bar set to be cleared. The Wilson lower bound is required because the sample is small enough that a point estimate alone would be noise.",
+      "degenerate_outcome_check": "If fewer than 30 types are scorable in the primary stratum, T1 is NO VERDICT and no pass may be claimed, because a Wilson interval on fewer than that cannot separate 0.85 from 0.6."
+    },
+    {
+      "id": "T2",
+      "name": "the agreement is better than guessing the commonest transmitter",
+      "primary": true,
+      "statement": "The primary stratum's type-weighted agreement rate exceeds the rate a constant predictor achieves, where the constant predictor assigns every type the modal transmitter of the ground-truth set, by at least 0.10; and Cohen's kappa against that baseline is at least 0.6.",
+      "why_it_is_here": "Most central-brain neurons are cholinergic. A classifier that answered 'acetylcholine' unconditionally would score well on any transmitter benchmark, and T1 alone cannot tell that apart from a working classifier. T2 is the guard, and both T1 and T2 must pass.",
+      "degenerate_outcome_check": "If the ground-truth set's modal transmitter accounts for more than 0.85 of the scorable types, the set is too imbalanced for an agreement rate to mean anything and the verdict rests on kappa alone, which is recorded."
+    },
+    {
+      "id": "T3",
+      "name": "how much of the connectome this speaks for",
+      "primary": false,
+      "statement": "The neuron-weighted and edge-weighted coverage of the validated types are reported, together with the fraction of MaleCNS bodies and of MaleCNS outgoing synaptic weight that belong to a type with any verified assignment at all.",
+      "no_threshold": "This hypothesis has no pass or fail. It exists so that the coverage cannot be omitted from the write-up, and so that T1's rate is never quoted without it.",
+      "expected_before_the_run": "Small, and concentrated in the optic lobe. The antennal-lobe olfactory types the project's stage-2 and stage-3 work depends on are expected to have no verified assignment at all, in which case the honest conclusion is that ND-03 remains unvalidated exactly where the project uses it."
+    }
+  ],
+  "expected_outcome_stated_before_the_run": {
+    "prediction": "T1 is expected to pass in the INDEPENDENT stratum if that stratum is large enough to score, because transmitter classification from electron-microscopy features is a well-validated task and the published classifiers do better than 0.85. T3 is expected to show coverage in the low single-digit percentages of neurons and of edges. The most likely overall outcome is a passed but narrow validation with a clearly stated irrelevance to the circuits the project models.",
+    "the_outcome_that_would_be_most_informative": "A small INDEPENDENT stratum. If most ground-truth rows turn out to be EM-derived or annotation-propagated, then no independent validation of ND-03 is available from this source at all, and the assumption stays at provenance M/P with no measurement behind it. That would be worth more than a flattering circular number."
+  },
+  "acceptance": {
+    "verdict_rule": "PASS if and only if T1 and T2 both pass in the INDEPENDENT stratum at the top confidence grade. T3 is reported and does not enter the verdict.",
+    "what_a_pass_would_establish": "That the transmitter label is right at a measured rate, for the cell types the ground truth covers, against evidence that does not come from the classifier being tested. It would move ND-03's validation from absent to measured-and-narrow and would let downstream claims quote an error rate instead of an assumption.",
+    "what_a_pass_would_not_establish": "Nothing about edge sign, which stays unresolved under ND-10. Nothing about co-transmission, which the assumption cannot represent and which is scored as disagreement precisely so it stays visible. Nothing about the cell types outside the join, which is most of the connectome. Nothing about the antennal lobe unless the coverage report shows antennal-lobe types in the scorable set.",
+    "no_tuning": "The consensus transmitter is read as the annotation supplies it. No threshold, no relabelling, no exclusion of a type because it disagreed. The only exclusions are the ones this contract fixes in advance: ground-truth conflicts, and rows below the confidence floor for the primary rate.",
+    "no_criterion_may_be_restated": "T1's thresholds, T2's margin and kappa floor, the confidence-floor rule, the join key, the multiplicity rule, the co-transmission rule, the unclear rule and all three degenerate-outcome checks are closed as of this commit."
+  },
+  "columns_this_contract_opens": {
+    "for_the_independence_audit": [
+      "neurotransmitter_verified_source",
+      "neurotransmitter_verified_evidence",
+      "known_nt_source",
+      "known_nt_evidence"
+    ],
+    "for_the_confidence_floor": [
+      "neurotransmitter_verified_confidence",
+      "known_nt_confidence"
+    ],
+    "for_scoring": [
+      "acetylcholine",
+      "glutamate",
+      "gaba",
+      "glycine",
+      "dopamine",
+      "serotonin",
+      "octopamine",
+      "tyramine",
+      "histamine",
+      "nitric_oxide",
+      "known_nt"
+    ],
+    "files": [
+      "drosophila-neurotransmitters/gt_sources/male_cns/202509-male_cns_gt_data.csv",
+      "drosophila-neurotransmitters/gt_sources/male_cns/malecns_extra.csv"
+    ],
+    "left_sealed": "drosophila-neurotransmitters/gt_data.csv, the parent table. It is not joinable on MaleCNS cell type, 804 of its rows are larval, and opening it would spend a set that a future contract joining through the cross-matching table might still be able to use."
+  },
+  "claim_boundary": "One scoring pass over the MaleCNS-joinable slice of a verified transmitter table, stratified by whether the verifying evidence is independent of the classifier under test. It validates presynaptic transmitter identity for roughly 181 cell types and nothing else, and it cannot advance ND-10 by any amount.",
+  "not_executed_yet": {
+    "status_on_2026-09-10": "The contract is committed and the run is not built. What it needs is a MaleCNS type-to-body table and a per-type outgoing synaptic weight, both of which exist in the registered derived graph, plus the scoring module.",
+    "why_committing_it_now_matters": "The feasibility measurement that shaped it read only unreserved columns and it already forced a correction to a committed claim. Fixing the criteria now, while the transmitter columns are still sealed, is the only way the agreement rate can be a measurement rather than a number chosen to look right."
+  },
+  "last_reviewed": "2026-09-10"
+}

@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage3-antennal-lobe-restricted-v1",
+  "title": "A restricted antennal-lobe activity-prediction contract: prepared, and deliberately not executable yet",
+  "status": "PREPARED AND SEALED. Nothing in the Takagi corpus may be opened under this contract. It supersedes the design of stage3-olfactory-activity-prediction-v1 as the intended reissue and it does not lift that design's seal, because two of its own preconditions are unmet.",
+  "provenance": "P",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "seal": "SEALED. See blocking_preconditions. The seal lifts only when every precondition below is satisfied and this contract is amended to record how, in a commit made before any value is read.",
+  "assumption_ids": ["ND-03", "ND-10", "ND-06", "VAL-03"],
+  "why_this_exists": {
+    "the_thing_the_project_is_for": "Predicting neural activity from a connectome. Everything else the project has done is either structure, which the connectome gives directly, or single-synapse dynamics, which is a means to this end. This is the first contract that states the end in a form small enough to be executed and sharp enough to be wrong.",
+    "why_it_is_restricted": "The full antennal lobe has fifty glomeruli, several classes of local neuron and no validated dynamics anywhere in the project. A contract at that scale would be unfalsifiable in practice. This one is restricted to the four glomeruli Takagi and colleagues imaged, to their uniglomerular projection neurons and to the GABAergic multiglomerular local neurons connecting them, and to three hypotheses.",
+    "what_the_superseded_design_got_wrong": "stage3-olfactory-activity-prediction-v1 was written when the matched OSN and PN recordings were believed not to exist. Its hypotheses aim at published population summaries. Scoring the files that do exist against criteria written for different observables would be choosing criteria after the data were in hand, and the reservation contract sealed the corpus for exactly that reason. This is the reissue that seal asks for, and it fixes all five recorded items."
+  },
+  "how_the_five_recorded_items_are_fixed": {
+    "item_1_a_measured_input_output_curve": "S1 below takes the *measured* OSN response of a glomerulus as the model's input and predicts that glomerulus's PN response. The odour never enters the model, so the contract no longer needs an odour-to-receptor encoder and no longer infers the input. This is the single biggest change from the superseded design and it is what makes the circuit rather than the receptor tuning the thing under test. It costs the OSN arrays: they are opened as inputs and are thereby spent, which is declared in what_gets_spent below.",
+    "item_2_a_direct_pharmacological_test": "S2 scores the GABA-A and GABA-B blockade condition directly, which is a stronger form of the divisive-normalisation test than the simulated-drive version the superseded design registered.",
+    "item_3_an_observation_model": "VAL-03, registered as a new assumption with this contract, maps a firing rate to a calcium-indicator signal, with a sensitivity sweep. It is registered because a monotone nonlinear indicator transform can manufacture or destroy a saturating curve entirely on its own, which is the failure that would make S1 meaningless.",
+    "item_4_the_species_assignment": "Established before any value is read, from the archive's readme and the authors' analysis code, both of which are metadata and code rather than observations and are readable under the reservation rule. Only files assigned to Drosophila melanogaster may be scored against a melanogaster connectome. Any file whose species cannot be established from the readme and the code is excluded rather than guessed, and the exclusion list is recorded in the amendment that lifts the seal.",
+    "item_5_the_antenna_ablation": "S3 scores it against the 1.56-fold ipsilateral contact asymmetry measured in the bilateral test, with an explicit fallback: if the imaging files do not separate ipsilateral from contralateral drive, S3 is recorded as NOT SCORED and the reason is the file structure rather than the outcome. That fallback is declared now so it cannot be invoked selectively later."
+  },
+  "the_circuit": {
+    "glomeruli": ["VM5d", "DM2", "DM4", "VA2"],
+    "why_these_four": "They are the four Takagi and colleagues imaged with matched OSN and PN responses. The restriction is theirs, not a choice made to suit the model.",
+    "neurons": "the olfactory receptor neurons of those four glomeruli, their uniglomerular projection neurons, and every GABAergic multiglomerular local neuron with synapses in two or more of the four",
+    "edges": "ORN to PN, ORN to LN, LN to PN and LN to LN within that neuron set, taken from MaleCNS v1.0 at the registered confidence threshold",
+    "what_is_left_out_and_why": "Every other glomerulus, which means the local neurons carry only part of their real input; the lateral horn and mushroom body, which receive PN output and do not feed back into the lobe at this scale; and the multiglomerular projection neurons, which ND-06's plasticity rule is not scoped to. Each omission makes the local-neuron drive an underestimate, so S2's predicted compression is a lower bound and must be scored as one."
+  },
+  "polarity_is_carried_as_an_alternative_and_not_asserted": {
+    "why": "ND-10 records that edge sign is a function of the transmitter and the postsynaptic receptor, and that partner-resolved receptor localisation does not exist at connectome scale. The MaleCNS receptorType annotation carries 752 non-null entries, all gustatory. So the sign of every edge in this circuit is formally unresolved, including the one the whole divisive-normalisation story rests on.",
+    "consequence_for_this_contract": "The circuit is run under the transmitter-only sign rule, which ND-10 registers as a named regression control rather than the physiological default. Every hypothesis below must hold under that control, and the artifact must state that it is the control and not a resolved sign. If a hypothesis holds only under one of several sign alternatives, that is recorded as a conditional result and awards nothing.",
+    "the_honest_summary": "This circuit's most confident sign assignment is that the GABAergic local neurons inhibit their targets, and even that is transmitter-based inference rather than partner-resolved measurement."
+  },
+  "the_dynamics_this_needs_and_does_not_have": {
+    "requirement": "A synaptic transmission model for ORN-to-PN and for LN-to-PN edges that has passed at least one holdout, plus a cellular model for PN and LN spiking that has passed at least one holdout.",
+    "position_on_2026-09-10": "Neither exists. ND-06 v0.1 failed two external tests. Its successor is under test against the sealed developmental cohorts under stage2-stp-developmental-holdout-v1, which scores paired-pulse ratios and nothing else. The cellular tier stands at a measured 1.064 against a required value below 1.0 and the kinetics leg is retired for want of unitary waveforms. LN-to-PN transmission has no registered parameters at all, from any source.",
+    "therefore": "This contract cannot be executed today and is not being executed today. Writing it now is worth doing anyway, because it names precisely what the dynamics work is for, and because the criteria are then fixed before the data that would score them is anywhere near being opened. That ordering is the whole point."
+  },
+  "blocking_preconditions": [
+    {
+      "id": "P1",
+      "requirement": "An ORN-to-PN synaptic transmission module that has passed a preregistered holdout, registered as ND-06 v0.2 or later with its passing artifact named.",
+      "met": false,
+      "status_on_2026-09-10": "Under test. stage2-stp-developmental-holdout-v1 scores frozen candidates against the sealed day-1 and day-0 wild-type cohorts. A pass there would be a V1-limited tier on the paired-pulse observable only, which satisfies this precondition in letter and only barely in spirit: a paired-pulse pass says nothing about the train-frequency range an odour response occupies. The amendment that lifts this seal must say which."
+    },
+    {
+      "id": "P2",
+      "requirement": "An LN-to-PN transmission model with registered parameters and a stated provenance class.",
+      "met": false,
+      "status_on_2026-09-10": "Nothing registered. This is the larger gap of the two and the project has not looked for a source. Wilson and Laurent 2005 and Olsen and Wilson 2008 are the obvious places to look and neither has been read into the parameter corpus."
+    },
+    {
+      "id": "P3",
+      "requirement": "VAL-03, the calcium observation model, registered as an assumption with its sensitivity sweep specified.",
+      "met": false,
+      "status_on_2026-09-10": "Named by this contract and not yet written. It must state the indicator, its Hill exponent and saturation, its rise and decay kinetics, and the sweep over each; and it must state plainly that a compressive indicator transform can produce the saturating input-output curve S1 tests for even from a perfectly linear circuit. Without that sweep S1 is not a test of the circuit."
+    },
+    {
+      "id": "P4",
+      "requirement": "The species assignment of every calcium-imaging file, from the archive readme and the authors' analysis code.",
+      "met": false,
+      "status_on_2026-09-10": "Not attempted. It requires no value to be opened and it is the cheapest of the four; it has not been done because the other three block execution anyway."
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "S1",
+      "name": "the projection-neuron response compresses its own glomerulus's receptor-neuron drive",
+      "primary": true,
+      "statement": "Driving the restricted circuit with each glomerulus's measured OSN response and reading out that glomerulus's PN response through VAL-03, the predicted PN-against-OSN relation is compressive, and its exponent when fitted as a power law lies inside a band fixed from published measurements rather than from Takagi and colleagues.",
+      "the_band_comes_from_elsewhere_on_purpose": "Olsen and Wilson's and Bhandawat and colleagues' measurements of the antennal-lobe input-output transformation are the source of the band. Taking it from the dataset under test would make S1 a fit. The exact numerical band must be extracted into the parameter corpus and written into this contract in the amendment that lifts the seal, and it must be extracted before any Takagi value is opened.",
+      "degenerate_outcome_check": "Compression can be produced by VAL-03 alone. S1 passes only if the predicted exponent lies inside the band across the whole registered VAL-03 sensitivity sweep, and it is recorded as NOT SCORED if the sweep's range of exponents is wider than the band itself, because then the observation model rather than the circuit is doing the work."
+    },
+    {
+      "id": "S2",
+      "name": "blocking GABA receptors reduces the compression",
+      "primary": true,
+      "statement": "With the LN-to-PN edges removed from the circuit, which is the model's counterpart of the GABA-A and GABA-B blockade condition, the predicted power-law exponent moves toward one by at least the amount recorded in the amendment, and the predicted direction of change matches the measured direction.",
+      "why_it_is_the_stronger_test": "S1 alone can be passed by any compressive mechanism, including the indicator. S2 is a causal manipulation with a predicted direction, applied to the one circuit element the connectome supplies and the observation model does not.",
+      "the_lower_bound_disclosure": "The restricted circuit omits the local neurons' input from the other forty-six glomeruli, so its lateral inhibition is an underestimate and its predicted compression is a lower bound. S2 is therefore a one-sided test: predicting less compression than measured is consistent with the omission, predicting more is not.",
+      "degenerate_outcome_check": "If removing every LN-to-PN edge changes the predicted exponent by less than the measurement's own error, the restricted circuit has no lateral inhibition worth testing and S2 is recorded as NOT SCORED with that as the reason."
+    },
+    {
+      "id": "S3",
+      "name": "unilateral antennal ablation, against the measured contact asymmetry",
+      "primary": false,
+      "statement": "The bilateral structural test measured a 1.56-fold ipsilateral excess in ORN-to-PN contacts at p = 2.7e-31. Under unilateral antennal ablation the restricted circuit predicts a reduction in PN drive whose ratio between the ablated and intact sides follows that asymmetry, within a limit fixed in the amendment.",
+      "explicit_fallback_declared_now": "If the imaging files do not separate ipsilateral from contralateral drive, S3 is recorded as NOT SCORED and the reason given is the file structure. That determination must be made from the archive's file listing and the authors' analysis code, which are readable metadata, and it must be recorded before any imaging value is opened, so that the fallback cannot be invoked selectively after seeing the result.",
+      "why_it_is_secondary": "It connects a structural measurement the project actually made to a physiological consequence, which is valuable, but it depends on the ablation being complete and on the contralateral projection having the same per-contact strength as the ipsilateral one. Kazama and Wilson measured equal ipsilateral and contralateral unitary EPSCs at p > 0.54, which supports that assumption and does not establish it for these glomeruli."
+    }
+  ],
+  "what_gets_spent": {
+    "the_osn_arrays": "S1 uses the measured OSN responses as the model's input, which opens them and spends them. They can never afterwards serve as a holdout for anything, including for a receptor-tuning model. That is a real and irreversible cost and it is accepted here in exchange for removing the odour-encoding problem from the contract entirely.",
+    "the_pn_arrays": "The holdout. Opened once, scored once.",
+    "the_blockade_condition": "Opened for S2, scored once.",
+    "the_ablation_condition": "Opened for S3 only if S3 is scorable; otherwise left sealed.",
+    "the_dose_response_curves": "Left sealed. They belong to a receptor-tuning question this contract does not ask.",
+    "the_behaviour_files": "Left sealed and out of scope: tethered flight and wind tunnel are not activity predictions from a connectome.",
+    "the_nicotinic_blockade": "Left sealed. It would test the ORN-to-PN sign directly, which is an ND-10 question and deserves its own contract rather than being folded into this one."
+  },
+  "what_a_pass_would_and_would_not_establish": {
+    "would": "That a connectome-constrained circuit model, given a measured input, predicts a measured output in a four-glomerulus subcircuit under one causal manipulation. That is the project's first circuit-level activity prediction and it would be worth a V2-restricted tier naming the four glomeruli, the observation model and the sign control.",
+    "would_not": "Anything about the other forty-six glomeruli, about odour identity, about temporal dynamics beyond whatever VAL-03's kinetics resolve, about the mushroom body or lateral horn, or about edge sign, which stays unresolved under ND-10 whatever this contract returns. It would not license a whole-brain claim of any kind.",
+    "and_if_it_fails": "The failure would be attributable, which is the point of restricting it: three preconditions and one sign control are named, so a failure can be traced to the dynamics module, the observation model, the sign rule or the omitted lateral input rather than to the enterprise."
+  },
+  "claim_boundary": "A prepared and sealed contract. It scores nothing, opens nothing, awards no tier, and its only present function is to fix the criteria before the data can be reached and to state exactly which four things must exist first.",
+  "supersedes": {
+    "experiment_id": "stage3-olfactory-activity-prediction-v1",
+    "how": "As the intended reissue its seal asks for. That design's seal is NOT lifted by this contract and its own hypotheses remain unscorable against the staged files, which is what its seal records.",
+    "what_is_kept_from_it": "Its data-availability finding, its statement of what the stage-3 question is, and its record that the target values are sealed."
+  },
+  "last_reviewed": "2026-09-10"
+}

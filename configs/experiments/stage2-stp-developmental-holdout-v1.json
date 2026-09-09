@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-stp-developmental-holdout-v1",
+  "title": "Score the frozen ORN-to-PN plasticity models once against the sealed day-1 and day-0 wild-type cohorts",
+  "status": "PREREGISTERED. Every acceptance criterion below was written before any cohort was opened, and the frozen predictions were inserted from the committed fit artifact rather than recomputed here.",
+  "provenance": "M/F",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": [
+    "ND-06",
+    "VAL-02"
+  ],
+  "depends_on": {
+    "fit_contract": "configs/experiments/stage2-stp-family-selection-v1.json",
+    "fit_artifact": "evidence/stage2/stage2-stp-family-selection-v1.json",
+    "rule": "The models scored here are the ones that artifact froze. Their parameters may not be changed, refitted, nudged or reselected, and this contract records their predictions numerically so that the comparison cannot drift.",
+    "fit_artifact_sha256": null,
+    "fit_artifact_sha256_note": "Filled in from the immutable snapshot of the fit artifact before this contract is committed. The scorer refuses to run against any other file, so the models it scores are demonstrably the models that were frozen."
+  },
+  "why_this_exists": {
+    "the_position_before_this_run": "ND-06 v0.1, a depression-only rule with parameters taken from a published fit, has faced two independent external tests and passed neither: it over-predicts steady-state depression at 7 Hz by about 16 percentage points, and it fails structurally against wild-type paired-pulse ratios because those exceed one and decrease with interval while a single depleting resource can do neither. Every quantitative dynamical claim this project has made has failed. No tier above V0 is supported.",
+    "what_would_change_that": "A model frozen before seeing a cohort, predicting that cohort inside its measurement error, and beating a horizontal line while doing it. That is what this contract scores. It is the first time in this project that a dynamical model has been frozen and then tested rather than inherited and then tested.",
+    "and_what_would_not": "A pass here does not make the model right. It is the same laboratory, the same protocol, the same genotype and the same observable as the fit set, differing only in the animals and their age. The acceptance section says exactly what a pass is worth and it is not much more than this: the model generalises across cohorts of the quantity it was fitted to."
+  },
+  "the_cohorts": {
+    "primary": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3J.mat",
+      "variables": [
+        "new_all_flies_PP_10ms_control",
+        "new_all_flies_PP_30ms_control",
+        "new_all_flies_PP_100ms_control",
+        "new_all_flies_PP_300ms_control",
+        "new_all_flies_PP_1000ms_control"
+      ],
+      "cohort": "wild type, 1 day post eclosion (24 to 48 h), Orco-GAL4; GH146-QF, QUAS-GFP",
+      "animals_from_the_published_legend": "n = 20 (10 ms), 21 (30 ms), 22 (100, 300, 1000 ms)",
+      "why_it_is_the_primary": "It is the developmental neighbour of the fit set. The paper reports that eEPSC amplitudes are already at wild-type levels by day 1 and that the homeostatic adjustment it studies completes within the first day post eclosion, so of the two sealed cohorts this is the one where a failure is least likely to be a developmental difference and most likely to be the model."
+    },
+    "secondary": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+      "variables": [
+        "new_all_flies_PP_10ms_control",
+        "new_all_flies_PP_30ms_control",
+        "new_all_flies_PP_100ms_control",
+        "new_all_flies_PP_300ms_control",
+        "new_all_flies_PP_1000ms_control"
+      ],
+      "cohort": "wild type, 0 days post eclosion (under 24 h), same genotype",
+      "animals_from_the_published_legend": "n = 20 (10 ms), 21 (30, 100, 300, 1000 ms)",
+      "why_it_is_secondary_and_what_that_costs": "The frozen models carry no age parameter, so scoring them on an animal under 24 hours old tests a conjunction: that the model describes this synapse, and that wild-type ORN-to-PN short-term plasticity is already mature at eclosion. A failure here cannot be attributed between the two, and that is declared now rather than discovered afterwards. Its result is reported in full and does not enter the primary verdict."
+    },
+    "excluded": {
+      "Fig6D": "paired-pulse ratios recorded from GABAergic multiglomerular local interneurons labelled by 449-QF. A different synapse class from the ORN-to-uniglomerular-PN edges ND-06's rule is scoped to. It stays sealed.",
+      "Fig3E_and_F": "the train arrays at 1, 10, 20 and 60 Hz. A different observable rather than a different cohort, and the decisive test of both pinned constants and of the unbounded facilitation. It stays sealed and is the declared next experiment.",
+      "every_RNAi_array": "a perturbation the frozen models have no parameter for. Sealed."
+    }
+  },
+  "how_the_holdout_is_and_is_not_independent": {
+    "different": "the animals, and their age",
+    "same": "the laboratory, the preparation, the stimulation protocol, the genotype, the measured quantity and the analysis code",
+    "therefore": "a cohort-generalisation test and a developmental extrapolation. Not an independent-laboratory test. Not a different observable. Not a perturbation.",
+    "established_from": "the paper's figure legends and methods, which are published prose and carry no reservation, cross-checked against the array shapes recorded in the sealed reservation manifest. No reserved value was read to establish any of it."
+  },
+  "observation_model": {
+    "assumption_id": "VAL-02",
+    "protocol": "twenty pairs at 0.2 Hz, simulated rather than assumed away, exactly as in the fit",
+    "missing_data_rule": "One paired-pulse ratio per animal. A non-finite entry excludes that animal from that interval and the count of exclusions is reported. Fixed here, before any value is opened.",
+    "the_10_ms_measurement_differs_from_the_others": "The methods state that at 10 ms the second amplitude was measured from the peak to the point of interception with the extrapolated first response. That is recorded again here, in advance, so that it can never be invoked afterwards as a reason to drop an interval a model failed on. All five intervals are scored on the same footing."
+  },
+  "frozen_models": {
+    "note": "Filled in from the committed fit artifact before this contract is committed and before any cohort is opened. Each entry carries the family, its parameters, and its predicted ratio at each of the five intervals under the twenty-pair protocol.",
+    "primary": null,
+    "secondary": null,
+    "flat_null": null
+  },
+  "hypotheses": [
+    {
+      "id": "A1",
+      "name": "the frozen curve lands inside the unseen cohort's measurement error",
+      "primary": true,
+      "statement": "For the primary cohort, the primary frozen model's predicted ratio lies inside that cohort's two-sided 95 percent interval at every scorable interval except at most one.",
+      "criterion": "at most one miss among the scorable intervals",
+      "why_one_miss_is_allowed": "Five intervals scored at 95 percent confidence will produce about one excursion by chance even from a correct model. Demanding five of five would fail a correct model about a quarter of the time; allowing more than one would stop being a test. This tolerance is fixed now and is not adjustable afterwards.",
+      "degenerate_outcome_check": "Any interval whose cohort 95 percent half-width exceeds 0.15 is recorded as NO VERDICT and drops out of the count, because a wide enough interval contains any prediction. If fewer than four intervals are scorable, A1 as a whole is NO VERDICT and no pass may be claimed from it."
+    },
+    {
+      "id": "A2",
+      "name": "the frozen curve beats a horizontal line",
+      "primary": true,
+      "statement": "For the primary cohort, the primary frozen model's weighted sum of squared residuals is at most half the flat null's weighted sum of squared residuals on the same cohort.",
+      "criterion": "weighted residual ratio, model over null, at most 0.5",
+      "why_it_is_here": "A1 alone can be passed by a model that predicts roughly the cohort mean at every interval, which is what the flat null does by construction. A2 is the guard against reading that as success, and both A1 and A2 must pass for the verdict to be a pass.",
+      "degenerate_outcome_check": "If the flat null itself satisfies A1 on this cohort, A1 is declared uninformative for this run and the verdict rests on A2 alone. This is recorded rather than allowed to inflate the result."
+    },
+    {
+      "id": "A3",
+      "name": "the shape is right and not just the level",
+      "primary": false,
+      "statement": "For the primary cohort, the sign of the change between each adjacent pair of intervals in the frozen prediction agrees with the sign in the cohort means at three or more of the four adjacent pairs. A pair whose two cohort 95 percent intervals overlap counts as agreeing, because the data do not resolve its direction.",
+      "criterion": "three or more of four adjacent comparisons agree",
+      "why_it_is_secondary": "It is the criterion whose failure refuted ND-06 v0.1, so it must be scored; but the overlap allowance makes it weak on cohorts this size, and a weak criterion should not carry a verdict.",
+      "reported_either_way": true
+    }
+  ],
+  "the_secondary_model_is_scored_and_awards_nothing": {
+    "why_it_is_scored": "The fit set cannot choose between the two eligible accounts of five means, so both were frozen and the unseen cohort is the only thing that can separate them. Scoring both is the point.",
+    "what_it_cannot_do": "The secondary model's result does not create a pass. If the primary fails and the secondary passes, the recorded outcome is that the primary failed and that a differently-structured account did better on one cohort, which is a lead for the next contract and not a validation.",
+    "degenerate_outcome_check": "If the two frozen models' predictions differ by less than 0.02 in ratio units at every interval, this holdout cannot separate them and that is recorded instead of a winner being declared."
+  },
+  "expected_outcome_stated_before_the_run": {
+    "prediction": "The primary is expected to pass A1 and A2 on the day-1 cohort, because the paper treats wild-type animals of these ages as equivalent controls and reports no wild-type difference across them, and because the frozen curve was fitted to the same quantity in the same preparation. The day-0 cohort is a genuine coin flip: it is the youngest animals and the least mature synapse.",
+    "why_a_pass_is_expected_and_still_worth_running": "An expected pass is a weak test, and saying so in advance is what stops it being reported as a strong one. What makes it worth running is that it is falsifiable, that the models are frozen with numbers written down, and that the alternative on offer is a project in which no dynamical model has ever been frozen and tested at all.",
+    "what_a_failure_would_mean": "That not even cohort generalisation of the fitted observable holds, which would mean the fit is describing 22 particular animals rather than the synapse, and would leave the whole paired-pulse route to a dynamical tier closed rather than merely narrow."
+  },
+  "acceptance": {
+    "verdict_rule": "PASS if and only if A1 and A2 both pass on the primary cohort. A3 and both secondary-cohort results are reported and do not enter the verdict.",
+    "what_a_pass_would_establish": "That a short-term-plasticity model for the ORN-to-PN synapse, frozen with its parameters written down before the data were seen, predicts an unseen cohort of the same observable in the same laboratory to within that cohort's measurement error, and does so better than a constant. That is the project's first passed dynamical validation, and it is worth a V1-limited tier on this observable only.",
+    "what_a_pass_would_not_establish": "Not V2 and nothing near it. It would not show the model predicts trains, latencies, absolute amplitudes, perturbations, another laboratory, another glomerulus or another synapse class. It would not make the fitted parameters measurements: the fit artifact records which of them this observable cannot determine, and those stay labelled. It would not reinstate the retired synaptic leg of the Stage 2 gate, which needs unitary waveforms this repository does not ship. The gate stays at v4 and 0 of 3.",
+    "what_a_failure_would_establish": "That the paired-pulse observable does not support a dynamical tier for this synapse on this connectome, and that the next attempt needs a different observable rather than a different model.",
+    "no_refitting": "No parameter may be changed on this outcome, and no successor may cite this test as evidence for its own values. That is the rule the 7 Hz failure and the paired-pulse failure were both recorded under and it holds identically here.",
+    "no_criterion_may_be_restated": "A1, A2, A3, their thresholds and all four degenerate-outcome checks are closed as of this commit.",
+    "scored_once": "The cohorts are opened once. This contract's values_opened flag is set on completion and the scorer refuses to run against a contract that already records them as opened."
+  },
+  "the_next_experiment_whatever_happens_here": {
+    "what": "the sealed wild-type train arrays in rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat, at 1, 10, 20 and 60 Hz over 32 to 112 pulses in 18 animals",
+    "why_it_is_the_decisive_one": "It is a different observable, not another cohort, and it attacks every weakness this exercise exposed. The frozen models pin a resource recovery constant that the paired-pulse protocol cannot measure at all; a train measures it directly. Their facilitation is additive and unbounded, so they diverge in a long train; a 60 Hz train of 112 pulses would show that immediately. The additive and multiplicative accounts differ by a term that is invisible on a paired-pulse curve and compounds across a train. And the fast facilitation component that the paired-pulse curve sees only at its 10 ms point is sampled repeatedly by a 60 Hz train, whose interval is 16.7 ms.",
+    "what_must_be_written_first": "Its own contract, naming the file, the variables, the normalisation, the missing-data rule and the acceptance limits, committed before those arrays are opened. Nothing in this contract licenses opening them."
+  },
+  "claim_boundary": "One scoring pass over two sealed wild-type cohorts, against models frozen beforehand. It can award at most a V1-limited tier on the paired-pulse observable, it opens ten arrays and nothing else, and it leaves the trains, the perturbations, the raw traces and the entire Takagi corpus sealed.",
+  "last_reviewed": "2026-09-10"
+}
