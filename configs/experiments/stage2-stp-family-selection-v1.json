@@ -1,0 +1,288 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-stp-family-selection-v1",
+  "title": "Fit candidate ORN-to-PN short-term-plasticity families on spent data, screen them, and freeze one",
+  "status": "PREREGISTERED. Committed before the fitting code was run and long before any sealed cohort is opened.",
+  "provenance": "F",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": [
+    "ND-06",
+    "ND-10",
+    "VAL-02"
+  ],
+  "why_this_exists": {
+    "the_recorded_failure": "ND-06 v0.1 binds the ORN-to-PN synapse to a depression-only Tsodyks-Markram rule with utilisation 0.22 and recovery 893 ms, taken from Nagel, Hong and Wilson 2015. On 2026-09-09 that rule was scored against Rozenfeld and colleagues' wild-type paired-pulse measurements and failed structurally at four of five intervals: the measured ratios exceed one at three intervals and decrease with interval, and a single depleting resource can do neither at any parameter setting. The diagnosis recorded then was a missing facilitation mechanism rather than a wrong depression mechanism.",
+    "what_this_run_does_about_it": "It builds the successor honestly. A depression-only rule cannot be repaired by refitting, so the successor has to be a different model form, and choosing a model form from data is fitting. The project's rule has been that a fit awards no validation, and that rule is kept: this contract fits on data that is already spent and cannot test anything, and the frozen result is sent to a cohort that is still sealed.",
+    "why_the_fit_set_is_the_right_fit_set": "The Fig3D wild-type arrays were opened and scored on 2026-09-09. That expenditure is irreversible: they can never again function as a holdout for anything. Using them as training data costs nothing that has not already been spent, and refusing to use them would leave the failure undiagnosed while protecting nothing.",
+    "what_this_contract_is_not": "It is not a validation, it awards no tier, and it does not reinstate the retired synaptic leg of the Stage 2 gate. The gate stays at v4 and 0 of 3."
+  },
+  "disclosure_about_blindness": {
+    "what_was_visible_when_this_was_written": "The five Fig3D wild-type cohort means, their standard deviations and their animal counts, all of which were published in the 2026-09-09 artifacts and copied into the ND-06 v0.1 registry. Exploratory fits of the candidate families to those five means were also run before this contract was written, and their weighted residuals and goodness-of-fit p-values were seen.",
+    "why_that_is_acceptable_here": "Selection on spent data is not blind and cannot be made blind. What must be blind is the test, and it is: the holdout criteria live in stage2-stp-developmental-holdout-v1 and the cohorts they score have never been read. Pretending the fit set was blind would be the dishonest option; disclosing that it was not is the honest one.",
+    "the_one_thing_the_disclosure_forbids": "No screen threshold in this contract may be changed after the holdout is opened, and no family may be added to the list below after the holdout is opened. Both lists are closed as of this commit.",
+    "what_the_exploratory_fits_showed": "Recorded here so it cannot be quietly reinterpreted later. No family reaches a goodness-of-fit p of 0.05 on the fit set; the best is about 0.013. Every family that carries a free resource-recovery time constant drives it to the top of its box, because the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled standard error of 0.0277 and a recoverable resource cannot be that flat. Subtracting the plateau from the cohort means leaves an excess whose implied decay constant is 21 ms between the 10 and 30 ms intervals and 83 ms between the 30 and 100 ms intervals, and a single exponential forced through the 10 and 100 ms points misses the 30 ms point by 3.3 standard errors."
+  },
+  "why_goodness_of_fit_is_not_a_screen": {
+    "decision": "A chi-square goodness-of-fit p-value is computed and reported for every family with residual degrees of freedom, and it gates nothing.",
+    "reason": "Gating on it at 0.05 would have excluded every candidate and frozen nothing, leaving the diagnosis untestable; gating on it at 0.02 would have been a threshold chosen to admit the two families whose p-values had already been seen. Neither is defensible. What replaces it is a weaker screen with a clear meaning, stated below: the fitted curve must be consistent with every cohort mean it was fitted to.",
+    "what_is_not_being_claimed": "None of these families describes this synapse to within its measurement error. That is stated here rather than buried, and it is the reason a saturated five-parameter family is carried and frozen: a model with no residual degrees of freedom cannot be tested in sample at all, so the only possible test of it is an unseen cohort, and the project has one."
+  },
+  "families_considered": [
+    "pinned-published-depression",
+    "facilitation-depression-classic",
+    "facilitation-depression",
+    "parallel-release-components",
+    "two-timescale-facilitation",
+    "two-timescale-facilitation-free",
+    "depression-only"
+  ],
+  "families": [
+    {
+      "id": "M0",
+      "family_id": "depression-only",
+      "parameters": 2,
+      "mechanism": "presynaptic vesicle depletion alone; the registered ND-06 v0.1 rule, term for term",
+      "why_it_is_here": "as the baseline whose refutation is already on record, and to quantify the gap"
+    },
+    {
+      "id": "M1b",
+      "family_id": "facilitation-depression-classic",
+      "parameters": 3,
+      "mechanism": "textbook Tsodyks-Markram, where one number sets both the resting release probability and the facilitation step",
+      "structural_prediction_stated_in_advance": "tying the two together caps the paired-pulse ratio at 1.5, and the measured 10 ms cohort mean is 1.5139, so this family is expected to fail on the amount of facilitation rather than on its presence"
+    },
+    {
+      "id": "M3",
+      "family_id": "pinned-published-depression",
+      "parameters": 2,
+      "mechanism": "the published ND-06 depression leg held exactly as registered, with the missing facilitation added",
+      "why_it_is_here": "it asks the question the 2026-09-09 failure left open. If this is eligible, the published utilisation and recovery constant survive and only a mechanism was absent. If it is not, the depression parameters are wrong for this dataset as well, which sharpens the recorded diagnosis.",
+      "structural_prediction_stated_in_advance": "pinning the effective first-pulse utilisation to 0.22 caps the ratio at 1.388, below the measured 10 ms mean"
+    },
+    {
+      "id": "M1",
+      "family_id": "facilitation-depression",
+      "parameters": 4,
+      "mechanism": "residual-calcium facilitation of release probability over a depleting resource; the standard two-state Markram-Tsodyks synapse"
+    },
+    {
+      "id": "M2",
+      "family_id": "parallel-release-components",
+      "parameters": 4,
+      "mechanism": "two populations of release sites summing at the postsynaptic membrane, one loosely coupled to calcium channels and facilitating, one tightly coupled and depressing",
+      "independent_support": "Pooryasin and colleagues 2021 showed that Unc13A and Unc13B clusters at a fly central synapse differ in calcium-channel coupling distance and that coupling distance defines release components with distinct short-term-plasticity characteristics",
+      "declared_structural_choice": "The resting share of the two components is fixed at one half rather than fitted, because a paired-pulse ratio identifies only the products of share with step and of share with utilisation. For a single pair from rest that invariance is exact; under the twenty-pair protocol it is approximate, and the E3 sweep measures the residual instead of assuming it away."
+    },
+    {
+      "id": "M4",
+      "family_id": "two-timescale-facilitation",
+      "parameters": 4,
+      "mechanism": "two facilitating components with different calcium decay constants, multiplying one depleting resource",
+      "declared_structural_choice": "Two constants are pinned and neither is a measurement. The fast facilitation constant is pinned at 5 ms for the reason above. The resource recovery constant is pinned at 20000 ms because the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled standard error of 0.0277, which fixes the depth of the plateau and says nothing whatever about its rate. The run is required to refit at several values of each pinned constant and to report how far the five scored predictions move; if either sweep moves them by more than 0.01 in ratio units the pinning is not harmless and the family is not eligible.",
+      "known_limitation": "Its facilitation is additive and has no ceiling, so it diverges in a long train. The sealed train arrays would test exactly that and are not opened here.",
+      "why_four_free_parameters_and_two_pinned_constants": "The fit set forces two facilitation timescales: one exponential above the plateau cannot pass through the 10, 30 and 100 ms means at once, missing the 30 ms mean by 3.3 standard errors. But it does not supply enough information to fit both components fully. The fast component decays faster than the shortest recorded interval, so the data carry one number about it, and an exploratory five-parameter version produced a flat ridge along which doubling the step and shortening the constant to match left every prediction unchanged. The fast constant is therefore pinned at 5 ms, half the shortest interval and arbitrary within the set of values the protocol cannot separate, and the amplitude is fitted. Four free parameters against five means leaves one residual degree of freedom, so unlike the exploratory version this family does have a goodness-of-fit statistic."
+    },
+    {
+      "id": "M4f",
+      "family_id": "two-timescale-facilitation-free",
+      "parameters": 5,
+      "mechanism": "as M4, with the fast facilitation time constant fitted rather than pinned",
+      "why_it_is_here": "Pinning M4's fast constant is a claim about what the protocol can resolve, and claims should be tested rather than assumed. M4f differs from M4 by that one parameter and by nothing else, so whichever of the two survives the screens carries the verdict on the pinning.",
+      "structural_prediction_stated_in_advance": "Five free parameters against five means leaves no residual degrees of freedom, so M4f has no goodness-of-fit statistic and E1 is trivially satisfied for it. If it survives, it survives on E2 and E3, which is the intended behaviour: an unfalsifiable in-sample fit is admitted only if its predicted curve is sharp enough for the holdout to refute."
+    }
+  ],
+  "data": {
+    "fit_source": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+      "variables": [
+        "new_all_flies_PP_10ms_control",
+        "new_all_flies_PP_30ms_control",
+        "new_all_flies_PP_100ms_control",
+        "new_all_flies_PP_300ms_control",
+        "new_all_flies_PP_1000ms_control"
+      ],
+      "cohort": "wild-type controls, 2 to 4 days post eclosion, Orco-GAL4; GH146-QF, QUAS-GFP",
+      "status": "SPENT on 2026-09-09; verified against the sealed reservation manifest before reading",
+      "unit_of_observation": "one paired-pulse ratio per animal",
+      "animals": {
+        "10ms": 20,
+        "30ms": 21,
+        "100ms": 22,
+        "300ms": 22,
+        "1000ms": 22
+      }
+    },
+    "nothing_else_is_opened": "Fig3H, Fig3J, Fig3E_and_F, Fig6D, every RNAi array, every absolute-amplitude array, the miniature-EPSC arrays, the Bruchpilot arrays and the raw traces all stay sealed. The Takagi corpus stays sealed."
+  },
+  "observation_model": {
+    "assumption_id": "VAL-02",
+    "protocol_is_simulated_not_assumed_away": "The methods state that paired-pulse recordings were made at 0.2 Hz and that twenty traces were averaged per interval. The reported ratio is therefore the mean second response over the mean first response across twenty pairs whose earlier members leave the resource partly depleted, not a single pair from rest. Every prediction in this contract and in the frozen registry is computed by simulating twenty pairs at a 5000 ms repetition period. The from-rest value is reported alongside so the size of the correction is visible; at 1000 ms it is about 0.028 in ratio units, which is larger than that cohort's standard error, so the correction is not cosmetic.",
+    "minimal_stimulation": "The recordings are minimal-stimulation single-fibre responses, not compound bundle responses. That was corrected into the record on 2026-09-09. It weakens the postsynaptic-saturation term of VAL-02 for these data, because minimal stimulation is designed to stay off the saturating part of the postsynaptic curve.",
+    "the_10_ms_measurement_differs_from_the_others": "The methods state that at 10 ms the second amplitude was measured from the peak to the point of interception with the extrapolated first response. That is a documented methodological difference from the other four intervals, and it is recorded here in advance so that it can never be invoked afterwards as a reason to drop the interval that a model failed on. The 10 ms interval is fitted and scored on the same footing as the others."
+  },
+  "screens": {
+    "e1_consistent_with_its_own_training_data": {
+      "statement": "The fitted curve must lie inside the fit set's two-sided 95 percent interval at all five intervals.",
+      "why_all_five_and_not_four": "Four of five would admit a family that misses one interval by any amount whatever, and two of the candidates fail precisely by missing the 10 ms interval by more than three standard errors while sitting comfortably inside the other four. A screen that cannot see that is not a screen."
+    },
+    "e2_sharp_enough_to_be_falsified": {
+      "statement": "The bootstrap 95 percent band on the frozen prediction, obtained by resampling animals within each interval and refitting, must be no wider at any interval than the fit set's own 95 percent interval at that interval.",
+      "why_it_is_the_right_screen_for_this_purpose": "The purpose of freezing a model here is to expose it to an unseen cohort. A prediction blurrier than the data cannot be refuted by more data of the same kind, so freezing one would be a way of arranging never to be wrong. This screen asks exactly the question the exercise is for, and it is the only one of the three that a family can fail while fitting perfectly.",
+      "it_carries_no_threshold_of_its_own": "There is no number to choose and therefore nothing to shop for: the comparison is against the data's own interval, and it scales with the data."
+    },
+    "e3_no_smuggled_constants": {
+      "statement": "Every constant a family pins rather than fits must be refitted across the sweep declared in pinned_constant_sensitivity, and the five scored predictions must move by no more than 0.01 in ratio units across that sweep.",
+      "why": "A pinned constant is an assumption wearing a number. Carrying one into a frozen model is defensible only if the predictions being scored do not depend on it, and the only way to establish that is to refit elsewhere and measure the movement. A pinning that moves the predictions is doing work, and work has to be either fitted or given up.",
+      "limit": 0.01
+    },
+    "selection": {
+      "primary": "among families passing all three screens, the one with the lowest weighted residual on the fit set",
+      "secondary": "among the remaining eligible families, the one with the fewest parameters, ties broken by the lower weighted residual",
+      "why_two_are_frozen": "The fit set cannot choose between a four-parameter and a five-parameter account of five means, and pretending otherwise would be the error this exercise exists to avoid. Freezing both lets an unseen cohort adjudicate. The primary carries the verdict; the secondary is reported and awards no tier of its own.",
+      "if_nothing_is_eligible": "Nothing is frozen, the sealed cohorts stay sealed, and the deliverable is the diagnosis plus the next experiment. That is a legitimate outcome and is not to be avoided by moving a threshold."
+    },
+    "degeneracy_guard": {
+      "statement": "A one-parameter flat constant is fitted to the fit set by the same weighted least squares and frozen alongside the selected families.",
+      "why": "A frozen curve that cannot beat a horizontal line on the holdout has not been tested by the holdout. The comparison must be between two predictions both made before the cohorts were opened, which is why the flat level is frozen here rather than fitted afterwards."
+    },
+    "reported_but_gating_nothing": [
+      "the chi-square goodness of fit, where residual degrees of freedom exist",
+      "the leave-one-interval-out prediction error",
+      "parameter-level identifiability from synthetic recovery, which decides which fitted numbers may be called measurements rather than which families may be frozen",
+      "the effective first-pulse utilisation against Kazama and Wilson's measured release probability of 0.79"
+    ]
+  },
+  "identifiability_findings_expected_and_to_be_reported_either_way": {
+    "the_recovery_time_constant": "It is expected to be unidentifiable from this observable in every family that leaves it free. If so, that is itself a finding worth more than the fit: the paired-pulse protocol cannot measure the quantity ND-06 v0.1 was accused of getting wrong, because once a facilitation term absorbs the short intervals the only remaining information about recovery is the depth of a plateau that is flat from 300 to 1000 ms. It would mean the v0.1 failure was never repairable by paired-pulse refitting, and that the decisive measurement is the sealed train set.",
+    "additive_versus_multiplicative": "M1 and M2 differ on a paired-pulse curve only by the product of their two effects, a term that decays with the facilitation constant. They are expected to be nearly inseparable here and clearly separable on a train, and the run measures that directly by refitting each family on data the other generated."
+  },
+  "acceptance": {
+    "what_this_run_can_establish": "Which candidate mechanisms are consistent with the wild-type paired-pulse curve, which of their parameters the observable can and cannot pin down, which of their pinned constants are doing real work, whether their frozen predictions are sharp enough to be refutable, and what gets frozen.",
+    "what_this_run_cannot_establish": "Anything about whether the frozen model is right. It is fitted to the only data it is scored against here, which is the definition of no test.",
+    "no_tier": "V0 remains the only supported tier. This run does not change that and cannot.",
+    "no_criterion_may_be_restated": "The three screens and the family list are closed as of this commit."
+  },
+  "the_holdout_this_freezes_for": {
+    "contract": "stage2-stp-developmental-holdout-v1, to be committed separately with the frozen numbers in it before any cohort is opened",
+    "cohorts": [
+      "rozenfeld2023-repo/Figure 3/Fig3J.mat wild-type arrays, 1 day post eclosion",
+      "rozenfeld2023-repo/Figure 3/Fig3H.mat wild-type arrays, 0 days post eclosion"
+    ],
+    "excluded_and_why": {
+      "Fig6D": "its paired-pulse ratios are recorded from GABAergic multiglomerular local interneurons labelled by 449-QF, not from uniglomerular projection neurons. ND-06's rule is class-specific to ORN-to-uniglomerular-PN edges, so this file scores a different synapse class and must not be used. It stays sealed.",
+      "Fig3E_and_F": "the train arrays. They are the decisive test of the pinned recovery constant and of the unbounded facilitation, and they are a different observable rather than a different cohort. They stay sealed and are the declared next experiment."
+    }
+  },
+  "claim_boundary": "A fit and a screen on spent data. It opens one already-spent file, awards no tier, and its only product is a frozen model and the record of what its parameters do and do not mean.",
+  "last_reviewed": "2026-09-10",
+  "pinned_constant_sensitivity": {
+    "requirement": "Every pinned constant must be swept and the refits reported.",
+    "sweeps": {
+      "parallel-release-components/share": [
+        0.25,
+        0.5,
+        0.75
+      ],
+      "two-timescale-facilitation/fast_tau_ms": [
+        1.0,
+        2.0,
+        5.0,
+        10.0
+      ],
+      "two-timescale-facilitation/recovery_tau_ms": [
+        5000.0,
+        10000.0,
+        20000.0,
+        50000.0
+      ],
+      "two-timescale-facilitation-free/recovery_tau_ms": [
+        5000.0,
+        10000.0,
+        20000.0,
+        50000.0
+      ]
+    },
+    "limit": 0.01,
+    "why": "A pinned constant is an assumption wearing a number. The only defensible way to carry one into a frozen model is to show that the predictions being scored do not depend on it, and the only way to show that is to refit at other values and measure the movement.",
+    "the_share_sweep_is_a_demonstration_not_a_test": "The parallel family's resting share is exactly unidentifiable for a single pair from rest: dividing the step and the utilisation by their own shares leaves the ratio identical, so fitting the share would be fitting a direction the observable cannot see. Under the recorded twenty-pair protocol the invariance is only approximate, because the depressing pool's depletion across forty pulses depends on its utilisation nonlinearly rather than only through the product of share and utilisation. A test measures the residual at under 0.01 in ratio units for a representative parametrisation. The sweep is therefore a real measurement of a small effect rather than a formality, and if it exceeds the limit the family is not eligible."
+  },
+  "independent_cross_check_reported_for_every_family": {
+    "quantity": "the effective utilisation of the first pulse from rest",
+    "compare_against": "Kazama and Wilson 2008 measured a release probability of 0.79 plus or minus 0.02 at this synapse by multiple-probability fluctuation analysis, uniform across glomeruli",
+    "status": "reported as a diagnostic; it gates nothing and awards nothing",
+    "why_it_is_not_a_screen": "The mapping from a fitted utilisation to a measured per-site release probability needs the extra assumptions of one vesicle per site and no within-pair recovery, which the ND-06 registry already records as the reason the variance-derived value was not adopted. It is reported because a family that can only fit this curve by putting the release probability an order of magnitude below the measured one has told us something about itself, and that should be visible rather than buried."
+  },
+  "independence_audit_of_the_holdout": {
+    "done_on": "2026-09-10",
+    "from": "the paper's own figure legends and methods, which are published prose and carry no reservation. No sealed value was read to establish any of this.",
+    "findings": [
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+        "cohort": "wild type, 2 to 4 days post eclosion",
+        "legend_animals": "n = 20 (10 ms), 21 (30 ms), 22 (100, 300, 1000 ms)",
+        "matches_the_array_shapes_in_the_sealed_manifest": true,
+        "role": "the fit set; SPENT on 2026-09-09"
+      },
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3J.mat",
+        "cohort": "wild type, 1 day post eclosion (24 to 48 h)",
+        "legend_animals": "n = 20 (10 ms), 21 (30 ms), 22 (100, 300, 1000 ms)",
+        "matches_the_array_shapes_in_the_sealed_manifest": true,
+        "role": "the primary holdout; sealed"
+      },
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+        "cohort": "wild type, 0 days post eclosion (under 24 h)",
+        "legend_animals": "n = 20 (10 ms), 21 (30, 100, 300, 1000 ms)",
+        "matches_the_array_shapes_in_the_sealed_manifest": true,
+        "role": "the secondary holdout; sealed"
+      },
+      {
+        "file": "rozenfeld2023-repo/Figure 6/Fig6D.mat",
+        "cohort": "wild type, day 0 and day 2 to 4",
+        "recorded_from": "GABAergic multiglomerular local interneurons labelled by 449-QF",
+        "role": "EXCLUDED and left sealed: a different synapse class from the one ND-06's rule is scoped to"
+      }
+    ],
+    "how_independent_the_holdout_actually_is": "Same laboratory, same protocol, same genotype (Orco-GAL4; GH146-QF, QUAS-GFP), different animals, different ages. It is a cohort-generalisation test and a developmental extrapolation, not an independent-laboratory test and not a different observable. That is stated in advance so a pass cannot later be reported as more than it is.",
+    "the_ambiguity_declared_in_advance": "The frozen model has no age parameter, so scoring it on a younger cohort tests a conjunction: that the model describes this synapse, and that wild-type ORN-to-PN short-term plasticity does not change over the first days after eclosion. A failure cannot be attributed between the two. Day 1 is the primary because the paper reports that eEPSC amplitudes are already at wild-type levels by day 1 and that the homeostatic adjustment it studies completes within the first day post eclosion; day 0 is under 24 h post eclosion and is the more exposed extrapolation, so it is secondary and its failure is the more ambiguous of the two.",
+    "what_the_genotype_is_not": "GH146-QF labels about 60 percent of projection neurons and no glomerulus is specified, so these are pooled recordings across an unstated mixture of glomeruli. Nagel, Hong and Wilson fitted DM6 and VM2. The comparison across papers therefore carries a glomerulus mismatch that no amount of statistics removes."
+  },
+  "superseded_screens": {
+    "why_this_is_here": "The first draft of this contract gated eligibility on parameter-level identifiability. That was a design error rather than a threshold that turned out inconvenient, and replacing it silently would have been indistinguishable from moving a threshold, so the draft and its outcome are recorded here in full.",
+    "what_was_wrong_with_it": "Parameter-level identifiability answers whether a fitted number may be reported as a measurement. Eligibility for freezing has to answer whether the frozen prediction can be falsified by the holdout. Those are different questions, and a model can have thoroughly unidentifiable parameters and a perfectly sharp predicted curve; that is the ordinary situation for a mechanistic model fitted to a few summary statistics. The replacement, E2, asks the question the exercise is actually for, and it is measured on the predictions rather than on the parameters.",
+    "what_the_superseded_screen_would_have_decided": "It was run. Under it exactly one family was eligible, the parallel-release-components family, and it passed by a margin of 0.005 on a single statistic: the median relative bias in recovering its facilitation step came out at 0.245 against a limit of 0.25, which a different random seed could have moved either way. The five-parameter two-timescale family, which fits the curve with a chi-square p of 0.9 against 0.012 for the eligible one, was excluded. Selecting on a coin-flip margin and excluding the far better fit is not a defensible way to choose what to freeze.",
+    "what_did_not_change": "E1 is unchanged. The family list is unchanged except for the addition of the two-timescale family's free-constant variant, which exists so that the decision to pin that constant is itself under test. The selection rule, the degeneracy guard, the holdout cohorts and every acceptance criterion in stage2-stp-developmental-holdout-v1 are unchanged, and none of them had been run when this was rewritten.",
+    "the_rule_this_does_not_break": "No screen in this contract may be changed after the holdout is opened. The holdout has not been opened. This revision is committed before it is, and this record is what makes the revision auditable rather than convenient.",
+    "superseded_text_preserved": {
+      "one_fit_set_screen": {
+        "statement": "The fitted curve must lie inside the fit set's own two-sided 95 percent interval at all five intervals.",
+        "why_all_five_and_not_four": "Four of five would admit a family that misses one interval by any amount whatever, and two of the candidates are expected to fail precisely by missing the 10 ms interval by more than three standard errors while sitting comfortably inside the other four. A screen that cannot see that is not a screen.",
+        "what_it_means": "the weakest form of 'consistent with the data it was fitted to' that still excludes something"
+      },
+      "two_identifiability_screen": {
+        "statement": "Every free parameter must either be recovered when the family is refitted to data it generated itself at the measured noise level, with a median relative bias no worse than 0.25 and a 5-to-95 percent recovered interval no wider than 2.0 times its own value, or else be shown not to matter: refitting with it displaced by factors of 0.25, 0.5, 2 and 4 must move the five scored predictions by no more than 0.01 in ratio units.",
+        "why_it_exists": "A parameter that cannot be recovered from its own noise-free-in-expectation data is not a quantity this observable constrains, whatever the point fit reports. Freezing such a parameter and then reporting it as a measurement would be the plainest form of overclaiming available here. The insensitivity route is provided because a parameter that is genuinely unidentifiable but genuinely irrelevant to the scored predictions is harmless, and saying so requires a demonstration rather than an assertion.",
+        "replicates": 120,
+        "insensitivity_sweep": [
+          0.25,
+          0.5,
+          2.0,
+          4.0
+        ],
+        "insensitivity_limit": 0.01
+      },
+      "three_selection": {
+        "primary": "among families passing both screens, the one with the lowest weighted residual on the fit set",
+        "secondary": "among the remaining eligible families, the one with the fewest parameters, ties broken by the lower weighted residual",
+        "why_two_are_frozen": "The fit set cannot choose between a four-parameter and a five-parameter account of five means, and pretending otherwise would be the error this whole exercise exists to avoid. Freezing both lets an unseen cohort adjudicate. The primary carries the verdict; the secondary is reported and awards no tier of its own.",
+        "if_nothing_is_eligible": "Nothing is frozen, the sealed cohorts stay sealed, and the deliverable is the diagnosis plus the next experiment. That is a legitimate outcome and is not to be avoided by moving a threshold."
+      },
+      "four_degeneracy_guard": {
+        "statement": "A one-parameter flat constant is fitted to the fit set by the same weighted least squares and frozen alongside the selected families.",
+        "why": "A frozen curve that cannot beat a horizontal line on the holdout has not been tested by the holdout. The comparison must be between two predictions both made before the cohorts were opened, which is why the flat level is frozen here rather than fitted later."
+      }
+    }
+  }
+}
