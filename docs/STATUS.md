@@ -915,3 +915,124 @@ and it carries a reviewer instruction: check that B3 is genuinely failing, that 
 exact, and that the absolute figure is retained, or reject the contract as criterion-shopping.
 Nine tests enforce exactly those three things plus the decomposition arithmetic, so a later edit
 that quietly weakens any of them breaks the suite.
+
+## Session of 2026-09-10 — the successor synapse: fitted, frozen, and its holdout voided
+
+Full reasoning: [ADR-2026-013](adr/ADR-2026-013-freeze-before-testing-and-what-a-duplicated-cohort-cost.md).
+Evidence: [STAGE2_SYNAPTIC_TIER.md](evidence/STAGE2_SYNAPTIC_TIER.md).
+Assumption set `foundation-v0.7` → `foundation-v0.8`; 37 records; `VAL-03` added.
+
+**Headline: no tier changed. V0 Structural remains the only supported tier and the Stage 2
+exit gate stays at v4, 0 of 3.** What changed is that the project fitted a model itself for
+the first time, froze it before testing, and then found the flaw in its own holdout rather
+than in the model.
+
+### The successor was built and two rules were frozen
+
+v0.1's depression-only rule was refuted structurally on 2026-09-09 and no refit could
+repair it. `stage2-stp-family-selection-v1` fitted seven standard mechanisms to the five
+**spent** Fig3D wild-type cohort means — spent because they were scored the day before, so
+training is the only honest use left for them — and screened them on three criteria fixed
+before the run. Two survived, and both were frozen with their five predictions written into
+the holdout contract numerically, pinned to the fit artifact by checksum, alongside a
+frozen flat constant as the degeneracy guard.
+
+Every prediction simulates the recorded protocol — twenty pairs at 0.2 Hz, twenty traces
+averaged — rather than assuming a single pair from rest. At 1000 ms that correction is
+0.028 in ratio units, larger than that cohort's own standard error.
+
+### Four things the fit set refuted
+
+- **The textbook Tsodyks–Markram form cannot facilitate enough.** Tying the facilitation
+  step to the resting release probability caps the ratio at 1.5 against a measured 1.5139.
+- **The minimal repair of the v0.1 failure fails too**, so the 2026-09-09 diagnosis was
+  half right. Keeping Nagel's 0.22 and 893 ms and adding only the missing facilitation caps
+  the ratio at 1.388 and misses 10 ms by 3.1 standard errors. The mechanism was missing
+  *and* the published parameters are wrong for this synapse as these recordings measure it.
+- **One facilitation timescale is not enough.** The excess over the plateau decays with an
+  implied 21 ms between 10 and 30 ms and 83 ms between 30 and 100 ms; one exponential
+  through the 10 and 100 ms points misses 30 ms by 3.3 standard errors.
+- **The recovery constant is not measurable from this observable at all.** Every family
+  with a free recovery constant drove it to its bound, because the 300 and 1000 ms means
+  differ by 0.0003 against a pooled standard error of 0.0277. v0.1 was accused of getting
+  wrong a quantity that its failing observable cannot determine.
+
+Two exclusions came from the screens rather than the fit: the parallel two-component family
+fits as well as anything with four parameters but its frozen band is wider than the data at
+10 and 30 ms, and the best-fitting family of all (p = 0.90) pinned a constant that turned
+out to be doing work — pinned elsewhere in its declared sweep, the predictions move by
+0.078. The first draft of the contract gated on parameter identifiability instead; that was
+a design error, and it is preserved verbatim with what it would have decided.
+
+**An unresolved tension is now on the record.** Every family that reproduces this curve
+needs an effective first-pulse utilisation of 0.07 to 0.13 against the 0.79 ± 0.02 release
+probability `KW2008` measured here — a factor of six to eleven. A synapse releasing at 0.79
+should barely facilitate; these recordings facilitate by half at 10 ms.
+
+### The holdout is void, and the verdict is NO VERDICT
+
+It ran clean at `c7f45bf` from a detached worktree and returned PASSED. **That verdict does
+not stand.** Fig3J's five wild-type arrays are element-wise identical to Fig3D's — same
+values, same order, same counts 20/21/22/22/22, maximum difference exactly zero, matching
+stored-byte digests. The authors reused their wild-type reference across two figures and
+the repository ships it twice.
+
+It was discoverable from the published legends, which give identical animal counts at all
+five intervals, and both lines were recorded side by side in the fit contract's own
+independence audit. The coincidence was noticed and not acted on. The experiment therefore
+returns **NO VERDICT** — not passed, not failed; it was not run — and the secondary cohort
+may not be promoted, which the contract forbids in its own acceptance section.
+
+**What survives, at its real weight.** Fig3H (day 0) is a genuine unseen cohort:
+
+- **A1 NO VERDICT** — the frozen curve lands inside all five intervals, but the 10 and
+  30 ms half-widths are 0.19 and 0.17 against the registered 0.15 power limit, leaving
+  three scorable against a registered minimum of four.
+- **A2 PASSED** — weighted residual 1.493 against the frozen constant's 38.612 on 21
+  unseen animals, a factor of 26 against a required 2. This is the one substantive
+  registered result, and the first time any dynamical model here has been frozen and then
+  beaten a null on animals it had not seen. It is not a tier.
+- **A3 PASSED** — 4 of 4 adjacent directions, and the constant passes it too.
+- The two frozen rules are **not** separated: the four-parameter one does marginally better
+  on the genuine cohort, opposite to the fit set. Neither may be preferred.
+
+### The guard, and the pattern it does not fix
+
+`reservations.duplicate_arrays` compares digests of the stored element bytes of named
+arrays across two MAT files, decoding nothing, and the holdout scorer now refuses any
+cohort that duplicates a spent one before a byte of payload is read. Against the real files
+it flags all five Fig3J arrays and clears all five Fig3H arrays; both are asserted in the
+suite. Equal stored bytes prove equal data, so a match refuses; the converse does not hold,
+so a clean result is a screen and not a certificate.
+
+**This is the third instance in two days of inferring something cheap to check:** the
+preparation from a plotting label, a join size from a row count, a cohort's independence
+from a legend's prose. All three unchecked readings favoured the project.
+
+### ND-03's validation set is seventeen times smaller than recorded
+
+Measured from unreserved columns only, so nothing was spent. The MaleCNS ground-truth slice
+holds 3,523 rows of which **158** carry a MaleCNS cell type, not 3,523; and the parent
+table's 6,107 rows carry no MaleCNS column at all and include 804 larval rows that cannot
+validate an adult connectome. The joinable set is about 205 rows over **169** distinct cell
+types — 89 optic lobe, most of the rest central complex, and **zero** antennal lobe: no
+ORN, no HRN, no projection neuron, no antennal-lobe local neuron. So `ND-03` will stay
+unvalidated exactly where stage 2 and stage 3 use it, whatever agreement rate the covered
+types return. ADR-2026-012 third amendment.
+
+### Three contracts preregistered, none executed
+
+- `stage2-nd03-transmitter-validation-v1` — agreement rate with an independence audit that
+  partitions the ground truth by whether its evidence depends on electron-microscopy
+  classification, because comparing a classifier against labels derived from it is the most
+  flattering and least informative number available. Coverage reported type-, neuron- and
+  edge-weighted, as a hypothesis with no pass condition so it cannot be dropped.
+- `stage3-antennal-lobe-restricted-v1` — **prepared and sealed.** Fixes all five items the
+  earlier stage-3 seal recorded, chiefly by taking the measured OSN response as the model's
+  input so the odour never enters the model and the circuit rather than the receptor tuning
+  is what is tested. Names four blocking preconditions, none met.
+- The next synaptic experiment is not yet written. The wild-type trains at 1, 10, 20 and
+  60 Hz are now the **only** unspent wild-type ORN→PN holdout in the corpus, which raises
+  the standard for the contract that opens them. Before writing it: run the duplicate-array
+  guard against those arrays and compare the published animal counts. Every train array
+  reports 18 animals at every frequency, which is a pattern to check rather than assume.

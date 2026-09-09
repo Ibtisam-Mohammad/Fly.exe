@@ -535,3 +535,131 @@ counts, and the whole of Takagi 2024.
 The decisive next check needs no new data and is already registered as H4: the 1 Hz train
 array gives a second-pulse-over-first at a 1000 ms interval in a different protocol, which
 either agrees with the 0.9302 measured here or does not.
+
+---
+
+## 2026-09-10 — ND-06 v0.2: fitted, frozen, tested once, NO VERDICT
+
+Full reasoning in [ADR-2026-013](../adr/ADR-2026-013-freeze-before-testing-and-what-a-duplicated-cohort-cost.md).
+Contracts: `stage2-stp-family-selection-v1`, `stage2-stp-developmental-holdout-v1`.
+Registry: `configs/neural/short-term-plasticity-v0.2.json`.
+
+### What was done
+
+v0.1's depression-only rule was refuted structurally on 2026-09-09 and no refit could
+repair it, so a successor was built the only honest way available: fit on data that was
+already spent, freeze the result with its predictions written down, and test it once on
+cohorts that were still sealed.
+
+Seven candidate mechanisms were fitted to the five spent Fig3D wild-type cohort means,
+each as a state machine over the recorded protocol — twenty pairs at 0.2 Hz, because that
+is what the methods describe and the correction reaches 0.028 in ratio units at 1000 ms,
+larger than that cohort's own standard error.
+
+```
+family                                     k      sse  df       p  in 5  eligible
+depletion alone (the v0.1 form)            2  123.610   3  3e-27   1/5        no
+textbook Tsodyks-Markram                   3   16.839   2 0.0002   4/5        no
+published depression leg + facilitation    2   17.584   3 0.0005   4/5        no
+release-probability facilitation           4    6.235   1 0.0125   5/5       YES
+two parallel release components            4    6.266   1 0.0123   5/5   no (E2)
+two-timescale facilitation, fast tau pinned 4   0.017   1 0.8972   5/5   no (E3)
+two-timescale facilitation, fast tau fitted 5   0.000   0     --    5/5       YES
+```
+
+### What the fit set refuted
+
+**The textbook form cannot facilitate enough.** Tying the facilitation step to the resting
+release probability caps the paired-pulse ratio at 1.5; the measured 10 ms mean is 1.5139.
+
+**The minimal repair fails, so the 2026-09-09 diagnosis was half right.** Keeping Nagel's
+0.22 and 893 ms exactly as registered and adding only the missing facilitation caps the
+ratio at 1.388 and misses 10 ms by 3.1 standard errors. The mechanism was missing *and*
+the published parameters are wrong for this synapse as these recordings measure it.
+
+**One facilitation timescale is not enough.** The excess over the plateau decays with an
+implied 21 ms between 10 and 30 ms and 83 ms between 30 and 100 ms; a single exponential
+through the 10 and 100 ms points misses 30 ms by 3.3 standard errors.
+
+**And the recovery constant is not measurable from this observable at all.** Every family
+carrying a free recovery constant drove it to the top of its box, because the 300 and
+1000 ms cohort means differ by 0.0003 against a pooled standard error of 0.0277. So v0.1
+was accused of getting wrong a quantity that the observable it failed on cannot determine.
+
+### The screens, and the two exclusions that came from them rather than from the fit
+
+**E1** — inside the fit set's own interval at all five intervals. **E2** — the bootstrap
+band on the frozen prediction must be no wider than the data's own interval, because a
+curve blurrier than the data cannot be refuted by more data. **E3** — any pinned constant
+must be refitted across a declared sweep and leave the predictions within 0.01.
+
+E2 excluded the parallel two-component family, which fits as well as anything with four
+parameters but whose band is 0.124 at 10 ms against the data's 0.116. E3 excluded the
+best-fitting family in the table, p = 0.90: pinning its fast constant at 5 ms is fine,
+pinning it at 1 ms instead moves the predictions by 0.078, so the constant was doing work
+and had to be fitted.
+
+The first draft of the contract gated on parameter identifiability instead. That was a
+design error — identifiability decides which numbers may be called measurements, not
+whether a prediction can be refuted — and the superseded screen is preserved verbatim in
+the contract with what it would have decided: one family eligible, by 0.005 on a single
+statistic, with the p = 0.90 fit excluded.
+
+### An independent tension, recorded and unresolved
+
+Every family that reproduces this curve needs an effective first-pulse utilisation of 0.07
+to 0.13, against the 0.79 ± 0.02 release probability `KW2008` measured at this synapse — a
+factor of six to eleven. The mapping needs one vesicle per site and no within-pair
+recovery, so it is not a clean contradiction, but a synapse releasing at 0.79 should barely
+facilitate and these recordings facilitate by half at 10 ms.
+
+### The holdout is void
+
+It ran clean at `c7f45bf` from a detached worktree and returned PASSED. **The verdict does
+not stand.** Fig3J's five wild-type arrays are element-wise identical to Fig3D's — same
+values, same order, same counts 20/21/22/22/22, maximum difference exactly zero, matching
+stored-byte digests. The authors reused their wild-type reference across two figures and
+the repository ships it twice. It was discoverable from the published legends, which give
+identical animal counts at all five intervals; both lines were recorded side by side in
+the fit contract's independence audit and the coincidence was noticed and not acted on.
+
+**The experiment returns NO VERDICT** — not passed, not failed; it was not run. The
+secondary cohort may not be promoted, which the contract forbids in its own acceptance
+section.
+
+### What survives, at its real weight
+
+Fig3H (day 0) is a genuine unseen cohort and its registered results stand as registered:
+
+| criterion | verdict | detail |
+|---|---|---|
+| A1 prediction inside the measurement error | **NO VERDICT** | lands inside all five, but 10 and 30 ms half-widths are 0.19 and 0.17 against the registered 0.15 limit — three scorable against a minimum of four |
+| A2 better than a frozen constant | **PASSED** | 1.493 against 38.612 on 21 unseen animals, a factor of 26 against a required 2 |
+| A3 shape | PASSED | 4 of 4, and the constant passes too |
+
+A2 is the one substantive result, and the first time any dynamical model in this project
+has been frozen and then beaten a null on unseen animals. It is not a tier.
+
+The two frozen rules are **not** separated: the four-parameter one does marginally better
+on the genuine cohort, 1.279 against 1.493, opposite to the fit set. Neither may be
+preferred.
+
+### The gate is unchanged
+
+Stage 2 exit gate stays at **v4, 0 of 3**. The retired synaptic leg stays retired: it needs
+unitary waveforms this repository does not ship. V0 Structural remains the only supported
+tier in the project.
+
+### The next experiment, and why the standard is now higher
+
+The wild-type trains in `Figure 3/Fig3E_and_F.mat` — 1, 10, 20 and 60 Hz, 32 to 112 pulses,
+18 animals — are now the **only** unspent wild-type ORN→PN holdout in the corpus. They
+measure the recovery constant this observable cannot identify; they would immediately
+expose the unbounded facilitation both frozen rules carry; they separate the additive from
+the multiplicative account, which a paired-pulse curve cannot; and at 60 Hz their 16.7 ms
+interval samples the fast facilitation component repeatedly, where the paired-pulse curve
+sees it at one point only.
+
+Before that contract is written: run `duplicate_arrays` against those arrays, and compare
+the published animal counts. Every train array in the file reports 18 animals at every
+frequency, which is a pattern to check rather than assume.
