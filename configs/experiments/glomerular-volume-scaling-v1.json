@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "glomerular-volume-scaling-v1",
+  "title": "Do contacts per ORN-to-PN connection scale with glomerular volume, as Kazama and Wilson 2008 measured?",
+  "provenance": "M",
+  "assumption_ids": ["DATA-03", "DATA-04", "ND-04"],
+  "purpose": "Kazama and Wilson 2008 measured unitary EPSC amplitude against the glomerular volume occupied by the PN dendritic tuft and found r = 0.75 (n = 39), and showed the scaling is carried by the number of release sites per ORN axon per PN while release probability and quantal size stay constant across glomeruli. The project's existing synaptic-structure test substituted converging ORN count for glomerular volume and found no such scaling. This contract measures volume directly and tests the claim in the form the source paper actually makes it.",
+  "why_this_matters": "The substitution is the suspect step, not the claim. Across the 50 glomeruli, contacts per connection anti-correlate with ORN count (Pearson -0.413, Spearman -0.487), yet on the four glomeruli Kazama and Wilson recorded the MaleCNS contact ordering reproduces their stated uEPSC ordering exactly and with clean separation (DL5 81 > DM4 63 > VM2 40 > DM6 28). Those two facts can only be reconciled by measuring volume. Either volume does not track ORN count in MaleCNS, in which case the claim survives and the proxy was wrong, or contacts do not track volume, in which case the claim fails on this connectome.",
+  "primary_sources": [
+    {
+      "key": "KW2008",
+      "citation": "Kazama H, Wilson RI 2008, Neuron 58:401-413",
+      "claims_quoted": [
+        "The correlation between synaptic currents and glomerular volume was strong and highly significant",
+        "uEPSC amplitudes are consistently larger for glomeruli DL5 and DM4 than for DM6 and VM2",
+        "values of N were significantly larger in large glomeruli, [which] implies that uEPSCs are larger in these glomeruli because the number of presynaptic release sites per ORN fiber is higher",
+        "Mean estimated probability of release is high in all PN types (no significant differences across glomeruli, p > 0.36)"
+      ],
+      "published_correlation_r": 0.75,
+      "published_correlation_n": 39
+    }
+  ],
+  "volume_definition": {
+    "measure": "the spatial extent of the cloud of postsynaptic sites belonging to ORN-to-uniglomerular-PN connections of that glomerulus, computed as the count of occupied bins on a fixed cubic lattice, converted to cubic micrometres",
+    "rationale": "Kazama and Wilson's variable is 'the glomerular volume occupied by the PN dendritic tuft'. The postsynaptic sites of that glomerulus's ORN inputs lie on exactly that tuft, so their occupied volume is the closest available proxy. An occupied-bin count is used rather than a convex hull because it is robust to a small number of outlying points, which a hull is not.",
+    "coordinates": "syn-partners x_post, y_post, z_post in 8 nm voxel units, per the MaleCNS dataset card",
+    "bin_edge_voxels": 125,
+    "bin_edge_um": 1.0,
+    "populations": "identical to orn-pn-convergence-v1: ORN_ prefix for receptors, ^([A-Za-z0-9]+)_(?:ad|l|v|il|lv|vl|m)PN$ for uniglomerular PNs, status Traced, pooled bilateral"
+  },
+  "sampling_confound_and_its_control": {
+    "confound": "Glomeruli differ enormously in synapse count, from tens of ORNs to DA1's 204. More synapses occupy more bins for reasons of sampling alone, so an uncontrolled occupied-bin volume would partly measure synapse count rather than extent.",
+    "control": "Rarefaction. Each glomerulus is subsampled without replacement to a common synapse count equal to the smallest glomerulus's count, the occupied-bin volume is recomputed, and the subsample is repeated 25 times with a fixed seed and averaged. The rarefied volume is the primary measure; the full-sample volume is reported alongside it.",
+    "seed": 20260909,
+    "repeats": 25
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "statement": "Contacts per ORN-to-PN connection correlate positively with rarefied glomerular volume across the 50 glomeruli, as Kazama and Wilson's release-site scaling requires.",
+      "test": "Spearman rank correlation between median contacts per realised connection and rarefied glomerular volume, over the 50 glomeruli, greater than zero at p < 0.05",
+      "expect_positive": true,
+      "blind": true,
+      "note": "Spearman rather than Pearson because neither variable is expected to be normal and the published claim is monotone rather than specifically linear. The published r = 0.75 was measured against uEPSC amplitude in 39 cells, not against contact counts in a connectome, so it sets the direction and not the magnitude."
+    },
+    {
+      "id": "H2",
+      "statement": "Glomerular volume does not track converging ORN count in MaleCNS, which is what would explain the project's earlier negative result as a proxy failure rather than a failure of the claim.",
+      "test": "Spearman rank correlation between rarefied glomerular volume and ORN count; H2 holds if it is not significantly positive at p < 0.05",
+      "blind": true,
+      "note": "Kazama and Wilson state that glomerular volume is linearly correlated with the number of presynaptic ORNs. If that also holds in MaleCNS then H1 and the observed negative contacts-versus-ORN-count correlation cannot both be true, and this contract will have found a genuine inconsistency rather than a proxy failure. Both outcomes are informative and neither is assumed."
+    },
+    {
+      "id": "H3",
+      "statement": "Descriptive: the per-glomerulus table of rarefied volume, full-sample volume, synapse count, ORN count, PN count, median contacts per connection, and convergence completeness.",
+      "test": "none"
+    },
+    {
+      "id": "H4",
+      "statement": "Descriptive: rarefied volume for the four glomeruli Kazama and Wilson recorded, in their stated uEPSC order DL5 and DM4 above DM6 and VM2.",
+      "test": "none; recorded because the contact ordering already reproduces theirs and the volumes say whether volume is the reason"
+    }
+  ],
+  "preregistration": {
+    "blind": "No glomerular volume has been computed for any glomerulus in this project. The contact counts, ORN counts, PN counts and completeness values are already known from orn-pn-convergence-v1 and are reported in that artifact; the volume side of every correlation here is unmeasured at registration, so H1 and H2 are blind.",
+    "streaming_note": "The syn-partners derivative is 298 parquet shards and a full pass takes about 20 minutes. The raw syn-points Feather must never be read whole; a previous attempt at 357 million points saturated the WSL instance."
+  },
+  "protocol": {
+    "requires_clean_worktree": true,
+    "contact_source": "the checksum-locked aggregate graph, identical to orn-pn-convergence-v1",
+    "no_contact_threshold": "any edge with at least one contact counts as a realised connection"
+  },
+  "claim_boundary": "A structural test of the locked connectome against a published physiological correlation. It awards no validation tier. Occupied-bin volume of a synapse cloud is a proxy for glomerular volume, not a segmentation of the glomerulus, and one anatomical contact is treated as one release site, which is an assumption the convergence contract also records. A pass would show the connectome's contact structure is consistent with the published scaling; it would not measure a unitary EPSC.",
+  "last_reviewed": "2026-09-09"
+}

@@ -46,6 +46,7 @@ from flysim.feeding_stage1 import (
     execute_feeding_screen,
     preregister_feeding_screen,
 )
+from flysim.glomerular import run_glomerular_volume_scaling
 from flysim.grooming import import_grooming_trajectory
 from flysim.morphology import sync_morphology_canaries
 from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
@@ -339,6 +340,29 @@ def _command_stage2_uepsc_prior(args: argparse.Namespace) -> int:
             "against_published_half_decay": result["against_published_half_decay"],
             "against_frozen_fit": result["against_frozen_fit"],
             "acceptance": result["acceptance"],
+            "validation_tier_awarded": None,
+        }
+    )
+    return 0
+
+
+def _command_benchmark_glomerular_volume(args: argparse.Namespace) -> int:
+    result = run_glomerular_volume_scaling(
+        root=args.root,
+        graph_path=args.graph,
+        experiment_path=args.experiment,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "experiment_id": result["experiment_id"],
+            "glomeruli_scored": result["glomeruli_scored"],
+            "rarefaction": result["rarefaction"],
+            "hypotheses": result["hypotheses"],
+            "hypotheses_descriptive": result["hypotheses_descriptive"],
+            "output": result["output"],
+            "sha256": result["sha256"],
             "validation_tier_awarded": None,
         }
     )
@@ -1604,6 +1628,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="produce an explicitly non-evidence-grade run from an uncommitted worktree",
     )
     convergence.set_defaults(func=_command_benchmark_orn_pn_convergence)
+
+    volume = benchmark_commands.add_parser(
+        "glomerular-volume",
+        help="test the published release-site scaling against measured glomerular volume",
+    )
+    volume.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "glomerular-volume-scaling-v1.json",
+    )
+    volume.add_argument("--root", type=Path, default=default_data_root())
+    volume.add_argument(
+        "--graph",
+        type=Path,
+        default=default_data_root() / "derived" / "male-cns-v1.0" / "graph",
+    )
+    volume.add_argument("--output", type=Path, required=True)
+    volume.add_argument("--allow-dirty-tree", action="store_true")
+    volume.set_defaults(func=_command_benchmark_glomerular_volume)
 
     feeding_screen = benchmark_commands.add_parser(
         "feeding-screen",
