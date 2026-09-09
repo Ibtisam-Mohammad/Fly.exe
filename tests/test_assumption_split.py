@@ -89,8 +89,28 @@ def test_val02_declares_the_observation_model_as_an_assumption(
     assert record["provenance"] == "E"
     assert record["status"] == "proposed"
     assert "Every clause is false in detail" in record["biological_mismatch"]
-    assert record["value"]["postsynaptic_saturation_contributes_nothing"] is True
-    assert record["value"]["postsynaptic_desensitisation_contributes_nothing"] is True
+    value = record["value"]
+    assert value["scored_as_if_postsynaptic_saturation_contributes_nothing"] is True
+    assert value["scored_as_if_postsynaptic_desensitisation_contributes_nothing"] is True
+
+
+def test_val02_does_not_assert_that_saturation_is_biologically_absent(
+    records: dict[str, dict[str, Any]],
+) -> None:
+    # The clauses were once named as bare assertions, so a reader could take
+    # "postsynaptic_saturation_contributes_nothing" for a claim that saturation does not
+    # happen at this synapse. Every key now says it is what the scoring assumes.
+    value = records["VAL-02"]["value"]
+    preamble = value["these_are_scoring_clauses_not_biological_claims"]
+    assert "None of them says what the synapse does" in preamble
+    assert "NOT a claim that" in preamble
+    assert "They do" in preamble
+    assert "biased upward" in preamble
+    clauses = [key for key in value if key != "these_are_scoring_clauses_not_biological_claims"]
+    assert clauses, "the record must still carry its clauses"
+    assert all(key.startswith("scored_as_if_") for key in clauses)
+    assert "scoring clauses" in records["VAL-02"]["units"]
+    assert "never what the preparation does" in records["VAL-02"]["units"]
 
 
 def test_val02_no_longer_claims_the_bias_runs_one_way(

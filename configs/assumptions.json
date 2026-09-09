@@ -738,14 +738,15 @@
       "id": "VAL-02",
       "name": "observation model for external electrophysiological tests",
       "value": {
-        "evoked_amplitude_proportional_to_released_vesicles": true,
-        "stimulus_recruits_a_fixed_presynaptic_population": true,
-        "postsynaptic_desensitisation_contributes_nothing": true,
-        "postsynaptic_saturation_contributes_nothing": true,
-        "paired_pulse_amplitude_ratio_equals_resource_ratio": true,
-        "train_amplitude_ratio_equals_resource_ratio": true
+        "these_are_scoring_clauses_not_biological_claims": "Each clause below says what the SCORING treats as true. None of them says what the synapse does. Every one is false in the preparation: biological_mismatch says how, and uncertainty says in which direction each one moves a measured ratio. In particular, scoring as if saturation contributes nothing is NOT a claim that postsynaptic receptors do not saturate at this synapse. They do, a compound evoked EPSC is where they are most likely to, and the recorded consequence is that a measured paired-pulse ratio is biased upward by an amount this project cannot quantify without the control named in the validation field.",
+        "scored_as_if_evoked_amplitude_is_proportional_to_released_vesicles": true,
+        "scored_as_if_the_stimulus_recruits_a_fixed_presynaptic_population": true,
+        "scored_as_if_postsynaptic_desensitisation_contributes_nothing": true,
+        "scored_as_if_postsynaptic_saturation_contributes_nothing": true,
+        "scored_as_if_the_paired_pulse_amplitude_ratio_equals_the_resource_ratio": true,
+        "scored_as_if_the_train_amplitude_ratio_equals_the_resource_ratio": true
       },
-      "units": "boolean scoring assumptions",
+      "units": "boolean scoring clauses; each is what the score assumes, never what the preparation does",
       "provenance": "E",
       "applies_to": "scoring a registered synaptic model against a published evoked-EPSC recording",
       "source": "project engineering decision 2026-09-09; ADR-2026-012; configs/experiments/stage2-depression-external-test-v1.json",
@@ -754,7 +755,8 @@
       "status": "proposed",
       "validation": "An independent handle on the two postsynaptic terms at this synapse. For saturation, the standard test is a low-affinity competitive antagonist that relieves receptor occupancy without changing release: if the measured paired-pulse ratio falls under it, saturation was inflating the ratio. For desensitisation, a measured recovery time course of the receptor response at fixed release. Failing those, the same paired-pulse ratio measured under minimal and under compound stimulation in one preparation bounds the whole observation term at once. None of the three is registered.",
       "owner": "validation",
-      "last_reviewed": "2026-09-09"
+      "last_reviewed": "2026-09-09",
+      "renamed_on_2026_09_09": "The clauses were originally named as bare assertions, so 'postsynaptic_saturation_contributes_nothing: true' read as a claim that saturation does not occur. It never meant that and now cannot be read that way: every key carries a scored_as_if prefix and the record opens by saying so."
     },
     {
       "id": "BENCH-01",

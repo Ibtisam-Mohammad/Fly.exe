@@ -209,6 +209,108 @@ def _skip_padding(body: bytes, position: int) -> int:
     return position
 
 
+_NUMERIC_STORAGE: dict[int, str] = {
+    1: "i1",
+    2: "u1",
+    3: "i2",
+    4: "u2",
+    5: "i4",
+    6: "u4",
+    7: "f4",
+    9: "f8",
+    12: "i8",
+    13: "u8",
+}
+
+
+def read_mat_variable(path: Path, name: str) -> Any:
+    """Decode exactly one named numeric variable, and nothing else in the file.
+
+    This is the opposite of :func:`read_mat_structure` and the two are kept apart on
+    purpose. That reader cannot reach a payload at all, which is what makes it safe to
+    run over sealed data. This one does reach a payload, so it takes the variable name as
+    an argument and returns only that variable: opening a file to read one preregistered
+    array cannot spill into its neighbours, and a typo in the name raises rather than
+    quietly reading something else.
+
+    MATLAB stores an integer-valued double array in the narrowest integer type that fits,
+    so the storage type is read from the payload tag rather than assumed from the array
+    class. Dimensions are column-major.
+    """
+    import numpy as np
+
+    if not name:
+        raise ConfigurationError("read_mat_variable needs the name of the variable to open")
+    with path.open("rb") as stream:
+        head = stream.read(_MAT5_HEADER_BYTES)
+        if len(head) < _MAT5_HEADER_BYTES:
+            raise ConfigurationError("File is shorter than a MAT version 5 header")
+        if head.startswith(_HDF5_SIGNATURE) or head[:16].startswith(b"MATLAB 7.3"):
+            raise ConfigurationError("MATLAB version 7.3 files are not read by this reader")
+        endian = head[126:128]
+        if endian not in {b"IM", b"MI"}:
+            raise ConfigurationError("Not a MAT version 5 file: endian indicator absent")
+        little = endian == b"IM"
+        body = stream.read()
+
+    order = "<" if little else ">"
+    cursor = 0
+    while cursor + 8 <= len(body):
+        tag = _read_tag(body, cursor, little)
+        if tag.element_type not in {_MI_COMPRESSED, _MI_MATRIX}:
+            break
+        end = tag.data_offset + tag.byte_count
+        if tag.element_type == _MI_COMPRESSED:
+            blob = zlib.decompressobj().decompress(body[tag.data_offset : end])
+            inner = _read_tag(blob, 0, little)
+            start, limit = inner.data_offset, len(blob)
+        else:
+            blob, start, limit = body, tag.data_offset, end
+        variable = _parse_matrix(blob, start, limit, little)
+        if variable.name == name:
+            if variable.is_complex:
+                raise ConfigurationError(f"{name} is complex; this reader returns real arrays")
+            return _decode_payload(blob, start, limit, little, order, variable, np)
+        cursor = _skip_padding(body, end)
+    raise ConfigurationError(f"{path.name} has no variable named {name!r}")
+
+
+def _decode_payload(
+    blob: bytes,
+    offset: int,
+    limit: int,
+    little: bool,
+    order: str,
+    variable: MatVariable,
+    np: Any,
+) -> Any:
+    """Walk past the flags, dimensions and name subelements to the numeric payload."""
+    cursor = offset
+    for _ in range(3):
+        cursor = _read_tag(blob, cursor, little).next_offset
+    payload = _read_tag(blob, cursor, little)
+    dtype = _NUMERIC_STORAGE.get(payload.element_type)
+    if dtype is None:
+        raise ConfigurationError(
+            f"{variable.name} is stored as element type {payload.element_type}, which this "
+            "reader does not decode"
+        )
+    if payload.data_offset + payload.byte_count > limit:
+        raise ConfigurationError(f"{variable.name} payload runs past its element")
+    values = np.frombuffer(
+        blob, dtype=np.dtype(order + dtype), count=payload.byte_count // int(dtype[1]),
+        offset=payload.data_offset,
+    )
+    expected = 1
+    for size in variable.dimensions:
+        expected *= size
+    if values.size != expected:
+        raise ConfigurationError(
+            f"{variable.name} holds {values.size} elements against {expected} from its shape"
+        )
+    return np.array(values, dtype=np.float64).reshape(variable.dimensions, order="F")
+
+
 def describe_csv(path: Path, *, delimiter: str = ",") -> dict[str, Any]:
     """Column headers and row count. Only the first line is decoded."""
     with path.open("rb") as stream:

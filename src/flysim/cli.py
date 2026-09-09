@@ -428,6 +428,34 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_depression_test(args: argparse.Namespace) -> int:
+    from flysim.depression_score import run_depression_external_test
+
+    result = run_depression_external_test(
+        stage=args.stage,
+        contract_path=args.experiment,
+        registry_path=args.registry,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "stage": result["stage"],
+            "unsealing": result["unsealing"],
+            "by_interval": result["by_interval"],
+            "hypotheses": result["hypotheses"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_depression_prediction(args: argparse.Namespace) -> int:
     from flysim.depression import run_depression_prediction
 
@@ -2060,6 +2088,40 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_depression_test = stage2_commands.add_parser(
+        "depression-test",
+        help="open the preregistered wild-type paired-pulse arrays and score them",
+    )
+    stage2_depression_test.add_argument(
+        "--stage", choices=("primary", "intervals"), required=True
+    )
+    stage2_depression_test.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-depression-external-test-v1.json",
+    )
+    stage2_depression_test.add_argument(
+        "--registry",
+        type=Path,
+        default=project_root() / "configs" / "neural" / "short-term-plasticity-v0.1.json",
+    )
+    stage2_depression_test.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_depression_test.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_depression_test.add_argument("--output", type=Path, required=True)
+    stage2_depression_test.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_depression_test.set_defaults(func=_command_stage2_depression_test)
 
     stage2_synaptic = stage2_commands.add_parser(
         "synaptic-structure",
