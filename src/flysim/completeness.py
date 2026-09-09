@@ -158,6 +158,12 @@ def unthin(observed_q: float, dispersion: float, survival: float) -> dict[str, f
         "true_untruncated_mean": true_mean,
         "model_corrected_mean_contacts": truncated_true_mean,
         "predicted_completeness": predicted_completeness,
+        # As p falls towards zero the true distribution grows without bound and the
+        # predicted completeness falls only to the untruncated non-zero mass of the
+        # *observed* distribution. So this is the lowest completeness the model can
+        # produce at any survival rate whatsoever, and a measured completeness below it
+        # falsifies the model rather than implying a small p.
+        "model_completeness_floor": 1.0 - observed_q**dispersion,
     }
 
 
@@ -230,6 +236,11 @@ def correct_glomerulus(
         "model_corrected_mean_contacts": unthinned["model_corrected_mean_contacts"],
         "predicted_completeness": unthinned["predicted_completeness"],
         "completeness_error": unthinned["predicted_completeness"] - completeness,
+        "model_completeness_floor": unthinned["model_completeness_floor"],
+        "completeness_below_model_floor": bool(
+            completeness < unthinned["model_completeness_floor"] - 1e-9
+        ),
+        "floor_gap": completeness - unthinned["model_completeness_floor"],
         "recovered_survival": recovered,
         "estimator_ratio": (
             unthinned["model_corrected_mean_contacts"] / exact_corrected_mean
@@ -276,6 +287,9 @@ def _score(
 
     boundary_count = sum(1 for row in rows if row["fit_at_search_boundary"])
     h5_passed = boundary_count < 5
+
+    below_floor = [row for row in rows if row["completeness_below_model_floor"]]
+    floor_gaps = np.asarray([row["floor_gap"] for row in rows])
 
     recorded = {str(item["glomerulus"]): item for item in rows}
     kazama_glomeruli = ("DL5", "DM4", "VM2", "DM6")
@@ -345,6 +359,44 @@ def _score(
             "blind": True,
             "glomeruli_at_search_boundary": boundary_count,
             "passed": h5_passed,
+        },
+        "model_falsification_diagnostic": {
+            "what_this_is": (
+                "Not a preregistered hypothesis. It is the mechanism behind whatever H1 and "
+                "H2 do, computed because H2's inversion returns nothing for a glomerulus "
+                "whose measured completeness the fitted shape cannot reach at any survival "
+                "rate, and that needed explaining rather than reporting as a null."
+            ),
+            "the_floor": (
+                "As p falls to zero the predicted completeness falls only to the untruncated "
+                "non-zero mass of the observed contact distribution, so that value is the "
+                "lowest completeness the thinning model can produce at any survival rate. A "
+                "measured completeness below it is not evidence of a small p; it falsifies "
+                "the model."
+            ),
+            "glomeruli_below_the_floor": len(below_floor),
+            "glomeruli_scored": len(rows),
+            "worst_gaps": [
+                {
+                    "glomerulus": row["glomerulus"],
+                    "measured_completeness": row["measured_completeness"],
+                    "model_floor": row["model_completeness_floor"],
+                    "gap": row["floor_gap"],
+                }
+                for row in sorted(rows, key=lambda item: item["floor_gap"])[:5]
+            ],
+            "median_gap": float(np.median(floor_gaps)),
+            "reading": (
+                "The contact distribution of recovered pairs is far too heavy to account "
+                "for the number of missing pairs. If the missing pairs were the weak tail "
+                "of the same distribution, the recovered pairs would show substantial mass "
+                "at one to three contacts, and mostly they do not. So the pairs are missing "
+                "for a reason the contact distribution does not encode. The convergence test "
+                "already measured a candidate: per-axon reconstruction truncation, at "
+                "r = +0.836 to +0.847 between an ORN's reached-target fraction and its total "
+                "out-contact budget. An axon that was not followed loses whole connections "
+                "rather than a random 58 percent of each connection's synapses."
+            ),
         },
         "H6": {
             "statement": hypotheses["H6"]["statement"],

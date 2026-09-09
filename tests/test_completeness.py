@@ -99,6 +99,42 @@ def test_recovering_the_survival_rate_inverts_unthinning() -> None:
             assert recovered == pytest.approx(survival, rel=1e-6)
 
 
+def test_the_model_has_a_completeness_floor_it_cannot_go_below() -> None:
+    """The diagnostic that turned out to carry the result.
+
+    As the survival rate falls the true distribution grows without bound, but the
+    predicted completeness falls only to the untruncated non-zero mass of the *observed*
+    distribution. So no survival rate can explain a measured completeness below that
+    floor, and a measurement below it falsifies the model rather than implying a small p.
+    """
+    floors = {
+        survival: unthin(observed_q=0.3, dispersion=2.0, survival=survival)
+        for survival in (0.9, 0.5, 0.1, 0.01, 1e-6)
+    }
+    expected_floor = 1.0 - 0.3**2.0
+
+    for result in floors.values():
+        assert result["model_completeness_floor"] == pytest.approx(expected_floor)
+        assert result["predicted_completeness"] >= expected_floor - 1e-12
+    # The floor is approached but never breached, however small the survival rate.
+    assert floors[1e-6]["predicted_completeness"] == pytest.approx(expected_floor, rel=1e-4)
+    assert floors[0.9]["predicted_completeness"] > floors[0.1]["predicted_completeness"]
+
+
+def test_a_glomerulus_below_the_floor_is_flagged_rather_than_corrected_silently() -> None:
+    """Many contacts on the recovered pairs, yet most pairs missing: not thinning."""
+    contacts = np.full(10, 60, dtype=np.int64)
+
+    row = correct_glomerulus(
+        glomerulus="synthetic", contacts=contacts, possible_pairs=100, survival=0.42
+    )
+
+    assert row["measured_completeness"] == pytest.approx(0.1)
+    assert row["completeness_below_model_floor"] is True
+    assert row["floor_gap"] < 0.0
+    assert row["recovered_survival"] is None
+
+
 def test_the_survival_rate_is_not_identifiable_from_a_complete_glomerulus() -> None:
     """A real limit on H2, not a numerical nuisance.
 
