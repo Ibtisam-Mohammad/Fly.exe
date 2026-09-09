@@ -104,6 +104,21 @@ what goes missing. Correcting the contact median for that censoring, and rerunni
 it, is the indicated next step. Nothing else on hand adds statistical power: there are only 50
 glomeruli and only eleven are well reconstructed.
 
+**Update, later the same day: that correction was built, and it does not work.** See
+[COMPLETENESS_CORRECTED_CONTACTS.md](COMPLETENESS_CORRECTED_CONTACTS.md). Modelling the loss as
+independent per-synapse thinning at the released 42% rate is falsified on this data: 45 of 50
+glomeruli have a measured completeness *below the floor* that model can produce at any survival
+rate, because the recovered pairs carry too many contacts to explain how many whole pairs went
+missing. The loss is per-axon truncation, which the convergence test had already measured at
+r = +0.836 to +0.847, not per-synapse thinning.
+
+**What that exercise does settle is this section's premise.** The two candidate correction models
+bracket the volume correlation and neither reaches significance: ρ = +0.209 at p = 0.146 under
+thinning, ρ = +0.262 at p = 0.066 under per-axon truncation, against +0.070 at p = 0.629 for the
+median used above. So the release-site scaling is unsupported on this connectome for want of
+*power*, not for want of a correction. The sentence "nothing else on hand adds statistical
+power" was right, and the hope that a correction would substitute for power was not.
+
 ## Caveats
 
 1. **Occupied-bin volume is a proxy for glomerular volume, not a segmentation of the glomerulus.**
@@ -130,6 +145,7 @@ glomeruli and only eleven are well reconstructed.
 | 2026-09-09 | that negative was a proxy failure, since volume does not track ORN count | **withdrawn** — volume does track ORN count, ρ = +0.329, p = 0.020 |
 | 2026-09-09 | contacts reproduce the uEPSC ordering on the four recorded glomeruli | **withdrawn as evidence** — the measured volumes for those four order differently, and two groups of two carry little information |
 | now | the question is not settleable on this connectome with this measurement | current |
+| later that day | the completeness correction named above as the way forward | **built and falsified**; the volume verdict is unchanged and now bracketed at p = 0.066 to 0.146 |
 
 Two of those three were recorded in this repository within a day of being withdrawn. The
 preregistered blind test is what withdrew them, which is the argument for preregistering rather
