@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage3-olfactory-activity-prediction-v1",
+  "title": "Predict antennal-lobe activity from the connectome and real odour input, scored against published population statistics of the ORN-to-PN transformation",
+  "status": "preregistered, NOT EXECUTED, no model built",
+  "provenance": "E",
+  "assumption_ids": ["DATA-01", "DATA-03", "ND-01", "ND-02", "ND-03", "ND-06", "ND-08", "VAL-01"],
+  "preregistered_on": "2026-09-09",
+  "why_this_exists": {
+    "problem": "Every result this project has that can pass or fail informatively is structural: it tests the connectome and the published anatomy, and touches no membrane parameter, synaptic kernel or integration step. So nothing currently in the restructured Stage 2 gate exercises the simulator. The two legs that did are retired for want of raw traces (ADR-2026-011).",
+    "the_route": "Lappalainen and colleagues showed a connectome-constrained network can be validated without measured biophysics by combining topology with a task objective and scoring against held-out recordings. The olfactory pathway is the natural target here because the input side is public at scale.",
+    "what_would_be_new": "Connectome and registered dynamics in, odour-driven activity out, scored against an independent measurement. That is a different kind of claim from any structural test, and it is the kind the retired legs were meant to support."
+  },
+  "data_availability_verified_2026_09_09": {
+    "input_side_available": {
+      "source": "DoOR 2.0, the Database of Odorant Responses",
+      "packages": ["ropensci/DoOR.data", "ropensci/DoOR.functions"],
+      "version_seen": "2.0.1.9001, dated 2026-07-17",
+      "license": "CC BY-SA 4.0",
+      "contents": "78 responding units, 693 odorants, 7,381 data points, consensus responses normalised to [0, 1] with spontaneous rates subtracted so inhibition is preserved",
+      "per_unit_coverage": "between 11 and 497 odorants tested per unit",
+      "recording_types_pooled": ["single sensillum recording", "calcium imaging", "heterologous expression"],
+      "caveat": "The [0, 1] consensus scale is the product of a pairwise monotonic merging procedure across heterogeneous techniques, so it is an ordinal-to-interval construction rather than a firing rate. Converting it to ORN spike rates requires a registered encoder and that encoder is an assumption, not a measurement."
+    },
+    "prediction_target_NOT_available": {
+      "finding": "DoOR 2.0 contains exclusively OSN and receptor data. It has no projection-neuron recordings.",
+      "consequence": "There is no downloadable per-PN, per-odorant response matrix to hold out. The PN odour-response literature is figure data, which is the same blocker that retired the cellular and synaptic legs, and it must not be pretended otherwise.",
+      "checked": ["DoOR 2.0 documentation and the Scientific Reports paper", "the DoOR.data package description", "searches for deposited projection-neuron response datasets"]
+    },
+    "what_can_be_scored_instead": "Published population statistics of the ORN-to-PN transformation, which are reported as fitted curves and dimensionless summaries rather than as traces. These are weaker targets than a held-out response matrix and this contract says so; they are not empty, because two of the three are circuit properties that a miswired or mis-signed network cannot reproduce."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "name": "the input-output transformation saturates",
+      "statement": "PN firing rate against cognate-ORN firing rate is a saturating function, not a linear one: weak ORN input is amplified and strong ORN input compressed.",
+      "target": "Bhandawat and colleagues 2007 and Olsen and Wilson: the transformation is well described by a hyperbolic saturating curve, with the gain at low input several times the gain at high input.",
+      "criterion": "Fit the same functional form to the simulated pairs and require the ratio of low-input to high-input gain to exceed 2, with the fit preferred over a linear model by the same Huber-loss comparison used for the uEPSC kernel family.",
+      "what_a_failure_means": "The registered dynamics do not produce the compressive nonlinearity that is the best-established computation in this circuit.",
+      "weakness_disclosed": "A saturating input-output curve is a generic consequence of a spiking threshold plus depression, so passing this is weak evidence. It is registered as a necessary condition, not as a discriminating test."
+    },
+    {
+      "id": "H2",
+      "name": "divisive normalisation by total antennal-lobe activity",
+      "statement": "A PN's response to a fixed cognate-ORN drive falls as activity in *other* glomeruli rises, in the divisive form the source reports rather than by subtraction.",
+      "target": "Olsen, Bhandawat and Wilson 2010: lateral inhibition divisively normalises PN output by summed antennal-lobe activity.",
+      "criterion": "Drive one glomerulus at a fixed rate and add drive to disjoint sets of other glomeruli. Fit both a divisive and a subtractive model of the suppression and require the divisive form to win, and require the suppression to depend on the summed drive rather than on which glomeruli carry it.",
+      "why_this_is_the_real_test": "It cannot be produced by single-neuron properties. It requires the local-interneuron network to be present, wired and correctly signed, so it tests the connectome and ND-03's transmitter-based polarity together with the dynamics. This is the discriminating hypothesis of the three.",
+      "risk_disclosed": "ND-03 assigns sign from transmitter identity alone, and the corpus records that receptor identity is partner- and dendritic-domain-specific, so a failure here may be attributable to polarity rather than to the rest of the model. The contract must report which."
+    },
+    {
+      "id": "H3",
+      "name": "PN tuning is broader than ORN tuning",
+      "statement": "For the same odour panel, PN responses are less sparse than the cognate ORN responses driving them.",
+      "target": "The amplification of weak input in H1 predicts it, and it is reported independently in the antennal-lobe literature.",
+      "criterion": "Compute lifetime sparseness for each ORN channel and its cognate PNs over the shared DoOR panel and require the median PN sparseness to be lower than the median ORN sparseness, by a paired test across glomeruli.",
+      "weakness_disclosed": "This is a consequence of H1 rather than independent of it, so H1 and H3 passing together is close to one result, not two."
+    },
+    {
+      "id": "H4",
+      "name": "the controls that make the above mean anything",
+      "statement": "The three predictions must fail under a shuffled connectome and under a sign-scrambled connectome, and H2 must fail when the local interneurons are ablated.",
+      "criterion": "Each control run must fail the corresponding hypothesis. A prediction that survives a shuffled connectome is a property of the dynamics or the input statistics and awards nothing.",
+      "why": "Every earlier failure in this project of a criterion that could not fail was caught by a control of this shape, and the shuffled-connectome control in the Track A matrix had to be reissued once for exactly that reason."
+    }
+  ],
+  "what_this_would_and_would_not_establish": {
+    "would": "That the connectome plus the registered dynamics reproduce, from real odour input, computations measured in the fly and not fitted here. With H4's controls, that the connectome carries them.",
+    "would_not": "Any tier by itself, and not the retired cellular or synaptic legs. Population statistics are not held-out per-cell responses, and a pass here is weaker than the Stage 2 gate statement asks for. It would however be the first result here that scores the simulator rather than the substrate.",
+    "explicitly_not_claimed": "That this is the Lappalainen method. Their result trains network parameters against a task objective and scores against held-out per-neuron recordings. This contract has no task objective, trains nothing, and has no per-neuron target. It borrows the structure of the argument, not the method."
+  },
+  "unbuilt_dependencies": [
+    "a DoOR ingestion step producing a checksum-locked odour-by-receptor matrix derivative, with the CC BY-SA 4.0 attribution recorded",
+    "a registered encoder from the DoOR [0, 1] consensus scale to ORN firing rates, whose form is an assumption and must be registered as one with a sensitivity sweep",
+    "a mapping from DoOR responding units to MaleCNS ORN types, which is not one-to-one and whose unmatched units must be reported",
+    "an antennal-lobe subgraph selection including local interneurons, and a spike-injection path into the neural engine, which the bucketed Track A engine does not currently have"
+  ],
+  "claim_boundary": "Design only. No data is ingested, no model is built, no run is executed and no artifact is produced by this contract. It exists so that the criteria are fixed before anything is built, and so that the verified data-availability finding is on the record: the input side is public and the per-PN prediction target is not.",
+  "last_reviewed": "2026-09-09"
+}

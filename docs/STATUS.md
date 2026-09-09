@@ -1,6 +1,6 @@
 # Implementation status
 
-Status date: 2026-09-08
+Status date: 2026-09-09
 
 ## Implemented
 
@@ -374,6 +374,81 @@ No tier is awarded and no gate changes verdict.
   rheobase requires at least 9.26 GOhm, and published fly central-neuron values are an order of
   magnitude lower again. This is a fitting artifact of the single-compartment LIF form; v0.4
   records it in `value_notes` and claims no resolution.
+## Session of 2026-09-09
+
+- **The Track A station-keeping defect is fixed, and the criterion it failed is refuted.**
+  `MOTOR-04` adds proportional-integral feedback on thorax pose through the femur-tibia pitch
+  of all six legs, provenance `E`, no physics parameter changed. Standing drift falls from
+  2.161 to 0.357 mm at 3 s at the registered pose, and worst-case 12-second displacement from
+  10.6 to 3.2 mm across seven settled poses; criterion B2 goes from failing 4 of 7 poses to
+  passing 7 of 7. **B3 does not pass as written and is not restated.** Its ratio statistic is
+  degenerate: it fails this controller while passing a strictly worse one, it passes a case
+  leaking to 3.16 mm at 12 s, and it passes a diverged configuration that has travelled
+  30.8 mm and rotated 2.69 rad. The well-conditioned replacement is preregistered in
+  `track-a-acceptance-v5-criteria.json` and marked **not adopted**, disclosing that the
+  current controller would fail it at 2 of 7 poses. **Track A remains not an accepted
+  milestone**: B2 passes, B3 fails, B1 and B4 are unmeasured, and the 30-run matrix was not
+  executed because it would spend hours reproducing a known failure.
+- **The renderer is cleared as the cause of the 1.44 s rendered-timing divergence.** A rendered
+  and a headless body driven with identical commands stay bit-identical in `qpos` for a whole
+  run, maximum absolute difference exactly zero. The divergence originates elsewhere in the
+  brain-body loop and the amendment remains unresolved.
+- **The completeness-corrected contact estimate was built and it fails its own gate.**
+  Modelling connectome incompleteness as independent per-synapse binomial thinning at the
+  released 42% rate is falsified: **45 of 50 glomeruli have a measured completeness below the
+  floor that model can produce at any survival rate**, because the recovered pairs carry too
+  many contacts to explain how many whole pairs went missing. H1, the registered gate, gives
+  rho = 0.635 against 0.7; H2 recovers a survival rate for 1 glomerulus of 50; H3 shows the
+  correction *strengthened* the confound it targeted, from rho = -0.475 to -0.554. The loss is
+  per-axon truncation, which the convergence test had already measured at r = +0.836 to
+  +0.847. **No recorded contact statistic is revised by it.**
+- **The glomerular volume question is now bounded and stays unsettled.** The two candidate
+  correction models bracket the correlation at rho = +0.209, p = 0.146 and rho = +0.262,
+  p = 0.066. The release-site scaling is unsupported for want of *power* at 50 glomeruli, not
+  for want of a correction, and the volume report's hope that a correction would substitute
+  for power is withdrawn.
+- **One anatomical contact is probably not one release site.** Two independent results now
+  say so: corrected contact counts run 2.06 times the Kazama and Wilson release-site estimate,
+  and the bilateral test finds a 1.56-fold contact asymmetry where they measured no amplitude
+  asymmetry. This is now the most load-bearing untested assumption in every contact-based
+  claim here.
+- **The bilateral ORN-to-PN symmetry prediction is rejected.** Ipsilateral connections carry a
+  median 1.561 times the contacts of contralateral ones onto the same PN, 220 of 260 neurons
+  individually, sign test p = 2.7e-31. The preregistered H2 control rules out a left/right
+  reconstruction artifact, and a post-hoc within-ORN control — same axon, same reconstruction
+  quality — gives the same 1.552 over 1799 ORNs at p = 2.0e-139. Loss within an axon's
+  commissural branch remains unexcluded. Because the published p > 0.54 is a failure to reject
+  rather than a demonstration of equality, this is best read as **a quantitative prediction
+  their experiment lacked the power to test**, checkable in one targeted experiment.
+- **The Stage 2 gate is restructured and is 0 of 3 (ADR-2026-011).** The cellular and synaptic
+  legs are **retired as gates** because the raw traces they need are not public for anyone, a
+  reason independent of whether they pass, and are demoted to recorded priors: still read,
+  still checksum-verified, no longer scored. The scored legs are circuit, ensemble and
+  structural, and all three fail. The rule that stops this being criterion-shopping is in the
+  contract: a structural leg may only enter at a criterion registered before the test that
+  scores it was run. **Retiring a leg is not passing it**, the scored gate is narrower than the
+  `AGENTS.md` section 9 statement, and each retired leg records what reinstates it.
+- **The whole-graph Shiu protocol does not need spike injection; that characterisation was
+  wrong.** `TrackAGeNNEngine.push_inputs` already drives any body at any firing rate and
+  resolves each body to its bucket and local index, so the bucketed whole-graph layout has an
+  injection path. The actual gap is that the protocol semantics — `StimulusSchedule`, windowed
+  readouts, `CircuitRun` — live in `circuit.run_genn_circuit`, which is built on a *single*
+  sparse projection whose padding is what makes the whole graph cost 13.8 GiB against 12 GiB of
+  VRAM. Running Shiu on all 165,122 neurons therefore means reimplementing the protocol on the
+  bucketed layout, and the two paths use **different neuron models**: the bucketed engine drives
+  an `InputRateHz` variable while the circuit path clamps an `InputCell` flag with its own reset
+  code. So the work is a bucketed protocol runner *plus* a parity check against the existing
+  path on a circuit small enough for both, in the shape `neural_parity` and
+  `compare_backend_runs` already establish. That is the largest of the four items and it gates
+  nothing, so it is scoped and deliberately not started: a half-built parallel engine is exactly
+  the kind of thing that later yields a wrong number nobody notices.
+- **ORN odour-response data is available; PN data is not.** DoOR 2.0 is downloadable under
+  CC BY-SA 4.0, actively maintained, 78 responding units and 693 odorants normalised to [0,1].
+  It contains **exclusively OSN and receptor data — no projection-neuron recordings**, so the
+  activity-prediction route has a usable input and no per-PN held-out target. What it can be
+  scored against is published population statistics of the ORN-to-PN transformation, which is
+  a materially weaker but not empty target; the design is preregistered and unexecuted.
+
 - **The cellular exit criterion is now failable, and fails. The Stage 2 gate is 0 of 4.** The
   leg requires the normalised error ratio strictly below 1.0 against a cohort-mean predictor and
   observes 1.0644: held-out RMSE 13.17 Hz against 12.38 Hz for the two-cell training mean, so the

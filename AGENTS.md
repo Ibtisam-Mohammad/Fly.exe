@@ -43,7 +43,7 @@ STAGE2_ND04_SCALE_CONFLICT: matching the 220 Hz grooming reference needs about 0
 STAGE1_REPRODUCTION_AFTER_FIXES: the grooming transfer parity improves to 1.1e-13 ms and the feeding screen is bit-identical, so both Stage 1 verdicts stand under the corrected code
 STAGE2_SYNAPTIC_STRUCTURE: v2 corrects v1's citation (Kazama and Wilson 2008 is 10.1016/j.neuron.2008.02.030) and claim (unitary current rises with glomerular volume and ORN number, unitary depolarization is uniform at 6.19 mV); 50 glomeruli, 265 PNs; contacts per connection fall with ORN number (rho -0.232 connected, -0.456 anatomical), the opposite of the published current, so contact number does not carry the scale; total contacts per PN are nearly flat (rho 0.04 anatomical); median 43 contacts per connection is 0.84 of the published 51 release sites; derived per-contact scale 0.042-1.12 mV brackets the registered 0.2 mV; VM6 and VP glomeruli are dropped by the type-name rule
 STAGE2_UEPSC_HOLDOUT: preregistered limits scored once on the five unconsumed chronic-exposure cells; decay fails at 0.463 against 0.30; the sign and peak-time passes carry no information because the source traces are peak-aligned and inward by selection, and the amplitude exclusion rested on a state-confound the source paper contradicts, so the 13.6 pA median underprediction is a model error; the corpus now has no unconsumed synaptic recording
-STAGE2_EXIT_GATE: executable contract stage2-exit-gate-v2 (same legs and pins as v1 with the review caveats); cellular passes at ratio 1.064, worse than the training-cohort mean; synaptic, circuit and ensemble fail; the circuit threshold 0.8 is set by the contract; Stage 2 does not exit
+STAGE2_EXIT_GATE: executable contract stage2-exit-gate-v4 (ADR-2026-011); the cellular and synaptic legs are retired to recorded priors because the raw traces they need are not public for anyone, and the scored legs are circuit, ensemble and structural, all failing, so the gate is 0 of 3; the structural leg is the bilateral ORN-to-PN symmetry test, whose criterion was registered at 564bdb9 before the run that scores it and which is rejected at p = 2.7e-31; retiring a leg is not passing it and the scored gate is narrower than the AGENTS section 9 statement; Stage 2 does not exit
 GENN_SPIKE_TIME_CONVENTION: GeNN labels a spike with the start of the interval, NumPy and Brian2 with the end; circuit.py lacked the correction that neural_parity.py had, and it cancelled the axonal-delay defect at the readout so Stage 1 parity looked clean
 STAGE2_CELLULAR_OBSERVABLES: contracts v1 and v2 (v2 reproduces every v1 value and adds diagnostics); MBON-alpha1 is the only unit-resolved current-step protocol in any registered source; tau_m 32.566 ms with the asymptote pinned to the pre-step baseline, 47.6 ms with it free; threshold -38.402 mV at a 10 mV/ms criterion that only 51 percent of spikes reach, -41.838 mV at 10 percent of peak slope; spikes 9-14 mV high so every count is detector-marginal; LN resting -50.79 mV whole-trace, -49.02 mV before the first spike; input resistance unmeasurable because every sweep is suprathreshold; no tier awarded
 STAGE2_PN_ENSEMBLE: contract stage2-pn-uncertainty-ensemble-v1 meets VAL-01 five-by-four; 130 of 768 candidates accepted at a 25 percent tolerance spanning 26.6-fold refractory and 38.4-fold adaptation tau, zero-adaptation included; unscored because every registered F-I cell is consumed
@@ -513,6 +513,26 @@ Exit gate:
 
 - Held-out cellular, synaptic and circuit responses are predicted in time and amplitude, not merely activation order.
 - Key predictions survive plausible parameter/model ensembles.
+
+**Amended 2026-09-09 by ADR-2026-011.** The cellular and synaptic legs are **retired as
+gates** and demoted to recorded priors: still parameterised, still checksum-verified and
+still reported at every evaluation, no longer scored. They require raw patch-clamp traces
+that are not public for anyone — confirmed absent for Kazama and Wilson 2008 and 2009,
+Gouwens and Wilson 2009, and Nagel and Wilson 2015 — so they measured the availability of
+somebody else's unpublished data rather than this model.
+
+The scored gate is now **circuit, ensemble and structural**, executed by
+`stage2-exit-gate-v4`, and it is **0 of 3**. A structural leg may only enter at a criterion
+registered before the test that scores it was run.
+
+Two things must be said whenever Stage 2 is described:
+
+- **The scored gate is narrower than the statement above.** It scores one of the three
+  response types the statement requires. Any claim of Stage 2 progress must name which legs
+  were scored.
+- **Retiring a leg is not passing it.** The cellular and synaptic questions are open, and
+  each retired leg records the condition that reinstates it, at a criterion at least as
+  strict as the one it had.
 
 ### Stage 3 — Sensory transduction and registration
 
