@@ -428,6 +428,49 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_stp_fit(args: argparse.Namespace) -> int:
+    from flysim.stp_fit import run_stp_family_selection
+
+    result = run_stp_family_selection(
+        contract_path=args.experiment,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        replicates=args.replicates,
+        restarts=args.restarts,
+        bootstrap_replicates=args.bootstrap_replicates,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "fit_set": result["fit_set"]["verification"],
+            "eligible": result["eligible"],
+            "selection": result["selection"],
+            "summary": [
+                {
+                    "family_id": family_id,
+                    "parameters": row["family"]["parameter_count"],
+                    "weighted_sse": row["fit"]["weighted_sse"],
+                    "goodness_of_fit_p": row["fit"]["goodness_of_fit_p"],
+                    "e1": row["e1_consistent_with_its_training_data"]["passes"],
+                    "e2": row["e2_sharp_enough_to_be_falsified"]["passes"],
+                    "e3": row["e3_pinned_constants_are_harmless"]["passes"],
+                    "eligible": row["eligible_to_be_frozen"],
+                    "first_pulse_utilisation": row["effective_first_pulse_utilisation"],
+                }
+                for family_id, row in result["families"].items()
+            ],
+            "flat_null": result["flat_null"]["level"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_depression_test(args: argparse.Namespace) -> int:
     from flysim.depression_score import run_depression_external_test
 
@@ -2088,6 +2131,35 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_stp_fit = stage2_commands.add_parser(
+        "stp-fit",
+        help="fit the candidate plasticity families on the spent fit set and screen them",
+    )
+    stage2_stp_fit.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-stp-family-selection-v1.json",
+    )
+    stage2_stp_fit.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_stp_fit.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_stp_fit.add_argument("--output", type=Path, required=True)
+    stage2_stp_fit.add_argument("--replicates", type=int, default=100)
+    stage2_stp_fit.add_argument("--restarts", type=int, default=48)
+    stage2_stp_fit.add_argument("--bootstrap-replicates", type=int, default=200)
+    stage2_stp_fit.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_stp_fit.set_defaults(func=_command_stage2_stp_fit)
 
     stage2_depression_test = stage2_commands.add_parser(
         "depression-test",
