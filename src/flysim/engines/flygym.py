@@ -36,6 +36,15 @@ from flysim.grooming import load_grooming_trajectory
 STATION_KEEPING_LEGS: tuple[str, ...] = ("lf", "lm", "lh", "rf", "rm", "rh")
 STATION_KEEPING_LEFT_LEGS: frozenset[str] = frozenset({"lf", "lm", "lh"})
 STATION_KEEPING_DOF = "{leg}_trochanterfemur-{leg}_tibia-pitch"
+# A second fore-aft channel, driven by the same demand as the first at a registered
+# weight. It exists because the primary channel is authority-limited: its offset
+# saturates at the edge of its monotone branch and the plant's restoring velocity there
+# caps near 0.2 mm/s, which is less than the drift force at some standing poses.
+STATION_KEEPING_SECONDARY_DOFS: dict[str, str] = {
+    "CTr_pitch": "{leg}_coxa-{leg}_trochanterfemur-pitch",
+    "ThC_roll": "c_thorax-{leg}_coxa-roll",
+    "TiTa_pitch": "{leg}_tibia-{leg}_tarsus1-pitch",
+}
 
 
 def _clamp(value: float, limit: float) -> float:
@@ -76,6 +85,8 @@ class FlyGymTrackAParameters:
     station_keeping_max_offset_rad: float
     station_keeping_max_yaw_offset_rad: float
     station_keeping_settle_us: int
+    station_keeping_secondary_channel: str
+    station_keeping_secondary_weight: float
 
 
 class FlyGymTrackABodyEngine:
@@ -242,6 +253,7 @@ class FlyGymTrackABodyEngine:
         self._actuator_index = {dof.name: index for index, dof in enumerate(self._actuated_dofs)}
         self._source_to_actuator = self._build_source_mapping()
         self._station_keeping_channel = self._build_station_keeping_channel()
+        self._station_secondary_channel = self._build_secondary_channel()
         settled_targets = self._neutral_targets.copy()
         settled_targets[: len(leg_dofs)] = (
             controller.preprogrammed_steps.default_pose_by_dof_order(leg_dofs)
@@ -365,6 +377,29 @@ class FlyGymTrackABodyEngine:
             channel.append((index, 1.0 if leg in STATION_KEEPING_LEFT_LEGS else -1.0))
         return tuple(channel)
 
+    def _build_secondary_channel(self) -> tuple[int, ...]:
+        """Actuator indices of the second fore-aft channel, or empty when unused."""
+        name = self.parameters.station_keeping_secondary_channel
+        if not name or self.parameters.station_keeping_secondary_weight == 0.0:
+            return ()
+        try:
+            template = STATION_KEEPING_SECONDARY_DOFS[name]
+        except KeyError as exc:
+            raise ConfigurationError(
+                f"Unknown station-keeping secondary channel {name!r}; known channels are "
+                f"{sorted(STATION_KEEPING_SECONDARY_DOFS)}"
+            ) from exc
+        indices: list[int] = []
+        for leg in STATION_KEEPING_LEGS:
+            dof = template.format(leg=leg)
+            try:
+                indices.append(self._actuator_index[dof])
+            except KeyError as exc:
+                raise ConfigurationError(
+                    f"Station-keeping secondary channel {dof} is not an actuated Track A DOF"
+                ) from exc
+        return tuple(indices)
+
     def station_keeping(self) -> dict[str, float]:
         """What the station-keeping controller is currently doing, for the run record."""
         common, differential = self._station_offsets_rad
@@ -479,6 +514,14 @@ class FlyGymTrackABodyEngine:
         )
         for index, sign in self._station_keeping_channel:
             targets[index] += _clamp(common + sign * differential, limit)
+        # The secondary channel carries the same demand at a registered weight, including
+        # while the primary is saturated, which is exactly when the extra authority is
+        # needed. It is clamped on its own so it cannot leave its own usable band.
+        secondary = _clamp(
+            self.parameters.station_keeping_secondary_weight * common, limit
+        )
+        for index in self._station_secondary_channel:
+            targets[index] += secondary
         self._station_offsets_rad = (common, differential)
         self._station_error_mm = math.hypot(delta_x, delta_y)
         self._station_peak_error_mm = max(self._station_peak_error_mm, self._station_error_mm)

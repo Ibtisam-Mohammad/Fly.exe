@@ -46,6 +46,8 @@ class _StubBody:
             "station_keeping_yaw_integral_rad_per_rad_s": 0.4,
             "station_keeping_max_offset_rad": 0.07,
             "station_keeping_max_yaw_offset_rad": 0.02,
+            "station_keeping_secondary_channel": "",
+            "station_keeping_secondary_weight": 0.0,
             "physics_dt_us": 500,
         }
         defaults.update(gains)
@@ -67,6 +69,9 @@ class _StubBody:
         self._clamped_integral = FlyGymTrackABodyEngine._clamped_integral
         self._release_station_reference = self.release
         self._reset_station_keeping = self.reset
+        self._station_secondary_channel = (
+            FlyGymTrackABodyEngine._build_secondary_channel(self)  # type: ignore[arg-type]
+        )
 
     def _pose(self) -> tuple[float, float, float, float]:
         x, y, heading = self.pose
@@ -318,3 +323,64 @@ def test_the_controller_is_registered_as_an_engineering_scaffold() -> None:
         (REPO / "configs" / "scenarios" / "eon-malecns.json").read_text(encoding="utf-8")
     )
     assert "MOTOR-04" in scenario["required_assumptions"]
+
+
+# --- the second fore-aft channel, which was tried and rejected ------------------------
+
+
+def test_the_secondary_channel_is_registered_disabled() -> None:
+    """It was refuted on the development poses, so it must ship inert.
+
+    Coxa roll at weight -1.0 looked like a clean win on the three poses it was swept over
+    and was worse on all seven, so the channel exists in the code and carries weight 0.0
+    in the registry.
+    """
+    value = _record("MOTOR-04")["value"]
+
+    assert value["station_keeping_secondary_weight"] == 0.0
+    assert value["station_keeping_secondary_channel"] == ""
+    assert "worse overall" in _record("MOTOR-04")["uncertainty"]
+
+
+def test_a_disabled_secondary_channel_touches_no_actuator() -> None:
+    body = _StubBody(pose=(0.0, 0.0, 0.0))
+    assert body._station_secondary_channel == ()
+
+    body.apply()
+    body.pose = (1.0, 0.0, 0.0)
+    targets = body.apply(steps=50)
+
+    # Only the primary channel moved, so every leg carries the same common-mode offset.
+    assert targets.std() == pytest.approx(0.0)
+
+
+def test_an_enabled_secondary_channel_carries_the_weighted_demand() -> None:
+    """If it is ever enabled, it must scale the primary demand and stay clamped."""
+    body = _StubBody(pose=(0.0, 0.0, 0.0), station_keeping_secondary_weight=-1.0)
+    body._actuator_index = dict(body._actuator_index)
+    for index, leg in enumerate(STATION_KEEPING_LEGS):
+        body._actuator_index[f"c_thorax-{leg}_coxa-roll"] = len(STATION_KEEPING_LEGS) + index
+    body.parameters.station_keeping_secondary_channel = "ThC_roll"
+    body._station_secondary_channel = (
+        FlyGymTrackABodyEngine._build_secondary_channel(body)  # type: ignore[arg-type]
+    )
+    assert len(body._station_secondary_channel) == len(STATION_KEEPING_LEGS)
+
+    body.apply()
+    body.pose = (1.0, 0.0, 0.0)
+    targets = np.zeros(2 * len(STATION_KEEPING_LEGS), dtype=np.float64)
+    FlyGymTrackABodyEngine._apply_station_keeping(body, targets)  # type: ignore[arg-type]
+
+    common = body._station_offsets_rad[0]
+    for index in body._station_secondary_channel:
+        assert targets[index] == pytest.approx(-common)
+    limit = body.parameters.station_keeping_max_offset_rad
+    assert np.all(np.abs(targets) <= limit + 1e-12)
+
+
+def test_an_unknown_secondary_channel_fails_closed() -> None:
+    body = _StubBody(station_keeping_secondary_weight=-1.0)
+    body.parameters.station_keeping_secondary_channel = "not-a-channel"
+
+    with pytest.raises(ConfigurationError, match="Unknown station-keeping secondary"):
+        FlyGymTrackABodyEngine._build_secondary_channel(body)  # type: ignore[arg-type]

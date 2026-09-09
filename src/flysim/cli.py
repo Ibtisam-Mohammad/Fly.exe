@@ -371,6 +371,32 @@ def _command_benchmark_glomerular_volume(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_track_a_station_validation(args: argparse.Namespace) -> int:
+    from flysim.station_validation import run_station_keeping_validation
+
+    result = run_station_keeping_validation(
+        root=args.root,
+        experiment_path=args.experiment,
+        output_path=args.output,
+        registry_path=args.assumptions,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "poses_scored": result["poses_scored"],
+            "poses_rejected_by_dust_guard": result["poses_rejected_by_dust_guard"],
+            "acceptance": result["acceptance"],
+            "v4_b3_diagnostic": result["v4_b3_diagnostic"],
+            "by_pose": result["by_pose"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+        }
+    )
+    return 0
+
+
 def _command_benchmark_bilateral_symmetry(args: argparse.Namespace) -> int:
     result = run_bilateral_symmetry(
         root=args.root,
@@ -1703,6 +1729,28 @@ def build_parser() -> argparse.ArgumentParser:
     volume.add_argument("--output", type=Path, required=True)
     volume.add_argument("--allow-dirty-tree", action="store_true")
     volume.set_defaults(func=_command_benchmark_glomerular_volume)
+
+    station = benchmark_commands.add_parser(
+        "station-keeping-validation",
+        help="score the frozen station-keeping controller on the registered validation poses",
+    )
+    station.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "track-a-acceptance-v5-criteria.json",
+    )
+    station.add_argument("--root", type=Path, default=default_data_root())
+    station.add_argument(
+        "--assumptions",
+        type=Path,
+        default=project_root() / "configs" / "assumptions.json",
+    )
+    station.add_argument("--output", type=Path, required=True)
+    station.add_argument("--allow-dirty-tree", action="store_true")
+    station.set_defaults(func=_command_track_a_station_validation)
 
     bilateral = benchmark_commands.add_parser(
         "bilateral-symmetry",

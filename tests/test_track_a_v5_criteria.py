@@ -30,12 +30,66 @@ def demonstrations(v5: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {item["id"]: item for item in listed}
 
 
-def test_the_proposal_is_not_adopted_and_changes_no_verdict(v5: dict[str, Any]) -> None:
-    assert v5["adopted"] is False
-    assert "NOT ADOPTED" in v5["status"]
-    assert "supersedes nothing" in v5["supersedes_nothing"].lower()
-    assert "remains failed" in v5["claim_boundary"]
+def test_the_criterion_is_adopted_prospectively_and_withdraws_nothing(
+    v5: dict[str, Any],
+) -> None:
+    assert v5["adopted"] is True
+    assert v5["adopted_on"] == "2026-09-09"
+    terms = v5["adoption_terms"]
+    assert "re-scores nothing" in terms["prospective_only"]
+    preserved = " ".join(terms["earlier_verdicts_preserved_unchanged"])
+    # The three verdicts that must survive adoption, named explicitly.
+    assert "0 of 30" in preserved
+    assert "2 of 7 development poses" in preserved
+    assert "0 of 3" in preserved
     assert "remains not an accepted milestone" in v5["claim_boundary"]
+
+
+def test_the_superseded_wording_is_preserved_rather_than_deleted(
+    v5: dict[str, Any],
+) -> None:
+    """Before adoption this contract said it superseded nothing. That line is now false of
+    the criterion and still true of every verdict, so it is kept and annotated."""
+    supersedes = v5["supersedes"]
+
+    assert supersedes["experiment_id"] == "track-a-acceptance-v4-criteria"
+    assert "supersedes nothing" in supersedes["superseded_text_before_adoption"]
+    assert "No verdict is withdrawn" in supersedes["what_does_not_change"]
+
+
+def test_the_validation_threshold_is_one_the_development_set_fails(
+    v5: dict[str, Any],
+) -> None:
+    """The only property that matters: it cannot have been chosen to be passable."""
+    threshold = v5["development_and_validation_split"]["validation_acceptance_threshold"]
+
+    assert "10 of the 12" in threshold["threshold"]
+    assert "8 successes of 10" in threshold["where_it_comes_from"]
+    assert "FAILS" in threshold["disclosure_that_it_is_informed"]
+    assert "5 of 7" in threshold["disclosure_that_it_is_informed"]
+    assert "below 80" in threshold["disclosure_that_it_is_informed"]
+
+
+def test_the_split_is_registered_with_a_seed_and_a_freeze(v5: dict[str, Any]) -> None:
+    split = v5["development_and_validation_split"]
+
+    assert len(split["development_poses"]) == 7
+    rule = split["validation_set_rule"]
+    assert "20260910" in rule["generator"]
+    assert rule["count"] == 12
+    freeze = split["freeze_and_evaluate_once"]
+    assert "clean worktree" in freeze["freeze"]
+    assert "exactly once" in freeze["evaluate_once"]
+    assert "new validation set" in freeze["no_retuning_after_seeing_it"]
+
+
+def test_the_rejected_secondary_channel_is_recorded(v5: dict[str, Any]) -> None:
+    """A tuning attempt that failed on development is part of the record, not deleted."""
+    note = v5["development_and_validation_split"]["secondary_channel_attempt"]
+
+    assert "weight 0.0" in note
+    assert "3 of 7 passing against 5 of 7" in note
+    assert "No validation pose was involved" in note or "no validation pose" in note.lower()
 
 
 def test_the_v4_criterion_is_untouched(v5: dict[str, Any]) -> None:
@@ -51,7 +105,7 @@ def test_the_v4_criterion_is_untouched(v5: dict[str, Any]) -> None:
 def test_the_limit_is_still_one_body_length(v5: dict[str, Any]) -> None:
     """Only the statistic may change. A looser limit would be the smuggled relaxation."""
     v4 = json.loads(V4.read_text(encoding="utf-8"))
-    proposed = v5["proposed_criterion"]
+    proposed = v5["adopted_criterion"]
 
     assert proposed["limit_mm"] == 2.5
     for identifier in ("B1", "B2"):
@@ -102,8 +156,8 @@ def test_the_better_controller_really_is_the_one_that_fails(
 
 def test_the_proposal_rejects_the_cases_that_motivate_it(v5: dict[str, Any]) -> None:
     """A replacement that accepted the degenerate cases would be no improvement."""
-    rejects = v5["proposed_criterion"]["would_reject_all_three_degenerate_cases"]
-    limit = v5["proposed_criterion"]["limit_mm"]
+    rejects = v5["adopted_criterion"]["would_reject_all_three_degenerate_cases"]
+    limit = v5["adopted_criterion"]["limit_mm"]
 
     for key in ("D2_leaking_case", "D3_diverged_case", "uncontrolled_baseline"):
         case = rejects[key]
