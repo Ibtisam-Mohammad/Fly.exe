@@ -396,12 +396,23 @@ a training set.
 
 ## The two artifacts this produced
 
-Both were built from the clean tree at `c32db5f` and are evidence-grade.
+Rebuilt at `8009fd2` after the `VAL-02` amendment, from a **detached worktree** at that
+commit, under the hardened gate that re-hashes every tracked file rather than trusting
+`git status`. Both record `ran_from_detached_worktree: true` and
+`byte_audit_performed: true`.
 
 | artifact | sha256 | what it holds |
 |---|---|---|
-| `evidence/stage2/stage2-reservations-v1.json` | `998ba22288490073908ecde31d680a9a8336621b9c66b5f191aa91b77ca4b9a7` | 20 reserved files across 4 datasets, each with its checksum, byte count and structure; every declaration check passes |
-| `evidence/stage2/stage2-depression-prediction-v1.json` | `d58655d1b01f1be9b2e382a7bc7169ba11f56ca1ddd97477ea6affafffcbca5d` | the predictions above, with `measured_values_read: false` |
+| `evidence/stage2/stage2-reservations-v1.json` | `430fe4ab29a0b44874599a533b53d786bc2d7594c858e9c33546a08c91f26f66` | 20 reserved files across 4 datasets, each with its checksum, byte count and structure; every declaration check passes |
+| `evidence/stage2/stage2-depression-prediction-v1.json` | `6c44b06f9e7c3aae314751b060b3effd60275fdfe47517d4c31ded1d342db9b5` | the predictions above, with `measured_values_read: false` |
+
+The first build, at `c32db5f`, is superseded and its digests are kept rather than deleted:
+reservations `998ba222...7ca4b9a7` and prediction `d58655d1...ffcbca5d`. It was rebuilt for
+two reasons, neither of them a changed number: the prediction artifact pins the contract by
+checksum and the contract was amended, and the first build's cleanliness rested on the
+weaker `git status` check. **Every predicted value is identical across the two builds** --
+0.8033 at 100 ms, floor 0.7700 -- which is what the amendment claimed, since it changed the
+inference and not the arithmetic.
 
 The Stage 2 exit gate was re-evaluated after the assumption-set bump and is unchanged at
 **0 of 3**: circuit 0.0 against 0.8, ensemble false, structural false.
