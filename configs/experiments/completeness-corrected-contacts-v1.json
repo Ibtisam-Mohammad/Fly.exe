@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "completeness-corrected-contacts-v1",
+  "title": "Invert the connectome's synapse-level incompleteness to recover contacts per true connection, and rerun the glomerular volume question against the corrected statistic",
+  "status": "preregistered",
+  "provenance": "M/P",
+  "assumption_ids": ["DATA-01", "DATA-03", "DATA-04"],
+  "preregistered_on": "2026-09-09",
+  "depends_on": [
+    "evidence/male-cns-v1.0/orn-pn-convergence-v1.json",
+    "evidence/male-cns-v1.0/glomerular-volume-scaling-v1.json"
+  ],
+  "problem": {
+    "summary": "Median contacts per realised ORN-to-PN connection is the statistic three of this project's results rest on, and it is measured over realised pairs only. The convergence test showed that weak connections are specifically what goes missing, so the statistic is inflated exactly where reconstruction is worst, and the glomerular-volume test was declared inconclusive because of it.",
+    "why_it_is_correctable": "MaleCNS reports 42 percent postsynaptic completion. Model a true connection carrying k_true synapses as appearing in the graph with k_obs ~ Binomial(k_true, p), absent entirely when k_obs = 0. The observed contact distribution is then a zero-truncated binomial thinning of the truth at a known rate, and Kazama and Wilson 2009 supply the missing denominator: ORN-to-PN connectivity is complete bipartite, so the true number of connections in a glomerulus is exactly n_ORN times n_PN, not the realised count.",
+    "the_exact_identity": "Because an absent pair contributes k_obs = 0, the sum of observed contacts over realised pairs equals the sum over all true pairs. So E[k_true] = total_contacts / (p * possible_pairs), with no distributional assumption at all. Equivalently the naive mean over realised pairs is corrected by multiplying by completeness/p, which is above 1 for well-reconstructed glomeruli and below 1 for badly reconstructed ones: the two biases, losing synapses within recovered pairs and losing whole weak pairs, act in opposite directions."
+  },
+  "model": {
+    "true_distribution": "zero-truncated negative binomial over k_true >= 1, parameters (r, q), mean r(1-q)/q divided by (1 - q^r)",
+    "observation": "k_obs | k_true ~ Binomial(k_true, p); the pair is in the graph iff k_obs >= 1",
+    "analytic_consequence": "A negative binomial is closed under binomial thinning: if k_true ~ NB(r, q) then Bin(k_true, p) ~ NB(r, q_Y) with q_Y = q / (1 - (1-q)(1-p)). Zero-truncating the truth leaves the observed counts exactly zero-truncated NB(r, q_Y). So fitting the observed counts identifies (r, q_Y) and nothing else, and the completeness is a prediction rather than an input.",
+    "predicted_completeness": "(1 - q_Y^r) / (1 - q^r), with q = q_Y * p / (1 - q_Y * (1 - p))",
+    "p_recovered_from_completeness": "q^r = 1 - (1 - q_Y^r)/C for measured completeness C, then p = q(1 - q_Y) / (q_Y (1 - q))",
+    "p_registered": 0.42,
+    "p_source": "MaleCNS v1.0 postsynaptic completion rate, quoted in orn-pn-convergence-v1.json. The 40.1 percent both-partners-proofread figure is consistent with 0.94 * 0.42 = 0.395, which supports reading the two rates as multiplying and the postsynaptic rate as the dominant term.",
+    "p_sensitivity_range": [0.35, 0.5],
+    "assumptions_recorded_as_assumptions": [
+      "One anatomical contact is one vesicular release site. The convergence and volume contracts both record this; H6 tests it rather than assuming it.",
+      "Synapse loss is independent across synapses of a connection at a rate that does not depend on the connection. If loss were spatially clustered along an axon, which the per-ORN reconstruction-quality signal suggests it partly is, the effective p would vary between connections and H1 should fail.",
+      "Complete ORN-to-PN convergence holds, so possible_pairs is the true connection count. This is the Kazama and Wilson 2009 result the convergence test confirmed exactly in every glomerulus well enough reconstructed to test it."
+    ]
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "blind": true,
+      "statement": "The thinning model reproduces the measured per-glomerulus completeness. Fit (r, q_Y) to each glomerulus's observed contact counts by maximum likelihood on the zero-truncated negative binomial, convert to q at p = 0.42, and predict completeness. The fit never sees possible_pairs, so this is out of sample.",
+      "criterion": "Spearman rho between predicted and measured completeness >= 0.7 across the 50 glomeruli, and median absolute error <= 0.10.",
+      "why_it_matters": "This is the gate. If it fails, the loss process is not independent per-synapse thinning at the released rate, the correction is not trustworthy, and H3 and H4 must not be read as results."
+    },
+    {
+      "id": "H2",
+      "blind": true,
+      "statement": "The per-synapse survival rate recovered from the data brackets the released value. Solve for p per glomerulus from the fitted (r, q_Y) and the measured completeness, then pool.",
+      "criterion": "Median recovered p across glomeruli with a solvable inversion lies in [0.30, 0.55], and at least 35 of the 50 glomeruli yield a solvable p.",
+      "why_it_matters": "The released 0.42 is a whole-dataset figure the paper states and the repository had not disclosed. Recovering it independently from olfactory contact statistics alone would be the first internal check on it. Recovering something far from it would say the olfactory system is not sampled at the dataset average, which is itself worth knowing."
+    },
+    {
+      "id": "H3",
+      "blind": true,
+      "statement": "Correcting removes the incompleteness confound from the contact statistic. The naive median contacts correlates with converging ORN count at rho = -0.475, p < 0.001 across all 50 glomeruli, attenuating to -0.046 among the best-reconstructed eleven, which the volume report attributed to incompleteness rather than biology.",
+      "criterion": "The corrected mean contacts per true connection correlates with ORN count at |rho| < 0.30 with p >= 0.05.",
+      "why_it_matters": "Falsifiable in the useful direction: if the corrected statistic still correlates strongly with ORN count, the correction has not removed the bias it was built to remove."
+    },
+    {
+      "id": "H4",
+      "blind": false,
+      "not_blind_disclosure": "The stratified analysis in the volume report already showed contacts-versus-volume rising from +0.070 across all 50 glomeruli to +0.381 among the 26 with completeness >= 0.85 and +0.527 among the best eleven, never reaching p < 0.05. So a positive result here is anticipated and this hypothesis is not blind. It is registered two-sided and both outcomes are reported.",
+      "statement": "Kazama and Wilson 2008 found unitary EPSC amplitude scales with glomerular volume and attributed the scaling to release sites per ORN axon per PN. Test the corrected mean contacts per true connection against the rarefied glomerular volume across all 50 glomeruli.",
+      "criterion": "Report Spearman rho and its two-sided p. p < 0.05 with positive rho supports the release-site scaling; anything else does not support it. Neither outcome is assumed, and the naive statistic's correlation is reported alongside so that any change is attributable to the correction and not to a change of statistic.",
+      "additional_requirement": "Report the same correlation for the naive mean, not only the naive median, so the comparison isolates the correction from the switch of central-tendency measure. The exact identity holds for the mean and not for the median, which is why the corrected statistic is a mean."
+    },
+    {
+      "id": "H5",
+      "blind": true,
+      "statement": "No fitted parameter sits at a search boundary.",
+      "criterion": "Fewer than 5 of the 50 glomeruli have a fitted r or mean at the edge of the refined search grid. If 5 or more do, this criterion fails and the fit must be reissued with a wider grid before H1 to H4 are read.",
+      "why_it_matters": "The stage-2 kernel-family comparison had to be reissued as v2 after a continuous parameter pinned at a grid floor. That failure is the reason this criterion exists."
+    },
+    {
+      "id": "H6",
+      "blind": false,
+      "not_blind_disclosure": "Glomerulus D was computed while writing this contract: total 9257 contacts over 168 possible pairs gives a corrected mean of 131.2 against a naive mean of 55.8 and a naive median of 45.5. Kazama and Wilson's fluctuation analysis gives 51.4 +/- 7.8 release sites per ORN axon per PN. So this hypothesis is expected to fail, and it is registered precisely so that the failure is reported as a conclusion about the contact-to-release-site identification rather than absorbed by adjusting the correction.",
+      "statement": "If one anatomical contact is one release site, the corrected mean contacts per true connection in the glomeruli Kazama and Wilson recorded should be consistent with their measured 51.4 +/- 7.8 release sites per ORN axon per PN.",
+      "criterion": "The corrected mean for DL5, DM4, VM2 and DM6 lies within [35.8, 67.0], which is their range widened to twice the stated standard deviation. If the corrected means exceed 118, twice the upper bound, the conclusion to be recorded is that one anatomical contact is not one release site, at a ratio this contract must state.",
+      "why_it_matters": "The correction and the release-site identification cannot both be right if the corrected counts are two to three times the physiological estimate. Registering the arithmetic in advance stops the discrepancy from being explained away after the fact."
+    }
+  ],
+  "outputs_required": [
+    "per glomerulus: possible_pairs, realised_pairs, measured completeness, total contacts, naive mean, naive median, corrected mean by the exact identity, corrected mean from the fitted distribution, fitted r and q_Y, predicted completeness, recovered p",
+    "the two corrected estimators compared, since one uses complete convergence and no distributional family and the other uses the negative binomial family and no convergence assumption; their agreement is a third independent check",
+    "H4 scored against the rarefied volume from glomerular-volume-scaling-v1.json, joined on glomerulus name",
+    "sensitivity of every corrected mean and of H3 and H4 to p over [0.35, 0.50]"
+  ],
+  "claim_boundary": "A structural correction to a structural statistic. It awards no validation tier, fits no model of dynamics, and uses no physiological recording. It changes the interpretation of previously recorded contact statistics and says so explicitly wherever it does.",
+  "last_reviewed": "2026-09-09"
+}
