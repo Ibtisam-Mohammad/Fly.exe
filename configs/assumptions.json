@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.6",
+  "assumption_set_id": "foundation-v0.7",
   "records": [
     {
       "id": "DATA-01",
@@ -235,18 +235,38 @@
     },
     {
       "id": "ND-03",
-      "name": "functional edge polarity",
+      "name": "presynaptic transmitter identity",
       "value": {
-        "policy": "transmitter-plus-postsynaptic-receptor; unresolved signs remain alternatives"
+        "policy": "per-body consensus transmitter from the connectome annotation; unclear stays unresolved",
+        "resolves_edge_sign": false
       },
       "units": "categorical",
-      "provenance": "M/P/F",
-      "applies_to": "chemical synaptic edges",
-      "source": "project scientific rule; ADR-2026-010; docs/evidence/LITERATURE_PARAMETER_CORPUS.md section 7",
-      "biological_mismatch": "The transmitter term is supported: receptor class matches the neurotransmitter used by the presynaptic input. The receptor refinement is not obtainable at connectome scale, because different receptors for the same transmitter localise to different dendritic domains receiving different presynaptic partners, so the quantity is partner-specific rather than cell-specific.",
-      "uncertainty": "Unresolved edge signs remain latent model alternatives. The refinement beyond the transmitter term is a stated boundary rather than a pending action: no bulk expression atlas can supply a partner-specific quantity, and the domain-resolved measurement exists only for a handful of visual-system neurons. The MaleCNS receptorType annotation carries 752 non-null entries, all gustatory (ppk23, ppk25, IR52b), and none olfactory.",
+      "provenance": "M/P",
+      "applies_to": "the presynaptic neuron of a chemical synaptic edge",
+      "source": "project scientific rule; ADR-2026-010; ADR-2026-012; docs/evidence/LITERATURE_PARAMETER_CORPUS.md section 7",
+      "biological_mismatch": "The MaleCNS consensus transmitter is a classifier prediction from electron-microscopy image features, not a measurement of the transmitter a given body releases. Co-transmission is not represented: one label per body, where a real neuron can release a small molecule and a peptide together.",
+      "uncertainty": "This record was narrowed by ADR-2026-012. It previously bundled transmitter identity with the postsynaptic receptor term and was cited wherever an edge sign was asserted, which made an untestable claim look like a tested one. Transmitter identity is testable and now has a reserved validation set: 6,107 verified per-cell-type assignments with a stated evidence class, of which 3,523 rows carry a MaleCNS cell type in the cell_type_mcns column. That set measures how often the transmitter label is right. It cannot measure whether an edge excites or inhibits, which additionally requires ND-10.",
       "status": "accepted",
-      "validation": "paired physiology and causal perturbation; the receptor term additionally requires domain-resolved and partner-resolved localisation, which is not available at scale",
+      "validation": "verified per-cell-type transmitter assignments, joined on cell type at a stated confidence floor. Reserved and unopened; see configs/datasets/stage2-reservations-v1.json.",
+      "owner": "neural",
+      "last_reviewed": "2026-09-09"
+    },
+    {
+      "id": "ND-10",
+      "name": "postsynaptic receptor identity and functional edge polarity",
+      "value": {
+        "policy": "edge sign is a function of the ND-03 transmitter and the postsynaptic receptor; where receptor evidence is absent the sign is unresolved and remains a latent model alternative",
+        "unresolved_sign_default": "unresolved",
+        "transmitter_only_sign_rule": "a named regression control, not the physiological default"
+      },
+      "units": "categorical",
+      "provenance": "P/F",
+      "applies_to": "chemical synaptic edges",
+      "source": "project scientific rule; ADR-2026-008; ADR-2026-012; docs/evidence/LITERATURE_PARAMETER_CORPUS.md section 7; docs/evidence/TRANSMITTER_SIGN_CONTROL.md",
+      "biological_mismatch": "Receptor class does match the presynaptic transmitter, which is why a transmitter-only sign rule is broadly right. What it cannot capture is that different receptors for the same transmitter localise to different dendritic domains receiving different presynaptic partners, so the sign of an edge is partner-specific rather than cell-specific. Acetylcholine is the clearest case: a cholinergic input can be excitatory through a nicotinic receptor and inhibitory through a muscarinic one at the same postsynaptic cell.",
+      "uncertainty": "This is a boundary, not a pending action. The measurement required is domain-resolved and partner-resolved receptor localisation, which exists for a handful of visual-system neurons and not at connectome scale. No bulk expression atlas can supply it, because the quantity is partner-specific and an atlas reports per-cell-type expression. The MaleCNS receptorType annotation carries 752 non-null entries, all gustatory (ppk23, ppk25, IR52b) and none olfactory. Consequently edge sign is left unresolved wherever receptor-level evidence is absent, and unresolved signs are carried as latent alternatives rather than defaulted. The verified transmitter ground truth reserved for ND-03 does not validate this record: a correct transmitter label still leaves the sign unresolved where the receptor is unknown, so an agreement rate on transmitter identity is an upper bound on sign correctness and not a measurement of it.",
+      "status": "accepted",
+      "validation": "domain-resolved and partner-resolved receptor localisation together with paired physiology and causal perturbation. Not available at scale, so this record cannot currently be advanced by any work available to this project.",
       "owner": "neural",
       "last_reviewed": "2026-09-09"
     },
@@ -630,7 +650,7 @@
       "biological_mismatch": "Entirely non-biological. A real fly holds station with load-sensing campaniform sensilla and femoral chordotonal reflexes distributed through the VNC; this is proportional feedback from a single thorax pose estimate onto the femur-tibia pitch of all six legs, which no fly has. It exists because the FlyGym locomotor controller this scaffold is built on has no station-keeping mode, so its open-loop standing pose hold lets a persistent net force integrate at about 0.88 mm/s.",
       "uncertainty": "The control channel, both gains and the offset limit are engineering choices, not measurements. The channel was selected by measuring the drift response of all six leg joint groups in common and differential mode; femur-tibia pitch had the largest authority in each. The offset limit is load-bearing rather than a safety margin: the measured drift velocity falls from +1.02 mm/s at zero offset through zero near 0.055 rad, but at 0.12 rad it is +1.40 mm/s, worse than no control, so a limit outside the first monotone branch lets the controller saturate onto its own worst operating point. A rate term was implemented and rejected: the smallest gain tried moved the body 5.9 mm instead of 0.36 mm. A signed lateral channel exists and was measured at about 263 mm/rad on differential coxa-trochanter roll; it is deliberately not used, because lateral error is only about 0.7 mm of the worst residual and a gain that large on a contact-mode-switching plant is a stability risk. No claim is made that any of this resembles fly motor control. A second fore-aft channel was implemented and rejected on the development poses. Coxa roll at weight -1.0 looked like a clean win on the three poses it was swept over, cutting the worst 12-second displacement from 3.163 to 1.710 mm, but those three were selected from the failing set: on all seven development poses it is worse overall, at 3.893 mm worst case and 3 of 7 passing against 5 of 7 for no secondary channel. Weight -1.5 passes 6 of 7 but has a worse worst case at 3.315 mm, so choosing it would be fitting seven samples with a hand-set weight. The channel is therefore implemented and registered at weight 0.0, which disables it, and the refutation is recorded rather than the tuning.",
       "status": "accepted",
-      "validation": "track-a-acceptance-v4 criterion B2, which it clears at every pose tested. It does not clear B3 as that criterion is written; see docs/evidence/TRACK_A_STATION_KEEPING.md. The controller-only control must still fail to produce the behavioural sequence.",
+      "validation": "track-a-acceptance-v4 criterion B2, which it clears at every pose tested. It does not clear B3 as that criterion is written; see docs/evidence/TRACK_A_STATION_KEEPING.md. The controller-only control must still fail to produce the behavioural sequence. Under track-a-acceptance-v5, evaluated once at frozen commit 4c4a53f on twelve poses drawn from seed 20260910 and never seen during tuning: B2 passes 12 of 12 with a worst 3-second displacement of 0.957 mm, and B3-v5 passes 8 of 12 against the 10 required, so validation FAILS. Development was 5 of 7 and validation 8 of 12, the same rate, so this is a capability limit at the twelve-second horizon rather than an overfitting gap. Those twelve poses are spent: they may not be rescored, and they may not be tuned against. A successor controller is registered as MOTOR-05 with a fresh development set and a separately frozen validation set drawn from a new registered seed, both registered before tuning begins, and this failure stays on the record either way.",
       "owner": "motor",
       "last_reviewed": "2026-09-09"
     },
@@ -713,6 +733,27 @@
       "validation": "replayable evidence bundles and held-out animal splits",
       "owner": "validation",
       "last_reviewed": "2026-09-05"
+    },
+    {
+      "id": "VAL-02",
+      "name": "observation model for external electrophysiological tests",
+      "value": {
+        "evoked_amplitude_proportional_to_released_vesicles": true,
+        "stimulus_recruits_a_fixed_presynaptic_population": true,
+        "postsynaptic_desensitisation_contributes_nothing": true,
+        "paired_pulse_amplitude_ratio_equals_resource_ratio": true,
+        "train_amplitude_ratio_equals_resource_ratio": true
+      },
+      "units": "boolean scoring assumptions",
+      "provenance": "E",
+      "applies_to": "scoring a registered synaptic model against a published evoked-EPSC recording",
+      "source": "project engineering decision 2026-09-09; ADR-2026-012; configs/experiments/stage2-depression-external-test-v1.json",
+      "biological_mismatch": "Every clause is false in detail. A compound evoked EPSC saturates postsynaptic receptors, so amplitude is sublinear in released vesicles; electrical stimulation of an axon bundle does not recruit an identical population on a second pulse a few milliseconds later; and nicotinic receptors desensitise on exactly the timescale of the shortest paired-pulse intervals. A model resource ratio is therefore not the same object as a measured amplitude ratio.",
+      "uncertainty": "The direction of each bias is known even though its size is not, which is what makes the assumption usable. Receptor saturation and desensitisation both make measured depression look deeper than vesicle depletion alone, and presynaptic recruitment failure does the same. All three therefore bias a measured paired-pulse ratio downward relative to the model's resource ratio, so a measured ratio *above* the prediction cannot be explained by any of them and a measured ratio below it is attributable to either the model or the observation. The contamination is worst at the shortest intervals, which is why the 100 ms interval carries the primary test and the 10 and 30 ms intervals are scored as disclosed-confounded.",
+      "status": "proposed",
+      "validation": "a preparation in which the same paired-pulse ratio is measured under minimal and compound stimulation, or a quantitative desensitisation measurement at the same synapse. Neither is registered.",
+      "owner": "validation",
+      "last_reviewed": "2026-09-09"
     },
     {
       "id": "BENCH-01",

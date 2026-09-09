@@ -1,0 +1,241 @@
+{
+  "schema_version": "1.0",
+  "contract_id": "stage2-reservations-v1",
+  "manifest_id": "stage2-reservations-v1",
+  "title": "Declaration of which staged files and which variables and columns inside them are reserved and unopened",
+  "declared_on": "2026-09-09",
+  "staging_root": "/srv/flybrain-data/incoming/stage2-2026-09-09",
+  "why_this_exists": "The intake manifest classified the staged datasets in prose. Prose is not a record: it does not pin the files by checksum, it does not say which variable inside a file is the holdout, and it cannot be checked. This contract names every reserved file and every reserved variable or column, and the manifest built from it records the structure and the checksum of each one before any value is opened. A reservation is worth exactly as much as the record of what was reserved.",
+  "reservation_rule": {
+    "reserved": "A reserved name may not be read, printed, plotted, summarised or fitted until a preregistered contract names the file, the variable, the metric and the limit, and that contract is committed before the values are opened.",
+    "unreserved": "An unreserved name carries no observation. Join keys, cell-type labels and cross-dataset mapping columns are unreserved because a holdout is spent by seeing the measurement, not by seeing which cells were measured. Reading them is what makes it possible to establish whether a join is even feasible before spending anything.",
+    "structure_is_not_a_value": "File names, byte counts, checksums, variable names, array shapes, column headers, row counts and archive listings are metadata and were read. No numeric observation was decoded.",
+    "analysis_code_is_not_a_value": "The MATLAB analysis scripts shipped with the Rozenfeld repository were read in full. They are code: they name the axis labels, the stimulation conditions and the statistics the authors ran, which is what established that the evoked recordings are compound rather than unitary. Reading them decodes no observation, and the determination it produced is recorded in ADR-2026-012.",
+    "what_this_does_not_protect_against": "A variable name can be informative on its own. Knowing that paired-pulse ratios exist at five intervals says recovery kinetics were measured, which the paper's abstract already says. The rule protects the values, which is what a holdout is."
+  },
+  "datasets": [
+    {
+      "id": "rozenfeld-2023-orn-pn-synaptic-physiology",
+      "source": "github.com/RoteMSN/Rozenfeld-et-al-2023 at commit 4e53fd71d6a8ad062543fe9e989ef2299eca75ba; Nature Communications 2023, doi 10.1038/s41467-023-38575-6; MIT licence",
+      "seal": "reserved, and partly released by stage2-depression-external-test-v1 once that contract is committed",
+      "release_condition": "Only the file and variable named by a committed preregistered contract may be opened, and only for the metric that contract fixes. stage2-depression-external-test-v1 names Figure 3/Fig3D.mat and Figure 3/Fig3E_and_F.mat; every other file below stays sealed.",
+      "files": [
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+          "kind": "matlab-v5",
+          "role": "per-animal paired-pulse ratio at five interstimulus intervals, control and cacophony-RNAi; the primary external test of the ND-06 recovery time constant",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat",
+          "kind": "matlab-v5",
+          "role": "per-animal evoked-EPSC amplitude across trains at 1, 10, 20 and 60 Hz, plus per-animal mean latency and latency jitter; the train arrays are the secondary external test and the latency arrays are reserved but are not a scored observable, because the registered model does not generate them",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+          "kind": "matlab-v5",
+          "role": "a second independent control cohort's paired-pulse ratios at the same five intervals; reserved as the preregistered replication of the primary test",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3J.mat",
+          "kind": "matlab-v5",
+          "role": "a third independent control cohort's paired-pulse ratios at the same five intervals; reserved as the second preregistered replication",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 6/Fig6D.mat",
+          "kind": "matlab-v5",
+          "role": "paired-pulse ratios in a day-0 and a later-day cohort; reserved and not scored, because ageing is a manipulation the registered model has no parameter for",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+          "kind": "matlab-v5",
+          "role": "per-animal evoked-EPSC amplitude at 1 Hz in absolute picoamps; reserved and not scored, because ND-04 carries no absolute conductance scale for this synapse",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3G.mat",
+          "kind": "matlab-v5",
+          "role": "as Fig3B for the second cohort; reserved, not scored",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 3/Fig3I.mat",
+          "kind": "matlab-v5",
+          "role": "as Fig3B for the third cohort; reserved, not scored",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 1/Fig1H.mat",
+          "kind": "matlab-v5",
+          "role": "22 odour-evoked projection-neuron recordings in current clamp and in voltage clamp, 70001 samples each; raw traces, but odour-evoked and therefore compound, so they are not the unitary EPSC cohort the retired synaptic leg requires",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 1/Fig1I.mat",
+          "kind": "matlab-v5",
+          "role": "as Fig1H for the perturbation condition",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 5/Fig5B.mat",
+          "kind": "matlab-v5",
+          "role": "per-animal miniature EPSC amplitude and frequency; reserved and not scored, because no quantal amplitude and no spontaneous release rate is registered",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-repo/Figure 5/Fig5D.mat",
+          "kind": "matlab-v5",
+          "role": "per-animal Bruchpilot puncta number, intensity and size; reserved, and relevant to the contact-to-release-site question, which needs its own contract because light-microscopy puncta and electron-microscopy contacts are not the same unit",
+          "reserve_all": true
+        },
+        {
+          "path": "rozenfeld2023-source-data.rar",
+          "kind": "opaque",
+          "role": "the publisher's source-data archive; no extractor in the environment, and probably redundant with the repository. Checksum and byte count only."
+        }
+      ]
+    },
+    {
+      "id": "takagi-2024-osn-expansion-pn-adaptation",
+      "source": "Nature Communications 2024, doi 10.1038/s41467-024-50808-w",
+      "seal": "SEALED. No contract names any of it, so nothing in it may be opened.",
+      "release_condition": "A circuit-level prediction contract must be written and committed first: it must state the circuit prediction, the observation model from calcium fluorescence to the quantity the simulator produces, the species assignment of each calcium-imaging file, and the acceptance limit, before any value is read. The stage-3 activity-prediction design is not that contract; it is a design whose data-availability finding these files falsify, and it must be reissued.",
+      "files": [
+        {
+          "path": "takagi2024-source-data.zip",
+          "kind": "zip",
+          "role": "matched OSN and PN calcium responses in VM5d, DM2, DM4 and VA2 with dose-response curves, GABA-A and GABA-B blockade, nicotinic blockade and antenna ablation, plus tethered-flight and wind-tunnel behaviour that is out of scope",
+          "reserve_all": true
+        },
+        {
+          "path": "takagi2024-supp-data1.xlsx",
+          "kind": "xlsx",
+          "role": "supplementary table 1",
+          "reserve_all": true
+        },
+        {
+          "path": "takagi2024-supp-data2.xlsx",
+          "kind": "xlsx",
+          "role": "supplementary table 2",
+          "reserve_all": true
+        }
+      ]
+    },
+    {
+      "id": "drosophila-neurotransmitter-ground-truth",
+      "source": "github.com/flyconnectome/drosophila_neurotransmitters at commit a9417412c8a70fcc9f80a65ca5bc6064eba07be3",
+      "seal": "the transmitter assignments and their evidence grades are reserved; the join keys are not",
+      "release_condition": "A committed contract must fix the join key, the confidence floor, the metric and the limit before any transmitter column is read, because the agreement rate is exactly the number a fit would otherwise be tuned against. It validates presynaptic transmitter identity, which is ND-03; it does not validate edge sign, which additionally requires the postsynaptic receptor evidence ND-10 records as unavailable at scale.",
+      "files": [
+        {
+          "path": "drosophila-neurotransmitters/gt_data.csv",
+          "kind": "csv",
+          "role": "verified per-cell-type transmitter assignments across species and regions with source, evidence class and confidence grade",
+          "reserved_names": [
+            "neurotransmitter_verified_source",
+            "neurotransmitter_verified_evidence",
+            "neurotransmitter_verified_confidence",
+            "acetylcholine",
+            "glutamate",
+            "gaba",
+            "glycine",
+            "dopamine",
+            "serotonin",
+            "octopamine",
+            "tyramine",
+            "histamine",
+            "nitric_oxide"
+          ],
+          "unreserved_names": ["species", "region", "hemilineage", "cell_type"]
+        },
+        {
+          "path": "drosophila-neurotransmitters/gt_sources/male_cns/202509-male_cns_gt_data.csv",
+          "kind": "csv",
+          "role": "the MaleCNS-specific slice of the same ground truth, which resolves the intake's open question: MaleCNS cell types are reached through this file's cell_type_mcns column, not through the cross-matching table, whose header carries no MaleCNS column",
+          "reserved_names": [
+            "neurotransmitter_verified_source",
+            "neurotransmitter_verified_evidence",
+            "neurotransmitter_verified_confidence",
+            "acetylcholine",
+            "glutamate",
+            "gaba",
+            "glycine",
+            "dopamine",
+            "serotonin",
+            "octopamine",
+            "tyramine",
+            "histamine",
+            "nitric_oxide"
+          ],
+          "unreserved_names": [
+            "species",
+            "region",
+            "hemilineage",
+            "cell_type_source",
+            "gt_celltype",
+            "cell_type_mcns"
+          ]
+        },
+        {
+          "path": "drosophila-neurotransmitters/gt_sources/male_cns/malecns_extra.csv",
+          "kind": "csv",
+          "role": "additional MaleCNS assignments in the older known_nt column layout",
+          "reserved_names": [
+            "known_nt_evidence",
+            "known_nt",
+            "known_nt_source",
+            "known_nt_confidence"
+          ],
+          "unreserved_names": ["species", "region", "hemilineage", "cell_type"]
+        },
+        {
+          "path": "drosophila-neurotransmitters/inst/extdata/cell_type_cross_matching.csv",
+          "kind": "csv",
+          "role": "cross-dataset cell-type mapping; carries no observation, so every column is unreserved and the table may be used freely to establish feasibility",
+          "unreserved_names": [
+            "cell_type",
+            "hemibrain_type",
+            "morphology_group",
+            "hemilineage",
+            "region",
+            "in_fafb",
+            "in_hemibrain",
+            "in_banc",
+            "in_l1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "liu-2022-connectomic-features-of-synaptic-strength",
+      "source": "PMC8825683; Data S1 to S4 were not obtained because PMC blocks scripted access to supplementary binaries",
+      "seal": "reserved on arrival; nothing is staged, so nothing is reserved yet",
+      "release_condition": "Stage the files manually, add them to this contract, rebuild the manifest, and only then write a contract that scores them. The recordings are lateral-horn neurons stimulated through projection neurons, so they test whether contact count predicts physiological strength at all; they are not a holdout for the ORN-to-PN unitary kernel.",
+      "files": []
+    }
+  ],
+  "not_reserved_and_why": [
+    {
+      "id": "gugel-2023-elife-85443",
+      "why": "already used and its holdout already consumed; the re-downloaded Figure 7 file matched the registered checksum, which verifies the existing artifact end to end"
+    },
+    {
+      "id": "nanami-2024",
+      "why": "registered with fit_role none and retired as a scoring source by ADR-2026-007, because the recorded step levels are the in-silico model's dimensionless amplitudes"
+    },
+    {
+      "id": "davis-2020-transcriptomic-cell-types",
+      "why": "cannot score an edge sign; a bulk expression atlas cannot supply the partner-specific receptor quantity ND-10 needs. Useful as a prior on which transmitters a type can express."
+    },
+    {
+      "id": "flyvis-2024",
+      "why": "a method reference and another model's predictions; treating them as ground truth would be circular"
+    }
+  ],
+  "claim_boundary": "A declaration and a record. It scores nothing, opens nothing, and awards no tier.",
+  "last_reviewed": "2026-09-09"
+}

@@ -277,3 +277,89 @@ SHA-256 `2d5f05e11bdb58a9453833cc837dd90c4723fcf061fd2840e40257c2a123d82c`.
    A revised kernel must be fitted and then tested on a new independent holdout, because these
    five cells are now consumed too, and its next contract must not gate on peak time of
    peak-aligned traces.
+
+---
+
+# The synaptic leg is not reinstated, and what Rozenfeld 2023 does test instead
+
+Recorded 2026-09-09 with ADR-2026-012.
+
+## The determination
+
+ADR-2026-011 retired this leg with a written condition: **raw unitary EPSC traces from a
+preparation not used to fit the kernel.** Rozenfeld and colleagues 2023 was staged as a
+candidate and does not meet it. From the authors' own analysis code, which is code and
+therefore spends no holdout:
+
+| what was staged | what it is | why it is not a unitary cohort |
+|---|---|---|
+| `Figure 3/Fig3D.mat`, `Fig3E_and_F.mat` | per-animal paired-pulse ratios and train amplitudes | `Figure_3.m` labels these panels "eEPSC latency" and "EPSC amp (pA)"; they are **evoked** responses to stimulation of the ORN axon bundle, which recruits many ORNs at once |
+| `Figure 1/Fig1H.mat`, `Fig1I.mat` | 22 recordings of 70001 samples in current and voltage clamp | **odour**-evoked whole-cell responses to isoamyl acetate; `Figure_1.m` plots the same preparation as firing rate. They confound the synapse with the ORN drive arriving at it |
+| `Figure 5/Fig5B.mat` | per-animal miniature EPSC amplitude and frequency | **quantal** events. A single-vesicle amplitude is not the unitary response of a connection |
+
+So the leg stays retired, `stage2-exit-gate-v4.json` is left unedited, and the Stage 2 exit
+gate stays **0 of 3**.
+
+**The error is worth keeping on the record.** The intake said this dataset matched the
+reinstatement condition, having paraphrased that condition as "raw traces from a preparation
+not used to fit the kernel". The dropped word was *unitary*, and it was the entire content
+of the condition. Paraphrasing one's own acceptance criterion is where criterion drift
+starts.
+
+## What it does test
+
+The retired leg's own caveats already named what it left untested: *"even a pass would leave
+release failure and short-term plasticity untested; the source paper's release probability of
+0.79 and depression onset near 50 spikes per second are registered but unmodelled."* That is
+`ND-06`, and Rozenfeld measured it per animal at five paired-pulse intervals and four train
+frequencies, in a laboratory that contributed nothing to the registered parameters.
+
+`configs/experiments/stage2-depression-external-test-v1.json` preregisters that test. The
+predictions are computed by `flysim stage2 depression-prediction` and committed before any
+value is opened:
+
+```
+paired-pulse ratio, 1 - U exp(-dt/tau)
+ interval    primary   family band
+    10 ms     0.7824   0.7723 .. 0.9114
+    30 ms     0.7873   0.7768 .. 0.9142
+   100 ms     0.8033   0.7918 .. 0.9232   <- the blind primary, registered at fb01944
+   300 ms     0.8428   0.8293 .. 0.9441
+  1000 ms     0.9282   0.9149 .. 0.9816
+
+train steady state, (1-c)/(1-(1-U)c)
+     1 Hz     0.9037   0.8810 .. 0.9775
+    10 Hz     0.3501   0.3124 .. 0.6569
+    20 Hz     0.2075   0.1814 .. 0.4790
+    60 Hz     0.0789   0.0677 .. 0.2298
+```
+
+**The primary is blind by commit ordering.** The 100 ms prediction of 0.8033 was written into
+the plasticity registry at commit `fb01944`, with the recorded status that it "becomes a test
+only against a paired-pulse or train recording not used by Nagel and colleagues". The
+Rozenfeld files were staged at `a24249f`. Neither the value nor the interval could have been
+chosen with knowledge of this dataset.
+
+**The sharpest criterion needs no threshold.** The ratio approaches `1 - U` as the interval
+shrinks, so across the three published fits nothing below **0.7700** is attainable at any
+interval. A measured cohort mean below that refutes the rule as registered, at every member
+of its parameter family, with no number chosen by the contract.
+
+**Five observables the dataset supplies are reserved and not scored**, because the frozen
+model does not generate them: response latency and its jitter, miniature amplitude and
+frequency, absolute evoked amplitude in picoamps, and Bruchpilot puncta counts. Scoring an
+observable a model cannot produce turns a test into a choice of what to report.
+
+**The expected outcome is written down.** H2, the floor, is expected to fail: Kazama and
+Wilson's variance-derived release probability of 0.79 implies paired-pulse depression far
+deeper than a utilisation of 0.22 permits, and every bias in the `VAL-02` observation model
+pushes the measurement the same way. If it does fail, the diagnosis is fixed in advance —
+the existing 7 Hz test says the rule *over*-predicts steady-state depression, so an
+*under*-prediction of paired-pulse depression would mean the synapse depresses faster than
+the rule and settles higher than it, which no single exponential resource can do. That is the
+one-resource collapse of a two-component response, which this registry's claim boundary
+already names and whose components Nagel and colleagues published separately.
+
+**Nothing will be refitted on the outcome.** That is the rule the 7 Hz failure was recorded
+under and it holds here: refitting to an external test converts the only external check into
+a training set.

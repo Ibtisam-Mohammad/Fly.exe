@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "experiment_id": "track-a-acceptance-v5-criteria",
   "title": "Adopted replacement for the B3 ratio statistic, with a development and validation split over standing poses",
-  "status": "adopted prospectively; validation set registered and not yet evaluated",
+  "status": "adopted prospectively; validation evaluated once and FAILED; the validation set is spent",
   "adopted": true,
   "supersedes": {
     "experiment_id": "track-a-acceptance-v4-criteria",
@@ -80,7 +80,7 @@
     "the renderer timing amendment at 100 ms",
     "the requirement that acceptance needs every criterion, not the new one alone"
   ],
-  "claim_boundary": "Criteria and a registered split. Adopting B3-v5 changes no verdict, awards no tier and executes no run. Track A remains not an accepted milestone: B2 passes on development poses, B3-v5 is unevaluated on validation poses, B1 and B4 are unmeasured, and the renderer timing amendment fails.",
+  "claim_boundary": "Criteria, a registered split and one evaluated validation set. Adopting B3-v5 changed no earlier verdict, awarded no tier and, having been evaluated, did not produce one: Track A remains not an accepted milestone. B2 passes on 12 of 12 unseen poses, B3-v5 fails at 8 of 12, B1 and B4 are unmeasured, the nine controls are not re-run, and the renderer timing amendment fails.",
   "last_reviewed": "2026-09-09",
   "adopted_on": "2026-09-09",
   "adopted_by": "Explicit project decision, taken after the v4 B3 failure was reported and the three demonstrations below were on the record. The decision was not taken by the author of the controller in the commit that reported the failure, which is the sequencing the disclosure below asked for.",
@@ -139,6 +139,7 @@
     ],
     "development_use_permitted": "MOTOR-04's gains, control channel, offset limits and settle window may be tuned against the development poses without limit. Everything already recorded in docs/evidence/TRACK_A_STATION_KEEPING.md was.",
     "validation_set_rule": {
+      "seed": 20260910,
       "generator": "numpy.random.default_rng(20260910), drawn in order, before any further tuning of MOTOR-04",
       "count": 12,
       "heading_rad": "uniform on [-pi, pi)",
@@ -191,5 +192,35 @@
     },
     "supersedes_measure_of": "track-a-acceptance-v4-criteria B3",
     "scored_on": "the registered validation poses, reported per pose and as the count passing; the development poses are reported alongside and labelled as development"
+  },
+  "validation_outcome": {
+    "evaluated_on": "2026-09-09",
+    "evaluated_once": true,
+    "frozen_commit": "4c4a53f",
+    "artifact": "evidence/male-cns-v1.0/track-a-station-keeping-validation-v1.json",
+    "evidence_grade": true,
+    "poses_scored": 12,
+    "poses_rejected_by_the_dust_guard": 0,
+    "b2_passes": 12,
+    "b3_v5_passes": 8,
+    "required_passes": 10,
+    "verdict": "B2 passes 12 of 12; B3-v5 passes 8 of 12 against 10 required, so validation FAILS",
+    "predicted_before_the_run": "about 8 or 9 of 12, which would fail",
+    "observed": 8,
+    "development_versus_validation": "Development 5 of 7 is 71 percent and validation 8 of 12 is 67 percent, the same rate within the resolution of twelve samples. Had the controller been overfitted to the development poses the validation rate would have collapsed and it did not, so this is a capability limit at the twelve-second horizon rather than an overfitting gap. All four failures are late-time leaks; v04 holds to 0.088 mm at 3 s, the tightest in the set, and reaches 3.634 mm at 12 s.",
+    "preserved_exactly": "This outcome is not revised, rescored or reinterpreted. The twelve poses may not be tuned against and may not be evaluated a second time, and flysim refuses both: seed 20260910 is listed in flysim.station_validation.SPENT_VALIDATION_SEEDS, which the draw consults. The poses can still be redrawn for inspection under an explicit reproduce purpose, which produces no artifact.",
+    "v4_ratio_diagnostic": "The retired 6 s over 3 s ratio would have passed only 3 of 12 and disagrees with the adopted criterion on half the set, including passing v08 at 1.285 while v08 has drifted 2.601 mm. That is the fourth independent demonstration that the ratio does not measure bounded drift."
+  },
+  "future_development_rule": {
+    "successor_id": "MOTOR-05",
+    "why_a_new_id": "MOTOR-04 is frozen at the values it was validated under, and its validation failed. Changing those values in place would make the recorded failure unattributable to any controller, so a successor is a new registered assumption rather than an edit.",
+    "requirements": [
+      "A new development set, drawn from a newly registered seed and registered before any tuning begins. The seven poses that chose MOTOR-04's gains may be reused as development, because they are already training data and cannot become less so.",
+      "A separately frozen validation set drawn from a different newly registered seed, untouched until the controller is frozen and committed.",
+      "The two sets are registered in the same commit, before tuning, so neither can be chosen after a result is seen.",
+      "The seeds are distinct from each other and from 20260910, and 20260910 stays permanently retired.",
+      "Evaluation once, reported whatever it is, exactly as this contract required."
+    ],
+    "what_stays_on_the_record": "This failed validation, whatever MOTOR-05 achieves. A later success does not withdraw an earlier failure; it is a second result about a different controller."
   }
 }

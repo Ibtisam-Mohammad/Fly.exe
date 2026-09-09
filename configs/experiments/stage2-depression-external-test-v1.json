@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-depression-external-test-v1",
+  "title": "External test of the frozen ND-06 depression rule against wild-type paired-pulse and train recordings from a laboratory that contributed nothing to its parameters",
+  "status": "preregistered, NOT EXECUTED. The predictions are committed and the reserved values are unopened.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-09",
+  "values_opened": false,
+  "assumption_ids": [
+    "ND-04",
+    "ND-05",
+    "ND-06",
+    "VAL-01",
+    "VAL-02"
+  ],
+  "why_this_exists": {
+    "the_open_prediction": "The plasticity registry has carried an open prediction since commit fb01944: the second-to-first unitary EPSC amplitude ratio at a 100 ms interval is 0.8033, with the recorded status that it 'becomes a test only against a paired-pulse or train recording not used by Nagel and colleagues'. Rozenfeld and colleagues 2023 measured exactly that, at five intervals including 100 ms, in a laboratory that contributed nothing to the registered parameters. The prediction was committed before those files were staged in commit a24249f, so it is blind by commit ordering rather than by assertion.",
+    "the_one_existing_external_test_failed": "The rule's only prior external test failed: against Kazama and Wilson's 7 Hz measurement it over-predicts steady-state depression by about 16 percentage points. No parameter was changed on that basis, because refitting to the only external check would have destroyed it. This contract is the second external test, and it is registered with the same rule: nothing is refitted on the outcome.",
+    "what_it_is_not": "It is NOT a reinstatement of the retired synaptic leg. That leg requires raw unitary EPSC traces from a preparation not used to fit the kernel, and these recordings are compound evoked responses, so the leg stays retired and the Stage 2 exit gate stays at v4 and 0 of 3. See ADR-2026-012."
+  },
+  "the_model_and_what_it_can_generate": {
+    "family": "depression-only Tsodyks-Markram, one resource variable, from configs/neural/short-term-plasticity-v0.1.json rule orn-to-uniglomerular-pn",
+    "closed_forms": {
+      "paired_pulse_ratio": "1 - U exp(-dt/tau)",
+      "train_recursion": "x_1 = 1, x_{n+1} = 1 - (1 - x_n (1 - U)) exp(-dt/tau)",
+      "train_steady_state": "(1 - c) / (1 - (1 - U) c) with c = exp(-dt/tau)"
+    },
+    "predicted_observables": [
+      "the ratio of a second evoked response to a first, at a stated interval, from rest",
+      "the amplitude of the nth response of a regular train, normalised to the first"
+    ],
+    "observables_the_dataset_supplies_and_the_model_cannot_generate": {
+      "rule": "An observable is scored only if the frozen model generates it. Adding one because the dataset contains it turns a test into a choice of what to report.",
+      "response_latency": "Reserved and not scored. ND-06 has no latency term; ND-05 carries conduction and release latency as a policy with no fitted value for this preparation, and the stimulating-electrode distance is unknown, so no number can be generated. The dataset's mean_rise_time arrays are labelled eEPSC latency in the authors' own plotting code.",
+      "latency_jitter": "Reserved and not scored. Jitter requires the stochastic-release class; the registered baseline is static-deterministic and predicts exactly zero, which is degenerate rather than testable.",
+      "miniature_epsc_amplitude_and_frequency": "Reserved and not scored. No quantal amplitude and no spontaneous release rate is registered.",
+      "evoked_amplitude_in_picoamps": "Reserved and not scored. ND-04 is contact count times a type-pair scale with contact_count_is_strength false, so there is no absolute conductance to convert into picoamps.",
+      "bruchpilot_puncta": "Reserved and not scored here. A light-microscopy puncta count and an electron-microscopy contact count are not the same unit, and the identification of the two is itself under test, so it cannot be assumed in order to score it. It needs its own contract."
+    }
+  },
+  "prediction_grid": {
+    "rule_id": "orn-to-uniglomerular-pn",
+    "paired_pulse_intervals_ms": [
+      10,
+      30,
+      100,
+      300,
+      1000
+    ],
+    "train_frequencies_hz": [
+      1,
+      10,
+      20,
+      60
+    ],
+    "train_pulses": {
+      "1": 32,
+      "10": 100,
+      "20": 100,
+      "60": 112
+    },
+    "pulse_counts_come_from": "the array widths recorded in the reservation manifest, which are metadata; no value was read to obtain them",
+    "prediction_band": "The envelope over the three published fits taken as pairs. A utilisation from one pharmacological component with a recovery constant from another describes no measurement, so the band is three points in parameter space rather than the corners of a rectangle over the two ranges. For this particular family the distinction makes no numerical difference, because the utilisation and the recovery constant increase together across the three fits, so the extreme rectangle corners happen to be real pairs. The pairing is still what is computed, because a later revision need not be co-monotone and because a mixed pair would be a parameter set nobody measured."
+  },
+  "data": {
+    "primary_source": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+      "variables": [
+        "new_all_flies_PP_10ms_control",
+        "new_all_flies_PP_30ms_control",
+        "new_all_flies_PP_100ms_control",
+        "new_all_flies_PP_300ms_control",
+        "new_all_flies_PP_1000ms_control"
+      ],
+      "unit_of_observation": "one paired-pulse ratio per animal",
+      "why_control_only": "The wild-type control is the baseline a wild-type model predicts. The RNAi arrays are a cacophony calcium-channel knockdown, which changes release probability by design, so they are a manipulation and secondary."
+    },
+    "secondary_source": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat",
+      "variables": [
+        "all_flies_1Hz_control",
+        "all_flies_10Hz_control",
+        "all_flies_20Hz_control",
+        "all_flies_60Hz_control"
+      ],
+      "unit_of_observation": "one amplitude series per animal across the train"
+    },
+    "preregistered_replications": {
+      "files": [
+        "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+        "rozenfeld2023-repo/Figure 3/Fig3J.mat"
+      ],
+      "variables": "the same five _control arrays in each",
+      "rule": "All three cohorts are opened in the same single pass and all three are reported. The primary verdict is set by Fig3D alone, named here before anything is opened, so a cohort cannot be promoted to primary after the fact. The other two are consistency checks and cannot rescue or overturn the primary.",
+      "why_this_matters": "Three independent control cohorts measuring the same quantity is an opportunity to shop for the agreeable one. Fixing the primary and reporting all three is what removes that opportunity."
+    },
+    "sealed_and_not_opened_by_this_contract": [
+      "rozenfeld2023-repo/Figure 6/Fig6D.mat, which is a day-0 versus later-day comparison; ageing is a manipulation the registered model has no parameter for",
+      "rozenfeld2023-repo/Figure 1/Fig1H.mat and Fig1I.mat, the odour-evoked traces",
+      "rozenfeld2023-repo/Figure 3/Fig3B.mat, Fig3G.mat and Fig3I.mat, absolute amplitudes",
+      "rozenfeld2023-repo/Figure 5/Fig5B.mat and Fig5D.mat, minis and Bruchpilot puncta"
+    ]
+  },
+  "observation_model": {
+    "assumption_id": "VAL-02",
+    "paired_pulse": "The measured amplitude ratio is taken to equal the model's resource ratio. Each animal contributes one ratio and the cohort mean is compared to the prediction.",
+    "train_normalisation_fixed_now": "Per animal, the steady state is the mean of the final ten pulses divided by the first pulse. This convention is fixed before the values are opened; choosing it afterwards would be a free parameter worth several tenths at 60 Hz.",
+    "nan_handling_fixed_now": "The authors' own scripts use nanmean, so the arrays contain missing entries. A missing first pulse voids that animal; missing entries inside the final ten are skipped; an animal with fewer than five of the final ten present is excluded and the exclusion count is reported.",
+    "known_biases_and_their_direction": "Receptor saturation, receptor desensitisation and presynaptic recruitment failure all deepen a measured ratio relative to vesicle depletion alone, so all three bias the measurement downward against the prediction. A measured ratio ABOVE the prediction therefore cannot be explained by any of them. A measured ratio below it is attributable to either the model or the observation, and the contamination is worst at the shortest intervals, which is why the primary sits at 100 ms."
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "name": "the registered prediction at the interval it was registered for",
+      "statement": "The wild-type mean paired-pulse ratio at 100 ms contains the registered prediction of 0.8033 in its 95 percent confidence interval.",
+      "blind": true,
+      "why_blind": "The number 0.8033 was committed at fb01944, before the Rozenfeld files were staged at a24249f. Neither the value nor the interval was chosen with any knowledge of this dataset.",
+      "criterion": "The Student-t 95 percent confidence interval of the per-animal mean, over about 22 animals, contains 0.8033.",
+      "degenerate_outcome_check": "A wide interval passes this trivially. If the 95 percent half-width exceeds 0.10, H1 is scored as NO VERDICT rather than passed, and the half-width is reported either way. This is the check that the equivalent Track A criterion needed and did not originally have.",
+      "this_is_the_primary": true
+    },
+    {
+      "id": "H2",
+      "name": "the floor the model cannot go below",
+      "statement": "No wild-type mean paired-pulse ratio, at any of the five intervals, lies below 0.7700.",
+      "blind": true,
+      "criterion": "The ratio is 1 - U exp(-dt/tau), which approaches 1 - U as the interval shrinks. Across the three published fits the smallest attainable value is 1 - 0.23 = 0.7700. A measured cohort mean below that refutes the rule as registered, at every member of its parameter family, with no threshold chosen by this contract.",
+      "why_this_is_the_sharpest_test": "It is a bound rather than an interval, so it cannot be passed by lack of power and cannot be tuned. It is also the criterion most likely to fail, which is why it is registered rather than omitted.",
+      "confound_disclosed": "At 10 and 30 ms a failure is attributable to the model or to VAL-02's downward biases. At 300 and 1000 ms those biases are small and a failure would be attributable to the model."
+    },
+    {
+      "id": "H3",
+      "name": "recovery is monotone in interval",
+      "statement": "The five wild-type mean ratios are non-decreasing from 10 ms to 1000 ms.",
+      "blind": true,
+      "criterion": "The five cohort means, in interval order, are non-decreasing.",
+      "weakness_disclosed": "Any single recovery process produces this, so passing is weak evidence. The chance of the exact ordering under random permutation is 1 in 120, which is the whole of its strength. It is registered as a necessary condition and as a check that the arrays are what their names say."
+    },
+    {
+      "id": "H4",
+      "name": "the train the parameters were fitted from, at frequencies they were not",
+      "statement": "The wild-type steady-state depression at 1, 10, 20 and 60 Hz contains the primary fit's exact discrete prediction at each frequency.",
+      "blind": true,
+      "criterion": "At each frequency the Student-t 95 percent confidence interval of the per-animal steady state, computed under the normalisation fixed above, contains the prediction. Reported per frequency; four independent verdicts, not one composite.",
+      "why_it_adds_to_H1": "The registered parameters come from a 10 Hz train fit, so the 10 Hz frequency is close to the fit and 1, 20 and 60 Hz are not. A model that gets 10 Hz right and 60 Hz wrong is reporting the range over which one resource variable can stand in for the two components Nagel and colleagues measured pharmacologically.",
+      "degenerate_outcome_check": "Same half-width rule as H1, applied per frequency."
+    },
+    {
+      "id": "H5",
+      "name": "the perturbation direction, secondary",
+      "statement": "Reducing presynaptic calcium-channel expression raises the paired-pulse ratio at every interval relative to control.",
+      "secondary": true,
+      "criterion": "The RNAi cohort mean exceeds the control cohort mean at each of the five intervals. Direction only; no magnitude is predicted.",
+      "why_only_direction": "The registered model has no cacophony-knockdown parameterisation, so no utilisation can be assigned to the manipulation. What the Tsodyks-Markram form does predict is the sign: lower release probability means less depletion by the first pulse, so a higher ratio. That tests the form, not the parameters.",
+      "why_secondary": "A wild-type model is tested against a wild-type baseline. The perturbation cohort is reported because a form that gets the sign wrong is refuted regardless, not because it could award anything."
+    }
+  ],
+  "expected_outcome_stated_before_the_run": {
+    "prediction": "H2 is expected to FAIL, and it is the most likely failure. Kazama and Wilson's variance-derived release probability of 0.79 at this synapse, which the registry records as the competing reading, implies paired-pulse depression far deeper than a utilisation of 0.22 permits, and VAL-02's biases all push the measurement in the same direction.",
+    "what_a_joint_outcome_would_mean": "The existing 7 Hz test says the rule OVER-predicts steady-state depression. If this test says it UNDER-predicts paired-pulse depression, then the synapse depresses faster than the rule and settles higher than it, which no single exponential resource can do. That is not a parameter error; it is the one-resource collapse of a two-component response, which the registry's own claim boundary already names, and Nagel and colleagues published both components' parameters. The remedy would be a two-resource rule with the fast and slow components fitted separately, not a refit of the single one.",
+    "why_this_is_written_down": "So that the outcome cannot be presented as a surprise in either direction, and so that the diagnosis is fixed before the data can suggest one."
+  },
+  "acceptance": {
+    "what_a_pass_would_establish": "That a depression rule whose parameters were taken from one laboratory's 10 Hz fit predicts another laboratory's paired-pulse and train measurements at intervals spanning two orders of magnitude. That is the first genuinely external quantitative agreement any dynamical parameter in this project would have.",
+    "what_a_pass_would_not_establish": "No tier, and not the retired synaptic leg. The recordings are compound evoked responses through an observation model that is itself an assumption, and the synapse measured is in a different specimen and a different sex from MaleCNS.",
+    "what_a_failure_would_establish": "That the registered rule does not describe this synapse's short-term dynamics as parameterised. Combined with the 7 Hz failure it would locate the defect in the single-resource form rather than in the numbers.",
+    "no_refitting": "No parameter is changed on this outcome. That is the rule the 7 Hz failure was recorded under and it holds here: refitting to an external test converts the only external check into a training set. A revision may be issued as a new registry version with its own predictions, and it must not claim this test as evidence.",
+    "no_criterion_may_be_restated": "If a criterion fails it is reported failed. The project has had to reissue a criterion once already for being satisfiable by a degenerate outcome, and the rule since then is that a failed criterion is never rewritten after the fact."
+  },
+  "execution_order": [
+    "1. Commit this contract and the prediction artifact it generates, with the reserved values unopened.",
+    "2. Confirm the reservation manifest records the two source files with the checksums the run will read.",
+    "3. Open only the named _control and _RNAi arrays in Fig3D, Fig3E_and_F, Fig3H and Fig3J, in one pass.",
+    "4. Score H1 to H5 exactly as written and report every verdict, including NO VERDICT outcomes.",
+    "5. Leave every other reserved file sealed."
+  ],
+  "claim_boundary": "Design and predictions only. Nothing is opened, nothing is scored, no artifact of a measurement is produced, and no tier is awarded by this contract.",
+  "last_reviewed": "2026-09-09"
+}

@@ -180,3 +180,93 @@ def test_everything_else_stays_in_place(v5: dict[str, Any]) -> None:
 
     for item in ("B1", "B2", "B4", "nine existing controls", "100 ms"):
         assert item in unchanged
+
+
+def test_the_validation_outcome_is_recorded_exactly_as_evaluated(v5: dict[str, Any]) -> None:
+    outcome = v5["validation_outcome"]
+    assert outcome["evaluated_once"] is True
+    assert outcome["poses_scored"] == 12
+    assert outcome["b2_passes"] == 12
+    assert outcome["b3_v5_passes"] == 8
+    assert outcome["required_passes"] == 10
+    assert "validation FAILS" in outcome["verdict"]
+    assert outcome["observed"] == 8
+    assert outcome["frozen_commit"] == "4c4a53f"
+    # The prediction written before the run, kept alongside the result it predicted.
+    assert "8 or 9" in outcome["predicted_before_the_run"]
+
+
+def test_the_outcome_is_not_reinterpreted_as_an_overfitting_gap(v5: dict[str, Any]) -> None:
+    comparison = v5["validation_outcome"]["development_versus_validation"]
+    assert "same rate" in comparison
+    assert "capability limit" in comparison
+    assert "rather than an overfitting gap" in comparison
+
+
+def test_the_validation_set_is_declared_spent_and_the_code_agrees(v5: dict[str, Any]) -> None:
+    from flysim.station_validation import SPENT_VALIDATION_SEEDS
+
+    seed = v5["development_and_validation_split"]["validation_set_rule"]["seed"]
+    assert seed == 20260910
+    assert seed in SPENT_VALIDATION_SEEDS
+    recorded = SPENT_VALIDATION_SEEDS[seed]
+    outcome = v5["validation_outcome"]
+    # The pinned record and the contract must not drift apart.
+    assert recorded["b3_v5_passes"] == outcome["b3_v5_passes"]
+    assert recorded["b2_passes"] == outcome["b2_passes"]
+    assert recorded["required_passes"] == outcome["required_passes"]
+    assert recorded["poses_scored"] == outcome["poses_scored"]
+    assert recorded["frozen_commit"] == outcome["frozen_commit"]
+
+
+def test_a_spent_seed_cannot_be_redrawn_for_development_or_for_scoring() -> None:
+    import pytest as _pytest
+
+    from flysim.errors import ConfigurationError
+    from flysim.station_validation import draw_validation_poses
+
+    for purpose in ("validation", "development"):
+        with _pytest.raises(ConfigurationError, match="is spent"):
+            draw_validation_poses(
+                seed=20260910, count=12, max_attempts=40, purpose=purpose
+            )
+
+
+def test_a_spent_seed_may_still_be_reproduced_for_inspection() -> None:
+    from flysim.station_validation import draw_validation_poses
+
+    poses = draw_validation_poses(
+        seed=20260910, count=12, max_attempts=12, purpose="reproduce"
+    )
+    assert len(poses) == 12
+    # The recorded first pose of the evaluated set, so a reader can check the artifact.
+    assert poses[0]["initial_heading_rad"] == pytest.approx(-3.0990, abs=1e-4)
+    assert poses[0]["initial_y_mm"] == pytest.approx(1.217, abs=1e-3)
+
+
+def test_an_unspent_seed_is_still_drawable() -> None:
+    from flysim.station_validation import draw_validation_poses
+
+    poses = draw_validation_poses(seed=20260911, count=4, max_attempts=4)
+    assert len(poses) == 4
+
+
+def test_an_unknown_draw_purpose_fails_closed() -> None:
+    import pytest as _pytest
+
+    from flysim.errors import ConfigurationError
+    from flysim.station_validation import draw_validation_poses
+
+    with _pytest.raises(ConfigurationError, match="Unknown draw purpose"):
+        draw_validation_poses(seed=20260911, count=4, max_attempts=4, purpose="tuning")
+
+
+def test_the_successor_controller_needs_two_fresh_registered_seeds(v5: dict[str, Any]) -> None:
+    rule = v5["future_development_rule"]
+    assert rule["successor_id"] == "MOTOR-05"
+    requirements = " ".join(rule["requirements"])
+    assert "new development set" in requirements
+    assert "separately frozen validation set" in requirements
+    assert "before tuning" in requirements
+    assert "20260910 stays permanently retired" in requirements
+    assert "does not withdraw an earlier failure" in rule["what_stays_on_the_record"]

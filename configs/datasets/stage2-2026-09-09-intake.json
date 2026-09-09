@@ -103,7 +103,8 @@
       ],
       "restriction_that_must_be_honoured": "Only the _control arrays are wild-type comparable. The _RNAi arrays are a cacophony calcium-channel knockdown, which changes release probability by design, so they are a manipulation and not a target for a wild-type model.",
       "reservation": "Reserved. No value in any file above has been read. Scoring requires a preregistered contract naming the file, the variable, the metric and the limit before the values are opened.",
-      "license": "check before redistribution; the repository ships analysis code and figure source data without an explicit LICENSE file, so it must not be copied into a GPL release until that is resolved"
+      "license": "check before redistribution; the repository ships analysis code and figure source data without an explicit LICENSE file, so it must not be copied into a GPL release until that is resolved",
+      "correction_to_this_entry": "This entry, and the what_this_intake_changes list below, said the synaptic leg 'may be reinstatable' because ADR-2026-011 'retired the synaptic leg for want of exactly this' and paraphrased its reinstatement condition as 'raw traces from a preparation not used to fit the kernel'. The paraphrase dropped a word that carries the condition. The gate requires raw *unitary* EPSC traces, and these recordings are not unitary: the authors' own plotting code labels the Figure 3 arrays eEPSC, an evoked compound response to stimulation of the ORN axon bundle, and the Figure 1 traces are odour-evoked whole-cell recordings. The miniature EPSCs in Figure 5 are quantal events, not unitary connection responses. So the reinstatement condition is NOT met, the synaptic leg stays retired, and the Stage 2 exit gate stays at v4 and 0 of 3. What this dataset does test is the observable the retired leg's own caveats named as untested, which is ND-06 short-term plasticity; that test is preregistered separately as stage2-depression-external-test-v1. See ADR-2026-012."
     },
     {
       "id": "takagi-2024-osn-expansion-pn-adaptation",
@@ -111,9 +112,21 @@
       "paper": "Olfactory sensory neuron population expansions influence projection neuron adaptation and enhance odour tracking, Nature Communications 2024, doi 10.1038/s41467-024-50808-w",
       "previous_use_in_this_project": "none. The name appears nowhere in the repository.",
       "staged": [
-        {"path": "takagi2024-source-data.zip", "bytes": 241951407, "sha256": "6c21a1ea454dc8379c6e0f17e4d8880e92cf486d80fb2b1e318d164342965c77"},
-        {"path": "takagi2024-supp-data1.xlsx", "bytes": 15212, "sha256": "e13fccc06b359f3218738df189527c30f3d1193a8fcf4c31408480f9c0fbb4af"},
-        {"path": "takagi2024-supp-data2.xlsx", "bytes": 15431, "sha256": "e46b8b55f5e3515a3ade23c2275358e5b3b5bb31887c47b2c1b21ff1ca8a5ba9"}
+        {
+          "path": "takagi2024-source-data.zip",
+          "bytes": 241951407,
+          "sha256": "6c21a1ea454dc8379c6e0f17e4d8880e92cf486d80fb2b1e318d164342965c77"
+        },
+        {
+          "path": "takagi2024-supp-data1.xlsx",
+          "bytes": 15212,
+          "sha256": "e13fccc06b359f3218738df189527c30f3d1193a8fcf4c31408480f9c0fbb4af"
+        },
+        {
+          "path": "takagi2024-supp-data2.xlsx",
+          "bytes": 15431,
+          "sha256": "e46b8b55f5e3515a3ade23c2275358e5b3b5bb31887c47b2c1b21ff1ca8a5ba9"
+        }
       ],
       "structure": "194 zip entries, 39 data files, in three groups: calcium imaging, tethered flight and wind tunnel flight",
       "raw_per_observation_arrays": [
@@ -147,13 +160,18 @@
         "The paper compares Drosophila melanogaster and D. sechellia and the calcium-imaging filenames do not carry the species. Which files are melanogaster must be established from the readme and the analysis code before any of it is used against a melanogaster connectome.",
         "The two wind-tunnel CSVs are 153 MB and 322 MB and are behavioural trajectories, not physiology; they are staged but out of scope."
       ],
-      "reservation": "Reserved. No value has been read. The classification above comes from filenames, sizes and the zip index."
+      "reservation": "Reserved. No value has been read. The classification above comes from filenames, sizes and the zip index.",
+      "seal": "SEALED. No contract names any of it, so no value in it may be opened. The seal lifts only when a circuit-level prediction contract is committed that states the circuit prediction, the observation model from calcium fluorescence to the quantity the simulator produces, the species assignment of every calcium-imaging file, and the acceptance limit. The stage-3 activity-prediction design is not that contract: it is a design whose data-availability finding these files falsify, and it must be reissued."
     },
     {
       "id": "drosophila-neurotransmitter-ground-truth",
       "priority": "high, because it tests the assumption every edge in the simulation depends on",
       "source": "github.com/flyconnectome/drosophila_neurotransmitters",
-      "staged": {"path": "drosophila-neurotransmitters", "kind": "git clone", "commit": "a9417412c8a70fcc9f80a65ca5bc6064eba07be3"},
+      "staged": {
+        "path": "drosophila-neurotransmitters",
+        "kind": "git clone",
+        "commit": "a9417412c8a70fcc9f80a65ca5bc6064eba07be3"
+      },
       "previous_use_in_this_project": "none",
       "structure": [
         {
@@ -174,10 +192,11 @@
           "classification": "per-body source snapshots behind the aggregated ground truth"
         }
       ],
-      "why_it_matters": "ND-03 assigns every edge's sign from a *predicted* transmitter identity, and that sign determines whether each of 25.6 million edges excites or inhibits. This is *verified* transmitter identity for 6,107 cell types with a stated evidence class. Joining it to the MaleCNS predictions gives a direct measurement of how often the sign assignment is right, which no result in this project currently has.",
+      "why_it_matters": "ND-03 assigns a presynaptic transmitter to every body from a classifier prediction, and this is verified transmitter identity for 6,107 cell types with a stated evidence class, of which 3,523 rows carry a MaleCNS cell type. Joining them measures how often the transmitter label is right, which no result in this project currently has.",
       "reservation": "Reserved as the validation set for ND-03 sign assignment. No transmitter value has been read. A contract must fix the join key, the confidence floor, the metric and the limit before the values are opened, because the accuracy figure is exactly the number a fit would otherwise be tuned against.",
-      "open_question": "The repository README claims MaleCNS mappings. The cross-matching table's columns list in_fafb, in_hemibrain, in_banc and in_l1 with no MaleCNS column in the header, so how MaleCNS types are reached must be established before use.",
-      "license": "the repository ships a LICENSE file; check its terms before redistribution"
+      "open_question": "RESOLVED. The cross-matching table's header carries in_fafb, in_hemibrain, in_banc and in_l1 with no MaleCNS column, which is what raised the question. The join does not go through that table: gt_sources/male_cns/202509-male_cns_gt_data.csv carries a cell_type_mcns column across 3,523 rows, and gt_sources/male_cns/malecns_extra.csv adds 46 more in the older known_nt layout. Established from column headers and row counts alone, so no reserved value was opened.",
+      "license": "the repository ships a LICENSE file; check its terms before redistribution",
+      "correction_to_this_entry": "This entry said the dataset makes 'ND-03 sign assignment' testable and that the sign 'determines whether each of 25.6 million edges excites or inhibits'. That overstates what a transmitter table can validate. Verified transmitter identity pins the presynaptic term only. An edge's sign is a function of that transmitter AND the postsynaptic receptor, and receptor identity is partner- and dendritic-domain-specific, so a correct transmitter label still leaves the sign unresolved wherever the receptor is unknown. ADR-2026-012 therefore split the old bundled ND-03 into ND-03, presynaptic transmitter identity, which this dataset validates, and ND-10, postsynaptic receptor identity and functional edge polarity, which it cannot. An agreement rate on transmitter identity is an upper bound on sign correctness, not a measurement of it."
     },
     {
       "id": "liu-2022-connectomic-features-of-synaptic-strength",
@@ -192,7 +211,10 @@
           "reason": "The PMC supplementary binary paths were probed and all returned HTTP 404 with an error page. PMC blocks scripted access to these files.",
           "how_to_get_it": "Download Data S1 to S4 manually from https://pmc.ncbi.nlm.nih.gov/articles/PMC8825683/ and stage them; the intake script will checksum whatever is placed in the staging directory."
         },
-        {"item": "Data S1 skeletons ZIP 15.1 MB, Data S3 simulated mEPSP amplitudes MAT 483 KB, Data S4 LHLN anatomy XLSX 16.7 KB", "reason": "same"}
+        {
+          "item": "Data S1 skeletons ZIP 15.1 MB, Data S3 simulated mEPSP amplitudes MAT 483 KB, Data S4 LHLN anatomy XLSX 16.7 KB",
+          "reason": "same"
+        }
       ],
       "zenodo_records_are_code_not_physiology": "Records 5711439, 5716323 and 5716321 were queried and hold NBLAST matching code with a 592 MB RData, NEURON model code with SWC morphologies, and barbell-model MATLAB respectively. None contains the EPSP waveforms. The three files-archive endpoints returned HTTP 403; the per-file endpoints are known and listed in the fetch log.",
       "reservation": "Reserved once obtained. Nothing has been read because nothing physiological was obtained."
@@ -201,26 +223,41 @@
   "staged_but_out_of_scope_or_summary_only": [
     {
       "id": "davis-2020-transcriptomic-cell-types",
-      "staged": {"path": "davis2020-supp1.xlsx", "bytes": 57861, "sha256": "8f7890472d7b07e4a04a0fd38716dd5f5e46d94995467a5ceba54d01ab15d361"},
+      "staged": {
+        "path": "davis2020-supp1.xlsx",
+        "bytes": 57861,
+        "sha256": "8f7890472d7b07e4a04a0fd38716dd5f5e46d94995467a5ceba54d01ab15d361"
+      },
       "previous_use": "read as prose in the literature corpus, which records it as the closest existing resource to what ND-03 would need and explains why it is insufficient: receptor identity is partner- and dendritic-domain-specific, so no bulk expression atlas can settle an edge's sign.",
       "classification": "cell-type-resolved transcriptomic tables; summary-level for this project's purposes",
       "reservation": "not reserved as a holdout, because it cannot score an edge sign. Useful as a prior on which transmitters a type can express."
     },
     {
       "id": "flyvis-2024-connectome-constrained-visual-model",
-      "staged": {"path": "flyvis2024-supplementary-data.zip", "bytes": 26522689, "sha256": "77a71cc7b215a3f9264c2a0135b570885a57c396e5d7fbd7ced9494fdc3de53b"},
+      "staged": {
+        "path": "flyvis2024-supplementary-data.zip",
+        "bytes": 26522689,
+        "sha256": "77a71cc7b215a3f9264c2a0135b570885a57c396e5d7fbd7ced9494fdc3de53b"
+      },
       "classification": "method reference and a worked example of the connectome-constrained route, for the fly visual system",
       "relevance": "It is the reference implementation of the argument the stage-3 design borrows, including experimental response references and predictions for 64 cell types. It is not a target for this project's olfactory work and must not be scored against one.",
       "reservation": "not reserved; it is a method reference, and treating another model's predictions as ground truth would be circular."
     }
   ],
   "what_this_intake_changes": [
-    "The synaptic leg may be reinstatable. Rozenfeld 2023 supplies per-animal paired-pulse ratios at five intervals and per-animal train responses at four frequencies, from a laboratory that contributed nothing to the registered depression parameters. ADR-2026-011 retired the synaptic leg for want of exactly this, and its recorded reinstatement condition is raw traces from a preparation not used to fit the kernel.",
+    "The synaptic leg is NOT reinstated, contrary to what this file first said. Its recorded condition requires raw unitary EPSC traces and Rozenfeld's recordings are compound evoked responses. The Stage 2 exit gate stays at v4 and 0 of 3 and is left unedited. See the correction on the Rozenfeld entry and ADR-2026-012.",
+    "The registered ND-06 depression rule gains its second external test, preregistered as stage2-depression-external-test-v1 with predictions committed before any value is opened. Rozenfeld supplies per-animal paired-pulse ratios at five intervals and per-animal train responses at four frequencies from a laboratory that contributed nothing to the registered parameters, and the registry has carried an open 100 ms prediction since commit fb01944, which makes that prediction blind by commit ordering.",
     "The cellular leg is not reinstated by anything here. Takagi 2024 is calcium imaging, not current clamp, so it cannot supply resting voltage, membrane time constant or adaptation in physical units.",
-    "The stage-3 activity-prediction design must be revised. Its data-availability finding that no per-PN response target is downloadable is now false.",
-    "ND-03 sign assignment becomes testable for the first time, against 6,107 verified cell-type transmitter assignments.",
+    "The stage-3 activity-prediction design must be revised. Its data-availability finding that no per-PN response target is downloadable is now false. Until it is reissued the Takagi files stay sealed.",
+    "ND-03 becomes testable for the first time, as presynaptic transmitter identity and not as edge sign. ADR-2026-012 splits the old bundled record into ND-03 and ND-10 for exactly this reason; see the correction on the transmitter entry.",
     "Nothing above changes any verdict. No tier moves, the Stage 2 gate stays 0 of 3, and no fit has been touched."
   ],
   "fetch_log": "/srv/flybrain-data/incoming/stage2-2026-09-09/fetch-log.txt",
-  "last_reviewed": "2026-09-09"
+  "last_reviewed": "2026-09-09",
+  "superseded_in_part_by": {
+    "contract": "configs/datasets/stage2-reservations-v1.json",
+    "manifest": "evidence/stage2/stage2-reservations-v1.json",
+    "what_moves": "This file classified the staged datasets in prose. The reservation contract names every reserved file and every reserved variable or column, and the manifest built from it pins each one by checksum and records its structure. Where the two disagree, the contract and the manifest are authoritative.",
+    "corrections_below": "Three claims made here were wrong and are corrected in place rather than deleted, in the fields they appear in."
+  }
 }

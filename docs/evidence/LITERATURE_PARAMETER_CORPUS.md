@@ -308,6 +308,21 @@ connectome scale, and the reason is that the quantity is partner-specific rather
 cell-specific." That converts an open action item into a stated boundary, which is honest and
 which stops the project from waiting on a dataset that will not arrive in this form.
 
+**Disposition taken, 2026-09-09 (ADR-2026-012).** The recommendation above was adopted and then
+went one step further: the record was **split**, because one identifier carrying both terms let
+every contract that cited it for an edge's sign lean on the term that cannot be measured.
+`ND-03` is now presynaptic transmitter identity alone, `M/P`, and it has a reserved validation
+set. `ND-10` carries postsynaptic receptor identity and functional edge polarity, `P/F`, as a
+stated boundary. The section above is the evidence for `ND-10`, not for `ND-03`.
+
+One consequence is worth stating plainly, because the intake of the flyconnectome ground truth
+got it wrong. Verified transmitter assignments for 6,107 cell types validate `ND-03`. They do
+**not** validate edge sign: a correct transmitter label still leaves the sign unresolved wherever
+the postsynaptic receptor is unknown, which the paragraphs above establish is the normal case
+rather than the exception. An agreement rate on transmitter identity is an upper bound on sign
+correctness, not a measurement of it.
+
+
 ## 8. Methodological prior art: what "the mark" actually looks like
 
 `Lappalainen2024` is the most directly comparable published work and it is worth being precise

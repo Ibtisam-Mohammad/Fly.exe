@@ -40,6 +40,30 @@
         "source": "Nagel, Hong and Wilson 2015, Figure 1c caption: 'f = 0.78 and tau = 893 ms', fit to EPSC amplitude versus stimulus number at 10 Hz in control saline.",
         "derivation": "The range spans the same three fits that set the utilisation range: 893 ms for the whole EPSC in control saline, 1006 ms for the IMI-resistant fast component, 629 ms for the curare-resistant slow component. A run must name the value it uses and the value must lie in this range. The paired utilisation and recovery time constant come from the same fit and must not be mixed across fits."
       },
+      "published_fits": [
+        {
+          "id": "whole-epsc-control-saline",
+          "utilisation": 0.22,
+          "recovery_tau_ms": 893.0,
+          "primary": true,
+          "source_detail": "Nagel, Hong and Wilson 2015 Figure 1c: whole unitary EPSC in control saline, f = 0.78 and tau = 893 ms."
+        },
+        {
+          "id": "imidacloprid-resistant-fast-component",
+          "utilisation": 0.23,
+          "recovery_tau_ms": 1006.0,
+          "primary": false,
+          "source_detail": "The same equation fitted to the imidacloprid-resistant fast component of the same EPSC, f = 0.77."
+        },
+        {
+          "id": "curare-resistant-slow-component",
+          "utilisation": 0.09,
+          "recovery_tau_ms": 629.0,
+          "primary": false,
+          "source_detail": "The same equation fitted to the curare-resistant slow component of the same EPSC, f = 0.91."
+        }
+      ],
+      "published_fits_note": "The three fits are recorded as pairs so that a prediction band can be computed without mixing a utilisation from one fit with a recovery time constant from another, which the range derivations above forbid in prose but could not prevent in code. The pairs carry no new information: they are the same three fits the utilisation_range and recovery_tau_ms range are derived from. Exactly one fit is primary and its values must equal the registered utilisation and recovery time constant.",
       "source": "https://doi.org/10.1038/nn.3895",
       "source_open_access_copy": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4289142/",
       "recording_basis": "n = 19 PNs from 19 flies, glomerulus DM6 or VM2, electrical stimulation of ORN axons; odour-response recordings n = 17 PNs from 17 flies in DM6, VM2 or VM7.",

@@ -397,6 +397,62 @@ def _command_track_a_station_validation(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_reservations(args: argparse.Namespace) -> int:
+    from flysim.reservations import build_reservation_manifest
+
+    result = build_reservation_manifest(
+        contract_path=args.contract,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "reserved_datasets": result["reserved_datasets"],
+            "reserved_files": result["reserved_files"],
+            "datasets": [
+                {
+                    "id": dataset["id"],
+                    "seal": dataset["seal"],
+                    "reserved_files": dataset["reserved_files"],
+                }
+                for dataset in result["datasets"]
+            ],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "immutable_snapshot": result["immutable_snapshot"],
+            "code_commit": result["code_commit"],
+        }
+    )
+    return 0
+
+
+def _command_stage2_depression_prediction(args: argparse.Namespace) -> int:
+    from flysim.depression import run_depression_prediction
+
+    result = run_depression_prediction(
+        experiment_path=args.experiment,
+        registry_path=args.registry,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    predictions = result["predictions"]
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "measured_values_read": result["measured_values_read"],
+            "paired_pulse": predictions["paired_pulse"],
+            "trains": predictions["trains"],
+            "hard_bounds": predictions["hard_bounds"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+        }
+    )
+    return 0
+
+
 def _command_benchmark_bilateral_symmetry(args: argparse.Namespace) -> int:
     result = run_bilateral_symmetry(
         root=args.root,
@@ -1939,6 +1995,45 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_exit.add_argument("--output", type=Path, required=True)
     stage2_exit.set_defaults(func=_command_stage2_exit_gate)
+    stage2_reservations = stage2_commands.add_parser(
+        "reservations",
+        help="record which staged files and columns are reserved, before any value is opened",
+    )
+    stage2_reservations.add_argument(
+        "--contract",
+        type=Path,
+        default=project_root() / "configs" / "datasets" / "stage2-reservations-v1.json",
+    )
+    stage2_reservations.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_reservations.add_argument("--output", type=Path, required=True)
+    stage2_reservations.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_reservations.set_defaults(func=_command_stage2_reservations)
+
+    stage2_depression = stage2_commands.add_parser(
+        "depression-prediction",
+        help="write what the frozen ND-06 rule predicts, before the external recording is opened",
+    )
+    stage2_depression.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-depression-external-test-v1.json",
+    )
+    stage2_depression.add_argument(
+        "--registry",
+        type=Path,
+        default=project_root() / "configs" / "neural" / "short-term-plasticity-v0.1.json",
+    )
+    stage2_depression.add_argument("--output", type=Path, required=True)
+    stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
     stage2_synaptic = stage2_commands.add_parser(
         "synaptic-structure",
         help="Test the published homeostatic-matching claim against locked contact structure",

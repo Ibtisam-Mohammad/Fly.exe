@@ -389,6 +389,68 @@ No tier is awarded and no gate changes verdict.
   current controller would fail it at 2 of 7 poses. **Track A remains not an accepted
   milestone**: B2 passes, B3 fails, B1 and B4 are unmeasured, and the 30-run matrix was not
   executed because it would spend hours reproducing a known failure.
+- **Reserved observations are now recorded before they are opened.**
+  `configs/datasets/stage2-reservations-v1.json` declares every reserved file and every
+  reserved variable or column inside it, and `flysim stage2 reservations` writes a manifest
+  pinning each one by checksum with its structure, frozen as an immutable snapshot. Twenty
+  files across four datasets. The readers cannot return a value: the MATLAB reader parses
+  version 5 element headers and stops at the first data subelement, so it has no code path
+  to a numeric payload, and a version 7.3 file is refused rather than guessed at. Two
+  executable guards make the record binding — a reserved name that is absent from its file
+  is an error, and a name that is present but neither reserved nor explicitly released is
+  an error. Join keys are deliberately unreserved, because a holdout is spent by seeing the
+  measurement rather than by seeing which cells were measured.
+- **Rozenfeld 2023 does NOT reinstate the synaptic leg, and the intake was wrong to imply
+  it might.** ADR-2026-011's condition is raw **unitary** EPSC traces. The authors' own
+  code settles what these recordings are: `Figure_3.m` labels the latency panels "eEPSC
+  latency" and the amplitudes "EPSC amp (pA)" from stimulation of the ORN axon bundle, so
+  they are compound evoked responses; the Figure 1 raw traces are odour-evoked whole-cell
+  recordings, plotted elsewhere in the same script as firing rate; and the Figure 5 minis
+  are quantal events. None of the three is a unitary connection response. The intake
+  paraphrased the reinstatement condition and dropped the word "unitary", which is the
+  whole of its content. **`stage2-exit-gate-v4.json` is left unedited and the gate stays
+  0 of 3.**
+- **The ND-06 depression rule has a second external test, preregistered and unexecuted.**
+  `configs/experiments/stage2-depression-external-test-v1.json` fixes five hypotheses over
+  paired-pulse ratios at 10, 30, 100, 300 and 1000 ms and train depression at 1, 10, 20 and
+  60 Hz, wild-type control as the primary and the cacophony-RNAi cohorts as secondary. The
+  primary is the prediction the registry has carried since commit fb01944 — a
+  second-to-first ratio of 0.8033 at 100 ms — which is blind by commit ordering, because it
+  was committed before these files were staged at a24249f. The sharpest criterion needs no
+  threshold at all: the ratio is `1 - U exp(-dt/tau)`, so no member of the registered family
+  can produce a ratio below 0.7700 at any interval, and a measured mean below that refutes
+  the rule as registered. Latency, latency jitter, miniature amplitude and frequency,
+  absolute picoamps and Bruchpilot counts are reserved and **not** scored, because the
+  frozen model does not generate them. `flysim stage2 depression-prediction` writes the
+  predictions before any value is opened, and the contract records in advance both the
+  expected failure and its diagnosis: combined with the existing 7 Hz over-prediction, an
+  under-prediction here would locate the defect in the single-resource collapse of a
+  two-component response rather than in the parameters.
+- **ND-03 is split, and the transmitter ground truth validates only half of what the intake
+  claimed.** ADR-2026-012 narrows `ND-03` to presynaptic transmitter identity and adds
+  `ND-10` for postsynaptic receptor identity and functional edge polarity; the assumption
+  set moves to `foundation-v0.7`. The 6,107 verified per-cell-type assignments pin the
+  presynaptic transmitter and cannot measure an edge's sign, because a correct transmitter
+  label still leaves the sign unresolved wherever the receptor is unknown. An agreement rate
+  on transmitter identity is an **upper bound** on sign correctness, not a measurement of
+  it. One question closed while classifying: the MaleCNS join does not go through the
+  cross-matching table, whose header has no MaleCNS column, but through
+  `gt_sources/male_cns/202509-male_cns_gt_data.csv` and its `cell_type_mcns` column across
+  3,523 rows. `VAL-02` newly registers the evoked-EPSC observation model as an assumption,
+  with the direction of each of its three biases stated, which is what makes it usable.
+- **The Track A validation failure is enforced, not merely recorded.** Seed 20260910 is
+  listed in `flysim.station_validation.SPENT_VALIDATION_SEEDS` with the outcome it produced,
+  and the draw refuses it for development, which would make it training data, and for
+  validation, which would be a second attempt at the same twelve poses. An explicit
+  `reproduce` purpose still redraws them for inspection and produces no artifact. A
+  successor controller is **MOTOR-05** with two new registered seeds, a fresh development
+  set and a separately frozen validation set, both registered before tuning begins.
+- **Takagi 2024 is sealed.** No value may be opened until a circuit-level prediction
+  contract is committed that states the prediction, the observation model from calcium
+  fluorescence to the quantity the simulator produces, the species assignment of every
+  calcium-imaging file, and the acceptance limit. The stage-3 activity-prediction design is
+  not that contract; its hypotheses were written for published population summaries when
+  the target was believed not to exist.
 - **The v5 criteria are adopted prospectively and the frozen controller fails validation.**
   Adoption withdraws nothing: the v3 matrix stays 0 of 30, the v4 B3 ratio stays failed, the
   Stage 2 gate stays 0 of 3. The seven poses MOTOR-04 was tuned on are registered as

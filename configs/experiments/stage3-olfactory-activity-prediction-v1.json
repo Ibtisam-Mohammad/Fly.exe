@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "experiment_id": "stage3-olfactory-activity-prediction-v1",
   "title": "Predict antennal-lobe activity from the connectome and real odour input, scored against published population statistics of the ORN-to-PN transformation",
-  "status": "preregistered, NOT EXECUTED, no model built; the data-availability finding was falsified the same day and the hypotheses need reissuing against the target that does exist",
+  "status": "preregistered, NOT EXECUTED, no model built; the data-availability finding was falsified the same day, the hypotheses need reissuing against the target that does exist, and that target's values are sealed until the reissue is committed",
   "provenance": "E",
   "assumption_ids": [
     "DATA-01",
@@ -97,5 +97,18 @@
     "an antennal-lobe subgraph selection including local interneurons, and a spike-injection path into the neural engine, which the bucketed Track A engine does not currently have"
   ],
   "claim_boundary": "Design only. No data is ingested, no model is built, no run is executed and no artifact is produced by this contract. It exists so that the criteria are fixed before anything is built, and so that the verified data-availability finding is on the record: the input side is public and the per-PN prediction target is not.",
-  "last_reviewed": "2026-09-09"
+  "last_reviewed": "2026-09-09",
+  "target_values_are_sealed": {
+    "dataset": "takagi-2024-osn-expansion-pn-adaptation",
+    "seal": "No value in the Takagi files may be opened by anyone acting under this contract.",
+    "why": "This contract is a design, not a prediction contract for that dataset. It was written when the target was believed not to exist, so its three hypotheses are aimed at published population summaries rather than at matched per-glomerulus OSN and PN responses. Scoring the new files against criteria written for different observables would let the criteria be chosen after the data was in hand, which is the failure mode this project has already had to repair once.",
+    "what_the_reissue_must_fix_before_the_seal_lifts": [
+      "H1 becomes a measured input-output curve rather than an inferred one, with the dose-response pairs named file by file.",
+      "H2 gains a direct pharmacological test through the GABA-A and GABA-B blockade condition, which is a stronger form of the divisive-normalisation test than the simulated-drive version registered here.",
+      "An observation model from calcium fluorescence to the quantity the simulator produces, registered as an assumption with a sensitivity sweep. The registered baseline produces rates, not fluorescence, and a monotone nonlinear indicator transform can manufacture or destroy a saturating curve on its own.",
+      "The melanogaster versus sechellia assignment of every calcium-imaging file, established from the readme and the analysis code, before any of it is scored against a melanogaster connectome.",
+      "The antenna-ablation condition bears on the 1.56-fold ipsilateral contact asymmetry measured in the bilateral test and needs its own hypothesis or an explicit statement that it is not scored."
+    ],
+    "recorded_in": "configs/datasets/stage2-reservations-v1.json and evidence/stage2/stage2-reservations-v1.json"
+  }
 }

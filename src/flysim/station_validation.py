@@ -25,11 +25,55 @@ from flysim.provenance import parse_provenance
 from flysim.runs import git_metadata, require_clean_worktree
 from flysim.stage1 import _atomic_json, _immutable_snapshot
 
+SPENT_VALIDATION_SEEDS: dict[int, dict[str, Any]] = {
+    20260910: {
+        "contract": "track-a-acceptance-v5-criteria",
+        "evaluated_on": "2026-09-09",
+        "frozen_commit": "4c4a53f",
+        "poses_scored": 12,
+        "b2_passes": 12,
+        "b3_v5_passes": 8,
+        "required_passes": 10,
+        "verdict": "validation failed on B3-v5 and passed B2",
+        "artifact": "evidence/male-cns-v1.0/track-a-station-keeping-validation-v1.json",
+        "successor_rule": (
+            "A successor controller is registered as MOTOR-05 with a fresh development set "
+            "and a separately frozen validation set drawn from a new registered seed, both "
+            "registered before tuning begins. This failure stays on the record either way."
+        ),
+    }
+}
+
+_DRAW_PURPOSES = frozenset({"validation", "development", "reproduce"})
+
+
+def _refuse_spent(seed: int, purpose: str) -> None:
+    """A spent validation set may be reproduced and may not be reused.
+
+    Reusing it for development would make it training data and reusing it for validation
+    would be a second bite at the same twelve poses. Both are refused here rather than
+    left to discipline, because the record of the first evaluation is only worth as much
+    as the impossibility of quietly replacing it.
+    """
+    record = SPENT_VALIDATION_SEEDS.get(seed)
+    if record is None or purpose == "reproduce":
+        return
+    raise ConfigurationError(
+        f"Validation seed {seed} is spent: {record['verdict']} at {record['b3_v5_passes']} "
+        f"of {record['poses_scored']} against {record['required_passes']} required, "
+        f"recorded in {record['artifact']} at commit {record['frozen_commit']}. "
+        f"{record['successor_rule']} Pass purpose='reproduce' to redraw the poses without "
+        "scoring them."
+    )
+
 
 def draw_validation_poses(
-    *, seed: int, count: int, max_attempts: int
+    *, seed: int, count: int, max_attempts: int, purpose: str = "validation"
 ) -> list[dict[str, float]]:
     """The registered draw: heading uniform on [-pi, pi), lateral offset on [-1.5, 1.5]."""
+    if purpose not in _DRAW_PURPOSES:
+        raise ConfigurationError(f"Unknown draw purpose: {purpose!r}")
+    _refuse_spent(seed, purpose)
     if count <= 0 or max_attempts < count:
         raise ConfigurationError("Validation draw needs a positive count within its attempts")
     generator = np.random.default_rng(seed)
@@ -149,7 +193,10 @@ def run_station_keeping_validation(
     limit = float(criterion["limit_mm"])
     b2_limit = 2.5
 
-    poses = draw_validation_poses(seed=20260910, count=int(rule["count"]), max_attempts=40)
+    # The seed comes from the contract rather than from this function, so a spent set
+    # cannot be re-evaluated by pointing the run at the same contract.
+    seed = int(rule["seed"])
+    poses = draw_validation_poses(seed=seed, count=int(rule["count"]), max_attempts=40)
     rows: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     for pose in poses:
