@@ -416,3 +416,122 @@ inference and not the arithmetic.
 
 The Stage 2 exit gate was re-evaluated after the assumption-set bump and is unchanged at
 **0 of 3**: circuit 0.0 against 0.8, ensemble false, structural false.
+
+---
+
+# The ND-06 external test, executed: the rule fails, and it fails structurally
+
+Executed 2026-09-09 in two stages from a detached worktree at `0294f7f`, cleanliness
+established by the byte-level audit. Both artifacts are evidence-grade.
+
+## What was unsealed, exactly
+
+| stage | file | variables opened | artifact sha256 |
+|---|---|---|---|
+| primary | `rozenfeld2023-repo/Figure 3/Fig3D.mat`, sha256 `022008e1...ac1eaf` | 1 of the 10 reserved in that file: `new_all_flies_PP_100ms_control` | `36382f6e3a28642c58b89bb62f5994dde17138a979d48b5629c08fb254b8c860` |
+| intervals | the same file, re-verified against the sealed manifest | 5 of 10: the `_control` arrays at 10, 30, 100, 300 and 1000 ms | `e088e90ce021c700cfaf2e37437aca06406fffecc4ff2a5ec3fb38c6622628df` |
+
+The file's checksum was re-checked against `stage2-reservations-v1.json` before either
+stage opened anything. No RNAi array, no train array, no replication cohort, no raw trace,
+no miniature EPSC and no Bruchpilot count was opened. Every array was complete, so the
+addendum missing-data rule never had to be applied.
+
+## The complete result
+
+```
+ interval   n     mean      sd            95% CI  | predicted   family band | contains
+    10 ms  20   1.5139  0.2482   [1.398, 1.630]  |    0.7824  [0.772,0.911] |    NO
+    30 ms  21   1.1583  0.2299   [1.054, 1.263]  |    0.7873  [0.777,0.914] |    NO
+   100 ms  22   1.0286  0.1832   [0.947, 1.110]  |    0.8033  [0.792,0.923] |    NO   <- primary
+   300 ms  22   0.9299  0.1050   [0.883, 0.976]  |    0.8428  [0.829,0.944] |    NO
+  1000 ms  22   0.9302  0.0765   [0.896, 0.964]  |    0.9282  [0.915,0.982] |   yes
+```
+
+| hypothesis | verdict |
+|---|---|
+| **H1**, the registered prediction at the interval it was registered for | **FAILED**. 1.0286 [0.9474, 1.1099] against 0.8033. Half-width 0.0812, inside the registered 0.10 limit, so this is a failure and not a NO VERDICT. |
+| **H2**, the floor the model cannot go below | **PASSED, uninformatively.** No mean lies below 0.7700 because every mean lies far above it. |
+| **H3**, recovery is monotone in interval | **FAILED**. The means decrease: 1.5139, 1.1583, 1.0286, 0.9299, 0.9302. |
+| H4, trains | not scored; the train arrays were not opened |
+| H5, the RNAi direction | not scored; the RNAi arrays were not opened |
+
+## Reading it
+
+**The failure is structural, not a parameter miss.** `PPR = 1 - U exp(-dt/tau)` is bounded
+above by 1 and increases with interval for every `U` in (0, 1] and every positive `tau`. The
+measurements exceed 1 at three of five intervals and decrease throughout. No choice of
+utilisation and recovery constant could reproduce this, which is independently why the
+no-refitting rule costs nothing here: refitting cannot rescue it.
+
+**H2's pass earns the model nothing, and my written expectation was wrong in the opposite
+direction.** The contract predicted in advance that H2 would fail, on the reasoning that
+Kazama and Wilson's variance-derived release probability of 0.79 implies depression far
+deeper than `U = 0.22` permits. The synapse does the opposite: it *facilitates* at short
+intervals. A floor test passes trivially when the measurement is nowhere near the floor, and
+that is all that happened.
+
+**The one agreement is at the least informative interval.** 1000 ms is where the model
+asymptotes toward 1 and is least distinguishable from any other account. The observed means
+at 300 and 1000 ms are 0.9299 and 0.9302 — a plateau — while the prediction is still rising
+through 0.8428 to 0.9282. The curves cross there. Banking that as a success would be reading
+a coincidence as a prediction.
+
+**What it does not establish.** It does not falsify presynaptic vesicle depletion.
+Facilitation and depletion coexist routinely, and this rule is depression-only *by
+construction*: the registry records its family as `tsodyks-markram-depression-only` while
+naming `stochastic-release-and-STP` as the supported class. Nagel and colleagues fitted these
+parameters to a 10 Hz train, where depression dominates from the fifth pulse and an early
+facilitation term is nearly invisible. So the diagnosis is a **missing** mechanism rather than
+a wrong one, and the presynaptic locus keeps the independent support this test never touched:
+Kazama and Wilson's 1/CV² decrease correlating with the amplitude decrease at r = 0.79.
+
+## Two facts this project had wrong, corrected by the paper's own methods
+
+Both were available in the local corpus the whole time. Published prose is not a reserved
+observation, so reading it cost nothing; not reading it cost two wrong facts.
+
+**These are minimal-stimulation recordings, not compound ones.** The contract, ADR-2026-012
+and the intake all called them compound, inferred from the `eEPSC` label in the plotting
+code. The methods say: *"eEPSCs were evoked by stimulating ORN axons with a minimal
+stimulation protocol via a suction electrode."* Minimal stimulation isolates a single-fibre
+response. Two consequences. The saturation term of `VAL-02` loses most of its force for these
+data, because minimal stimulation is designed to stay off the saturating part of the
+postsynaptic curve — so the failure is *more* attributable to the model than the amended
+`VAL-02` would allow in general. And the overlap problem at 10 ms is not unhandled after all:
+*"the amplitude of the second response in 10 ms inter-pulse recordings was measured from the
+peak to the point of interception with the extrapolated first response."* The case for 100 ms
+being primary therefore rests on the stronger reason alone — it is the interval the
+registry's prediction was written for at `fb01944`.
+
+**The synaptic leg still stays retired, for a sharper reason.** Not because the recordings
+are compound; they are unitary. Because the repository ships per-animal *scalars* and
+per-animal *averaged amplitudes*, not the unitary **waveforms** a kinetics holdout needs.
+Figure 3 holds paired-pulse ratios and 32-pulse amplitude series; the only raw traces in the
+repository, Figure 1's `IAA_IC` and `IAA_VC`, are odour-evoked whole-cell recordings. A
+holdout scoring peak time and decay without peak alignment cannot be built from scalars. If
+the authors' minimal-stimulation waveforms became available, the recorded reinstatement
+condition would be met. `stage2-exit-gate-v4.json` is still unedited and the gate is still
+**0 of 3**.
+
+## The orientation gap, and how it was closed without spending anything
+
+The contract named the file, the variable, the metric and the limit, and did **not** name the
+orientation of the ratio. Under the inverse reading H3 would have passed, so scoring it
+either way after seeing the data would have been a choice made with the data in hand. The
+paper settles it: *"cac knockdown led to increased paired-pulse **facilitation** at short
+inter-pulse intervals"*, repeated in the legends for all three cohorts. Facilitation means a
+second response larger than the first, so the arrays are second-over-first and the observed
+wild-type facilitation is the authors' own finding rather than an artifact of how this project
+read them. The gap is recorded because the next contract of this shape must name the
+orientation before it opens anything.
+
+## What stays sealed
+
+Everything else: the RNAi cohorts at all five intervals, the trains at 1, 10, 20 and 60 Hz
+with their latency and jitter arrays, the two replication cohorts in Fig3H and Fig3J, the
+day-0 comparison in Fig6D, the absolute amplitudes, the miniature EPSCs, the Bruchpilot
+counts, and the whole of Takagi 2024.
+
+The decisive next check needs no new data and is already registered as H4: the 1 Hz train
+array gives a second-pulse-over-first at a 1000 ms interval in a different protocol, which
+either agrees with the 0.9302 measured here or does not.

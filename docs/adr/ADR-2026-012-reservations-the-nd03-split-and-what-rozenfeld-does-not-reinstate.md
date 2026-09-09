@@ -222,3 +222,42 @@ does not touch in Kazama and Wilson's 1/CV² correlation at r = 0.79.
 assumption is listed rather than hidden inside "linear summation", and its validation field
 now names the control that would bound it: a low-affinity competitive antagonist that
 relieves receptor occupancy without changing release.
+
+## Second amendment, 2026-09-09 — the recordings are minimal stimulation, and the leg's reason changes
+
+Recorded after the wild-type paired-pulse arrays were opened and scored, and it changes no
+verdict: the leg stays retired and the gate stays 0 of 3.
+
+**Withdrawn factual claim, preserved verbatim from Decision 2:** *"The Figure 3 arrays are
+evoked responses. `Figure_3.m` labels the latency panels 'eEPSC latency', and the amplitudes
+'EPSC amp (pA)', from stimulation of the ORN axon bundle. An evoked compound EPSC recruits
+many ORNs at once; a unitary EPSC is one ORN."*
+
+**What the paper says.** *"eEPSCs were evoked by stimulating ORN axons with a minimal
+stimulation protocol via a suction electrode."* Minimal stimulation is the standard method
+for isolating a single-fibre response, so these are unitary, not compound. Decision 2 read
+the authors' plotting code and inferred the preparation from a label; the methods section was
+in the local corpus and says it outright.
+
+**Why the leg still stays retired, restated.** The condition is raw unitary EPSC **traces**
+from a preparation not used to fit the kernel. The staged repository ships per-animal
+*scalars* — paired-pulse ratios — and per-animal *averaged amplitudes* across a 32-pulse
+train. The only raw traces in it, Figure 1's `IAA_IC` and `IAA_VC`, are odour-evoked
+whole-cell recordings rather than minimal-stimulation eEPSCs. A kinetics holdout that scores
+peak time and decay without peak alignment cannot be built from scalars. This is a sharper
+statement than the withdrawn one and it names what would satisfy the condition: the authors'
+minimal-stimulation waveforms, which the repository does not contain.
+
+**What it changes for `VAL-02`.** Nothing in the record itself; its two-directional bias
+account stands and is general. What changes is its weight for these particular data.
+Minimal stimulation produces small responses precisely to stay off the saturating part of the
+postsynaptic curve, so the upward bias that would otherwise be the leading alternative
+explanation of a measured ratio above the prediction is weak here, and the failure is
+correspondingly **more** attributable to the model. The 10 ms overlap concern is also
+answered by the methods, which measure the second response *"from the peak to the point of
+interception with the extrapolated first response"*.
+
+**The lesson worth keeping.** Both errors came from inferring a preparation from analysis
+code and variable labels while a methods section sat unread in the local corpus. Published
+prose is not a reserved observation and reading it costs nothing. The reservation discipline
+protects values; it was never a reason not to read the paper.

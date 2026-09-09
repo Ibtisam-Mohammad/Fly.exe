@@ -81,7 +81,7 @@
           "recovery_tau_ms": 893.0,
           "interstimulus_interval_ms": 100.0
         },
-        "status": "consistent with the fit it was derived from, so it is not independent evidence; it becomes a test only against a paired-pulse or train recording not used by Nagel and colleagues",
+        "status": "TESTED AND FAILED on 2026-09-09. It was open until then, with the recorded status that it 'becomes a test only against a paired-pulse or train recording not used by Nagel and colleagues'. Rozenfeld and colleagues 2023 supplied exactly that and the measured wild-type ratio at 100 ms is 1.0286 with a 95 percent interval of [0.9474, 1.1099] over 22 animals, against this prediction of 0.8033. See second_external_test.",
         "steady_state_predictions": {
           "regular_train_10hz_exact": 0.3501,
           "regular_train_50hz_exact": 0.0933
@@ -109,7 +109,71 @@
         "not_acted_on": "No parameter is changed on this basis. Refitting to the failing test would remove the only external check the rule has. It is recorded so the next registry revision starts from a known discrepancy."
       },
       "model_form_independently_supported": "Kazama and Wilson 2008 Figure 8G: 7 Hz stimulation decreases 1/CV^2 and the decrease correlates with the decrease in uEPSC amplitude (Pearson r = 0.79, p < 1e-4), implying a presynaptic locus. That independently supports the presynaptic-depletion form of the Tsodyks-Markram model used here, separately from its parameter values.",
-      "two_component_conflict_resolved": "Kazama and Wilson 2008 inferred from evoked-stimulation failure modes that the fast and slow EPSC decay components 'originate from different synapses', the slow one polysynaptic. Nagel and colleagues measured both components in spontaneous EPSCs, each of which 'arises from a single ORN spike, and any dynamics present in these EPSCs must therefore arise from unitary ORN-to-PN connections', and separated them pharmacologically at the same synapse. The spontaneous measurement is monosynaptic by construction, so the whole-EPSC parameter choice registered here is sound."
+      "two_component_conflict_resolved": "Kazama and Wilson 2008 inferred from evoked-stimulation failure modes that the fast and slow EPSC decay components 'originate from different synapses', the slow one polysynaptic. Nagel and colleagues measured both components in spontaneous EPSCs, each of which 'arises from a single ORN spike, and any dynamics present in these EPSCs must therefore arise from unitary ORN-to-PN connections', and separated them pharmacologically at the same synapse. The spontaneous measurement is monosynaptic by construction, so the whole-EPSC parameter choice registered here is sound.",
+      "second_external_test": {
+        "source": "https://doi.org/10.1038/s41467-023-38575-6",
+        "quantity": "second-to-first evoked EPSC amplitude ratio at five interstimulus intervals, wild-type controls, minimal stimulation of ORN axons",
+        "preregistered_as": "configs/experiments/stage2-depression-external-test-v1.json, committed before the values were opened",
+        "artifacts": [
+          "evidence/stage2/stage2-depression-external-test-primary-v1.json",
+          "evidence/stage2/stage2-depression-external-test-intervals-v1.json"
+        ],
+        "measured": {
+          "10ms": {
+            "mean": 1.5139,
+            "ci95": [
+              1.398,
+              1.63
+            ],
+            "animals": 20
+          },
+          "30ms": {
+            "mean": 1.1583,
+            "ci95": [
+              1.054,
+              1.263
+            ],
+            "animals": 21
+          },
+          "100ms": {
+            "mean": 1.0286,
+            "ci95": [
+              0.9474,
+              1.1099
+            ],
+            "animals": 22
+          },
+          "300ms": {
+            "mean": 0.9299,
+            "ci95": [
+              0.883,
+              0.976
+            ],
+            "animals": 22
+          },
+          "1000ms": {
+            "mean": 0.9302,
+            "ci95": [
+              0.896,
+              0.964
+            ],
+            "animals": 22
+          }
+        },
+        "predicted": {
+          "10ms": 0.7824,
+          "30ms": 0.7873,
+          "100ms": 0.8033,
+          "300ms": 0.8428,
+          "1000ms": 0.9282
+        },
+        "verdict": "FAILED at four of five intervals, and failed structurally. The registered prediction of 0.8033 at 100 ms lies far below the measured interval [0.9474, 1.1099]. Worse for the model than any single miss, the measured ratios DECREASE with interval while this rule increases with interval at every parameter setting, and they exceed 1 at three intervals while this rule cannot exceed 1 at any.",
+        "why_no_parameter_change_could_fix_it": "PPR = 1 - U exp(-dt/tau) is bounded above by 1 and is increasing in dt for every U in (0, 1] and every positive tau. The measurements violate both properties. This is a refutation of the depression-only family on this observable rather than a miss by the values.",
+        "what_it_does_not_refute": "Presynaptic vesicle depletion. This rule is depression-only by construction while the assumption's supported class is stochastic-release-and-STP, and Nagel and colleagues fitted these parameters to a 10 Hz train where depression dominates from the fifth pulse and an early facilitation term is nearly invisible. The measured pattern is the paper's own finding of paired-pulse facilitation at short intervals, decaying to slight depression by 300 ms. The diagnosis is a missing facilitation mechanism, not a wrong depression mechanism, and the presynaptic locus keeps the independent support recorded above in model_form_independently_supported.",
+        "independence": "Genuinely independent. A different laboratory, a different preparation, a minimal-stimulation protocol, and a prediction committed at fb01944 before the files were staged at a24249f.",
+        "not_acted_on": "No parameter is changed. Refitting to an external test converts the only external check into a training set, which is the rule the 7 Hz failure was recorded under and it holds identically here. A successor rule must be a new registry version with its own predictions and must not claim this test as evidence for its values.",
+        "registry_sha256_when_the_test_ran": "a07ccd3fd59a0951069dcce58238faa8ee9d6200ec52867a32b93c8f1421bfaa"
+      }
     }
   ],
   "engine_coverage": {
@@ -118,7 +182,7 @@
     "genn_circuit_runner": "not implemented; a run that asks for depression on this backend must be refused",
     "track_a_genn_engine": "not implemented"
   },
-  "validation_status": "The parameters are now fitted values from a published recording of this synapse class rather than an unresolved engineering range, but no MaleCNS rate-dependent ORN-to-PN recording is registered and no recording independent of Nagel and colleagues has been located, so this rule remains an executable labelled alternative for sensitivity ensembles and awards no validation tier. The open prediction is the paired-pulse ratio above against a recording not used in the fit.",
+  "validation_status": "The parameters are fitted values from a published recording of this synapse class, and the rule has now faced two independent external tests and passed neither. At 7 Hz it over-predicts steady-state depression by about 16 percentage points. Against Rozenfeld and colleagues' paired-pulse measurements it fails at four of five intervals and fails structurally, because the measured ratios exceed 1 and decrease with interval while a depression-only resource can do neither. This rule therefore remains an executable labelled alternative that awards no validation tier, and it is now an alternative with a recorded refutation on the paired-pulse observable rather than an untested one. Nothing is refitted: a successor must be a new registry version with its own predictions.",
   "revision_note": "Issued at schema 1.0 with utilisation 0.79 taken from the Kazama and Wilson release probability and recovery_tau_ms left unresolved in an invented [25, 500] ms window. Corrected to schema 1.1 before first commit, so no artifact was ever produced under the superseded values. The correction followed verification of Nagel, Hong and Wilson 2015 against the open-access full text: that paper fits this registry's exact equation and publishes both parameters, its recovery time constant of 893 ms fell outside the invented ceiling, and the superseded utilisation was a different physical quantity that mispredicts the measured paired-pulse ratio by a factor of 2.735.",
   "last_reviewed": "2026-09-09"
 }

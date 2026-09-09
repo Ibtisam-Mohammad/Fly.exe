@@ -399,6 +399,42 @@ No tier is awarded and no gate changes verdict.
   identical across the two, because the amendment changed the inference and not the
   arithmetic. The Stage 2 exit gate was re-evaluated after the assumption-set bump and is
   unchanged at 0 of 3.
+- **The ND-06 depression rule was tested against Rozenfeld and it failed structurally.**
+  Executed 2026-09-09 in two stages from a detached worktree at `0294f7f`, opening one array
+  and then five, with the file re-verified against the sealed manifest before each stage.
+  **H1, the primary, FAILED**: the wild-type paired-pulse ratio at 100 ms is 1.0286 with a 95
+  percent interval of [0.9474, 1.1099] over 22 animals, against the registered prediction of
+  0.8033, and the half-width of 0.0812 is inside the registered 0.10 limit so this is a
+  failure and not a NO VERDICT. Across all five intervals the means are 1.5139, 1.1583,
+  1.0286, 0.9299 and 0.9302 at 10, 30, 100, 300 and 1000 ms. **H3 FAILED**: they *decrease*
+  with interval while the rule increases with interval at every parameter setting, and they
+  exceed 1 at three intervals while the rule cannot exceed 1 at any. **No (U, tau) could fix
+  this** — it is a refutation of the depression-only family on this observable, which is also
+  why the no-refitting rule costs nothing here. **H2 PASSED and the pass is uninformative**:
+  no mean lies below the 0.7700 floor because every mean lies far above it, and the
+  contract's written expectation that H2 would fail was wrong in the opposite direction — the
+  synapse facilitates where I predicted deeper depression. The one interval whose interval
+  contains the prediction is 1000 ms, where the model asymptotes and is least
+  distinguishable from anything else; the data plateau at 0.93 from 300 ms while the
+  prediction is still rising, so the curves merely cross there. **It does not falsify
+  presynaptic depletion**: this rule is depression-only by construction, Nagel fitted it to a
+  10 Hz train where an early facilitation term is nearly invisible, and the diagnosis is a
+  missing mechanism rather than a wrong one. Nothing was refitted; the registry now records
+  the prediction as tested and failed, and its second failed external test alongside the 7 Hz
+  one. Artifacts `stage2-depression-external-test-primary-v1.json` sha256
+  `36382f6e...54b8c860` and `...-intervals-v1.json` sha256 `e088e90c...622628df`.
+- **Two facts this project had wrong, corrected from the paper's own methods.** The
+  recordings are **minimal stimulation**, not compound: *"eEPSCs were evoked by stimulating
+  ORN axons with a minimal stimulation protocol via a suction electrode."* So the `VAL-02`
+  saturation term loses most of its force for these data and the failure is *more*
+  attributable to the model than the general account allows; and the 10 ms overlap was
+  handled by the authors by extrapolating the first response, so 100 ms is primary for the
+  stronger reason alone, that it is the interval `fb01944` wrote the prediction for. **The
+  synaptic leg still stays retired and the gate stays 0 of 3**, for a sharper reason: the
+  repository ships per-animal scalars and averaged amplitudes, not the unitary waveforms a
+  kinetics holdout needs. Separately, the contract never named the ratio's orientation — a
+  real preregistration gap, closed from the paper's own statement of paired-pulse
+  facilitation rather than by choosing after the fact.
 - **Reserved observations are now recorded before they are opened.**
   `configs/datasets/stage2-reservations-v1.json` declares every reserved file and every
   reserved variable or column inside it, and `flysim stage2 reservations` writes a manifest

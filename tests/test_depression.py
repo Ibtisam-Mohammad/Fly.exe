@@ -265,7 +265,88 @@ def test_the_contract_does_not_claim_to_reinstate_the_synaptic_leg(
     claim = contract["why_this_exists"]["what_it_is_not"]
     assert "NOT a reinstatement" in claim
     assert "0 of 3" in claim
-    assert contract["values_opened"] is False
+
+
+def test_the_contract_records_that_its_values_are_now_open(contract: dict[str, Any]) -> None:
+    # Opened 2026-09-09 in two stages. The flag is what stops a second scoring pass.
+    assert contract["values_opened"] is True
+    assert contract["status"].startswith("EXECUTED")
+    stages = [entry["stage"] for entry in contract["execution_record"]["stages"]]
+    assert stages == ["primary", "intervals"]
+    counts = [len(entry["variables_opened"]) for entry in contract["execution_record"]["stages"]]
+    assert counts == [1, 5]
+
+
+def test_the_recorded_verdicts_are_the_ones_that_came_out(contract: dict[str, Any]) -> None:
+    results = contract["execution_record"]["results"]
+    assert results["H1"].startswith("FAILED")
+    assert "1.0286" in results["H1"]
+    assert "0.8033" in results["H1"]
+    assert "not a NO VERDICT" in results["H1"]
+    # A pass that the measurement never came near must not be reported as support.
+    assert results["H2"].startswith("PASSED, and the pass is uninformative")
+    assert results["H3"].startswith("FAILED")
+    assert "DECREASE with interval" in results["H3"]
+    assert "not scored" in results["H4"]
+    assert "not scored" in results["H5"]
+
+
+def test_the_failure_is_recorded_as_structural_and_not_as_a_parameter_miss(
+    contract: dict[str, Any],
+) -> None:
+    record = contract["execution_record"]
+    assert "no parameter setting could" in record["what_this_establishes"]
+    assert "refutation of the registered model FAMILY" in record["what_this_establishes"]
+    assert "refitting cannot rescue it" in record["what_this_establishes"]
+    # And depletion is explicitly not what failed.
+    not_established = record["what_this_does_not_establish"]
+    assert "does not falsify presynaptic vesicle depletion" in not_established
+    assert "MISSING mechanism" in not_established
+    assert "0.79" in not_established
+
+
+def test_nothing_was_refitted(contract: dict[str, Any]) -> None:
+    performed = contract["execution_record"]["no_refitting_performed"]
+    assert "utilisation stays 0.22" in performed
+    assert "recovery time constant stays 893" in performed
+    assert "no revision may claim this test as evidence" in performed
+
+
+def test_the_single_agreement_is_not_banked_as_a_success(contract: dict[str, Any]) -> None:
+    note = contract["execution_record"]["the_one_agreement_is_the_least_informative_interval"]
+    assert "1000 ms" in note
+    assert "asymptotes" in note
+    assert "coincidence as a prediction" in note
+
+
+def test_the_minimal_stimulation_correction_is_recorded_with_its_consequences(
+    contract: dict[str, Any],
+) -> None:
+    correction = contract["post_execution_corrections"][
+        "correction_1_the_recordings_are_minimal_stimulation_not_compound"
+    ]
+    assert "compound evoked responses" in correction["what_was_written"]
+    assert "minimal stimulation protocol" in correction["what_the_paper_says"]
+    # It cuts both ways and both ways must be recorded.
+    assert "loses most of its force" in correction["consequence_for_the_observation_model"]
+    assert "MORE attributable to the model" in correction["consequence_for_the_observation_model"]
+    assert "extrapolated first response" in correction["consequence_for_the_10_ms_interval"]
+    leg = correction["consequence_for_the_retired_synaptic_leg"]
+    assert "STAYS RETIRED" in leg
+    assert "0 of 3" in leg
+    assert "not the unitary WAVEFORMS" in leg
+
+
+def test_the_orientation_gap_is_admitted_and_closed_from_published_prose(
+    contract: dict[str, Any],
+) -> None:
+    correction = contract["post_execution_corrections"][
+        "correction_2_the_orientation_was_never_registered_and_is_now_settled"
+    ]
+    assert "did not name the orientation" in correction["the_gap"]
+    assert "H3 would have passed" in correction["the_gap"]
+    assert "FACILITATION" in correction["how_it_is_settled_without_spending_anything"]
+    assert "Nothing in the numbers" in correction["what_it_changes"]
 
 
 def test_the_expected_outcome_is_written_down_before_the_run(contract: dict[str, Any]) -> None:
@@ -348,3 +429,27 @@ def test_the_floor_test_admits_which_bias_it_is_immune_to(contract: dict[str, An
     # Saturation cannot push a measurement below a floor; the other two can.
     assert "saturation cannot push a measurement below the floor" in sharpest
     assert "cannot produce a failure of this floor" in floor["confound_disclosed"]
+
+
+def test_the_registry_records_the_prediction_as_tested_and_failed(
+    registry: dict[str, Any],
+) -> None:
+    rule = registry["rules"][0]
+    status = rule["preregistered_prediction"]["status"]
+    assert "TESTED AND FAILED" in status
+    assert "1.0286" in status
+    second = rule["second_external_test"]
+    assert second["verdict"].startswith("FAILED at four of five intervals")
+    assert "bounded above by 1" in second["why_no_parameter_change_could_fix_it"]
+    assert "Presynaptic vesicle depletion" in second["what_it_does_not_refute"]
+    assert "No parameter is changed" in second["not_acted_on"]
+    assert second["measured"]["100ms"]["mean"] == 1.0286
+    assert second["predicted"]["100ms"] == 0.8033
+
+
+def test_the_registry_admits_two_failed_external_tests(registry: dict[str, Any]) -> None:
+    status = registry["validation_status"]
+    assert "two independent external tests and passed neither" in status
+    assert "16 percentage points" in status
+    assert "awards no validation tier" in status
+    assert "Nothing is refitted" in status

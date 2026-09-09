@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "experiment_id": "stage2-depression-external-test-v1",
   "title": "External test of the frozen ND-06 depression rule against wild-type paired-pulse and train recordings from a laboratory that contributed nothing to its parameters",
-  "status": "preregistered and AMENDED 2026-09-09, NOT EXECUTED. The predictions are committed, the reserved values are unopened, and the amendment corrected the observation-model bias account before anything was opened.",
+  "status": "EXECUTED 2026-09-09 in two stages. H1 failed, H2 passed uninformatively, H3 failed. The wild-type paired-pulse arrays of Figure 3D are open; every other reserved file in the corpus is still sealed.",
   "provenance": "E",
   "preregistered_on": "2026-09-09",
-  "values_opened": false,
+  "values_opened": true,
   "assumption_ids": [
     "ND-04",
     "ND-05",
@@ -184,5 +184,120 @@
     "why_it_mattered": "The withdrawn claim would have licensed reading a high measured ratio as agreement with the model while attributing a low one to the observation. That is a one-directional escape hatch, and it is the same shape as the criterion drift this project has had to repair before.",
     "what_did_not_change": "No numeric prediction, no criterion and no threshold. The 100 ms primary stays primary and its interval was never chosen here; what changed is its justification, which is now reduced response overlap rather than a one-sided bias. The floor of 0.7700 is unchanged. What narrowed is the inference drawn from failing it.",
     "withdrawn_text_preserved": "Receptor saturation, receptor desensitisation and presynaptic recruitment failure all deepen a measured ratio relative to vesicle depletion alone, so all three bias the measurement downward against the prediction. A measured ratio ABOVE the prediction therefore cannot be explained by any of them."
+  },
+  "execution_record": {
+    "executed_on": "2026-09-09",
+    "stages": [
+      {
+        "stage": "primary",
+        "variables_opened": [
+          "new_all_flies_PP_100ms_control"
+        ],
+        "artifact": "evidence/stage2/stage2-depression-external-test-primary-v1.json",
+        "sha256": "36382f6e3a28642c58b89bb62f5994dde17138a979d48b5629c08fb254b8c860"
+      },
+      {
+        "stage": "intervals",
+        "variables_opened": [
+          "new_all_flies_PP_10ms_control",
+          "new_all_flies_PP_30ms_control",
+          "new_all_flies_PP_100ms_control",
+          "new_all_flies_PP_300ms_control",
+          "new_all_flies_PP_1000ms_control"
+        ],
+        "artifact": "evidence/stage2/stage2-depression-external-test-intervals-v1.json",
+        "sha256": "e088e90ce021c700cfaf2e37437aca06406fffecc4ff2a5ec3fb38c6622628df"
+      }
+    ],
+    "code_commit": "0294f7f24828e24a4a934e680d2c0f58dd4c8412",
+    "ran_from_a_detached_worktree": true,
+    "cleanliness_established_by": "the byte-level audit, not git status",
+    "contract_sha256_the_artifacts_pinned": "430dd53a661273be195fae3f52428103fa7db267862475351b5560b615badcea",
+    "why_that_sha_no_longer_matches_this_file": "The artifacts pinned this contract as it stood at the moment the values were opened, which is the state that matters. This execution record and the corrections below were written afterwards, so the file's digest has moved on. The pre-execution digest is recorded here so the pinning still checks out.",
+    "results": {
+      "H1": "FAILED. 100 ms cohort mean 1.0286, 95 percent interval [0.9474, 1.1099] over 22 animals, against the registered prediction 0.8033. The half-width is 0.0812, inside the registered 0.10 limit, so this is a failure and not a NO VERDICT.",
+      "H2": "PASSED, and the pass is uninformative. No cohort mean lies below the 0.7700 floor because every mean lies far ABOVE it. A floor test passes trivially when the measurement is nowhere near the floor.",
+      "H3": "FAILED, and this is the informative one. The cohort means DECREASE with interval: 1.5139, 1.1583, 1.0286, 0.9299, 0.9302 at 10, 30, 100, 300 and 1000 ms. The registered rule predicts a monotone increase at every parameter setting.",
+      "H4": "not scored; the train arrays were not opened.",
+      "H5": "not scored; the RNAi arrays were not opened."
+    },
+    "by_interval": [
+      {
+        "interval_ms": 10,
+        "animals": 20,
+        "mean": 1.5139,
+        "ci95": [
+          1.398,
+          1.63
+        ],
+        "predicted": 0.7824,
+        "contains": false
+      },
+      {
+        "interval_ms": 30,
+        "animals": 21,
+        "mean": 1.1583,
+        "ci95": [
+          1.054,
+          1.263
+        ],
+        "predicted": 0.7873,
+        "contains": false
+      },
+      {
+        "interval_ms": 100,
+        "animals": 22,
+        "mean": 1.0286,
+        "ci95": [
+          0.947,
+          1.11
+        ],
+        "predicted": 0.8033,
+        "contains": false
+      },
+      {
+        "interval_ms": 300,
+        "animals": 22,
+        "mean": 0.9299,
+        "ci95": [
+          0.883,
+          0.976
+        ],
+        "predicted": 0.8428,
+        "contains": false
+      },
+      {
+        "interval_ms": 1000,
+        "animals": 22,
+        "mean": 0.9302,
+        "ci95": [
+          0.896,
+          0.964
+        ],
+        "predicted": 0.9282,
+        "contains": true
+      }
+    ],
+    "no_animal_was_excluded": "Every array was complete: 20, 21, 22, 22 and 22 finite values with no non-finite entries, so the addendum missing-data rule never had to be applied.",
+    "the_one_agreement_is_the_least_informative_interval": "1000 ms is the only interval whose interval contains the prediction, and it is where the model asymptotes toward 1 and is therefore least distinguishable from any other account. The observed means at 300 and 1000 ms are 0.9299 and 0.9302, a plateau, while the prediction is still rising through 0.8428 to 0.9282. The curves cross there. Banking that as a success would be reading a coincidence as a prediction.",
+    "what_this_establishes": "The registered depression-only single-resource rule does not predict this synapse's paired-pulse behaviour, and no parameter setting could. PPR = 1 - U exp(-dt/tau) is at most 1 and increases with interval at every U and tau. The measurements exceed 1 at three of five intervals and decrease throughout. That is a refutation of the registered model FAMILY on this observable, not a parameter miss, which is also why the no-refitting rule costs nothing here: refitting cannot rescue it.",
+    "what_this_does_not_establish": "It does not falsify presynaptic vesicle depletion. Facilitation and depletion coexist routinely, and the registered rule is depression-only BY CONSTRUCTION: the registry records its family as tsodyks-markram-depression-only while naming stochastic-release-and-STP as the supported class. Nagel and colleagues fitted their parameters to a 10 Hz train, where depression dominates from the fifth pulse onward and an early facilitation term is nearly invisible. So the diagnosis is a MISSING mechanism rather than a wrong one, and the depletion form keeps the independent support this test never touched: Kazama and Wilson's 1 over CV squared decrease correlating with the amplitude decrease at r = 0.79.",
+    "no_refitting_performed": "The utilisation stays 0.22 and the recovery time constant stays 893 ms. No parameter was adjusted before, during or after scoring, and no revision may claim this test as evidence for its values."
+  },
+  "post_execution_corrections": {
+    "corrected_on": "2026-09-09",
+    "how_these_came_to_light": "The paper's own methods and results section, which was already in the local corpus and which this contract should have quoted before asserting anything about the preparation. Published prose is not a reserved observation and reading it cost nothing; not reading it cost two wrong facts.",
+    "correction_1_the_recordings_are_minimal_stimulation_not_compound": {
+      "what_was_written": "This contract, ADR-2026-012 and the intake all described the Figure 3 recordings as compound evoked responses to stimulation of the ORN axon bundle, inferred from the eEPSC label in the authors' plotting code.",
+      "what_the_paper_says": "'eEPSCs were evoked by stimulating ORN axons with a minimal stimulation protocol via a suction electrode.' Minimal stimulation is the standard method for isolating a single-fibre response, which is the opposite of compound.",
+      "consequence_for_the_observation_model": "The saturation term of VAL-02 loses most of its force for these data. Minimal stimulation produces small responses precisely to stay off the saturating part of the postsynaptic curve, so the upward bias that would otherwise be the leading alternative explanation of a measured ratio above the prediction is weak here. The failure is therefore MORE attributable to the model than the amended VAL-02 would allow in general. VAL-02 itself is unchanged and its two-directional account stands; what changes is its weight in this particular case.",
+      "consequence_for_the_10_ms_interval": "The overlap problem at 10 ms is not unhandled after all. The paper states that 'the amplitude of the second response in 10 ms inter-pulse recordings was measured from the peak to the point of interception with the extrapolated first response', which is an explicit correction for the decay of the first response. The justification for 100 ms being primary therefore rests on the stronger reason alone: it is the interval the registry's prediction was written for at fb01944.",
+      "consequence_for_the_retired_synaptic_leg": "The leg STAYS RETIRED and the gate stays at v4 and 0 of 3, but the reason must be restated. It is not that the recordings are compound; they are minimal-stimulation unitary responses. It is that the staged repository ships per-animal scalars and per-animal averaged amplitudes, not the unitary WAVEFORMS the leg needs: Figure 3 holds paired-pulse ratios and 32-pulse amplitude series, and the only raw traces in the repository, Figure 1's IAA_IC and IAA_VC, are odour-evoked whole-cell recordings rather than minimal-stimulation eEPSCs. A kinetics holdout scoring peak time and decay without peak alignment cannot be built from scalars. If the authors' unitary waveforms became available the condition would be met, and that is a sharper and more useful statement than the one it replaces."
+    },
+    "correction_2_the_orientation_was_never_registered_and_is_now_settled": {
+      "the_gap": "This contract named the file, the variable, the metric and the limit, and did not name the orientation of the ratio. Under the standard convention PPR is the second response over the first; under the inverse the interval ordering would flip and H3 would have passed. That was a real preregistration gap and scoring it either way would have been a choice made after the data were in hand.",
+      "how_it_is_settled_without_spending_anything": "The paper's results section states that 'cac knockdown led to increased paired-pulse FACILITATION at short inter-pulse intervals', and its figure legends repeat it for all three cohorts. Facilitation means a second response larger than the first, so the arrays are second over first, values above one are facilitation, and the orientation this run scored is the authors' own.",
+      "what_it_changes": "Nothing in the numbers, and it removes the one reading under which H3 would have passed. The observed wild-type facilitation at short intervals is the paper's own finding rather than an artifact of how this project read the arrays."
+    }
   }
 }
