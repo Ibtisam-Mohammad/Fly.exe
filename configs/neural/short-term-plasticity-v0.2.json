@@ -261,7 +261,7 @@
     "track_a_genn_engine": "not implemented",
     "why_this_is_recorded_now": "Neither frozen rule can yet be executed inside a circuit simulation. They exist as closed-form and state-machine predictors of a paired-pulse ratio. Wiring them into the runners is work that should not be done until the holdout says whether either of them survives."
   },
-  "validation_status": "FROZEN AND UNTESTED as of 2026-09-10. Both rules are fitted to spent data and neither has faced a holdout. This registry awards no validation tier and must not be cited as one. Its test is stage2-stp-developmental-holdout-v1, which scores it once against the sealed day-1 and day-0 wild-type cohorts; a pass there would be worth a V1-limited tier on the paired-pulse observable in one laboratory and nothing more. The decisive test after that is the sealed train arrays at 1, 10, 20 and 60 Hz, which measure the recovery constant these rules cannot identify and which would immediately expose the unbounded facilitation both of them carry.",
+  "validation_status": "FROZEN, TESTED ONCE, NO VERDICT as of 2026-09-10. Both rules are fitted to spent data. Their registered holdout returned NO VERDICT because its primary cohort turned out to be bit-identical to the fit set; the one genuine unseen cohort was too noisy at the two short intervals to score the primary criterion, and passed the beat-a-constant criterion by a factor of 26. This registry awards no validation tier and must not be cited as one. What it now has that v0.1 never had is a frozen prediction that has outperformed a frozen null on animals it had not seen. The decisive test remains the sealed train arrays at 1, 10, 20 and 60 Hz, which are now the only unspent wild-type ORN-to-PN holdout in the corpus and which measure the recovery constant neither rule can identify.",
   "what_this_registry_does_not_do": [
     "It does not reinstate the retired synaptic leg of the Stage 2 gate, which needs unitary waveforms this repository does not ship. The gate stays at v4 and 0 of 3.",
     "It does not resolve edge sign, which is ND-10 and stays unresolved wherever receptor evidence is absent.",
@@ -269,5 +269,28 @@
     "It does not apply to ORN-to-local-neuron synapses, which are a different class with no registered parameters at all.",
     "It carries no glomerulus specificity. The recordings pool an unstated mixture of glomeruli through the GH146-QF driver, which labels about 60 per cent of projection neurons, while Nagel and colleagues fitted DM6 and VM2."
   ],
-  "last_reviewed": "2026-09-10"
+  "last_reviewed": "2026-09-10",
+  "holdout": {
+    "contract": "configs/experiments/stage2-stp-developmental-holdout-v1.json",
+    "artifact": "evidence/stage2/stage2-stp-developmental-holdout-v1.json",
+    "artifact_sha256": "d700ff2f742e7739d0554ecac3369911a5ccbefba79cf1bdd9aaf7e844c46b21",
+    "executed_on": "2026-09-10",
+    "verdict": "NO VERDICT",
+    "why": "The registered primary cohort was void. The Fig3J wild-type arrays are bit-identical to the arrays these rules were fitted to: the repository ships the same wild-type reference in both figure files, and the published legends give it the same animal counts in both, which was noticed before the run and not acted on. Scoring it scored the training set. The artifact's PASSED verdict applied the registered rule faithfully to a cohort that was not a holdout, and it is superseded by the contract's execution record.",
+    "what_the_one_genuine_cohort_returned": {
+      "cohort": "wild type, 0 days post eclosion, Fig3H, 20 to 21 animals per interval",
+      "registered_role": "secondary; declared in advance not to enter the verdict",
+      "A1_prediction_inside_the_measurement_error": "NO VERDICT. The frozen primary's prediction does lie inside all five intervals, but the 10 ms and 30 ms half-widths are about 0.19 and 0.17 against the registered 0.15 power limit, leaving three scorable intervals against a registered minimum of four. An interval that wide would contain many wrong predictions too, which is what the limit is for.",
+      "A2_better_than_a_frozen_constant": "PASSED, and this is the one substantive registered result. On 21 animals neither rule had seen, the primary's weighted residual is 1.493 against the frozen constant's 38.612, a factor of 26, against a registered requirement of 2. The secondary rule gives 1.279 on the same cohort.",
+      "A3_shape": "PASSED, 4 of 4 adjacent directions, and the frozen constant passes it too, so it carries little.",
+      "did_it_separate_the_two_frozen_rules": "No. The four-parameter single-facilitation rule does marginally better here than the five-parameter two-timescale rule, 1.279 against 1.493, which points the opposite way from the fit set where the two-timescale family was better by a factor of hundreds. The two curves differ by up to 0.075 at 100 ms, above the 0.02 separability limit, but that cohort's 100 ms half-width is 0.12. One cohort of this size cannot tell them apart, and neither rule may be preferred over the other on this evidence."
+    },
+    "what_this_registry_may_now_claim": "That its primary rule, frozen with its parameters and its five predictions written down before the cohort was opened, tracks an unseen wild-type cohort about 26 times better than a frozen constant does, under a criterion fixed in advance. That is real and it is the first time any dynamical model in this project has been frozen and then beaten a null on unseen animals. It is not a validation tier: the registered experiment returns NO VERDICT because its primary cohort was the training set, and the criterion that asks whether the predictions land inside the measurement error returned NO VERDICT on power.",
+    "what_it_may_not_claim": [
+      "A passed holdout. The experiment as registered returns NO VERDICT.",
+      "Any validation tier. V0 remains the only supported tier in the project.",
+      "That the two-timescale mechanism is established. The one genuine cohort mildly favours the simpler rule and cannot separate them.",
+      "That the fit-set agreement means anything. The fit set was spent before the fit."
+    ]
+  }
 }

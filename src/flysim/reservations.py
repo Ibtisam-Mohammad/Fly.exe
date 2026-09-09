@@ -21,10 +21,12 @@ reserved or explicitly declared unreserved, so nothing escapes the reservation b
 
 from __future__ import annotations
 
+import hashlib
 import re
 import struct
 import zipfile
 import zlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -193,6 +195,84 @@ def read_mat_structure(path: Path) -> tuple[MatVariable, ...]:
             variables.append(_parse_matrix(body, tag.data_offset, end, little))
         cursor = _skip_padding(body, end)
     return tuple(variables)
+
+
+def stored_element_digests(path: Path) -> dict[str, str]:
+    """A digest of each variable's stored bytes, computed without decoding any value.
+
+    This exists because of a failure on 2026-09-10. The Rozenfeld repository ships the
+    same five wild-type paired-pulse arrays twice, once in Fig3D and once in Fig3J, and
+    the published figure legends describe the second as a different developmental cohort
+    while giving it the same animal counts. A holdout was preregistered against Fig3J,
+    committed, opened and scored, and the arrays turned out to be bit-identical to the
+    training set. The registered replication check caught it after the fact; nothing
+    caught it before.
+
+    Equal stored bytes prove equal data, which is the direction a guard needs: a match
+    refuses. The converse does not hold -- two identical arrays could in principle be
+    stored differently, most obviously with different compression settings -- so a
+    non-match is a screen and not a proof of independence. The other half of the
+    protection is reading the published animal counts and acting on them.
+
+    No payload is decompressed and no numeric element is decoded. For a compressed
+    element the digest covers the compressed bytes and the name is taken from the header
+    peek the structure reader already performs.
+    """
+    with path.open("rb") as stream:
+        head = stream.read(_MAT5_HEADER_BYTES)
+        if len(head) < _MAT5_HEADER_BYTES:
+            raise ConfigurationError("File is shorter than a MAT version 5 header")
+        if head.startswith(_HDF5_SIGNATURE) or head[:16].startswith(b"MATLAB 7.3"):
+            raise ConfigurationError(
+                "MATLAB version 7.3 file: an HDF5 container, which this reader does not parse"
+            )
+        endian = head[126:128]
+        if endian == b"IM":
+            little = True
+        elif endian == b"MI":
+            little = False
+        else:
+            raise ConfigurationError("Not a MAT version 5 file: endian indicator absent")
+        body = stream.read()
+
+    digests: dict[str, str] = {}
+    cursor = 0
+    while cursor + 8 <= len(body):
+        tag = _read_tag(body, cursor, little)
+        if tag.element_type not in {_MI_COMPRESSED, _MI_MATRIX}:
+            break
+        end = tag.data_offset + tag.byte_count
+        if tag.element_type == _MI_COMPRESSED:
+            peek = zlib.decompressobj().decompress(
+                body[tag.data_offset : end], _COMPRESSED_PEEK_BYTES
+            )
+            inner = _read_tag(peek, 0, little)
+            if inner.element_type != _MI_MATRIX:
+                raise ConfigurationError("Compressed MATLAB element is not an array")
+            variable = _parse_matrix(peek, inner.data_offset, len(peek), little)
+        else:
+            variable = _parse_matrix(body, tag.data_offset, end, little)
+        digests[variable.name] = hashlib.sha256(body[tag.data_offset : end]).hexdigest()
+        cursor = _skip_padding(body, end)
+    return digests
+
+
+def duplicate_arrays(
+    *, candidate: Path, spent: Path, names: Sequence[str]
+) -> tuple[str, ...]:
+    """Which of the named arrays are stored identically in both files.
+
+    Called before a holdout is opened. A non-empty result means the candidate cohort
+    contains the same numbers as a cohort that has already been used, and scoring it
+    would be scoring the training set.
+    """
+    left = stored_element_digests(candidate)
+    right = stored_element_digests(spent)
+    return tuple(
+        name
+        for name in names
+        if name in left and name in right and left[name] == right[name]
+    )
 
 
 def _skip_padding(body: bytes, position: int) -> int:

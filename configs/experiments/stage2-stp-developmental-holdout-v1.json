@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "experiment_id": "stage2-stp-developmental-holdout-v1",
   "title": "Score the frozen ORN-to-PN plasticity models once against the sealed day-1 and day-0 wild-type cohorts",
-  "status": "PREREGISTERED. Every acceptance criterion below was written before any cohort was opened, and the frozen predictions were inserted from the committed fit artifact rather than recomputed here.",
+  "status": "EXECUTED 2026-09-10 and its primary cohort VOIDED. The Fig3J wild-type arrays are bit-identical to the fit set, so the registered primary holdout was the training data and the artifact's PASSED verdict does not stand. The Fig3H day-0 cohort is genuine and its registered results stand: A1 NO VERDICT on power, A2 PASSED, A3 PASSED. Under the registered verdict rule the experiment returns NO VERDICT.",
   "provenance": "M/F",
   "preregistered_on": "2026-09-10",
-  "values_opened": false,
+  "values_opened": true,
   "assumption_ids": [
     "ND-06",
     "VAL-02"
@@ -15,7 +15,20 @@
     "fit_artifact": "evidence/stage2/stage2-stp-family-selection-v1.json",
     "rule": "The models scored here are the ones that artifact froze. Their parameters may not be changed, refitted, nudged or reselected, and this contract records their predictions numerically so that the comparison cannot drift.",
     "fit_artifact_sha256": "0fdfa14c0ad7481c05b4e3b8c4ed71da728b68b9cd892f716168dc92916a53d9",
-    "fit_artifact_code_commit": "d47e14ec8c97db5328eb7bcf232f38e5afffb366"
+    "fit_artifact_code_commit": "d47e14ec8c97db5328eb7bcf232f38e5afffb366",
+    "spent_arrays": [
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+        "variables": [
+          "new_all_flies_PP_10ms_control",
+          "new_all_flies_PP_30ms_control",
+          "new_all_flies_PP_100ms_control",
+          "new_all_flies_PP_300ms_control",
+          "new_all_flies_PP_1000ms_control"
+        ],
+        "why_it_is_spent": "opened and scored on 2026-09-09 by stage2-depression-external-test-v1, then used as the fit set by stage2-stp-family-selection-v1"
+      }
+    ]
   },
   "why_this_exists": {
     "the_position_before_this_run": "ND-06 v0.1, a depression-only rule with parameters taken from a published fit, has faced two independent external tests and passed neither: it over-predicts steady-state depression at 7 Hz by about 16 percentage points, and it fails structurally against wild-type paired-pulse ratios because those exceed one and decrease with interval while a single depleting resource can do neither. Every quantitative dynamical claim this project has made has failed. No tier above V0 is supported.",
@@ -285,5 +298,76 @@
     "what_must_be_written_first": "Its own contract, naming the file, the variables, the normalisation, the missing-data rule and the acceptance limits, committed before those arrays are opened. Nothing in this contract licenses opening them."
   },
   "claim_boundary": "One scoring pass over two sealed wild-type cohorts, against models frozen beforehand. It can award at most a V1-limited tier on the paired-pulse observable, it opens ten arrays and nothing else, and it leaves the trains, the perturbations, the raw traces and the entire Takagi corpus sealed.",
-  "last_reviewed": "2026-09-10"
+  "last_reviewed": "2026-09-10",
+  "execution_record": {
+    "executed_on": "2026-09-10",
+    "artifact": "evidence/stage2/stage2-stp-developmental-holdout-v1.json",
+    "artifact_sha256": "d700ff2f742e7739d0554ecac3369911a5ccbefba79cf1bdd9aaf7e844c46b21",
+    "code_commit": "c7f45bfc35cc4d3c39fc368a97a99fa1c334a58d",
+    "ran_from_a_detached_worktree": true,
+    "worktree_dirty": false,
+    "the_artifact_records_a_verdict_that_does_not_stand": {
+      "what_it_says": "PASSED",
+      "why_it_does_not_stand": "The artifact applied the registered verdict rule faithfully to the primary cohort. The primary cohort is not a holdout. Its five wild-type arrays are bit-identical to the five the model was fitted to, so A1 and A2 were scored against the training set and passing them means nothing. The artifact is immutable and is left exactly as written; this record supersedes its verdict field and any citation of it must cite this correction too.",
+      "the_corrected_verdict": "NO VERDICT",
+      "why_not_simply_failed": "The experiment did not fail; it was not run. A void cohort produces no evidence either way about the frozen models."
+    },
+    "the_duplication": {
+      "finding": "rozenfeld2023-repo/Figure 3/Fig3J.mat stores the same five wild-type paired-pulse arrays as Fig3D.mat. Element-wise identical: same values, same order, same animal counts of 20, 21, 22, 22 and 22. The maximum absolute difference at every interval is exactly zero, and the digests of the stored element bytes match at all five.",
+      "what_it_means_about_the_paper": "Nothing improper. The authors compared the 1-day-old cacRNAi cohort against the same wild-type reference they used for the 2-to-4-day comparison, and the repository ships that reference in both figure files. The RNAi arrays differ between the two files -- 28 animals in Fig3D against 22 in Fig3J -- so the perturbation cohorts are distinct. Only the wild-type control is shared.",
+      "how_it_was_discoverable_in_advance": "From the published legends alone. Figure 3D gives wild-type n = 20 (10 ms), 21 (30 ms), 22 (100, 300, 1000 ms). Figure 3J gives wild-type n = 20 (10 ms), 21 (30 ms), 22 (100, 300, 1000 ms). Identical at every interval. The independence audit recorded both lines side by side in the fit contract and the coincidence was noticed and not acted on. That is the error: not a missing check, an unheeded one.",
+      "why_the_animal_counts_were_not_treated_as_disqualifying": "Because Fig3H, the day-0 cohort, differs from the fit set at three of five intervals, which made the pattern look like ordinary cohort variation rather than reuse. That is a reason and not an excuse: identical counts at five independent intervals is not cohort variation, it is the same cohort.",
+      "the_structural_fix": "flysim.reservations.duplicate_arrays compares the digests of the stored element bytes of named arrays across two files, decoding nothing, and flysim.stp_holdout now refuses to open any cohort that duplicates a spent one before a byte of payload is read. Run against this case it flags all five Fig3J arrays and clears all five Fig3H arrays. Equal stored bytes prove equal data, so a match is a refusal; unequal bytes prove nothing, so a clean result is a screen and not a certificate of independence.",
+      "the_third_instance_of_one_pattern": "On 2026-09-09 the preparation was inferred from a plotting label instead of read from the methods. Earlier on 2026-09-10 a join size was inferred from a file's row count instead of measured on its column. Now a cohort's independence was inferred from a figure legend's prose instead of checked against its own numbers. All three were cheap to check, none was checked, and all three unchecked readings favoured the project. The two automated guards added since -- the byte-level worktree audit and this duplicate-array check -- address the mechanism, not the habit."
+    },
+    "what_the_genuine_cohort_returned": {
+      "cohort": "wild type, 0 days post eclosion (under 24 h), same genotype",
+      "file": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+      "status": "a real unseen cohort: its arrays differ from the fit set at every interval and its animal counts differ at three of five",
+      "registered_role": "secondary, declared in advance not to enter the verdict",
+      "A1": {
+        "verdict": "NO VERDICT",
+        "note": "Only 3 of 5 intervals are scorable under the registered half-width limit of 0.15, below the registered minimum of 4.",
+        "reading": "The 10 ms and 30 ms cohorts have 95 percent half-widths of about 0.19 and 0.17 against the registered 0.15 limit, so three of five intervals are scorable and the registered minimum is four. The frozen prediction does in fact lie inside all five intervals, but the registered power check forbids reading that as a pass, and it forbids it for the right reason: an interval that wide would contain a great many wrong predictions too."
+      },
+      "A2": {
+        "verdict": "PASSED",
+        "model_weighted_sse": 1.4930563693238241,
+        "flat_null_weighted_sse": 38.61217748465355,
+        "ratio": 0.03866801787900309,
+        "reading": "This is the one substantive registered result the run produced. On 21 animals the frozen model had never seen, its weighted residual is about 26 times smaller than a frozen constant's, against a registered limit of 2 times. A2 does not require narrow intervals -- it asks whether the curve tracks the means better than a horizontal line -- so the power problem that voided A1 does not void this."
+      },
+      "A3": {
+        "verdict": "PASSED",
+        "agreements": 4,
+        "reading": "All four adjacent directions agree. Weak, because the overlap allowance makes it easy on cohorts this size, and the flat null also passes it."
+      },
+      "the_secondary_model_on_the_same_cohort": {
+        "A2_ratio": 0.0331282787146883,
+        "reading": "The four-parameter single-facilitation model does marginally better than the five-parameter two-timescale one on this cohort: weighted residuals of 1.279 against 1.493. The difference is far too small to separate them and it points the opposite way from the fit set, where the two-timescale family was better by a factor of hundreds. So the question the two frozen models were meant to adjudicate is not adjudicated, and the honest statement is that one unseen cohort of this size cannot tell them apart."
+      },
+      "what_this_cohort_cannot_support": "A pass of the experiment. It was registered as secondary and declared in advance not to enter the verdict, and promoting it now because the primary turned out void would be exactly the criterion-restatement this contract forbids in its own acceptance section."
+    },
+    "degenerate_outcome_checks_as_they_fired": {
+      "D1": {
+        "on_the_primary": "no intervals dropped",
+        "on_the_genuine_cohort": "two of five dropped for width, which is what turned A1 into NO VERDICT there"
+      },
+      "D2": {
+        "flat_null_A1_on_the_primary": "FAILED",
+        "reading": "the constant failed A1, so A1 would have carried information had the cohort been real"
+      },
+      "D3": {
+        "fired": true,
+        "this_is_the_check_that_caught_it": "It was written to detect a holdout whose means sit within one fit-set standard error of the fit set, on the reasoning that such a cohort is a replication rather than a test. What it found was stronger than that: differences of exactly 0.0000 at all five intervals. A difference of exactly zero is not a replication, it is the same data, and the check's recorded consequence -- record the pass as a replication -- is too weak for what it found. Its wording is corrected in the reissue."
+      },
+      "D4": {
+        "separable": true,
+        "largest_gap": 0.07525894904666652,
+        "reading": "The two frozen curves differ by up to 0.075 at 100 ms, above the registered 0.02 limit, so a cohort of adequate power could have separated them. The genuine cohort's 100 ms half-width is 0.12, which is not adequate power."
+      }
+    },
+    "no_refitting": "Nothing was refitted on this outcome. The frozen parameters in this contract and in short-term-plasticity-v0.2 are unchanged, and no successor may cite either cohort as evidence for its values. Fig3H is now spent; Fig3J was never anything but the fit set.",
+    "what_remains_unspent": "The wild-type train arrays of rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat, at 1, 10, 20 and 60 Hz over 32 to 112 pulses in 18 animals. After this run they are the only unspent wild-type ORN-to-PN holdout in the corpus, which raises rather than lowers the standard for the contract that opens them."
+  }
 }

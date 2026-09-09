@@ -35,7 +35,7 @@ from flysim.depression_score import (
     variable_for,
 )
 from flysim.errors import ConfigurationError
-from flysim.reservations import read_mat_variable
+from flysim.reservations import duplicate_arrays, read_mat_variable
 from flysim.runs import git_metadata, require_clean_worktree
 from flysim.stage1 import _atomic_json, _immutable_snapshot
 from flysim.stp_families import family, paired_pulse
@@ -81,8 +81,59 @@ def _verify(*, manifest_path: Path, relative_path: str, staging_root: Path) -> d
     }
 
 
+def _refuse_a_duplicate_of_a_spent_cohort(
+    *, relative_path: str, names: list[str], spent: list[dict[str, Any]], staging_root: Path
+) -> dict[str, Any]:
+    """Refuse to open a cohort whose arrays are stored identically to a spent one.
+
+    This exists because of what happened on 2026-09-10. A holdout was preregistered
+    against the Fig3J wild-type arrays, whose published legend describes a different
+    developmental cohort and gives it the same animal counts as the training set. The
+    arrays turned out to be bit-identical to the training set: the repository ships the
+    same wild-type reference twice. The registered replication check caught it, but only
+    after the cohort had been opened and scored, by which point the damage was done.
+
+    The check runs before a byte of any payload is decoded: equal stored element bytes
+    prove equal data, which is the direction a guard needs.
+    """
+    findings: list[dict[str, Any]] = []
+    for source in spent:
+        duplicates = duplicate_arrays(
+            candidate=staging_root / relative_path,
+            spent=staging_root / str(source["file"]),
+            names=names,
+        )
+        findings.append(
+            {
+                "against": source["file"],
+                "why_it_is_spent": source["why_it_is_spent"],
+                "duplicate_arrays": list(duplicates),
+            }
+        )
+        if duplicates:
+            raise ConfigurationError(
+                f"{relative_path} stores the same arrays as the already-spent "
+                f"{source['file']}: {list(duplicates)}. Scoring it would be scoring the "
+                "training set. Equal stored bytes prove equal data."
+            )
+    return {
+        "checked_against": findings,
+        "no_duplicate_found": True,
+        "what_a_clean_result_does_not_prove": (
+            "Independence. Equal stored bytes prove equal data; unequal stored bytes do "
+            "not prove unequal data, and neither proves the animals differ. The other "
+            "half of the protection is reading the published animal counts and acting on "
+            "them."
+        ),
+    }
+
+
 def _open_cohort(
-    *, spec: dict[str, Any], manifest_path: Path, staging_root: Path
+    *,
+    spec: dict[str, Any],
+    manifest_path: Path,
+    staging_root: Path,
+    spent: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Open the five declared wild-type arrays of one cohort and summarise each."""
     relative_path = str(spec["file"])
@@ -93,6 +144,9 @@ def _open_cohort(
             "This cohort would open a variable the contract does not name: "
             f"{sorted(set(wanted) - declared)}"
         )
+    duplication = _refuse_a_duplicate_of_a_spent_cohort(
+        relative_path=relative_path, names=wanted, spent=spent, staging_root=staging_root
+    )
     unsealing = _verify(
         manifest_path=manifest_path, relative_path=relative_path, staging_root=staging_root
     )
@@ -106,6 +160,7 @@ def _open_cohort(
     return {
         "cohort": str(spec["cohort"]),
         "unsealing": {**unsealing, "variables_opened": wanted},
+        "not_a_duplicate_of_a_spent_cohort": duplication,
         "by_interval": rows,
     }
 
@@ -352,11 +407,13 @@ def run_stp_developmental_holdout(
     primary_curve = _rederive(primary_model)
     secondary_curve = _rederive(secondary_model) if secondary_model else None
 
+    spent = list(contract["depends_on"]["spent_arrays"])
     cohorts = {
         role: _open_cohort(
             spec=contract["the_cohorts"][role],
             manifest_path=manifest_path,
             staging_root=staging_root,
+            spent=spent,
         )
         for role in ("primary", "secondary")
     }
