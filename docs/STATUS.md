@@ -1151,3 +1151,14 @@ series exists anywhere in it.** So the recovery constant is unmeasurable from th
 rather than merely unmeasured, and the plan to settle it with the trains was built on a
 mis-read header. Advancing the ORN->PN synaptic tier requires a different dataset, not a
 different contract.
+
+**Checked, and qualified.** The claim that the corpus holds no train amplitude series was
+asserted from one figure directory, so it was verified across the whole repository:
+`read_mat_structure` over all 66 MAT files, shapes only, nothing decoded. It holds for the
+61 files that could be read. **Five could not be** -- `Fig1D`, `FigS4A` and `FigS8E` are
+MATLAB v7.3, and `Fig8B` and `FigS13` defeat this project's own v5 structure reader, which
+is a defect on our side and is recorded as one. So the claim covers 61 of 66 files, not the
+repository. Four of the five belong to odour-response or behaviour figures where an
+amplitude train series would be out of place, and that is left as an open question rather
+than a conclusion, because "would be out of place" is the inference this session has been
+punished for six times.

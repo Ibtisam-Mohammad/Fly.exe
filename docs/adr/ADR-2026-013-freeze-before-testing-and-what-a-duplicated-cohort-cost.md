@@ -556,3 +556,44 @@ document and in two contracts — was built on a mis-read header.
 contract.** That is the honest deliverable of this session's second half, and it is worth
 more than a fourth negative result would have been: it says where the work is, and it says
 it is not here.
+
+## Ninth amendment, 2026-09-10 — the corpus claim, checked across the whole repository and then qualified
+
+The eighth amendment asserted that "no train amplitude series exists anywhere in it" after
+examining one figure directory. That is the same shape as the six errors this ADR already
+records, so it was checked: `read_mat_structure` over every MAT file in the repository,
+variable names and shapes only, no payload decoded, nothing spent.
+
+**The claim survives, for 61 of 66 files.** Across every readable file the only per-pulse
+arrays over a stimulation train are `Fig3E_and_F`'s latencies and the 32-column arrays of
+`Fig3B`, `Fig3G` and `Fig3I` — the 32 eEPSCs evoked at 1 Hz that the methods say were
+averaged to give one amplitude per animal. Everything else wide is odour-evoked calcium or
+spiking population data, raw whole-cell traces, or behaviour.
+
+**Five files could not be read**, and the claim is therefore about 61 of 66 files and not
+about the repository:
+
+| file | why |
+|---|---|
+| `Figure 1/Fig1D.mat` | MATLAB v7.3, an HDF5 container the header-only reader declines to parse |
+| `Figure S4/FigS4A.mat` | MATLAB v7.3 |
+| `Figure S8/FigS8E.mat` | MATLAB v7.3 |
+| `Figure 8/Fig8B.mat` | **v5 container the project's own reader cannot parse** |
+| `Figure S13/FigS13.mat` | same |
+
+Four of the five belong to odour-response or behaviour figures, where an evoked-amplitude
+train series would be out of place. "Would be out of place" is an inference of exactly the
+kind that produced the six recorded errors, so it is recorded as an open question rather
+than as a conclusion.
+
+**The last two are a defect in this project's reader, not in the data.** `Fig8B` and
+`FigS13` are version 5 containers that `read_mat_structure` fails on at the dimensions
+subelement — most likely a variable class it does not handle, such as a cell array or a
+struct. It is recorded rather than fixed, because no current contract needs it and because
+an unrecorded reader limitation is precisely how a corpus comes to be described from the
+files that happened to open.
+
+The audit also confirmed that `Fig3G`'s wild-type 1 Hz array carries 20 animals against
+`Fig3B`'s and `Fig3I`'s 17, matching the published legends and consistent with the recorded
+finding that `Fig3B` and `Fig3I` are bit-identical while `Fig3G` is a separate day-0
+recording.

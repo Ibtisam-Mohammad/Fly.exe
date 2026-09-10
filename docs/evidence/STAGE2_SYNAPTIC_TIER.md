@@ -680,7 +680,8 @@ frequency-dependent first column where a from-rest pulse cannot be, and no depre
 all across 112 pulses at 60 Hz. The unregistered check that would have caught it is that
 the first column must be frequency-independent.
 
-**There is no unspent wild-type ORN->PN amplitude holdout in this corpus.** No train
-amplitude series exists in the Rozenfeld repository at all, so the recovery constant cannot
-be measured from it by anyone. Advancing this tier needs a different dataset. The Stage 2
+**There is no unspent wild-type ORN->PN amplitude holdout in this corpus.** A
+whole-repository structure audit of all 66 MAT files found no train amplitude series in any
+of the 61 that could be read; five could not be read and are recorded as an open question.
+So the recovery constant cannot be measured from this corpus by anyone. Advancing this tier needs a different dataset. The Stage 2
 gate stays at v4, 0 of 3; V0 Structural remains the only supported tier.

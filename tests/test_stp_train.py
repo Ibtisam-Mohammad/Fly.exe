@@ -360,3 +360,37 @@ def test_a_pulse_count_that_disagrees_with_the_freeze_is_refused(tmp_path: Path)
     paths["contract"].write_text(json.dumps(contract), encoding="utf-8")
     with pytest.raises(ConfigurationError, match="the contract froze"):
         _run(paths)
+
+
+def test_the_corpus_claim_carries_its_own_qualification() -> None:
+    """The strongest closing claim of the session, checked and then qualified.
+
+    "No train amplitude series exists anywhere in this corpus" was asserted from one
+    figure directory. A whole-repository structure audit confirmed it for the 61 files
+    that could be read and found five that could not, so the claim covers 61 of 66 files.
+    The qualification has to travel with the claim or the next reader inherits the
+    unqualified version.
+    """
+    reservations = json.loads(
+        (REPO / "configs/datasets/stage2-reservations-v1.json").read_text(encoding="utf-8")
+    )
+    audit = reservations["whole_repository_structure_audit_2026_09_10"]
+    assert audit["files_examined"] == 66
+    assert audit["files_read_successfully"] == 61
+    assert len(audit["the_five_unreadable_files"]) == 5
+    assert "61 of 66 files and not about the repository" in (
+        audit["the_qualification_that_must_travel_with_it"]
+    )
+    # The reader defect must be recorded as ours rather than blamed on the data.
+    defect = audit["a_defect_in_the_project_reader_not_in_the_data"]
+    assert "limitation of" in defect
+    assert "not a property of the files" in defect
+    # And the registry must not repeat the unqualified version.
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    qualified = registry["the_train_experiment_was_void"][
+        "the_corpus_claim_and_its_qualification"
+    ]
+    assert "61 of 66 files" in qualified
+    assert "open question rather than as a conclusion" in qualified
