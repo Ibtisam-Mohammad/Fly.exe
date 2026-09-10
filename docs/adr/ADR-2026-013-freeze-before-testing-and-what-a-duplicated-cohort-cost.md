@@ -656,3 +656,75 @@ otherwise spend. Fitting a family jointly to the Rozenfeld paired-pulse curve an
 least one train constraint is the next contract, and it needs no data the project does not
 already hold. The release-probability incompatibility remains open and is untouched by any
 of this.
+
+## Eleventh amendment, 2026-09-10 - the first passed dynamical validation
+
+Everything above is prologue to this. The joint fit was run, two families survived, one
+was frozen as primary under a rule committed beforehand, and it was scored once against a
+day-0 1 Hz train cohort that had never been decoded. **It passed both registered
+criteria.**
+
+| | result |
+|---|---|
+| **J1** prediction inside the measurement error | **PASSED** - 31 of 31 scorable pulses inside 1.96 standard errors, a fraction of 1.000 against the registered 0.80 |
+| **J2** beats the refuted predecessor | **PASSED** - weighted error 13.41 against ND-06 v0.1's 139.32, a ratio of 0.096 against a limit of 0.5 |
+| J3 steady state | observed 0.555; primary predicts 0.643, secondary 0.650, v0.1 0.904 |
+| J4 the two frozen models | 13.41 against 14.60 on 31 pulses - separates nothing |
+
+**Why this one worked when the others did not.** Every earlier candidate was fitted to a
+paired-pulse curve alone, and that observable cannot constrain the resource recovery
+constant: the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled standard
+error of 0.0277. Every family duly drove the constant to its bound, which is invisible
+across a single pair and catastrophic across a train. Adding a 32-pulse 1 Hz trajectory to
+the objective fixes it: the constant comes out at 7096 ms, interior to its box, and the
+fits gain 32 residual degrees of freedom with goodness-of-fit p values near 0.78. The
+previous primary had zero residual degrees of freedom and no p at all.
+
+**The guards, each answering a failure this session actually had.**
+
+| guard | what it established | which failure it answers |
+|---|---|---|
+| manifest checksum | the bytes scored are the bytes reserved | the dirty-tree artifacts of 2026-09-08 |
+| duplicate-array digest | Fig3G duplicates none of Fig3D, Fig3B, Fig3H | the bit-identical holdout of this morning |
+| trajectory re-derivation | every pulse recomputed from frozen parameters to 1e-6 | a simulator moving under a freeze |
+| **internal consistency check** | first pulse 49.72 pA against the fit set's 50.43, ratio 0.986 | **the latency arrays scored as amplitudes** |
+| degeneracy check on J1 | v0.1 lands inside at only 0.581, below 0.80 | a criterion that passes everything |
+
+The fourth is the one that matters most, and it is the first contract in this project to
+carry a check the data can fail on their own terms. The fifth is what makes J1 mean
+something: had the null also passed it, the registered fallback would have put the verdict
+on J2 alone.
+
+**What it establishes.** That a short-term-plasticity model for the ORN-to-PN synapse,
+fitted to a paired-pulse curve and a 1 Hz train in one cohort and frozen with every
+predicted number written down and checksum-pinned beforehand, predicts an unseen cohort's
+32-pulse train trajectory inside its measurement error at every scorable pulse, ten times
+better than the rule it replaces. **V1-limited**, scoped to the ORN-to-uniglomerular-PN
+paired-pulse and 1 Hz train observables, in one laboratory, across an unstated glomerular
+mixture labelled by `GH146-QF`.
+
+**What it does not establish, stated in the same place.**
+
+- Nothing above 1 Hz. The primary predicts a 7 Hz steady state of 0.195 against Kazama and
+  Wilson's measured 0.60. The secondary gives 0.532. That is a live problem for the
+  primary and this pass does not touch it.
+- Nothing about another laboratory, glomerulus or synapse class; nothing about latency,
+  jitter, absolute amplitude, minis or any perturbation; nothing about edge sign, which
+  stays unresolved under `ND-10`.
+- Not the release-probability incompatibility. The primary's effective first-pulse
+  utilisation is 0.084 against a measured 0.79, and the bound derived in the fifth and
+  seventh amendments holds for any distribution of per-site probabilities.
+- Not which of the two models is right. The holdout separates them by 1.2 on 31 points.
+- **Not developmental invariance**, and this is the sharpest caveat. The day-0 cohort's
+  steady state is 0.555 and the day-2-to-4 fit set's is 0.703. The frozen models predict
+  0.643 and 0.650 - *between* the two. So the curve is not tracking a cohort identical to
+  the one it was fitted to; it lands inside the day-0 error bars at every pulse while
+  sitting above the day-0 mean and below the day-2-to-4 mean. That the day-0 intervals are
+  wide enough to contain it is part of why J1 passes, and the degeneracy check is what
+  establishes they are not so wide that the refuted null also passes.
+
+**The Stage 2 gate is unchanged at v4, 0 of 3.** Its three legs are cellular, synaptic
+kinetics and circuit, and this is none of them: it is a plasticity module, and the gate's
+synaptic leg requires unitary waveforms this repository does not ship. V0 Structural
+remains the only supported *stage* tier; what changes is that one registered dynamics
+module now carries a V1-limited validation of its own, which is the first in this project.

@@ -1200,3 +1200,45 @@ committed first, verifiably.
 
 **Next contract:** fit a family jointly to the Rozenfeld paired-pulse curve *and* at least
 one published train constraint. It needs no data the project does not already hold.
+
+## The first passed dynamical validation, 2026-09-10
+
+**`male-cns-orn-pn-stp-v0.3` passed both registered criteria against a cohort that had
+never been decoded.** Full reasoning in ADR-2026-013's eleventh amendment.
+
+```
+J1  prediction inside measurement error   PASSED   31/31 pulses inside, vs required 0.80
+J2  beats the refuted ND-06 v0.1          PASSED   13.41 vs 139.32, ratio 0.096, limit 0.5
+J3  steady state                          observed 0.555; primary 0.643, v0.1 0.904
+J4  the two frozen models                 13.41 vs 14.60 - separates nothing
+```
+
+**Why this worked when four earlier attempts did not.** A paired-pulse curve cannot
+constrain the resource recovery constant - Rozenfeld's 300 and 1000 ms means differ by
+0.0003 - so every family fitted to it alone drove the constant to its bound and then
+collapsed in a sustained train. Adding a 32-pulse 1 Hz trajectory to the objective fixes
+it: 7096 ms, interior to its box, 32 residual degrees of freedom, goodness-of-fit p near
+0.78. The previous primary had no residual degrees of freedom at all.
+
+**Five guards ran, each answering a real failure from this session:** manifest checksum,
+duplicate-array digest (Fig3G duplicates nothing spent), trajectory re-derivation to 1e-6,
+an **internal consistency check** on the first-pulse magnitude (49.72 pA against the fit
+set's 50.43) - the first in this project, added because latency arrays were scored as
+amplitudes this morning - and a degeneracy check confirming the refuted null lands inside
+at only 0.581, so J1 discriminates rather than passing everything.
+
+**Tier: V1-limited**, scoped to ORN-to-uniglomerular-PN paired-pulse and 1 Hz train
+observables, one laboratory, an unstated glomerular mixture.
+
+**What it does not establish.** Nothing above 1 Hz - the primary predicts 0.195 at 7 Hz
+against a measured 0.60, a live problem. Nothing about another laboratory, glomerulus or
+synapse class, latency, absolute amplitude or any perturbation. Not edge sign. Not the
+release-probability incompatibility, where the fitted 0.084 sits against a measured 0.79.
+Not which of the two models is right. And **not developmental invariance**: the day-0
+steady state is 0.555 against the fit set's 0.703, and both models sit between them, so the
+frozen curve lands inside day-0 error bars while tracking neither cohort's mean exactly.
+
+**The Stage 2 exit gate is unchanged at v4, 0 of 3**, and V0 Structural remains the only
+supported stage tier. The gate's three legs are cellular, synaptic kinetics and circuit;
+this is a plasticity module and none of them. What changed is that one registered dynamics
+module now carries a validation of its own, which is a first.

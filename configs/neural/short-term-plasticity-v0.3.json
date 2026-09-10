@@ -1,0 +1,212 @@
+{
+  "schema_version": "1.3",
+  "registry_id": "male-cns-orn-pn-stp-v0.3",
+  "dataset_id": "male-cns:v1.0",
+  "assumption_ids": [
+    "ND-04",
+    "ND-06"
+  ],
+  "what_this_file_is": "The first validated dynamics module in this project. Two families fitted jointly to a spent paired-pulse curve and a spent 1 Hz train, frozen with their predictions checksum-pinned, and scored once against a day-0 train cohort that had never been decoded. It passed both registered criteria.",
+  "supersedes": {
+    "v0_1": "refuted on the paired-pulse observable; its ratios cannot exceed one or decrease with interval",
+    "v0_2": "a candidate set whose members were fitted to paired pulses alone, drove the recovery constant to its bound, and were refuted on sustained trains at eight times too much depression",
+    "what_changed": "The fit includes a train. The recovery constant that a paired-pulse curve cannot constrain is fitted at 7096 ms, interior to its box, and the resulting models no longer collapse in a sustained train."
+  },
+  "primary_rule": {
+    "family_id": "facilitation-depression",
+    "parameters": {
+      "resting_utilisation": 0.007760370924271978,
+      "facilitation_increment": 0.07706701812983233,
+      "facilitation_tau_ms": 32.5546454433904,
+      "recovery_tau_ms": 7096.017678837662
+    },
+    "one_hz_trajectory": [
+      1.0,
+      0.926842,
+      0.868653,
+      0.822369,
+      0.785555,
+      0.756273,
+      0.732982,
+      0.714457,
+      0.699722,
+      0.688002,
+      0.67868,
+      0.671265,
+      0.665367,
+      0.660676,
+      0.656945,
+      0.653977,
+      0.651616,
+      0.649739,
+      0.648245,
+      0.647057,
+      0.646113,
+      0.645361,
+      0.644763,
+      0.644288,
+      0.64391,
+      0.643609,
+      0.64337,
+      0.643179,
+      0.643028,
+      0.642908,
+      0.642812,
+      0.642736
+    ],
+    "steady_state_last_five": 0.6429323932066177,
+    "paired_pulse": [
+      {
+        "interval_ms": 10.0,
+        "predicted": 1.480765474800296
+      },
+      {
+        "interval_ms": 30.0,
+        "predicted": 1.222502198344176
+      },
+      {
+        "interval_ms": 100.0,
+        "predicted": 0.9546784457853431
+      },
+      {
+        "interval_ms": 300.0,
+        "predicted": 0.9253792183699951
+      },
+      {
+        "interval_ms": 1000.0,
+        "predicted": 0.9472591319159545
+      }
+    ],
+    "joint_weighted_sse": 25.4578096918126,
+    "goodness_of_fit_p": 0.7870733424174755,
+    "degrees_of_freedom": 32,
+    "effective_first_pulse_utilisation": 0.08422932040738922,
+    "predicted_7hz_steady_state": 0.1948764695245776
+  },
+  "secondary_rule": {
+    "family_id": "parallel-release-components",
+    "parameters": {
+      "facilitation_step": 1.315642849616148,
+      "facilitation_tau_ms": 27.438896383612796,
+      "utilisation": 0.18530374571537445,
+      "recovery_tau_ms": 13057.119014852045
+    },
+    "one_hz_trajectory": [
+      1.0,
+      0.914179,
+      0.849416,
+      0.800544,
+      0.763663,
+      0.735832,
+      0.71483,
+      0.698981,
+      0.687021,
+      0.677995,
+      0.671184,
+      0.666045,
+      0.662166,
+      0.659239,
+      0.65703,
+      0.655364,
+      0.654106,
+      0.653157,
+      0.65244,
+      0.6519,
+      0.651492,
+      0.651184,
+      0.650952,
+      0.650777,
+      0.650644,
+      0.650545,
+      0.650469,
+      0.650412,
+      0.650369,
+      0.650337,
+      0.650313,
+      0.650294
+    ],
+    "steady_state_last_five": 0.6503451357556808,
+    "paired_pulse": [
+      {
+        "interval_ms": 10.0,
+        "predicted": 1.4937170197357927
+      },
+      {
+        "interval_ms": 30.0,
+        "predicted": 1.2021799553134525
+      },
+      {
+        "interval_ms": 100.0,
+        "predicted": 0.9528334919777358
+      },
+      {
+        "interval_ms": 300.0,
+        "predicted": 0.9365079165992668
+      },
+      {
+        "interval_ms": 1000.0,
+        "predicted": 0.95372808723911
+      }
+    ],
+    "joint_weighted_sse": 25.942813238882987,
+    "goodness_of_fit_p": 0.7661311294205781,
+    "degrees_of_freedom": 32,
+    "effective_first_pulse_utilisation": 0.09265187285768722,
+    "predicted_7hz_steady_state": 0.5316459664169301
+  },
+  "the_two_are_not_separated": "Joint residuals of 25.5 and 25.9 on 32 degrees of freedom, and holdout residuals of 13.4 and 14.6 on 31 pulses. Neither the fit set nor the holdout can choose between them. The committed selection rule named the primary and it stands, but the independent Kazama and Wilson 7 Hz check favours the secondary decisively, 0.532 against 0.195 for a measured 0.60. Any use above 1 Hz should prefer the secondary or treat the difference as an open alternative.",
+  "validation": {
+    "executed_on": "2026-09-10",
+    "artifact": "evidence/stage2/stage2-stp-joint-holdout-v1.json",
+    "artifact_sha256": "265de9ba87cd241f0380748764241043fb1e5b7da5f06bd2d652df107939f6e7",
+    "code_commit": "042a225e423164afd776ea798d71ad2048c4d4e5",
+    "ran_from_a_detached_worktree": true,
+    "worktree_dirty": false,
+    "verdict": "PASSED",
+    "cohort": "Fig3G wild type, 0 days post eclosion, 20 animals, 32 pulses at 1 Hz, never previously decoded",
+    "results": {
+      "J1_prediction_inside_the_measurement_error": "PASSED. 31 of 31 scorable pulses inside 1.96 standard errors, a fraction of 1.000 against the registered 0.80. The threshold was the one the joint fit's own screen used on the training train, fixed before this contract existed, so the holdout was scored no more leniently than the fit.",
+      "J2_beats_the_refuted_predecessor": "PASSED. Weighted squared error 13.41 against ND-06 v0.1's 139.32, a ratio of 0.0962 against the registered limit of 0.5. Better by a factor of ten than the rule it replaces, on a cohort neither had seen.",
+      "J3_steady_state": "Observed 0.5550. Primary predicted 0.6429, secondary 0.6503, ND-06 v0.1 0.9037. The day-0 cohort depresses somewhat more than the day-2-to-4 fit set's 0.7032, and both frozen models sit between the two while the refuted predecessor is far above both.",
+      "J4_the_two_frozen_models_are_not_separated": "Primary 13.41, secondary 14.60, both inside at 31 of 31 pulses. A difference of 1.2 on 31 points separates nothing. The independent Kazama and Wilson check still favours the secondary decisively, 0.532 against 0.195 for a measured 0.60, and this holdout does not overturn or confirm that. The committed selection rule made the primary primary and it stands; neither model may be preferred on this evidence."
+    },
+    "the_guards_that_ran_and_what_each_established": {
+      "manifest_checksum": "the bytes scored are the bytes reserved",
+      "duplicate_array_digest": "Fig3G duplicates none of Fig3D, Fig3B or Fig3H. The guard that was missing when a bit-identical cohort was scored as a holdout earlier today.",
+      "frozen_trajectory_rederivation": "every predicted pulse recomputed from the frozen parameters and matched to 1e-6, so the simulator has not moved under the freeze",
+      "internal_consistency_check": "the cohort's mean first-pulse magnitude is 49.72 pA against the fit set's 50.43, a ratio of 0.9860. This is the check that was missing when latency arrays were scored as amplitudes this morning, and it is the first contract in this project to carry one.",
+      "degeneracy_check_on_J1": "ND-06 v0.1 lands inside at only 0.581 of pulses, below the 0.80 threshold, so J1 discriminates rather than passing everything. Had the null also passed, the registered fallback would have put the verdict on J2 alone."
+    },
+    "what_this_establishes": "That a short-term-plasticity model for the ORN-to-PN synapse, fitted to a paired-pulse curve and a 1 Hz train in one cohort and frozen with every predicted number written down and checksum-pinned beforehand, predicts an unseen cohort's 32-pulse train trajectory inside its measurement error at every scorable pulse, and does so ten times better than the refuted rule it replaces. It is the project's first passed dynamical validation.",
+    "the_tier_it_earns": {
+      "tier": "V1-limited",
+      "scope": "the ORN-to-uniglomerular-PN paired-pulse and 1 Hz train observables, in one laboratory, in Drosophila melanogaster, across an unstated mixture of glomeruli labelled by GH146-QF",
+      "it_is_not_V2": "nothing here is a circuit-level activity prediction"
+    },
+    "what_it_does_not_establish": [
+      "Anything about another laboratory, another glomerulus or another synapse class. The recordings pool an unstated glomerular mixture through a driver labelling about 60 per cent of projection neurons.",
+      "Anything about trains above 1 Hz. The 7 Hz check is reported and the primary misses it badly, at 0.195 against a measured 0.60, while the secondary gives 0.532. That is a live problem for the primary and it is not resolved by this pass.",
+      "Anything about latency, jitter, absolute amplitude, miniature EPSCs or any perturbation.",
+      "Anything about edge sign, which stays unresolved under ND-10.",
+      "The release-probability incompatibility, which is untouched: the primary's effective first-pulse utilisation is 0.084 against a measured 0.79, and the recorded structural bound says no single-pool family reconciles those.",
+      "Which of the two frozen models is right. The holdout cannot separate them.",
+      "Developmental invariance. The fit set is day 2 to 4 and the holdout day 0, and the models carry no age parameter, so the pass is a conjunction of the model being right and the trajectory being mature at eclosion. The observed day-0 steady state of 0.555 against the day-2-to-4 0.703 shows the two cohorts do differ, and both frozen models sit between them, which is a weaker situation than either alone."
+    ],
+    "the_honest_caveat_on_the_day_0_difference": "The day-0 steady state is 0.555 and the day-2-to-4 steady state, in the fit set, is 0.703. The models predict 0.643 and 0.650, between the two. So the frozen curve is not tracking a cohort identical to the one it was fitted to; it lands inside the day-0 error bars at every pulse while sitting above the day-0 mean and below the day-2-to-4 mean. That the day-0 cohort's intervals are wide enough to contain it is part of why J1 passes, and the registered degeneracy check confirms the intervals are not so wide that the refuted null also passes.",
+    "no_refitting": "No parameter changed. The frozen values stand exactly as committed at 042a225, and no successor may cite this test as evidence for its own values."
+  },
+  "tier": "V1-limited",
+  "open_problems_this_does_not_touch": [
+    "the release-probability incompatibility: every family needs an effective first-pulse utilisation below 0.40 to reproduce the measured 10 ms ratio, against a measured 0.79, and the bound holds for any distribution of per-site probabilities",
+    "the primary's 7 Hz prediction of 0.195 against a measured 0.60",
+    "edge sign, which is ND-10 and stays unresolved",
+    "every observable except paired-pulse ratios and 1 Hz trains"
+  ],
+  "engine_coverage": {
+    "numpy_circuit_runner": "not implemented for these families",
+    "brian2_circuit_runner": "not implemented",
+    "genn_circuit_runner": "not implemented",
+    "note": "Wiring a validated rule into the runners is the next engineering step and is not done."
+  },
+  "last_reviewed": "2026-09-10"
+}

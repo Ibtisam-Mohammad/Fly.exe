@@ -703,3 +703,26 @@ catastrophic over a train.
 successors on trains. The next contract must fit jointly to a paired-pulse curve and a
 published train constraint, and needs no new data. Stage 2 gate unchanged at v4, 0 of 3;
 V0 Structural remains the only supported tier.
+
+### The first passed dynamical validation, 2026-09-10
+
+`male-cns-orn-pn-stp-v0.3`, fitted jointly to the spent paired-pulse curve and the spent
+1 Hz train, frozen with every predicted pulse checksum-pinned, scored once against Fig3G's
+day-0 train in twenty animals. **J1 31/31 pulses inside (required 0.80). J2 ratio 0.096
+against ND-06 v0.1 (limit 0.5).** PASSED.
+
+The recovery constant is 7096 ms, fitted rather than pinned, interior to its box - the
+parameter the paired-pulse observable could not see and that made every earlier candidate
+collapse in a train.
+
+**V1-limited**, on the paired-pulse and 1 Hz train observables only. It says nothing above
+1 Hz, where the primary predicts 0.195 against a measured 0.60; nothing about another
+laboratory, glomerulus or synapse class; nothing about edge sign; and it does not resolve
+the release-probability incompatibility. The two frozen models are not separated by it.
+
+The day-0 cohort's steady state is 0.555 against the day-2-to-4 fit set's 0.703, and both
+models predict between the two, so this is a pass inside day-0 error bars rather than an
+exact reproduction of either cohort.
+
+**Stage 2 exit gate unchanged at v4, 0 of 3.** Its legs are cellular, synaptic kinetics and
+circuit; this is a plasticity module and none of them.

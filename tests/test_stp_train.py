@@ -397,3 +397,74 @@ def test_the_corpus_claim_carries_its_own_qualification() -> None:
     ]
     assert "61 of 66 files" in qualified
     assert "open question rather than as a conclusion" in qualified
+
+
+def test_the_joint_holdout_passed_and_the_guards_that_make_it_mean_something() -> None:
+    """The project's first passed dynamical validation, and why it is not an artefact."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-joint-holdout-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert contract["values_opened"] is True
+    record = contract["execution_record"]
+    assert record["verdict"] == "PASSED"
+    assert "31 of 31" in record["results"]["J1_prediction_inside_the_measurement_error"]
+    assert "factor of ten" in record["results"]["J2_beats_the_refuted_predecessor"]
+    guards = record["the_guards_that_ran_and_what_each_established"]
+    # Four guards, each answering a failure this session actually had.
+    assert "duplicates none of" in guards["duplicate_array_digest"]
+    assert "1e-6" in guards["frozen_trajectory_rederivation"]
+    assert "latency arrays were scored as amplitudes" in guards["internal_consistency_check"]
+    # And the null must not pass J1, or J1 discriminates nothing.
+    assert "0.581" in guards["degeneracy_check_on_J1"]
+    assert "J1 discriminates" in guards["degeneracy_check_on_J1"]
+
+
+def test_the_pass_carries_its_limits_and_does_not_overclaim() -> None:
+    """A pass is worth what it is worth. The record has to say so in the same place."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-joint-holdout-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    record = contract["execution_record"]
+    assert record["the_tier_it_earns"]["tier"] == "V1-limited"
+    assert record["the_tier_it_earns"]["it_is_not_V2"]
+    limits = " ".join(record["what_it_does_not_establish"])
+    for phrase in (
+        "another laboratory",
+        "7 Hz",
+        "edge sign",
+        "release-probability incompatibility",
+        "Developmental invariance",
+    ):
+        assert phrase in limits, phrase
+    # The day-0 cohort genuinely differs from the fit set, and that must be disclosed
+    # in the same record rather than left for a reader to notice.
+    caveat = record["the_honest_caveat_on_the_day_0_difference"]
+    assert "0.555" in caveat and "0.703" in caveat
+    assert "between the two" in caveat
+    # The two models are not separated and neither may be preferred.
+    assert "separates nothing" in record["results"]["J4_the_two_frozen_models_are_not_separated"]
+
+
+def test_the_v0_3_registry_records_the_tier_and_the_open_problems() -> None:
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
+    )
+    assert registry["tier"] == "V1-limited"
+    assert registry["validation"]["verdict"] == "PASSED"
+    # What changed from the refuted predecessors has to be stated mechanistically.
+    assert "7096 ms" in registry["supersedes"]["what_changed"]
+    assert "cannot constrain" in registry["supersedes"]["what_changed"]
+    # And the open problems must survive the pass rather than be quietly dropped.
+    problems = " ".join(registry["open_problems_this_does_not_touch"])
+    assert "release-probability incompatibility" in problems
+    assert "0.195" in problems
+    assert "edge sign" in problems
+    separation = registry["the_two_are_not_separated"]
+    assert "Neither the fit set nor the holdout can choose between them" in separation
+    assert "prefer the secondary" in separation
+    # Nothing is wired into a runner yet and the file must say so.
+    assert "not implemented" in registry["engine_coverage"]["numpy_circuit_runner"]
