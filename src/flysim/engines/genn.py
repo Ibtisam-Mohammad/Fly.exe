@@ -240,6 +240,7 @@ class TrackAGeNNEngine:
         self._flat_offsets: np.ndarray | None = None
         self._flat_index_by_dense: np.ndarray | None = None
         self._pool_flat_index: dict[str, np.ndarray] = {}
+        self._last_frame_counts: np.ndarray | None = None
         self._last_counts: dict[int, float] = {}
         self._last_pool_counts: dict[str, np.ndarray] = {}
         self._model_identity: str | None = None
@@ -638,6 +639,7 @@ class TrackAGeNNEngine:
             + local_by_dense.astype(np.int64)
         )
         self._pool_flat_index.clear()
+        self._last_frame_counts = None
         self._t_us = 0
         self._last_counts.clear()
         self._last_pool_counts.clear()
@@ -799,6 +801,27 @@ class TrackAGeNNEngine:
                 "max_rate_hz": float(delta.max() / seconds) if index.size else 0.0,
             }
         return report
+
+    def spike_counts_since_last_frame(self) -> np.ndarray:
+        """Per-neuron spike count since the previous call, in dense graph order.
+
+        This is what the brain view renders. It is one device pull and one subtraction
+        over 165,122 counters, and it carries neuron identity, which a population rate
+        does not and a membrane trace would only bury under ten thousand samples a second.
+        """
+        self._require_ready()
+        assert self._flat_index_by_dense is not None
+        flat = self._flat_counts()
+        cumulative = flat[self._flat_index_by_dense].astype(np.float64)
+        previous = self._last_frame_counts
+        if previous is None:
+            previous = np.zeros_like(cumulative)
+        delta = cumulative - previous
+        if np.any(delta < 0.0):
+            raise CausalityError("Track A spike counter moved backward")
+        self._last_frame_counts = cumulative
+        counts: np.ndarray = np.rint(delta).astype(np.int32)
+        return counts
 
     def read_state(self, body_ids: Sequence[int]) -> dict[str, list[float]]:
         """Membrane voltage and synaptic state for a declared, selected body set.

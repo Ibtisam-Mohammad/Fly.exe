@@ -55,9 +55,15 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
-from flysim.contracts import NeuralInputFrame, SignalType
+from flysim.contracts import (
+    ActuatorCommandFrame,
+    NeuralInputFrame,
+    NeuralOutputFrame,
+    SignalType,
+)
 from flysim.demo01 import Demo01Populations, PopulationSpec, selectivity_index
 from flysim.errors import ConfigurationError
 
@@ -637,6 +643,167 @@ def score_visual_operating_point(
     }
 
 
+# --------------------------------------------------------------------------------------
+# The neural-to-locomotor decoder. Provenance E, tuned only after the network is frozen.
+# --------------------------------------------------------------------------------------
+
+
+class VisualLocomotorState(StrEnum):
+    QUIESCENT = "QUIESCENT"
+    WATCHING = "WATCHING"
+    LOCOMOTING = "LOCOMOTING"
+
+
+@dataclass(frozen=True, slots=True)
+class VisualDecoderParameters:
+    """How descending rates become forward and yaw drive. Every value is E provenance.
+
+    ``turn_sign`` is the one parameter that deserves comment. The strongest visual route
+    in this connectome runs from looming detectors to escape descending neurons, and the
+    canonical approach route is both far weaker and predicted inhibitory at its final
+    synapse, so whether a cue on the left produces a left turn or a right turn is a
+    property of the frozen network rather than something to choose. The decoder therefore
+    carries an explicit sign, fitted once on development scenarios and frozen with the
+    rest of the decoder, and the value it takes is reported as a measurement of the
+    network. Turning toward the cue and turning away from it are both acceptable outcomes.
+    """
+
+    quiescent_us: int
+    forward_half_rate_hz: float
+    forward_threshold_hz: float
+    initiation_hold_us: int
+    yaw_gain_per_hz: float
+    max_yaw_rad_s: float
+    turn_sign: float
+
+    @classmethod
+    def from_mapping(cls, raw: dict[str, Any]) -> VisualDecoderParameters:
+        values = cls(
+            quiescent_us=int(raw["quiescent_us"]),
+            forward_half_rate_hz=float(raw["forward_half_rate_hz"]),
+            forward_threshold_hz=float(raw["forward_threshold_hz"]),
+            initiation_hold_us=int(raw["initiation_hold_us"]),
+            yaw_gain_per_hz=float(raw["yaw_gain_per_hz"]),
+            max_yaw_rad_s=float(raw["max_yaw_rad_s"]),
+            turn_sign=float(raw["turn_sign"]),
+        )
+        if values.quiescent_us < 0 or values.initiation_hold_us < 0:
+            raise ConfigurationError("Decoder timing cannot be negative")
+        if values.forward_half_rate_hz <= 0.0 or values.max_yaw_rad_s <= 0.0:
+            raise ConfigurationError("Decoder scales must be positive")
+        if values.turn_sign not in (-1.0, 1.0):
+            raise ConfigurationError(
+                "The turn sign must be exactly -1 or +1; it selects which way a "
+                "lateralised readout steers and is not a gain"
+            )
+        return values
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "quiescent_us": self.quiescent_us,
+            "forward_half_rate_hz": self.forward_half_rate_hz,
+            "forward_threshold_hz": self.forward_threshold_hz,
+            "initiation_hold_us": self.initiation_hold_us,
+            "yaw_gain_per_hz": self.yaw_gain_per_hz,
+            "max_yaw_rad_s": self.max_yaw_rad_s,
+            "turn_sign": self.turn_sign,
+            "provenance": "E",
+            "inputs": "two descending population rates, and nothing else",
+        }
+
+
+class VisualLocomotorDecoder:
+    """Descending rates in, forward and yaw drive out. It cannot see the world.
+
+    The predecessor demonstration's controller took the sensor frame and added an odour
+    gradient term straight into yaw. This one has no sensor argument at all: ``decode``
+    accepts a neural frame and a timestamp. There is no gain to set to zero because there
+    is no term, and no sensor to read because none is passed.
+    """
+
+    def __init__(
+        self,
+        parameters: VisualDecoderParameters,
+        *,
+        left_readout: str = VISUAL_LEFT_READOUT,
+        right_readout: str = VISUAL_RIGHT_READOUT,
+    ) -> None:
+        self.parameters = parameters
+        self.left_readout = left_readout
+        self.right_readout = right_readout
+        self.state = VisualLocomotorState.QUIESCENT
+        self.events: list[dict[str, Any]] = []
+        self._above_since_us: int | None = None
+
+    def _transition(self, t_us: int, to_state: VisualLocomotorState, reason: str) -> None:
+        self.events.append(
+            {
+                "t_us": t_us,
+                "from_state": self.state.value,
+                "to_state": to_state.value,
+                "reason": reason,
+            }
+        )
+        self.state = to_state
+
+    def decode(self, neural: NeuralOutputFrame) -> ActuatorCommandFrame:
+        from flysim.engines.body import COMMAND_IDS
+
+        t_us = neural.t_us
+        left = neural.value_for(self.left_readout)
+        right = neural.value_for(self.right_readout)
+        drive = 0.5 * (left + right)
+
+        if self.state is VisualLocomotorState.QUIESCENT:
+            if t_us >= self.parameters.quiescent_us:
+                self._transition(
+                    t_us, VisualLocomotorState.WATCHING, "quiescent-period-elapsed"
+                )
+        elif self.state is VisualLocomotorState.WATCHING:
+            if drive >= self.parameters.forward_threshold_hz:
+                if self._above_since_us is None:
+                    self._above_since_us = t_us
+                elif t_us - self._above_since_us >= self.parameters.initiation_hold_us:
+                    self._transition(
+                        t_us,
+                        VisualLocomotorState.LOCOMOTING,
+                        "descending-drive-held-above-threshold",
+                    )
+            else:
+                self._above_since_us = None
+
+        forward = 0.0
+        yaw = 0.0
+        if self.state is VisualLocomotorState.LOCOMOTING:
+            forward = drive / (drive + self.parameters.forward_half_rate_hz)
+            raw_yaw = self.parameters.turn_sign * self.parameters.yaw_gain_per_hz * (
+                left - right
+            )
+            yaw = min(1.0, max(-1.0, raw_yaw / self.parameters.max_yaw_rad_s))
+        return ActuatorCommandFrame(
+            t_us=t_us,
+            ids=COMMAND_IDS,
+            values=(forward, yaw, 0.0, 0.0),
+            units=(
+                "normalized-drive [0,1], normalized-drive [-1,1], normalized, normalized"
+            ),
+            signal_type=SignalType.ACTUATOR_COMMAND,
+            provenance="E",
+            assumption_ids=("MOTOR-06", "DEMO-03"),
+            metadata={
+                "decoder_state": self.state.value,
+                "vnc_bypass": True,
+                "sensor_terms_in_command": [],
+                "decoder_sees_only": [self.left_readout, self.right_readout],
+                "decoder_inputs": {
+                    "descending_left_hz": left,
+                    "descending_right_hz": right,
+                    "descending_drive_hz": drive,
+                },
+            },
+        )
+
+
 def visual_searched_parameter_grid(raw: dict[str, Any]) -> tuple[dict[str, float], ...]:
     """Expand the registered P/E visual search grid into candidate operating points.
 
@@ -667,7 +834,10 @@ __all__ = [
     "RetinaMap",
     "RetinotopicVisualEncoder",
     "VisualCue",
+    "VisualDecoderParameters",
     "VisualEncodingParameters",
+    "VisualLocomotorDecoder",
+    "VisualLocomotorState",
     "VisualOperatingPointCriteria",
     "score_visual_operating_point",
     "visual_searched_parameter_grid",

@@ -54,14 +54,34 @@ from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
 from flysim.runs import git_metadata, require_clean_worktree
 from flysim.stage1 import _atomic_json, _immutable_snapshot
 
-# Parameters that change the built network. A candidate that differs only outside this set
-# reuses the same GeNN build directory, which is the difference between one build per
-# candidate and one build per distinct network.
-STRUCTURAL_KEYS = (
+# Parameters that change the *generated CUDA kernel*, and therefore force a recompile.
+# GeNN compiles shared neuron parameters into the kernel as constants but loads synaptic
+# weights as runtime variables, so a candidate that differs only in a weight scale needs
+# no recompile at all. Keying the build directory on the weight scales instead cost 18
+# separate three-and-a-half-minute compiles for two distinct kernels, which is where an
+# hour of this search was going.
+KERNEL_KEYS = (
+    "neural_dt_us",
+    "resting_mv",
+    "reset_mv",
+    "threshold_mv",
+    "membrane_tau_ms",
+    "synapse_tau_ms",
+    "refractory_ms",
+    "synaptic_delay_ms",
+    "reset_synaptic_state_on_spike",
+    "tonic_drive_mv",
+    "adaptation_increment_mv",
+    "adaptation_tau_ms",
+)
+
+# Weight-only parameters, listed so the search can order candidates to group identical
+# kernels together. These never trigger a recompile.
+WEIGHT_KEYS = (
     "synaptic_mv_per_contact",
     "central_entry_outgoing_gain",
     "synaptic_target_normalisation_exponent",
-    "tonic_drive_mv",
+    "inhibitory_weight_gain",
 )
 
 
@@ -138,8 +158,8 @@ def probe_visual_operating_point(
     if not 0.0 <= settle_fraction < 1.0:
         raise ConfigurationError("settle_fraction must lie in [0, 1)")
     parameters = {**base_parameters, **candidate}
-    structural = {key: parameters[key] for key in STRUCTURAL_KEYS if key in parameters}
-    build_key = sha256_json(structural)[:12]
+    kernel = {key: parameters[key] for key in KERNEL_KEYS if key in parameters}
+    build_key = sha256_json(kernel)[:12]
     engine = TrackAGeNNEngine(build_root / build_key, variant="exact")
     started = time.perf_counter()
     engine.initialize(
@@ -319,15 +339,15 @@ def run_visual_operating_point_search(
     )
     coupling_us = int(contract["coupling_us"])
     grid = visual_searched_parameter_grid(contract["searched_grid"])
-    # Search structurally-identical candidates consecutively so the GeNN build is reused.
-    grid = tuple(
-        sorted(
-            grid,
-            key=lambda row: sha256_json(
-                {key: row[key] for key in STRUCTURAL_KEYS if key in row}
-            ),
-        )
-    )
+    # Order candidates so every one sharing a generated kernel runs consecutively, which
+    # keeps the number of CUDA compiles down to the number of distinct kernels.
+    fixed = contract["fixed_parameters"]
+
+    def kernel_key(row: dict[str, float]) -> str:
+        merged = {**fixed, **row}
+        return sha256_json({key: merged[key] for key in KERNEL_KEYS if key in merged})
+
+    grid = tuple(sorted(grid, key=kernel_key))
     if max_candidates is not None:
         grid = grid[:max_candidates]
     results: list[dict[str, Any]] = []
@@ -426,7 +446,8 @@ def run_visual_operating_point_search(
 
 
 __all__ = [
-    "STRUCTURAL_KEYS",
+    "KERNEL_KEYS",
+    "WEIGHT_KEYS",
     "VisualEpoch",
     "cue_for",
     "default_visual_epochs",
