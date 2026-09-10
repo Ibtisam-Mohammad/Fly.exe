@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "demo01-visual-lateral",
+  "title": "DEMO-01 closed loop, lateral cue: the same standard applied to a cue placed where passive standing drift cannot close the distance",
+  "provenance": "E",
+  "status": "Engineering demonstration scenario. Not evidence, not a tier, not a measurement.",
+  "last_reviewed": "2026-09-10",
+  "what_this_scenario_is": {
+    "the_loop": "cue geometry -> retinotopic lamina encoder -> full MaleCNS runtime -> declared descending readout -> causal filter -> E decoder -> engineered walking controller -> MuJoCo body -> the cue's retinal position changes -> back to the encoder",
+    "the_behaviour_target": "A stationary fly; a dark object 14 mm away and 90 degrees to one side; activity through the full graph; lateralised, cue-side-dependent descending activity; locomotion initiation with a turn whose direction follows from the declared sign convention; the loop closing as the body moves.",
+    "the_turn_direction_is_an_engineering_choice": "CORRECTED. An earlier wording claimed the turn direction is a property of the frozen network. It is not. The decoder carries an explicit turn sign of -1 or +1, so flipping one number turns an approach into an avoidance, which makes the direction of the behaviour an engineering choice rather than a measurement. What the network does determine is which descending side is stronger for a given cue side, and that the asymmetry reverses when the cue moves, which is what the operating-point search measured. The convention here is to turn toward the stronger side, declared rather than derived."
+  },
+  "body": {
+    "physics_dt_us": 500,
+    "initial_x_mm": 0.0,
+    "initial_y_mm": 0.0,
+    "initial_heading_rad": 0.0,
+    "spawn_height_mm": 0.5,
+    "cue_x_mm": 0.0,
+    "cue_y_mm": 14.0,
+    "cue_radius_mm": 2.5,
+    "cue_height_mm": 2.5,
+    "max_forward_mm_s": 12.0,
+    "max_yaw_rad_s": 3.0,
+    "note": "The cue sits 14.0 mm away at 90.0 degrees to the fly's left, subtending an angular radius of 10.3 degrees at the start and growing as the fly approaches. Perpendicular to the measured 2.299 mm standing drift at +11.5 degrees, so passive drift closes only 0.142 mm of the 14 mm gap against the unchanged 1.0 mm allowance.",
+    "station_keeping_gain_rad_per_mm": 0.02,
+    "station_keeping_integral_rad_per_mm_s": 0.12,
+    "station_keeping_yaw_gain_rad_per_rad": 0.05,
+    "station_keeping_yaw_integral_rad_per_rad_s": 0.4,
+    "station_keeping_max_offset_rad": 0.07,
+    "station_keeping_max_yaw_offset_rad": 0.02,
+    "station_keeping_settle_us": 2000000,
+    "why_these_body_values": {
+      "spawn_height_mm": "Track A's registered value. An earlier version of this scenario invented 1.35 mm, which made the fly fall about 0.9 mm and land hard: the thorax then sank from 1.374 to as low as 0.798 mm and the body slid. At 0.5 mm the thorax holds between 1.046 and 1.12 mm and lateral drift falls to under 0.01 mm.",
+      "physics_dt_us": "Track A's registered 500 us step. An earlier 1000 us step made leg contacts less stable, and 15 ms of coupling is 30 physics steps at this value.",
+      "station_keeping": "A body commanded to stand drifts, which is a documented property of this body prior rather than a fault in this module; see docs/evidence/TRACK_A_STATION_KEEPING.md. Measured here with no brain attached over the real 20 s duration: 14.413 mm with the controller off, 6.026 mm at Track A's registered integral gain of 0.06, and 2.294 mm at 0.12. The integral gain is doubled relative to Track A because this body actuates legs only while Track A also actuates head and proboscis degrees of freedom, so the gains are re-derived rather than inherited. The criterion is a body-only one, that a fly commanded to stand should stand, and no neural or behavioural quantity enters it.",
+      "the_offset_limits_are_not_safety_margins": "Track A measured the channel's drift response to be non-monotone, falling from +1.02 mm/s at zero offset through zero near 0.055 rad but rising to +1.40 mm/s at 0.12 rad, which is worse than no control at all. The limits keep both the proportional term and the wound-up integral inside the first monotone branch, and raising them would saturate the controller onto the worst available operating point. They are carried over unchanged."
+    }
+  },
+  "decoder": {
+    "quiescent_us": 1500000,
+    "forward_half_rate_hz": 6.0,
+    "forward_threshold_hz": 0.6,
+    "initiation_hold_us": 150000,
+    "yaw_gain_per_hz": 1.6,
+    "max_yaw_rad_s": 3.0,
+    "turn_sign": 1.0,
+    "provenance": "E",
+    "why_each_value": {
+      "quiescent_us": "The fly stands still for the first 1.5 s regardless of the network, so the video shows a stationary starting point and the onset of locomotion is visibly caused by something.",
+      "forward_threshold_hz": "0.6, and the value is measurably arbitrary between the two searched. Settings differing only in this threshold were identical to the last decimal in every reported quantity, because the frozen operating point's 2.435 Hz cue response sits well above both 0.6 and 1.2 Hz, so the threshold never binds.",
+      "forward_half_rate_hz": "A half-saturation constant, so forward drive is 0.5 at 6 Hz of descending drive rather than saturating at the first spike.",
+      "yaw_gain_per_hz": "1.6, chosen by the sweep. Approach is non-monotonic in this gain: 0.8 gave +12.07 mm, 1.6 gave +12.61 mm and 3.2 gave only +5.00 mm, because too much steering gain makes the fly overshoot and oscillate rather than close on the cue.",
+      "turn_sign": "+1, turn toward the stronger descending side, which produces an approach. The sweep measured the mirror: -1 at the same gain gives -8.05 mm, a retreat. One number flips the behaviour, so the direction is an engineering choice and is reported as one. What the network supplies is the lateralisation, and the sign-agreement fraction barely moves between the two, 0.718 against 0.854."
+    },
+    "what_the_decoder_cannot_see": "Everything except two descending population rates. It takes no sensor frame, no pose, no distance and no time-to-target. There is no gain to zero because there is no sensory term.",
+    "frozen": {
+      "status": "FROZEN 2026-09-10 by scripts/tune_demo01_decoder.py",
+      "artifact": "evidence/demo01/demo01-decoder-tuning.json",
+      "selection_rule": "Among settings that walked in every development scenario, the largest mean approach. Declared before the sweep ran.",
+      "development_scenarios": "Three cue placements and seeds that are not the evaluation configuration: right-near (9.0, -7.0) seed 2, right-far (13.0, -11.0) seed 3, and left-far (13.5, 11.5) seed 4. The evaluation uses (10.7, 9.0) with seed 1, so the frozen decoder meets an unseen configuration.",
+      "the_network_was_not_touched": "The operating point was read from the frozen search artifact and never varied, so only the decoder moved."
+    }
+  },
+  "controls": {
+    "exact": "The run itself.",
+    "readout-ablated": "The declared descending readout is forced to zero after the brain has computed it. The brain runs identically; the body cannot hear it. Behaviour surviving this was never neural.",
+    "stimulus-absent": "No cue. Everything else identical, including the seed and the lamina baseline drive.",
+    "shuffled-connectome": "The target array is permuted, so the edge count, every out-degree and the multiset of contact counts are preserved exactly and only which pairs the edges join changes. All 25,563,197 edges are still built and executed.",
+    "what_the_standing_variants_measure": "The readout-ablated and stimulus-absent variants never command a movement, so their displacement is the body's residual standing drift, measured at 2.294 mm over 20 s. That is the floor the exact run has to clear, and it is why the drift was fixed in the stance model rather than by relaxing the acceptance criteria."
+  },
+  "what_may_and_may_not_be_claimed": {
+    "may_claim_if_the_controls_behave": "Full-graph causal embodiment: the body's behaviour depends on the simulated neural readout, on the exact released graph, with every neuron and every edge executed.",
+    "may_claim_only_if_shuffled_diverges": "That MaleCNS topology matters, rather than that a network of this size and degree distribution matters.",
+    "may_never_claim": "That this is what a fly does, that any parameter here is measured, or that any mechanism is validated. The tier is V0 Structural.",
+    "the_retina_is_not_executed": "All 66,533 photoreceptor output edges are zeroed by the frozen sign policy, because fly photoreceptors are histaminergic and histamine is absent from the transmitter model. Entry is therefore one synapse downstream, at the lamina monopolar cells."
+  },
+  "supersedes_nothing": "This does not replace demo01-visual-approach. That scenario ran, its verdict was INVALID AS A CAUSAL CLAIM, and both the run and the verdict stay on the record at runs/demo01-visual/. This is a second, distinct experiment.",
+  "why_this_scenario_exists": {
+    "what_failed": "Under demo01-visual-approach the frozen acceptance contract returned INVALID on one criterion of five. A1, A2, A4 and A5 passed. A3 failed on its approach clause: the stimulus-absent control closed 1.906 mm against a 1.0 mm allowance, while passing A3's own displacement clause at 0.150 of the exact run.",
+    "why_it_failed": "Not because the behaviour failed to require the stimulus. The stimulus-absent control never reached the locomoting state at all and moved only 2.29 mm, which is the residual standing drift measured with no brain attached. It failed because that drift runs at +11.5 degrees from the initial heading, essentially straight ahead, and the cue sat at 40.1 degrees and 14 mm away, so passive forward drift closes the distance geometrically. The clause was measuring the stance defect.",
+    "whose_fault": "Mine. The 1.0 mm allowance was frozen before the drift's direction had been measured. The threshold is not being changed.",
+    "what_changed_and_what_did_not": "The cue bearing, and nothing else. Every acceptance threshold is byte-identical, because the acceptance contract is scenario-agnostic and is reused unmodified. The operating point, the decoder, the body, the duration and the seed are all unchanged.",
+    "how_the_bearing_was_chosen": "By measuring the drift direction from the recorded control trace and computing the closure that this exact drift produces for a cue at each bearing 14 mm away: +2.243 mm at 0 degrees, +1.783 at 45, +1.302 at 60, +0.738 at 75, +0.142 at 90, and negative beyond. Every bearing from 75 degrees satisfies the unchanged allowance; 90 degrees is chosen as the most cleanly perpendicular. The bearing was not found by trying placements until one passed.",
+    "why_this_is_harder_not_easier": "The decoder was tuned on development cues at 37.9, 40.2 and 40.4 degrees, so a 90 degree cue is outside its development range and the fly must turn twice as far. Removing a body artifact from the control does not make the task easier for the brain.",
+    "and_the_retinal_lateralisation_is_stronger_here": "Under the registered retinal map a 90 degree cue lands on column 21.59 of the ipsilateral eye and maps to -15.47 for the contralateral one, well outside its array, against 12.32 and -6.21 at 40 degrees."
+  }
+}

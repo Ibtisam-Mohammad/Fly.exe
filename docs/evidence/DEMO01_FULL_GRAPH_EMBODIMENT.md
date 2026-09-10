@@ -241,3 +241,78 @@ position and so cannot be drawn, which every frame states.
 4. I predicted the odour route's failure would be signal dilution across the optic lobe at
    hop 2. C3 failed as predicted but the mechanism was different: the antennal lobe was
    amplifying into saturation while the descending layer stayed silent.
+
+## The first evaluation: INVALID, on one criterion of five
+
+Four variants, identical seed, 20 s each, from a clean tree at commit `a6d750d`. Verdict at
+`runs/demo01-visual/acceptance.json`.
+
+| variant | displacement | heading change | cue distance | locomoted |
+|---|---|---|---|---|
+| exact | 15.29 mm | +130.6 deg | 13.39 -> **1.92 mm** | yes, onset 1.665 s |
+| readout-ablated | 2.29 mm | +9.2 deg | 13.39 -> 11.48 mm | **no** |
+| stimulus-absent | 2.29 mm | +9.2 deg | 13.39 -> 11.48 mm | **no** |
+| shuffled-connectome | 36.48 mm | +159.5 deg | 13.39 -> **49.28 mm** | yes |
+
+| criterion | result | measured | threshold |
+|---|---|---|---|
+| A1 starts still, then moves | PASS | 15.29 mm, locomoted | >= 3.0 mm |
+| A2 caused by the neural readout | PASS | 0.150 of exact, never locomoted | <= 0.25 |
+| A3 requires the stimulus | **FAIL** | approach **1.906 mm** | <= 1.0 mm |
+| A4 turn is cue-locked | PASS | -0.291 Hz and -3.69 deg share a sign | same sign |
+| A5 topology gate | PASS | shuffle diverges 21.196 mm | >= 3.0 mm |
+
+**Verdict: INVALID AS A CAUSAL CLAIM.** No video from this run may be presented as a brain
+controlling a body, and the rendered videos carry that verdict on their closing card.
+
+### Why A3 failed, and why the threshold was not touched
+
+Not because the behaviour failed to require the stimulus. The stimulus-absent control
+**never reached the locomoting state at all** and moved only 2.29 mm, which is precisely the
+residual standing drift measured with no brain attached. A3's own displacement clause passed
+at 0.150 of the exact run. What failed is its second clause, the approach allowance.
+
+The drift runs at **+11.5 degrees from the initial heading**, essentially straight ahead,
+and the cue sat at 40.1 degrees and 14 mm away, so passive forward drift closes the distance
+geometrically. Closure that this exact drift produces, by cue bearing at 14 mm:
+
+| cue bearing | closure | within the 1.0 mm allowance |
+|---|---|---|
+| 0 deg | +2.243 mm | no |
+| 45 deg | +1.783 mm | no |
+| 60 deg | +1.302 mm | no |
+| 75 deg | +0.738 mm | yes |
+| 90 deg | +0.142 mm | yes |
+
+So the clause was measuring the stance defect rather than a cue-driven approach. That is my
+error: the 1.0 mm allowance was frozen before the drift's *direction* had been measured. The
+threshold stays as written, this run stays on the record as a failure, and the response is a
+second scenario rather than a looser standard.
+
+### What the shuffled control showed, which is the strongest result here
+
+The degree-preserving shuffle walked 36.48 mm and ended **49.28 mm** from a cue it started
+13.39 mm from. Rewiring the same edges, preserving the edge count, every out-degree and the
+multiset of contact counts, produces a hyperactive network that drives the body a long way in
+the wrong direction. A5 passes on a 21.196 mm divergence against a 3.0 mm threshold.
+
+The honest reading is not that the real connectome "works better" in some general sense. It
+is that the operating point selected for the exact graph does not transfer to a random
+rewiring of it: the same synaptic scale that gives the exact network a 0.000 Hz baseline
+makes the shuffled one drive locomotion continuously. That is a statement about how narrow
+the usable regime is, and it makes the topology control informative rather than a formality.
+
+## The second evaluation: the same standard, a cue where drift cannot mimic it
+
+`configs/scenarios/demo01-visual-lateral.json` places the cue at 90.0 degrees and 14.0 mm,
+perpendicular to the measured drift. **Every acceptance threshold is byte-identical**,
+because the acceptance contract is scenario-agnostic and is reused unmodified; the operating
+point, the decoder, the body, the duration and the seed are all unchanged. The only change
+is the cue bearing, and the bearing was chosen by measuring the drift direction rather than
+by trying placements until one passed.
+
+It is also the harder test. The decoder was tuned on development cues at 37.9, 40.2 and 40.4
+degrees, so 90 degrees is outside its development range and the fly must turn twice as far.
+Removing a body artifact from a control does not make the task easier for the brain. The
+retinal lateralisation is stronger at 90 degrees, landing on column 21.59 of the ipsilateral
+eye against -15.47 for the contralateral one, compared with 12.32 and -6.21 at 40 degrees.
