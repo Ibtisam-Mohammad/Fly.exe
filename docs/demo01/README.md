@@ -12,6 +12,7 @@ Read in this order.
 | [`docs/adr/ADR-2026-014-*.md`](../adr/) | the decisions and the alternatives that were rejected |
 | [`PROGRESS.md`](PROGRESS.md) | the working ledger, kept so nothing regresses and no decision is silently revisited |
 | [`PILOT.md`](PILOT.md) | the exploratory pilot that shaped the registered grid, published because it did |
+| [`docs/adr/ADR-2026-015-*.md`](../adr/) | the presentation pass: why the first video's colour map was destroying its own control contrast |
 
 ## Contracts, all committed before the runs they govern
 
@@ -32,6 +33,7 @@ Read in this order.
 | `src/flysim/demo01_body.py` | the FlyGym body, the cue and the ported station-keeping controller |
 | `src/flysim/demo01_embodied.py` | the closed loop, the control variants and the synchronised recording |
 | `src/flysim/demo01_acceptance.py` | applies the frozen contract. Cannot run a simulation or alter a threshold. |
+| `src/flysim/demo01_replay.py` | rebuilds the body from recorded physics state and places the camera. Refuses to run on a body that has been stepped. |
 | `src/flysim/demo01_render.py` | reads a finished recording and composites video. Cannot touch a simulation. |
 
 ## How to reproduce, in order
@@ -68,3 +70,13 @@ which descending side is stronger for a given cue side.
 **A single run proves nothing.** The predecessor demonstration walked 100.2 mm with every
 synaptic weight zeroed. What licenses a causal claim here is that the readout-ablated and
 stimulus-absent variants fail, from an identical seed, with the same body and decoder.
+
+**The cue is drawn see-through because it is not solid.** It has no collision and no
+height: the encoder works in the horizontal plane and saturates its angular radius at a
+hemisphere once the fly is nearer than the radius. A successful run therefore ends with the
+fly standing inside a sphere wider than itself, and drawing it opaque would hide the animal
+at the moment the demonstration succeeds.
+
+**Brightness is comparable between panels and is not per-run.** One fixed logarithmic scale
+is used everywhere, so a dimmer brain in the control comparison is a quieter brain rather
+than a different exposure.

@@ -27,8 +27,10 @@ Recording is deliberately not a membrane trace. Every neuron's voltage at the 0.
 neural step would be 165,122 times 10,000 floats per second and would say nothing the
 video shows. Instead each coupling interval records: the spike count of every neuron that
 fired, sparsely; seven whole-population rates; the declared readouts filtered and raw; the
-decoder command; the cue's retinal geometry; and the body pose. That is enough to render
-the brain, the body and the traces from disk without rerunning anything.
+decoder command; the cue's retinal geometry; the body pose; and `qpos`, the model's full
+generalised position vector. That last one is what makes the body re-renderable from any
+camera afterwards, so no video is written during the run and no shot is baked into the
+recording.
 """
 
 from __future__ import annotations
@@ -137,34 +139,25 @@ def _shuffled_graph(
 
 
 class Demo01Recorder:
-    """Writes the synchronised recording: scalars as JSONL, spikes sparsely, frames as MP4."""
+    """Writes the synchronised recording: scalars as JSONL, spikes sparsely, physics state.
 
-    def __init__(
-        self,
-        directory: Path,
-        *,
-        neuron_count: int,
-        fps: int,
-        camera_resolution: tuple[int, int],
-        write_video: bool,
-    ) -> None:
+    No video is written during the run. An earlier version rendered the body camera inside
+    the loop, which baked one camera into the recording: every shot correction cost a full
+    re-simulation of four control variants, and one framing formula had to serve the whole
+    run. Recording `qpos` instead is both smaller and strictly more general, because the
+    model plus `qpos` determines every body frame the camera could have seen.
+    """
+
+    def __init__(self, directory: Path, *, neuron_count: int) -> None:
         directory.mkdir(parents=True, exist_ok=True)
         self.directory = directory
         self.neuron_count = neuron_count
-        self.fps = fps
         self._trace = (directory / "trace.jsonl").open("w", encoding="utf-8")
         self._spike_indices: list[np.ndarray] = []
         self._spike_counts: list[np.ndarray] = []
+        self._qpos: list[np.ndarray] = []
+        self._pose_t_us: list[int] = []
         self._rows = 0
-        self._writer: Any | None = None
-        self._write_video = write_video
-        self._camera_resolution = camera_resolution
-        if write_video:
-            import imageio.v2 as imageio
-
-            self._writer = imageio.get_writer(
-                directory / "body.mp4", fps=fps, codec="libx264", quality=8
-            )
 
     def add_interval(self, row: dict[str, Any], spikes: np.ndarray) -> None:
         self._trace.write(json.dumps(row, separators=(",", ":")) + "\n")
@@ -173,15 +166,12 @@ class Demo01Recorder:
         self._spike_counts.append(np.minimum(spikes[active], 255).astype(np.uint8))
         self._rows += 1
 
-    def add_frame(self, frame: np.ndarray) -> None:
-        if self._writer is not None:
-            self._writer.append_data(frame)
+    def add_pose(self, t_us: int, qpos: np.ndarray) -> None:
+        self._pose_t_us.append(int(t_us))
+        self._qpos.append(np.asarray(qpos, dtype=np.float64))
 
     def close(self) -> dict[str, Any]:
         self._trace.close()
-        if self._writer is not None:
-            self._writer.close()
-            self._writer = None
         offsets = np.zeros(self._rows + 1, dtype=np.int64)
         if self._spike_indices:
             offsets[1:] = np.cumsum([array.size for array in self._spike_indices])
@@ -197,6 +187,16 @@ class Demo01Recorder:
             counts=counts,
             neuron_count=np.int64(self.neuron_count),
         )
+        qpos = (
+            np.stack(self._qpos)
+            if self._qpos
+            else np.zeros((0, 0), dtype=np.float64)
+        )
+        np.savez_compressed(
+            self.directory / "poses.npz",
+            qpos=qpos,
+            t_us=np.asarray(self._pose_t_us, dtype=np.int64),
+        )
         return {
             "intervals": self._rows,
             "spike_events_recorded": int(indices.size),
@@ -205,7 +205,14 @@ class Demo01Recorder:
             ),
             "trace": "trace.jsonl",
             "spikes": "spikes.npz",
-            "video": "body.mp4" if self._write_video else None,
+            "poses": "poses.npz",
+            "pose_intervals": int(qpos.shape[0]),
+            "qpos_size": int(qpos.shape[1]) if qpos.ndim == 2 else 0,
+            "why_poses_and_not_video": (
+                "The full generalised position vector is recorded once per coupling "
+                "interval instead of a rendered body frame, so the camera is not baked "
+                "into the recording and a shot can be changed without re-simulating."
+            ),
             "what_is_not_recorded": (
                 "No membrane voltage at the neural step. Every neuron's voltage at 0.1 ms "
                 "would be 165,122 x 10,000 floats per second and would show nothing the "
@@ -228,9 +235,6 @@ def run_embodied(
     body_parameters: Demo01BodyParameters,
     seed: int,
     variant: str = "exact",
-    fps: int = 30,
-    camera_resolution: tuple[int, int] = (720, 1280),
-    write_video: bool = True,
     allow_dirty_tree: bool = False,
     progress: bool = False,
 ) -> EmbodiedResult:
@@ -299,9 +303,7 @@ def run_embodied(
         ),
     )
     controller = VisualLocomotorDecoder(decoder)
-    body = Demo01VisualBody(
-        body_parameters, seed=seed, camera_resolution=camera_resolution
-    )
+    body = Demo01VisualBody(body_parameters, seed=seed)
     cue = VisualCue(
         x_mm=body_parameters.cue_x_mm,
         y_mm=body_parameters.cue_y_mm,
@@ -309,17 +311,9 @@ def run_embodied(
     )
     readout_ids = populations.readout_body_ids
     pools = dict(populations.monitors)
-    recorder = Demo01Recorder(
-        output_directory,
-        neuron_count=graph.neuron_count,
-        fps=fps,
-        camera_resolution=camera_resolution,
-        write_video=write_video,
-    )
+    recorder = Demo01Recorder(output_directory, neuron_count=graph.neuron_count)
 
     intervals = duration_us // coupling_us
-    video_period_us = max(coupling_us, round(1_000_000 / fps))
-    next_frame_us = 0
     # A command computed from brain activity over [t, t+dt] drives the body over
     # [t+dt, t+2dt]. That one-interval sensorimotor delay is not a convenience: a brain
     # cannot move a body with activity it has not produced yet, and stamping the command
@@ -413,9 +407,7 @@ def run_embodied(
                 },
                 spikes,
             )
-            if write_video and t_us >= next_frame_us:
-                recorder.add_frame(body.render_frame())
-                next_frame_us += video_period_us
+            recorder.add_pose(t_us + coupling_us, body.qpos())
             if progress and step % 100 == 0:
                 print(
                     f"  [{step:5d}/{intervals}] t={t_us / 1e6:6.2f}s "

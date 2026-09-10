@@ -363,3 +363,33 @@ closure it produces at each bearing. The prediction was 0.142 mm and the measure
 
 Both results stay on the record with their own videos and verdicts. A reader who wants to
 discount the second because the first failed has everything needed to do so.
+
+## S6: the presentation pass, 2026-09-11
+
+Opened after comparing our videos frame by frame against the EON Systems embodied-fly
+demonstration. The science was ahead; the film was a long way behind, and two of the gaps
+were not matters of taste. Full reasoning in
+[ADR-2026-015](../adr/ADR-2026-015-demo01-the-presentation-pass.md).
+
+**What was wrong, measured rather than judged.**
+
+| defect | measurement |
+|---|---|
+| brightness saturated far below the real range | glow 1.0 rendered at 0.95 white, 2.0 at 0.998, against a real per-neuron range to 76.3 |
+| the exact and shuffled brains rendered identically | their median 99.9th-percentile glow is 47.2 against 5.96, an eightfold difference the map erased |
+| the arrival was unwatchable | the camera framed the midpoint at a distance proportional to separation, so it collapsed as the fly arrived |
+| the stimulus-absent control drew a cue | the renderer drew it unconditionally; the panel contradicted its own caption |
+| the cue has no collision and nothing said so | the encoder saturates angular radius at a hemisphere once the fly is inside the radius |
+
+**What changed.** The body is no longer rendered during the run: `qpos` is recorded once
+per coupling interval and the body is replayed offline, which is exact, 40 times smaller
+than baked video, and makes a shot correction free instead of costing four re-simulations.
+Brightness is logarithmic on a fixed reference, averaged per pixel, at a gain chosen to
+maximise the rendered separation between the exact graph and its shuffle. The brain view is
+fixed rather than orbiting. Four strips became three, with the population rates moved beside
+the brain. The cue is drawn translucent because it is not solid, and a cue-size floor keeps
+it under 45 percent of frame height in every shot.
+
+**What did not change.** Any threshold, any parameter, any simulation code path that could
+alter a trajectory. The four variants were re-run at the new commit and the frozen contract
+re-applied; the reproduction result is in the evidence record.

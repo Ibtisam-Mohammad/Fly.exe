@@ -26,7 +26,7 @@ model, and the scaffolds it stands on are declared in `SCAFFOLDS`.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 import numpy as np
@@ -55,8 +55,54 @@ SCAFFOLDS: tuple[str, ...] = (
     "chordotonal reflexes distributed through the ventral cord, and nothing in a fly "
     "resembles one pose estimate driving six joints in common mode.",
     "The cue is a geometric object with a radius and a position. It has no texture, no "
-    "luminance spectrum and no background.",
+    "luminance spectrum, no background, no height and no collision: the encoder computes "
+    "bearing and angular radius in the horizontal plane, saturating at a hemisphere once "
+    "the fly is nearer than the radius, so the fly walks through the cue rather than up "
+    "to it.",
 )
+
+# The cue is drawn as a dark sphere because the encoder's drive is an OFF-pathway term:
+# what reaches the lamina is the object's angular size, and darkness is the polarity that
+# makes that drive physically sensible to a viewer. It is added to the viewer scene rather
+# than to the model, so no cue geom exists for any solver to touch.
+#
+# It is drawn translucent, and that is not a cosmetic choice. The cue has no collision, and
+# the run's success condition is that the fly closes on it, so a successful run ends with
+# the fly standing *inside* a sphere wider than itself -- which the encoder anticipates by
+# saturating angular radius at a hemisphere. Drawing it opaque asserts a solidity that does
+# not exist and hides the animal at the exact moment the demonstration succeeds. The first
+# cut of this video ended on a black ball with three legs protruding from underneath it.
+CUE_RGBA = (0.10, 0.10, 0.13, 0.45)
+
+
+def add_cue_geom(
+    mujoco: Any,
+    scene: Any,
+    *,
+    x_mm: float,
+    y_mm: float,
+    height_mm: float,
+    radius_mm: float,
+) -> bool:
+    """Append the cue to a viewer scene. Returns False if the scene is full.
+
+    Shared by the live renderer and the offline replay renderer so the object cannot drift
+    between the two: a replayed frame has to show the same cue the run showed.
+    """
+    if scene.ngeom >= scene.maxgeom:
+        return False
+    geom = scene.geoms[scene.ngeom]
+    mujoco.mjv_initGeom(
+        geom,
+        type=mujoco.mjtGeom.mjGEOM_SPHERE,
+        size=np.array([radius_mm, radius_mm, radius_mm], dtype=np.float64),
+        pos=np.array([x_mm, y_mm, height_mm], dtype=np.float64),
+        mat=np.eye(3, dtype=np.float64).reshape(9),
+        rgba=np.array(CUE_RGBA, dtype=np.float32),
+    )
+    geom.category = mujoco.mjtCatBit.mjCAT_DECOR
+    scene.ngeom += 1
+    return True
 
 
 @dataclass(frozen=True, slots=True)
@@ -497,72 +543,95 @@ class Demo01VisualBody:
 
     # -- rendering ----------------------------------------------------------------
 
-    def render_frame(self, *, cue_visible: bool = True) -> np.ndarray:
-        """One RGB frame framing both the fly and the cue, with the cue drawn in.
+    def qpos(self) -> np.ndarray:
+        """A copy of the full generalised position vector.
 
-        The camera is a free camera aimed at the midpoint between the fly and the cue and
-        pulled back far enough to hold both, rather than the body-fixed tracking camera,
-        which sits close enough that the object the fly is reacting to is off screen. A
-        demonstration whose stimulus is not visible does not show what it claims to.
+        This is what makes the body re-renderable after the fact: `qpos` plus the model
+        determines every body frame in the scene, so recording it once per coupling
+        interval is enough to draw the run again from any camera without simulating
+        anything. It is a copy, and nothing in the rendering path ever writes back.
+        """
+        return np.array(self._simulation.mj_data.qpos, copy=True)
+
+    @property
+    def mujoco(self) -> Any:
+        return self._mujoco
+
+    @property
+    def render_model(self) -> Any:
+        """The compiled model, for appearance changes only.
+
+        Exposed so the offline renderer can adjust materials and lighting. Every constant
+        it touches is read by the visualiser and by no solver, and it may only do so before
+        the body has been stepped, which `render_replay_frame` enforces.
+        """
+        return self._simulation.mj_model
+
+    def _ensure_renderer(self) -> Any:
+        if self._renderer is None:
+            height, width = self._camera_resolution
+            self._renderer = self._mujoco.Renderer(
+                self._simulation.mj_model, height=height, width=width
+            )
+        return self._renderer
+
+    def _draw(self, framing: Any, *, cue_visible: bool) -> np.ndarray:
+        mujoco = self._mujoco
+        renderer = self._ensure_renderer()
+        camera = mujoco.MjvCamera()
+        mujoco.mjv_defaultFreeCamera(self._simulation.mj_model, camera)
+        camera.lookat[:] = framing.lookat_mm
+        camera.distance = framing.distance_mm
+        camera.azimuth = framing.azimuth_deg
+        camera.elevation = framing.elevation_deg
+        renderer.update_scene(self._simulation.mj_data, camera=camera)
+        if cue_visible:
+            add_cue_geom(
+                mujoco,
+                renderer.scene,
+                x_mm=self.parameters.cue_x_mm,
+                y_mm=self.parameters.cue_y_mm,
+                height_mm=self.parameters.cue_height_mm,
+                radius_mm=self.parameters.cue_radius_mm,
+            )
+        return np.asarray(renderer.render())
+
+    def render_frame(self, framing: Any, *, cue_visible: bool = True) -> np.ndarray:
+        """One RGB frame from the live body, through a caller-supplied camera placement.
 
         The cue is added as a viewer-scene geom rather than a model body, so the physics
         the fly experiences is identical whether or not a frame is rendered. Nothing the
         renderer does can influence the simulation.
         """
-        mujoco = self._mujoco
-        if self._renderer is None:
-            height, width = self._camera_resolution
-            self._renderer = mujoco.Renderer(
-                self._simulation.mj_model, height=height, width=width
-            )
-        x_mm, y_mm, z_mm, heading = self.pose()
-        camera = mujoco.MjvCamera()
-        mujoco.mjv_defaultFreeCamera(self._simulation.mj_model, camera)
-        cue_x, cue_y = self.parameters.cue_x_mm, self.parameters.cue_y_mm
-        separation = math.hypot(cue_x - x_mm, cue_y - y_mm)
-        camera.lookat[:] = (
-            0.5 * (x_mm + cue_x),
-            0.5 * (y_mm + cue_y),
-            max(1.0, 0.5 * (z_mm + self.parameters.cue_height_mm)),
-        )
-        # Enough distance to hold both, with a floor so the shot does not collapse onto
-        # the fly when it arrives.
-        camera.distance = max(7.0, 1.15 * separation + 2.5 * self.parameters.cue_radius_mm)
-        # Look along the fly's heading from behind and above, so a turn is visible as a
-        # turn rather than as a translation across frame.
-        camera.azimuth = math.degrees(heading) + 150.0
-        camera.elevation = -26.0
-        self._renderer.update_scene(self._simulation.mj_data, camera=camera)
-        if cue_visible:
-            self._add_cue_geom()
-        return np.asarray(self._renderer.render())
+        return self._draw(framing, cue_visible=cue_visible)
 
-    def _add_cue_geom(self) -> None:
-        mujoco = self._mujoco
-        assert self._renderer is not None
-        scene = self._renderer.scene
-        if scene.ngeom >= scene.maxgeom:
-            return
-        geom = scene.geoms[scene.ngeom]
-        radius = self.parameters.cue_radius_mm
-        mujoco.mjv_initGeom(
-            geom,
-            type=mujoco.mjtGeom.mjGEOM_SPHERE,
-            size=np.array([radius, radius, radius], dtype=np.float64),
-            pos=np.array(
-                [
-                    self.parameters.cue_x_mm,
-                    self.parameters.cue_y_mm,
-                    self.parameters.cue_height_mm,
-                ],
-                dtype=np.float64,
-            ),
-            mat=np.eye(3, dtype=np.float64).reshape(9),
-            # A dark object, because the OFF pathway is what the encoder drives.
-            rgba=np.array([0.12, 0.12, 0.16, 1.0], dtype=np.float32),
-        )
-        geom.category = mujoco.mjtCatBit.mjCAT_DECOR
-        scene.ngeom += 1
+    def render_replay_frame(
+        self, qpos: np.ndarray, *, framing: Any, cue_visible: bool = True
+    ) -> np.ndarray:
+        """Draw a recorded state. Only legal on a body that has never been stepped.
+
+        Writing into `qpos` is exactly the thing that must never happen to a running
+        simulation, so rather than trusting the caller, the guard below makes it
+        impossible: a body that has advanced its clock refuses. Offline rendering
+        constructs a fresh body, which has not, and the running loop never can.
+        """
+        if self._t_us != 0:
+            raise CausalityError(
+                "render_replay_frame overwrites the physics state and may only be used on "
+                f"a body that has never been stepped, but this one is at {self._t_us} us. "
+                "Offline rendering must construct its own body."
+            )
+        state = np.asarray(qpos, dtype=np.float64)
+        data = self._simulation.mj_data
+        if state.shape != data.qpos.shape:
+            raise ConfigurationError(
+                f"Recorded qpos has shape {state.shape}, but this model needs "
+                f"{data.qpos.shape}. The recording and the model disagree."
+            )
+        data.qpos[:] = state
+        data.qvel[:] = 0.0
+        self._mujoco.mj_forward(self._simulation.mj_model, data)
+        return self._draw(framing, cue_visible=cue_visible)
 
     def close(self) -> None:
         if self._renderer is not None:
@@ -576,6 +645,10 @@ class Demo01VisualBody:
             "physics_dt_us": self.parameters.physics_dt_us,
             "cue_xy_mm": [self.parameters.cue_x_mm, self.parameters.cue_y_mm],
             "cue_radius_mm": self.parameters.cue_radius_mm,
+            # Every construction value, so an offline renderer can rebuild this exact model
+            # from the recording alone rather than being handed a scenario file that may
+            # since have changed.
+            "parameters": asdict(self.parameters),
             "provenance": "E",
             "station_keeping": self.station_keeping(),
             "scaffolds": list(SCAFFOLDS),
@@ -589,4 +662,10 @@ class Demo01VisualBody:
         }
 
 
-__all__ = ["SCAFFOLDS", "Demo01BodyParameters", "Demo01VisualBody"]
+__all__ = [
+    "CUE_RGBA",
+    "SCAFFOLDS",
+    "Demo01BodyParameters",
+    "Demo01VisualBody",
+    "add_cue_geom",
+]

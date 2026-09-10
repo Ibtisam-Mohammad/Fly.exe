@@ -40,6 +40,15 @@ TRACE_HEIGHT = 310
 FOOTER_HEIGHT = 60
 BRAIN_WIDTH = 1150
 BODY_WIDTH = FRAME_WIDTH - BRAIN_WIDTH
+# Fixed because the legend's contents are fixed: a title, six colour keys, four lines of
+# what-is-not-drawn, and four live population rates. Drawn as a filled box before any of
+# that text, so the panel is legible over the point cloud behind it.
+LEGEND_HEIGHT = 282
+# The legend and the frontal inset get a column of their own, and the dorsal view starts to
+# the right of it. Drawing the brain across the full width and then putting an opaque legend
+# on top of it hid the fly's left optic lobe behind the key that explains it.
+BRAIN_VIEW_LEFT = 350
+BRAIN_VIEW_WIDTH = BRAIN_WIDTH - BRAIN_VIEW_LEFT
 
 INK = (232, 236, 244)
 DIM = (128, 138, 156)
@@ -72,6 +81,52 @@ ROLE_COLOURS = {
     "entry": (0.35, 1.00, 0.45),
     "readout": (1.00, 0.28, 0.38),
 }
+
+# --------------------------------------------------------------------------------------
+# How activity becomes brightness, and why these numbers
+# --------------------------------------------------------------------------------------
+#
+# The first version clipped decayed spike counts at 8.0, scaled by 1.8 and ran them through
+# an exposure curve. Measured against the recordings that shipped, that map was saturated
+# almost everywhere: a neuron with a decayed count of 1.0 already rendered at 0.95 of full
+# white, and 2.0 rendered at 0.998. The actual range in the exact run reaches 76.3, with a
+# median 99.9th percentile of 47.2, so the entire top two decades were flattened into white.
+#
+# It cost more than looks. The shuffled-connectome control's median 99.9th percentile is
+# 5.96 against the exact run's 47.2, an eightfold difference in how hard the graph drives
+# itself -- and the display threw that difference away by saturating both. The control
+# comparison's most important visual claim was being erased by its own colour map.
+#
+# Two changes fix it. Brightness is now logarithmic, referenced to a fixed constant so that
+# variants stay comparable frame for frame; per-run normalisation would have made the four
+# control panels incomparable, which is the one thing that video may not do. And activity is
+# averaged over the neurons drawn at a pixel rather than summed, so the optic lobes stop
+# rendering as a white slab merely because more somata project there. What a bright pixel
+# now means is that the neurons at that pixel are firing hard, not that there are many.
+#
+# The gain is not a taste setting either. Measured on the finished recordings at the real
+# 1150x640 dorsal projection, the 99th-percentile lit pixel carries a mean activity of 0.308
+# in the exact run against 0.127 in the degree-preserving shuffle. The exposure curve is
+# 1 - exp(-gain * exposure * activity), and the gain that maximally separates those two
+# values is ln(0.308/0.127) / (0.308 - 0.127) / exposure, which is 2.22. So the display is
+# tuned to make the control contrast as visible as the medium allows, and the exact run's
+# brightest pixels land at 0.97 rather than clipping.
+GLOW_REFERENCE = 48.0
+ACTIVITY_GAIN = 2.2
+ACTIVITY_EXPOSURE = 2.2
+# Activity is a per-pixel mean and so already looks the same at any panel size, but the
+# structural cloud is a sum and does not: 141,000 somata into the 1150x640 hero panel is
+# 1.14 neurons per lit pixel, while the same cloud in a 620x379 comparison panel is more
+# than twice that, and the hero view came out visibly fainter than the small panels beside
+# it. Rescaling to a reference density makes the anatomy read identically in both, without
+# flattening the density differences *within* a view, which are anatomy and should show.
+STRUCTURE_REFERENCE_DENSITY = 2.5
+
+
+def activity_intensity(glow: np.ndarray) -> np.ndarray:
+    """Compress a decayed spike count into [0, ~1.12]. Fixed map, never per-run."""
+    compressed: np.ndarray = np.log1p(np.maximum(glow, 0.0)) / math.log1p(GLOW_REFERENCE)
+    return compressed
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,73 +258,149 @@ class BrainAtlas:
         return px, py, normalised.astype(np.float32)
 
 
+GLOW_KERNEL: tuple[tuple[int, int, float], ...] = (
+    (0, 0, 1.0),
+    (1, 0, 0.34),
+    (-1, 0, 0.34),
+    (0, 1, 0.34),
+    (0, -1, 0.34),
+)
+
+
 def _accumulate(
-    buffer: np.ndarray, px: np.ndarray, py: np.ndarray, colour: np.ndarray, glow: bool
+    buffer: np.ndarray, px: np.ndarray, py: np.ndarray, values: np.ndarray, glow: bool
 ) -> None:
-    """Add coloured points into an (H, W, 3) float buffer with an optional 1-pixel glow."""
-    height, width, _ = buffer.shape
+    """Add per-point values into an (H, W, C) float buffer with an optional 1-pixel glow.
+
+    ``values`` is (N, C) and must match the buffer's channel count, so the same routine
+    accumulates three-channel colour and the single-channel density map that colour is
+    later divided by. Both have to use the identical kernel or the division is meaningless.
+    """
+    height, width, channels = buffer.shape
     ix = np.rint(px).astype(np.int64)
     iy = np.rint(py).astype(np.int64)
     inside = (ix >= 1) & (ix < width - 1) & (iy >= 1) & (iy < height - 1)
     if not np.any(inside):
         return
-    ix, iy, colour = ix[inside], iy[inside], colour[inside]
-    offsets: tuple[tuple[int, int, float], ...] = ((0, 0, 1.0),)
-    if glow:
-        offsets = (
-            (0, 0, 1.0),
-            (1, 0, 0.34),
-            (-1, 0, 0.34),
-            (0, 1, 0.34),
-            (0, -1, 0.34),
-        )
+    ix, iy, values = ix[inside], iy[inside], values[inside]
+    offsets = GLOW_KERNEL if glow else ((0, 0, 1.0),)
     flat_size = height * width
     for dx, dy, weight in offsets:
         flat = (iy + dy) * width + (ix + dx)
-        for channel in range(3):
+        for channel in range(channels):
             buffer[..., channel] += np.bincount(
-                flat, weights=colour[:, channel] * weight, minlength=flat_size
+                flat, weights=values[:, channel] * weight, minlength=flat_size
             ).reshape(height, width)
+
+
+@dataclass(frozen=True, slots=True)
+class BrainProjection:
+    """Everything about one fixed viewpoint that does not change from frame to frame.
+
+    The structural cloud and the per-pixel neuron density depend only on the viewpoint, so
+    with a fixed camera they are computed once for the whole video instead of 600 times.
+    The view is fixed on purpose: an orbiting point cloud reads as a tumbling blob, while a
+    still anatomical view reads as a brain and lets the eye attribute every change on screen
+    to activity, which is the only thing that should be moving.
+    """
+
+    px: np.ndarray
+    py: np.ndarray
+    depth: np.ndarray
+    structure: np.ndarray
+    density: np.ndarray
+    width: int
+    height: int
+
+    @classmethod
+    def build(
+        cls,
+        atlas: BrainAtlas,
+        *,
+        azimuth_rad: float,
+        elevation_rad: float,
+        width: int,
+        height: int,
+        view: str = "frontal",
+    ) -> BrainProjection:
+        px, py, depth = atlas.project(azimuth_rad, elevation_rad, width, height, view=view)
+
+        structure = np.zeros((height, width, 3), dtype=np.float64)
+        # The structural cloud, dimmed with depth so the shape reads as three-dimensional.
+        shade = (0.45 + 0.55 * depth).astype(np.float32)[:, None]
+        _accumulate(structure, px, py, STRUCTURE_COLOUR[None, :] * shade, glow=False)
+
+        # Declared populations, always visible so the viewer can see where input enters and
+        # where the readout is taken even while they are silent.
+        for value, colour in ((1, ROLE_COLOURS["entry"]), (2, ROLE_COLOURS["readout"])):
+            mask = atlas.role == value
+            if not np.any(mask):
+                continue
+            tint = np.tile(np.asarray(colour, dtype=np.float32), (int(mask.sum()), 1))
+            _accumulate(structure, px[mask], py[mask], tint * 0.22, glow=False)
+
+        density = np.zeros((height, width, 1), dtype=np.float64)
+        _accumulate(density, px, py, np.ones((px.size, 1), dtype=np.float64), glow=True)
+        lit = density[..., 0] > 0.0
+        if np.any(lit):
+            structure *= STRUCTURE_REFERENCE_DENSITY / float(density[..., 0][lit].mean())
+        return cls(
+            px=px,
+            py=py,
+            depth=depth,
+            structure=structure,
+            density=density,
+            width=width,
+            height=height,
+        )
 
 
 def render_brain(
     atlas: BrainAtlas,
     glow: np.ndarray,
     *,
-    azimuth_rad: float,
-    elevation_rad: float,
-    width: int,
-    height: int,
-    exposure: float = 1.7,
+    azimuth_rad: float = 0.0,
+    elevation_rad: float = 0.0,
+    width: int = 0,
+    height: int = 0,
+    exposure: float = ACTIVITY_EXPOSURE,
+    gain: float = ACTIVITY_GAIN,
     view: str = "frontal",
+    projection: BrainProjection | None = None,
 ) -> np.ndarray:
-    """One brain frame. ``glow`` is a per-drawn-neuron activity level, already decayed."""
-    buffer = np.zeros((height, width, 3), dtype=np.float64)
-    px, py, depth = atlas.project(azimuth_rad, elevation_rad, width, height, view=view)
+    """One brain frame. ``glow`` is a per-drawn-neuron activity level, already decayed.
 
-    # The structural cloud, dimmed with depth so the shape reads as three-dimensional.
-    shade = (0.45 + 0.55 * depth).astype(np.float32)[:, None]
-    _accumulate(buffer, px, py, STRUCTURE_COLOUR[None, :] * shade, glow=False)
-
-    # Declared populations, always visible so the viewer can see where input enters and
-    # where the readout is taken even while they are silent.
-    for value, colour in ((1, ROLE_COLOURS["entry"]), (2, ROLE_COLOURS["readout"])):
-        mask = atlas.role == value
-        if not np.any(mask):
-            continue
-        tint = np.tile(np.asarray(colour, dtype=np.float32), (int(mask.sum()), 1))
-        _accumulate(buffer, px[mask], py[mask], tint * 0.22, glow=False)
-
-    # Activity.
+    Pass a prebuilt ``projection`` to reuse a fixed viewpoint across a whole video.
+    """
+    if projection is None:
+        projection = BrainProjection.build(
+            atlas,
+            azimuth_rad=azimuth_rad,
+            elevation_rad=elevation_rad,
+            width=width,
+            height=height,
+            view=view,
+        )
+    activity = np.zeros((projection.height, projection.width, 3), dtype=np.float64)
     active = glow > 1e-3
     if np.any(active):
-        intensity = np.minimum(glow[active], 8.0)[:, None].astype(np.float32) * 1.8
+        intensity = activity_intensity(glow[active])[:, None].astype(np.float32)
         active_colour = atlas.tint[active].copy()
         roles = atlas.role[active]
         active_colour[roles == 2] = np.asarray(ROLE_COLOURS["readout"], dtype=np.float32)
         active_colour[roles == 1] = np.asarray(ROLE_COLOURS["entry"], dtype=np.float32)
-        _accumulate(buffer, px[active], py[active], active_colour * intensity, glow=True)
+        _accumulate(
+            activity,
+            projection.px[active],
+            projection.py[active],
+            active_colour * intensity,
+            glow=True,
+        )
+        # Mean over the neurons drawn at each pixel, so brightness reports how hard those
+        # neurons are firing rather than how many of them happen to project there.
+        activity /= np.maximum(projection.density, 1.0)
 
+    buffer = projection.structure + activity * gain
     tone = 1.0 - np.exp(-buffer * exposure)
     return (np.clip(tone, 0.0, 1.0) * 255.0).astype(np.uint8)
 
@@ -414,10 +545,14 @@ class TraceStrip:
 
 
 def build_strips(rows: list[dict[str, Any]]) -> tuple[TraceStrip, ...]:
-    """Turn a recording into the four strips the video shows.
+    """Turn a recording into the three strips the video shows.
 
-    Chosen so the causal chain reads top to bottom: what the eye received, what the optic
-    lobe did with it, what the descending readout became, what the decoder commanded.
+    Three, not four. The causal chain still reads top to bottom -- what the eye received,
+    what the brain sent down, what the body was given -- but the whole-population rates
+    that used to occupy a fourth strip now appear as live numbers beside the brain, where
+    they belong: they describe the picture next to them rather than being a fourth line to
+    read. Four dense strip charts made the frame a figure from a paper, and a viewer reads
+    two or three traces while a video is moving, not four.
     """
 
     def column(path: tuple[str, ...], default: float = 0.0) -> np.ndarray:
@@ -448,27 +583,6 @@ def build_strips(rows: list[dict[str, Any]]) -> tuple[TraceStrip, ...]:
             ),
         ),
         TraceStrip(
-            title="optic lobe and visual projection neurons, mean population rate",
-            unit="Hz",
-            channels=(
-                TraceChannel(
-                    "optic lobe (89,390 bodies)",
-                    column(("pool_mean_rate_hz", "optic-lobe")),
-                    (110, 150, 245),
-                ),
-                TraceChannel(
-                    "visual projection (9,201)",
-                    column(("pool_mean_rate_hz", "visual-projection")),
-                    (245, 165, 60),
-                ),
-                TraceChannel(
-                    "central brain (32,160)",
-                    column(("pool_mean_rate_hz", "central-brain")),
-                    (110, 210, 225),
-                ),
-            ),
-        ),
-        TraceStrip(
             title="descending readout, causally filtered: posterior descending group",
             unit="Hz",
             channels=(
@@ -493,6 +607,71 @@ def build_strips(rows: list[dict[str, Any]]) -> tuple[TraceStrip, ...]:
                 TraceChannel("yaw drive", column(("command", "yaw")), (255, 140, 200)),
             ),
         ),
+    )
+
+
+def chapter_caption(row: dict[str, Any], variant: str) -> tuple[str, tuple[int, int, int]]:
+    """One line saying what is happening right now, read off the recording.
+
+    Not a script. Every branch below is decided by a recorded quantity -- whether the cue
+    was present, which control variant this is, what state the decoder was in, which
+    descending side was stronger -- so the caption cannot claim something the frame is not
+    showing. A video that narrates itself from a timeline can drift from its own data; this
+    one cannot.
+    """
+    if not row["cue"].get("present", True):
+        return (
+            "no cue on the retina. Same brain, same body, same seed, nothing to see.",
+            DIM,
+        )
+    if variant == "readout-ablated":
+        return (
+            "the brain is computing normally; the declared readout is zeroed before the "
+            "decoder can hear it",
+            WARN,
+        )
+    # The encoder saturates angular radius at a hemisphere once the fly is nearer to the
+    # cue than the cue's own radius, which is what "arrived" means for a stimulus that has
+    # no collision. Saying so is more useful than describing a turn that is already over.
+    if float(row["cue"].get("angular_radius_deg", 0.0)) >= 89.999:
+        return (
+            "the fly is inside the cue's radius: the encoder saturates its angular radius "
+            "at a hemisphere, and the cue is drawn see-through because it has no collision",
+            INK,
+        )
+    state = str(row["command"].get("state", ""))
+    if state != "LOCOMOTING":
+        return (
+            "the cue is on the retina; the descending readout has not crossed the "
+            "decoder's threshold",
+            DIM,
+        )
+    left = float(row["readout_hz"].get(VISUAL_LEFT_READOUT_NAME, 0.0))
+    right = float(row["readout_hz"].get(VISUAL_RIGHT_READOUT_NAME, 0.0))
+    if abs(left - right) < 1e-9:
+        return ("the descending readout is symmetric; the body drives forward", INK)
+    side = "left" if left > right else "right"
+    return (
+        f"the descending readout favours the fly's {side} by "
+        f"{abs(left - right):.2f} Hz, and the decoder steers that way",
+        INK,
+    )
+
+
+# The whole-population rates that used to occupy a fourth strip chart. They belong beside
+# the brain, because they describe the picture they sit next to.
+LIVE_POOL_ROWS: tuple[tuple[str, str], ...] = (
+    ("optic lobe", "optic-lobe"),
+    ("visual projection", "visual-projection"),
+    ("central brain", "central-brain"),
+    ("descending", "descending-all"),
+)
+
+
+def live_pool_rates(row: dict[str, Any]) -> tuple[tuple[str, float], ...]:
+    rates = row.get("pool_mean_rate_hz", {})
+    return tuple(
+        (label, float(rates.get(key, 0.0))) for label, key in LIVE_POOL_ROWS
     )
 
 
@@ -574,14 +753,22 @@ def draw_trajectory_inset(
     cue_xy: tuple[float, float],
     cue_radius_mm: float,
     fonts: dict[str, Any],
+    cue_present: bool = True,
 ) -> None:
-    """A top-down map of where the fly has been and where the cue is."""
+    """A top-down map of where the fly has been and, when there is one, where the cue is.
+
+    ``cue_present`` is not cosmetic. The stimulus-absent control's whole claim is that
+    there is nothing in the world to react to, and drawing a cue on its map contradicted
+    the caption directly above it.
+    """
     x0, y0, x1, y1 = box
     draw.rectangle(box, fill=(10, 13, 19), outline=(52, 60, 76))
     xs = np.array([row["pose"]["x_mm"] for row in rows], dtype=np.float64)
     ys = np.array([row["pose"]["y_mm"] for row in rows], dtype=np.float64)
-    all_x = np.concatenate([xs, [cue_xy[0]]])
-    all_y = np.concatenate([ys, [cue_xy[1]]])
+    extra_x = [cue_xy[0]] if cue_present else []
+    extra_y = [cue_xy[1]] if cue_present else []
+    all_x = np.concatenate([xs, extra_x])
+    all_y = np.concatenate([ys, extra_y])
     pad = 3.0
     lo_x, hi_x = float(all_x.min()) - pad, float(all_x.max()) + pad
     lo_y, hi_y = float(all_y.min()) - pad, float(all_y.max()) + pad
@@ -594,14 +781,17 @@ def draw_trajectory_inset(
         sy = (y0 + y1) / 2.0 - (my - cy) / span * inner
         return sx, sy
 
-    radius_px = max(3.0, cue_radius_mm / span * inner)
-    ccx, ccy = to_screen(*cue_xy)
-    draw.ellipse(
-        (ccx - radius_px, ccy - radius_px, ccx + radius_px, ccy + radius_px),
-        fill=(58, 62, 78),
-        outline=(150, 160, 185),
-    )
-    draw.text((ccx + radius_px + 4, ccy - 7), "cue", font=fonts["tiny"], fill=DIM)
+    if cue_present:
+        radius_px = max(3.0, cue_radius_mm / span * inner)
+        ccx, ccy = to_screen(*cue_xy)
+        draw.ellipse(
+            (ccx - radius_px, ccy - radius_px, ccx + radius_px, ccy + radius_px),
+            fill=(58, 62, 78),
+            outline=(150, 160, 185),
+        )
+        draw.text((ccx + radius_px + 4, ccy - 7), "cue", font=fonts["tiny"], fill=DIM)
+    else:
+        draw.text((x0 + 6, y1 - 18), "no cue in this world", font=fonts["tiny"], fill=DIM)
 
     path = [
         to_screen(float(a), float(b))
@@ -732,6 +922,15 @@ def opening_card(summary: dict[str, Any], fonts: dict[str, Any]) -> Any:
                 "downstream.",
             ),
             (
+                "ENGINEERED STAND-INS",
+                "; ".join(
+                    scaffold.split(". ")[0].rstrip(".")
+                    for scaffold in summary["body"]["scaffolds"]
+                )
+                + ". None of these is a model of the animal, and the arena holds exactly "
+                "one object because the encoder models exactly one.",
+            ),
+            (
                 "TIER",
                 "V0 Structural. This is an engineering demonstration. The network "
                 "parameters are P/E, the decoder and body are E, and nothing here is "
@@ -794,13 +993,47 @@ def verdict_card(
     )
 
 
+def _open_body_source(
+    run_directory: Path, summary: dict[str, Any], resolution: tuple[int, int]
+) -> tuple[Any, Any, Any]:
+    """Prefer replay from recorded physics state; fall back to a run's baked-in video.
+
+    Recordings made before the body became re-renderable carry `body.mp4` and no `qpos`,
+    and they still render, from the camera they were made with. New recordings carry the
+    state and get the shot list.
+    """
+    from flysim.demo01_body import Demo01BodyParameters
+    from flysim.demo01_replay import BodyReplay, PoseRecording
+
+    poses_path = run_directory / "poses.npz"
+    raw = summary.get("body", {}).get("parameters")
+    if poses_path.is_file() and raw:
+        poses = PoseRecording(poses_path)
+        replay = BodyReplay(
+            Demo01BodyParameters.from_mapping(raw),
+            seed=int(summary["seed"]),
+            resolution=resolution,
+        )
+        return replay, poses, None
+
+    import imageio.v2 as imageio
+
+    video = run_directory / "body.mp4"
+    if video.is_file():
+        return None, None, imageio.get_reader(video)
+    raise ReadinessError(
+        f"{run_directory} carries neither poses.npz nor body.mp4, so the body cannot be "
+        "drawn. Re-run the recording."
+    )
+
+
 def render_recording(
     run_directory: Path,
     *,
     positions_path: Path,
     output_path: Path | None = None,
     fps: int = 30,
-    orbit_degrees_per_second: float = 9.0,
+    orbit_degrees_per_second: float = 0.0,
     glow_decay: float = 0.78,
     title: str | None = None,
 ) -> Path:
@@ -810,6 +1043,8 @@ def render_recording(
         from PIL import Image, ImageDraw
     except ImportError as exc:  # pragma: no cover - environment guard
         raise ReadinessError("Rendering needs imageio and Pillow") from exc
+
+    from flysim.demo01_replay import ShotPlan, frame_camera, smooth_track
 
     summary = json.loads((run_directory / "summary.json").read_text(encoding="utf-8"))
     rows = load_trace(run_directory / "trace.jsonl")
@@ -829,11 +1064,12 @@ def render_recording(
     strips = build_strips(rows)
     fonts = _fonts()
 
-    body_video = run_directory / "body.mp4"
-    # Read the body frames one at a time rather than buffering them. A 20 s run at
+    replay, poses, body_reader = _open_body_source(
+        run_directory, summary, (PANEL_HEIGHT, BODY_WIDTH)
+    )
+    # Read baked-in frames one at a time rather than buffering them. A 20 s run at
     # 770x640 is about 900 MB of uint8 if held in a list, which is a large amount of
     # memory to spend on frames that are consumed strictly in order.
-    body_reader = imageio.get_reader(body_video) if body_video.is_file() else None
     body_iterator: Iterator[Any] | None = (
         iter(body_reader.iter_data()) if body_reader is not None else None
     )
@@ -849,23 +1085,66 @@ def render_recording(
         if verdict_path.is_file()
         else None
     )
-    card_seconds = 6
+    opening_seconds, closing_seconds = 5, 6
 
     coupling_us = int(summary["coupling_us"])
     interval_s = coupling_us / 1_000_000.0
     frame_period_s = 1.0 / fps
     variant = str(summary["variant"])
     heading = title or "MaleCNS full-graph closed loop"
-    scaffolds = summary["body"]["scaffolds"]
     glow = np.zeros(atlas.drawn, dtype=np.float32)
+
+    # The camera track: recorded poses, smoothed over about a third of a second so the
+    # shot does not shake with every step. Only the camera sees the smoothed values.
+    onset_us = summary.get("outcome", {}).get("locomotion_onset_us")
+    plan = ShotPlan.from_recording(
+        duration_s=len(rows) * interval_s,
+        onset_s=None if onset_us is None else float(onset_us) / 1e6,
+    )
+    track_x, track_y, track_z, track_heading = smooth_track(
+        np.array([row["pose"]["x_mm"] for row in rows]),
+        np.array([row["pose"]["y_mm"] for row in rows]),
+        np.array([row["pose"]["z_mm"] for row in rows]),
+        np.array([row["pose"]["heading_rad"] for row in rows]),
+        window=max(3, round(0.35 / interval_s)),
+    )
+    cue_xy = (
+        float(summary["body"]["cue_xy_mm"][0]),
+        float(summary["body"]["cue_xy_mm"][1]),
+    )
+    cue_radius_mm = float(summary["body"]["cue_radius_mm"])
+    cue_height_mm = float(
+        summary["body"].get("parameters", {}).get("cue_height_mm", cue_radius_mm)
+    )
     # Map dense graph index to a row in the drawn cloud, once.
     row_by_dense = np.full(spikes.neuron_count, -1, dtype=np.int64)
     row_by_dense[atlas.dense_index] = np.arange(atlas.drawn, dtype=np.int64)
 
     frame_count = max(1, round(len(rows) * interval_s * fps))
+    # The dorsal view is the hero: it shows both optic lobes, the central brain and the
+    # left-right asymmetry the demonstration is about. The frontal view goes in a corner
+    # inset because its job is only to show that the ventral nerve cord is there and
+    # running. Both are fixed, and both are therefore built once.
+    inset_size = 300
+    dorsal_projection = BrainProjection.build(
+        atlas,
+        azimuth_rad=0.0,
+        elevation_rad=math.radians(6.0),
+        width=BRAIN_VIEW_WIDTH,
+        height=PANEL_HEIGHT,
+        view="dorsal",
+    )
+    frontal_projection = BrainProjection.build(
+        atlas,
+        azimuth_rad=math.radians(20.0),
+        elevation_rad=math.radians(10.0),
+        width=inset_size,
+        height=inset_size,
+        view="frontal",
+    )
     try:
         opening = np.asarray(opening_card(summary, fonts))
-        for _ in range(card_seconds * fps):
+        for _ in range(opening_seconds * fps):
             writer.append_data(opening)
         for frame_index in range(frame_count):
             t_s = frame_index * frame_period_s
@@ -887,37 +1166,49 @@ def render_recording(
                 if np.any(keep):
                     np.add.at(glow, target[keep], counts[keep])
 
-            spin = math.radians(orbit_degrees_per_second * t_s)
-            # The dorsal view is the hero: it shows both optic lobes, the central brain and
-            # the left-right asymmetry the demonstration is about. The frontal view goes in
-            # a corner inset because its job is only to show that the ventral nerve cord is
-            # there and running.
-            dorsal = render_brain(
-                atlas,
-                glow,
-                azimuth_rad=spin * 0.5,
-                elevation_rad=math.radians(6.0),
-                width=BRAIN_WIDTH,
-                height=PANEL_HEIGHT,
-                view="dorsal",
-            )
-            inset_size = 300
-            frontal = render_brain(
-                atlas,
-                glow,
-                azimuth_rad=math.radians(20.0) + spin,
-                elevation_rad=math.radians(10.0),
-                width=inset_size,
-                height=inset_size,
-                view="frontal",
-            )
+            if orbit_degrees_per_second:
+                spin = math.radians(orbit_degrees_per_second * t_s)
+                dorsal_projection = BrainProjection.build(
+                    atlas,
+                    azimuth_rad=spin * 0.5,
+                    elevation_rad=math.radians(6.0),
+                    width=BRAIN_VIEW_WIDTH,
+                    height=PANEL_HEIGHT,
+                    view="dorsal",
+                )
+            dorsal = render_brain(atlas, glow, projection=dorsal_projection)
+            frontal = render_brain(atlas, glow, projection=frontal_projection)
 
             canvas = Image.new("RGB", (FRAME_WIDTH, FRAME_HEIGHT), BACKGROUND)
-            canvas.paste(Image.fromarray(dorsal), (0, HEADER_HEIGHT))
+            canvas.paste(Image.fromarray(dorsal), (BRAIN_VIEW_LEFT, HEADER_HEIGHT))
             inset_x = 10
             inset_y = HEADER_HEIGHT + PANEL_HEIGHT - inset_size - 30
             canvas.paste(Image.fromarray(frontal), (inset_x, inset_y))
-            if body_iterator is not None and not body_exhausted:
+            row = rows[cursor]
+            if replay is not None and poses is not None:
+                shot = plan.shot_at(t_s)
+                framing = frame_camera(
+                    shot,
+                    fly_xyz_mm=(
+                        float(track_x[cursor]),
+                        float(track_y[cursor]),
+                        float(track_z[cursor]),
+                    ),
+                    heading_rad=float(track_heading[cursor]),
+                    cue_xy_mm=cue_xy,
+                    cue_height_mm=cue_height_mm,
+                    cue_radius_mm=cue_radius_mm,
+                    cue_present=bool(row["cue"].get("present", True)),
+                    t_s=t_s,
+                )
+                body_frame = np.asarray(
+                    replay.render(
+                        poses.at(cursor),
+                        framing,
+                        cue_visible=bool(row["cue"].get("present", True)),
+                    )
+                )
+            elif body_iterator is not None and not body_exhausted:
                 try:
                     body_frame = np.asarray(next(body_iterator))
                 except StopIteration:
@@ -936,7 +1227,6 @@ def render_recording(
                 )
 
             draw = ImageDraw.Draw(canvas)
-            row = rows[cursor]
             draw.rectangle((0, 0, FRAME_WIDTH, HEADER_HEIGHT), fill=(13, 16, 23))
             draw.text((26, 10), heading, font=fonts["title"], fill=INK)
             draw.text(
@@ -967,14 +1257,19 @@ def render_recording(
                 fill=DIM,
             )
             draw.text(
-                (BRAIN_WIDTH - 430, HEADER_HEIGHT + PANEL_HEIGHT - 22),
+                (BRAIN_WIDTH - 436, HEADER_HEIGHT + 8),
                 "dorsal view, looking down. Left of frame is the fly's left.",
                 font=fonts["tiny"],
                 fill=DIM,
             )
+            legend_x1 = 344
             legend_y = HEADER_HEIGHT + 12
+            # Drawn filled and first, because an unfilled legend sitting on top of a point
+            # cloud is unreadable, which is what the first cut of this video did.
             draw.rectangle(
-                (8, legend_y - 6, 300, legend_y + 208), fill=(10, 12, 18), outline=(30, 36, 48)
+                (8, legend_y - 6, legend_x1, legend_y + LEGEND_HEIGHT),
+                fill=(10, 12, 18),
+                outline=(30, 36, 48),
             )
             draw.text(
                 (16, legend_y),
@@ -998,21 +1293,57 @@ def render_recording(
             legend_y += 24
             draw.text(
                 (16, legend_y),
-                f"{atlas.drawn:,} of {spikes.neuron_count:,} drawn; {atlas.missing:,} carry no",
+                f"{atlas.drawn:,} of {spikes.neuron_count:,} drawn. {atlas.missing:,} have no",
                 font=fonts["tiny"],
                 fill=DIM,
             )
             draw.text(
                 (16, legend_y + 13),
-                "released soma position and cannot be drawn",
+                "released soma position and cannot be drawn.",
                 font=fonts["tiny"],
                 fill=DIM,
             )
             draw.text(
-                (16, legend_y + 30),
-                "brightness is spike count over the last few frames",
+                (16, legend_y + 26),
+                "Brightness: mean recent spike count of the",
                 font=fonts["tiny"],
                 fill=DIM,
+            )
+            draw.text(
+                (16, legend_y + 39),
+                "neurons drawn at that pixel, on a fixed log scale.",
+                font=fonts["tiny"],
+                fill=DIM,
+            )
+            # The whole-population rates, live. These used to be a fourth strip chart at
+            # the bottom of the frame, a long way from the picture they describe.
+            legend_y += 60
+            draw.text(
+                (16, legend_y), "population rate, this interval", font=fonts["small"], fill=DIM
+            )
+            for label, value in live_pool_rates(row):
+                legend_y += 16
+                draw.text((22, legend_y), label, font=fonts["tiny"], fill=INK)
+                text = f"{value:6.2f} Hz"
+                draw.text(
+                    (legend_x1 - 12 - draw.textlength(text, font=fonts["tiny"]), legend_y),
+                    text,
+                    font=fonts["tiny"],
+                    fill=INK,
+                )
+
+            # What is happening right now, read off the recording rather than scripted.
+            caption, caption_colour = chapter_caption(row, variant)
+            band_top = HEADER_HEIGHT + PANEL_HEIGHT - 30
+            draw.rectangle(
+                (BRAIN_VIEW_LEFT, band_top, BRAIN_WIDTH, HEADER_HEIGHT + PANEL_HEIGHT),
+                fill=(10, 12, 18),
+            )
+            draw.text(
+                (BRAIN_VIEW_LEFT + 12, band_top + 7),
+                caption,
+                font=fonts["small"],
+                fill=caption_colour,
             )
 
             cue = row["cue"]
@@ -1047,10 +1378,12 @@ def render_recording(
                 draw,
                 rows,
                 cursor,
+                # Bottom right, because the establishing shot puts the fly on the left of
+                # the body panel and an inset in that corner covered the animal.
                 box=(
-                    BRAIN_WIDTH + 16,
+                    FRAME_WIDTH - 246,
                     HEADER_HEIGHT + PANEL_HEIGHT - 250,
-                    BRAIN_WIDTH + 246,
+                    FRAME_WIDTH - 16,
                     HEADER_HEIGHT + PANEL_HEIGHT - 20,
                 ),
                 cue_xy=(
@@ -1059,6 +1392,7 @@ def render_recording(
                 ),
                 cue_radius_mm=float(summary["body"]["cue_radius_mm"]),
                 fonts=fonts,
+                cue_present=bool(row["cue"].get("present", True)),
             )
 
             draw_strips(
@@ -1071,28 +1405,24 @@ def render_recording(
                 fonts=fonts,
             )
 
+            # Two lines, not three. The full list of engineered stand-ins moved to the
+            # opening card, where a viewer has time to read it; what stays on every frame
+            # is the sentence that would change how the frame is understood.
             footer_y = FRAME_HEIGHT - FOOTER_HEIGHT
             draw.rectangle((0, footer_y, FRAME_WIDTH, FRAME_HEIGHT), fill=(13, 16, 23))
             draw.text(
-                (26, footer_y + 8),
-                "Engineered stand-ins in this demonstration: " + scaffolds[0].split(":")[0]
-                + "; leg adhesion; a female body prior driven by a male CNS; "
-                + "the retina-to-lamina synapse is NOT executed because the frozen sign "
-                + "policy zeroes all 66,533 photoreceptor edges.",
+                (26, footer_y + 9),
+                "The walking controller is an engineered pattern generator, not the "
+                "simulated ventral cord. The retina-to-lamina synapse is NOT executed: the "
+                "frozen sign policy zeroes all 66,533 photoreceptor edges.",
                 font=fonts["tiny"],
                 fill=WARN,
             )
             draw.text(
-                (26, footer_y + 26),
-                "Lamina rates, retinal map, excitatory/inhibitory ratio, adaptation and "
-                "per-contact scale are declared engineering values chosen against neural "
-                "criteria with no behavioural objective. No mechanism is validated.",
-                font=fonts["tiny"],
-                fill=DIM,
-            )
-            draw.text(
-                (26, footer_y + 42),
-                f"commit {summary.get('code_commit', 'unknown')}   "
+                (26, footer_y + 30),
+                "Network parameters are P/E and the decoder and body are E. The camera "
+                "track is smoothed for display; no recorded quantity is.    "
+                f"commit {summary.get('code_commit', 'unknown')[:12]}   "
                 f"graph sha256 {summary['graph']['source_sha256'][:16]}   "
                 f"seed {summary['seed']}",
                 font=fonts["tiny"],
@@ -1100,12 +1430,14 @@ def render_recording(
             )
             writer.append_data(np.asarray(canvas))
         closing = np.asarray(verdict_card(summary, verdict, fonts))
-        for _ in range(card_seconds * fps):
+        for _ in range(closing_seconds * fps):
             writer.append_data(closing)
     finally:
         writer.close()
         if body_reader is not None:
             body_reader.close()
+        if replay is not None:
+            replay.close()
     return output_path.resolve()
 
 
@@ -1197,8 +1529,49 @@ def render_comparison(
     footer = 52
     panel_w = FRAME_WIDTH // 2
     panel_h = (FRAME_HEIGHT - header - footer) // 2
+    brain_w = 620
     brain_h = panel_h - 96
+    side_x = 636
+    side_w = 310
+    side_h = 200
     glow = {variant: np.zeros(atlas.drawn, dtype=np.float32) for variant in loaded}
+    projection = BrainProjection.build(
+        atlas,
+        azimuth_rad=0.0,
+        elevation_rad=math.radians(6.0),
+        width=brain_w,
+        height=brain_h,
+        view="dorsal",
+    )
+
+    # Each panel gets its own fly, drawn through one shared shot plan. The plan comes from
+    # the exact run so that at any instant all four panels are in the same kind of shot
+    # following their own animal, which is what makes them comparable. Cutting each panel
+    # on its own events would have three of them establishing while the fourth arrives.
+    from flysim.demo01_replay import ShotPlan, frame_camera, smooth_track
+
+    onset_us = reference["summary"].get("outcome", {}).get("locomotion_onset_us")
+    plan = ShotPlan.from_recording(
+        duration_s=intervals * interval_s,
+        onset_s=None if onset_us is None else float(onset_us) / 1e6,
+    )
+    for variant, payload in loaded.items():
+        try:
+            replay, poses, _ = _open_body_source(
+                run_root / variant, payload["summary"], (side_h, side_w)
+            )
+        except ReadinessError:
+            replay, poses = None, None
+        payload["replay"] = replay
+        payload["poses"] = poses
+        rows = payload["rows"]
+        payload["track"] = smooth_track(
+            np.array([row["pose"]["x_mm"] for row in rows]),
+            np.array([row["pose"]["y_mm"] for row in rows]),
+            np.array([row["pose"]["z_mm"] for row in rows]),
+            np.array([row["pose"]["heading_rad"] for row in rows]),
+            window=max(3, round(0.35 / interval_s)),
+        )
 
     output_path = output_path or run_root / "control-comparison.mp4"
     writer = imageio.get_writer(output_path, fps=fps, codec="libx264", quality=9)
@@ -1267,15 +1640,7 @@ def render_comparison(
                     keep = target >= 0
                     if np.any(keep):
                         np.add.at(state, target[keep], counts[keep])
-                brain = render_brain(
-                    atlas,
-                    state,
-                    azimuth_rad=math.radians(6.0 * t_s * 0.5),
-                    elevation_rad=math.radians(6.0),
-                    width=panel_w - 16,
-                    height=brain_h,
-                    view="dorsal",
-                )
+                brain = render_brain(atlas, state, projection=projection)
                 canvas.paste(Image.fromarray(brain), (x0 + 8, y0 + 30))
 
                 draw.text(
@@ -1285,6 +1650,58 @@ def render_comparison(
                     fill=INK if variant == "exact" else DIM,
                 )
                 row = rows[local_cursor]
+                cue_present = bool(row["cue"].get("present", True))
+                body_summary = payload["summary"]["body"]
+
+                # This panel's own fly, in the same shot as every other panel's.
+                if payload["replay"] is not None and payload["poses"] is not None:
+                    track_x, track_y, track_z, track_h = payload["track"]
+                    body_parameters = body_summary.get("parameters", {})
+                    framing = frame_camera(
+                        plan.shot_at(t_s),
+                        fly_xyz_mm=(
+                            float(track_x[local_cursor]),
+                            float(track_y[local_cursor]),
+                            float(track_z[local_cursor]),
+                        ),
+                        heading_rad=float(track_h[local_cursor]),
+                        cue_xy_mm=(
+                            float(body_summary["cue_xy_mm"][0]),
+                            float(body_summary["cue_xy_mm"][1]),
+                        ),
+                        cue_height_mm=float(
+                            body_parameters.get(
+                                "cue_height_mm", body_summary["cue_radius_mm"]
+                            )
+                        ),
+                        cue_radius_mm=float(body_summary["cue_radius_mm"]),
+                        cue_present=cue_present,
+                        t_s=t_s,
+                    )
+                    body_frame = np.asarray(
+                        payload["replay"].render(
+                            payload["poses"].at(local_cursor),
+                            framing,
+                            cue_visible=cue_present,
+                        )
+                    )
+                    canvas.paste(
+                        Image.fromarray(body_frame).resize((side_w, side_h)),
+                        (x0 + side_x, y0 + 30),
+                    )
+                else:
+                    draw.rectangle(
+                        (x0 + side_x, y0 + 30, x0 + side_x + side_w, y0 + 30 + side_h),
+                        fill=PANEL,
+                        outline=(34, 40, 52),
+                    )
+                    draw.text(
+                        (x0 + side_x + 10, y0 + 30 + side_h // 2),
+                        "no recorded physics state",
+                        font=fonts["tiny"],
+                        fill=DIM,
+                    )
+
                 travelled = math.hypot(
                     row["pose"]["x_mm"] - rows[0]["pose"]["x_mm"],
                     row["pose"]["y_mm"] - rows[0]["pose"]["y_mm"],
@@ -1303,17 +1720,18 @@ def render_comparison(
                     rows,
                     local_cursor,
                     box=(
-                        x0 + panel_w - 214,
-                        y0 + panel_h - 210,
-                        x0 + panel_w - 14,
-                        y0 + panel_h - 10,
+                        x0 + side_x,
+                        y0 + 30 + side_h + 12,
+                        x0 + side_x + side_w,
+                        y0 + 30 + side_h + 12 + side_h,
                     ),
                     cue_xy=(
-                        float(payload["summary"]["body"]["cue_xy_mm"][0]),
-                        float(payload["summary"]["body"]["cue_xy_mm"][1]),
+                        float(body_summary["cue_xy_mm"][0]),
+                        float(body_summary["cue_xy_mm"][1]),
                     ),
-                    cue_radius_mm=float(payload["summary"]["body"]["cue_radius_mm"]),
+                    cue_radius_mm=float(body_summary["cue_radius_mm"]),
                     fonts=fonts,
+                    cue_present=cue_present,
                 )
 
             footer_y = FRAME_HEIGHT - footer
@@ -1328,8 +1746,10 @@ def render_comparison(
             )
             draw.text(
                 (26, footer_y + 18),
-                "Panels differ in brightness because the loop is closed: a fly that "
-                "approaches sees a larger cue, which drives its lamina harder.",
+                "All four panels use one fixed logarithmic brightness scale, so a dimmer "
+                "brain is a quieter brain and not a different exposure. They differ "
+                "because the loop is closed: a fly that approaches sees a larger cue, "
+                "which drives its lamina harder.",
                 font=fonts["tiny"],
                 fill=DIM,
             )
@@ -1345,26 +1765,40 @@ def render_comparison(
             writer.append_data(np.asarray(canvas))
     finally:
         writer.close()
+        for payload in loaded.values():
+            if payload.get("replay") is not None:
+                payload["replay"].close()
     return output_path.resolve()
 
 
 __all__ = [
+    "ACTIVITY_EXPOSURE",
+    "ACTIVITY_GAIN",
     "BODY_WIDTH",
+    "BRAIN_VIEW_LEFT",
+    "BRAIN_VIEW_WIDTH",
     "BRAIN_WIDTH",
     "COMPARISON_CAPTIONS",
     "COMPARISON_PANEL_ORDER",
     "FOOTER_HEIGHT",
     "FRAME_HEIGHT",
     "FRAME_WIDTH",
+    "GLOW_REFERENCE",
     "HEADER_HEIGHT",
+    "LEGEND_HEIGHT",
     "PANEL_HEIGHT",
+    "STRUCTURE_REFERENCE_DENSITY",
     "TRACE_HEIGHT",
     "BrainAtlas",
+    "BrainProjection",
     "SpikeRecording",
     "TraceChannel",
     "TraceStrip",
+    "activity_intensity",
     "build_soma_positions",
     "build_strips",
+    "chapter_caption",
+    "live_pool_rates",
     "load_trace",
     "opening_card",
     "render_brain",

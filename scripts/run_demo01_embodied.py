@@ -137,9 +137,6 @@ def main() -> int:
             body_parameters=body_parameters,
             seed=args.seed,
             variant=variant,
-            fps=args.fps,
-            camera_resolution=(640, 770),
-            write_video=True,
             allow_dirty_tree=args.allow_dirty_tree,
             progress=args.progress,
         )

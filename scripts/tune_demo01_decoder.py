@@ -132,7 +132,6 @@ def main() -> int:
                 body_parameters=body_parameters,
                 seed=int(development["seed"]),
                 variant="exact",
-                write_video=False,
                 allow_dirty_tree=True,
             )
             summary = read_variant(directory, decoder.quiescent_us)

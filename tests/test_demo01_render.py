@@ -22,13 +22,18 @@ from flysim.demo01_render import (
     FOOTER_HEIGHT,
     FRAME_HEIGHT,
     FRAME_WIDTH,
+    GLOW_REFERENCE,
     HEADER_HEIGHT,
     PANEL_HEIGHT,
     TRACE_HEIGHT,
     BrainAtlas,
+    BrainProjection,
     SpikeRecording,
     TraceChannel,
+    activity_intensity,
     build_strips,
+    chapter_caption,
+    live_pool_rates,
     load_trace,
     render_brain,
 )
@@ -253,30 +258,42 @@ def _row(t_us: int, left: float, right: float, forward: float, yaw: float) -> di
 
 
 def test_the_strips_follow_the_causal_chain() -> None:
-    """Top to bottom must read input, optic lobe, descending readout, command."""
+    """Top to bottom must read what the eye got, what came down, what the body got.
+
+    Three strips, not four. The whole-population rates that used to be a fourth strip are
+    drawn as live numbers beside the brain instead, because four dense strip charts turned
+    the frame into a figure and nobody reads four moving traces.
+    """
     strips = build_strips([_row(15000, 5.0, 1.0, 0.4, 0.2)])
-    assert len(strips) == 4
+    assert len(strips) == 3
     assert "retinal input" in strips[0].title
-    assert "optic lobe" in strips[1].title
-    assert "descending readout" in strips[2].title
-    assert "decoder command" in strips[3].title
+    assert "descending readout" in strips[1].title
+    assert "decoder command" in strips[2].title
     # The command strip must be symmetric, because yaw is signed and a one-sided axis
     # would hide a turn in the wrong direction.
-    assert strips[3].symmetric
+    assert strips[2].symmetric
+
+
+def test_the_population_rates_that_left_the_strips_are_still_reported() -> None:
+    """Dropping a strip may not drop the quantity, only move it."""
+    labels = dict(live_pool_rates(_row(15000, 5.0, 1.0, 0.4, 0.2)))
+    assert labels["optic lobe"] == pytest.approx(1.0)
+    assert labels["visual projection"] == pytest.approx(2.0)
+    assert labels["central brain"] == pytest.approx(3.0)
 
 
 def test_a_missing_channel_reads_as_zero_rather_than_crashing() -> None:
     row = _row(15000, 5.0, 1.0, 0.4, 0.2)
     del row["readout_hz"]["dn-visual-right"]
     strips = build_strips([row])
-    readout = strips[2]
+    readout = strips[1]
     right = next(c for c in readout.channels if "right" in c.label)
     assert right.values.tolist() == [0.0]
 
 
 def test_the_strips_preserve_the_sign_of_yaw() -> None:
     strips = build_strips([_row(15000, 1.0, 5.0, 0.4, -0.6)])
-    yaw = next(c for c in strips[3].channels if c.label == "yaw drive")
+    yaw = next(c for c in strips[2].channels if c.label == "yaw drive")
     assert yaw.values[0] == pytest.approx(-0.6)
 
 
@@ -340,3 +357,156 @@ def test_the_body_geometry_puts_the_cue_where_the_note_says() -> None:
     # And the angular radius the note quotes.
     angular = math.degrees(math.asin(body["cue_radius_mm"] / distance))
     assert angular == pytest.approx(10.3, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
+# Brightness: the map that was throwing away the result
+# ---------------------------------------------------------------------------
+#
+# Measured on the recordings that shipped, the first brightness map saturated at a decayed
+# spike count of about 2, while the exact run reaches 76 and the shuffled control's 99.9th
+# percentile sits eightfold below the exact run's. The control comparison's central visual
+# claim -- that the rewired graph drives itself far less hard -- was being erased by the
+# colour map rather than by the data. These pin the fix.
+
+
+def test_brightness_still_separates_counts_far_above_the_old_clip() -> None:
+    """A glow of 6 and a glow of 48 must not render as the same white."""
+    low, high = activity_intensity(np.array([6.0, 48.0]))
+    assert high - low > 0.4
+
+
+def test_brightness_spans_the_measured_range_without_clipping() -> None:
+    """The exact run's per-neuron peak was 76.3. It has to stay on the scale."""
+    peak = float(activity_intensity(np.array([76.3]))[0])
+    assert 1.0 < peak < 1.3
+    assert float(activity_intensity(np.array([GLOW_REFERENCE]))[0]) == pytest.approx(1.0)
+
+
+def test_brightness_is_monotone_and_zero_at_silence() -> None:
+    values = activity_intensity(np.array([0.0, 0.5, 1.0, 10.0, 50.0, 80.0]))
+    assert values[0] == 0.0
+    assert np.all(np.diff(values) > 0.0)
+
+
+def test_the_brightness_scale_is_fixed_rather_than_per_run() -> None:
+    """Per-run normalisation would make the four control panels incomparable."""
+    alone = activity_intensity(np.array([3.0]))
+    beside_a_brighter_neighbour = activity_intensity(np.array([3.0, 900.0]))
+    assert alone[0] == pytest.approx(beside_a_brighter_neighbour[0])
+
+
+def test_a_harder_driven_brain_renders_brighter_than_a_quieter_one(
+    atlas: BrainAtlas,
+) -> None:
+    """The end-to-end version of the same property, through the real renderer."""
+    projection = BrainProjection.build(
+        atlas, azimuth_rad=0.0, elevation_rad=0.0, width=64, height=64, view="dorsal"
+    )
+    quiet = render_brain(atlas, np.full(atlas.drawn, 6.0, dtype=np.float32),
+                         projection=projection)
+    loud = render_brain(atlas, np.full(atlas.drawn, 47.0, dtype=np.float32),
+                        projection=projection)
+    assert int(loud.sum()) > int(quiet.sum()) * 1.2
+
+
+def test_activity_is_averaged_over_the_neurons_at_a_pixel_not_summed(
+    tmp_path: Path,
+) -> None:
+    """Otherwise the optic lobes render white merely because more somata project there.
+
+    Four neurons are stacked at one location and one sits alone. Driven equally hard, the
+    crowded pixel and the lonely pixel must come out at the same brightness, because both
+    report how hard their neurons are firing. Summing would make the crowded one four times
+    brighter, which is how the optic lobes became a white slab.
+    """
+    path = tmp_path / "clustered.npz"
+    np.savez_compressed(
+        path,
+        dense_index=np.arange(5, dtype=np.int32),
+        body_id=np.arange(5, dtype=np.int64),
+        xyz=np.array(
+            [
+                [20000.0, 30000.0, 30000.0],
+                [20000.0, 30000.0, 30000.0],
+                [20000.0, 30000.0, 30000.0],
+                [20000.0, 30000.0, 30000.0],
+                [80000.0, 30000.0, 30000.0],
+            ],
+            dtype=np.float32,
+        ),
+        superclass=np.array(["ol_intrinsic"] * 5),
+        side=np.array(["L"] * 5),
+        missing_dense_index=np.zeros(0, dtype=np.int32),
+        missing_superclass=np.zeros(0, dtype="<U1"),
+    )
+    clustered = BrainAtlas.load(path, neuron_count=5)
+    projection = BrainProjection.build(
+        clustered, azimuth_rad=0.0, elevation_rad=0.0, width=64, height=64, view="dorsal"
+    )
+    assert float(projection.density.max()) == pytest.approx(4.0)
+
+    silent = render_brain(clustered, np.zeros(5, dtype=np.float32), projection=projection)
+    active = render_brain(
+        clustered, np.full(5, 2.0, dtype=np.float32), projection=projection
+    )
+
+    def activity_added(frame: np.ndarray, index: int) -> float:
+        """Undo the exposure curve to recover what activity put into the buffer.
+
+        The structural cloud is deliberately still a sum, because anatomy is denser in
+        some places and should look it, so the two pixels do not end at the same value.
+        What has to match is the activity each one gained.
+        """
+        row = round(float(projection.py[index]))
+        column = round(float(projection.px[index]))
+        tone = np.clip(frame[row, column, 2] / 255.0, 0.0, 0.999)
+        return float(-np.log(1.0 - tone))
+
+    crowded = activity_added(active, 0) - activity_added(silent, 0)
+    lonely = activity_added(active, 4) - activity_added(silent, 4)
+    assert crowded == pytest.approx(lonely, rel=0.05)
+
+
+def test_a_projection_carries_its_own_size(atlas: BrainAtlas) -> None:
+    projection = BrainProjection.build(
+        atlas, azimuth_rad=0.0, elevation_rad=0.0, width=40, height=30, view="frontal"
+    )
+    assert projection.structure.shape == (30, 40, 3)
+    assert projection.density.shape == (30, 40, 1)
+    assert render_brain(atlas, np.zeros(atlas.drawn), projection=projection).shape == (
+        30,
+        40,
+        3,
+    )
+
+
+# ---------------------------------------------------------------------------
+# The caption has to be read off the recording, never scripted
+# ---------------------------------------------------------------------------
+
+
+def test_the_caption_says_there_is_nothing_to_see_when_there_is_no_cue() -> None:
+    row = _row(15000, 5.0, 1.0, 0.4, 0.2)
+    row["cue"]["present"] = False
+    text, _ = chapter_caption(row, "stimulus-absent")
+    assert "no cue" in text.lower()
+
+
+def test_the_caption_names_the_ablation_rather_than_describing_a_turn() -> None:
+    text, _ = chapter_caption(_row(15000, 5.0, 1.0, 0.4, 0.2), "readout-ablated")
+    assert "zeroed" in text
+
+
+def test_the_caption_names_the_side_the_readout_actually_favours() -> None:
+    left_wins, _ = chapter_caption(_row(15000, 5.0, 1.0, 0.4, 0.2), "exact")
+    right_wins, _ = chapter_caption(_row(15000, 1.0, 5.0, 0.4, -0.2), "exact")
+    assert "left" in left_wins and "right" not in left_wins.replace("right way", "")
+    assert "right" in right_wins
+
+
+def test_the_caption_does_not_claim_a_turn_before_the_decoder_commands_one() -> None:
+    row = _row(15000, 5.0, 1.0, 0.0, 0.0)
+    row["command"]["state"] = "QUIESCENT"
+    text, _ = chapter_caption(row, "exact")
+    assert "threshold" in text
