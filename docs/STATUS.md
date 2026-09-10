@@ -1361,3 +1361,36 @@ standing drift over the real 20 s duration fell from 14.413 mm with the controll
 contract was committed before the matrix ran and the evaluator that applies it cannot run a
 simulation or alter a threshold. Nothing here may ever claim that this is what a fly does,
 that any parameter is a measurement, or that any mechanism is validated.
+
+### DEMO-01 outcome: two evaluations, one failure and one pass
+
+**The tier does not move.** V0 Structural remains the only supported stage tier and the
+Stage 2 exit gate remains at v4, 0 of 3. What follows is an engineering demonstration.
+
+The frozen acceptance contract was applied twice, with byte-identical thresholds, to two cue
+placements. The first returned **INVALID AS A CAUSAL CLAIM**: A1, A2, A4 and A5 passed, and
+A3 failed on its approach clause because the residual standing drift runs at +11.5 degrees,
+essentially straight ahead, while the cue sat at 40 degrees, so passive drift closed
+1.906 mm against a 1.0 mm allowance. That clause was measuring the stance defect, the
+allowance had been frozen before the drift's direction was measured, and the threshold was
+not changed.
+
+The second placement puts the cue at 90 degrees, perpendicular to the measured drift, chosen
+by computing the closure that drift produces at each bearing rather than by searching for a
+placement that passed. It returned **FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC**, all
+five criteria passing. The intact loop closed 12.08 mm of a 14.02 mm gap; the readout-ablated
+and stimulus-absent controls closed 0.135 mm and never entered the locomoting state, a
+93-fold ratio. The drift prediction of 0.142 mm held to 0.01 mm, confirming the first
+failure's diagnosis quantitatively.
+
+The degree-preserving shuffle is the most informative control. It walked 32.20 mm and ended
+43.10 mm from a cue it started 14.02 mm from. The reading is not that the real connectome
+works better in general, but that the operating point selected for the exact graph does not
+transfer to a random rewiring of it: the same synaptic scale that gives the exact network a
+0.000 Hz baseline makes the shuffled one drive locomotion continuously.
+
+**Both results stay on the record**, with their own verdicts and videos. What may be claimed
+is that the body's behaviour depends on the simulated neural readout on the exact released
+graph, and that the exact connectivity rather than a network of its size is responsible at
+this operating point. What may never be claimed is that this is what a fly does, that any
+parameter here is a measurement, or that any mechanism is validated.

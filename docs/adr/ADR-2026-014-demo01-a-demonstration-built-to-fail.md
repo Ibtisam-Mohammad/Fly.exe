@@ -118,3 +118,27 @@ all the data, and it would have been weaker science: driving the lamina makes 99
 **Accept the standing drift and compare cue-directed displacement instead of total
 displacement.** Rejected. The criterion was already frozen and already failing; changing what
 it measures after seeing it fail is exactly the forbidden move. The stance was fixed instead.
+
+## Outcome, added after the evaluations ran
+
+The contract was applied twice with byte-identical thresholds.
+
+**The first evaluation returned INVALID AS A CAUSAL CLAIM**, and the demonstration built to
+fail did fail. A3's approach clause allowed the stimulus-absent control 1.0 mm and it closed
+1.906 mm, not because the behaviour failed to require the stimulus, since that control never
+locomoted and A3's displacement clause passed, but because the residual standing drift runs
+essentially straight ahead while the cue sat at 40 degrees. The clause was measuring the
+stance defect. The allowance had been frozen before the drift's direction was measured, and
+it was not changed.
+
+**The second evaluation, with the cue perpendicular to the measured drift, passed all five.**
+The bearing was chosen by computing the closure that the measured drift produces at each
+bearing, predicting 0.142 mm; the controls closed 0.135 mm. It is the harder placement,
+being outside the decoder's development range.
+
+That sequence is the decision in this ADR working as intended. A demonstration whose
+criteria are frozen before the runs can fail, and this one did, on a defect in my own
+criterion design rather than on a flattering interpretation. The response changed the
+experiment and left the standard alone, which is the same move the odour failure forced
+earlier, and both results are on the record so a reader can discount the second on account
+of the first if they wish.

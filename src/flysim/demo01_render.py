@@ -1127,9 +1127,16 @@ COMPARISON_PANEL_ORDER = (
     "shuffled-connectome",
 )
 
+# The ablated caption is worded carefully. Zeroing the readout after the brain has
+# computed it leaves the two brains identical *given identical input*, and that stops
+# being true the moment the bodies differ: the exact fly approaches, so its cue looms
+# larger and drives the lamina harder, while the ablated fly stands still and its retinal
+# input never grows. The panels visibly diverge in brightness for that reason, and the
+# divergence is evidence the loop is closed rather than a discrepancy to explain away.
+# An earlier caption said "identical brain", which was true only at the first interval.
 COMPARISON_CAPTIONS = {
     "exact": "EXACT: the released graph, all 25,563,197 edges",
-    "readout-ablated": "READOUT ABLATED: identical brain, body cannot hear it",
+    "readout-ablated": "READOUT ABLATED: readout zeroed after the brain computes it",
     "stimulus-absent": "STIMULUS ABSENT: identical everything, no cue",
     "shuffled-connectome": "SHUFFLED: same edge count and out-degrees, rewired",
 }
@@ -1312,15 +1319,22 @@ def render_comparison(
             footer_y = FRAME_HEIGHT - footer
             draw.rectangle((0, footer_y, FRAME_WIDTH, FRAME_HEIGHT), fill=(13, 16, 23))
             draw.text(
-                (26, footer_y + 6),
+                (26, footer_y + 4),
                 "The shuffle preserves the edge count, every out-degree and the multiset "
-                "of contact counts, and changes only which pairs the edges join, so a "
+                "of contact counts, changing only which pairs the edges join, so a "
                 "difference between it and the exact run cannot be a difference in size.",
                 font=fonts["tiny"],
                 fill=DIM,
             )
             draw.text(
-                (26, footer_y + 24),
+                (26, footer_y + 18),
+                "Panels differ in brightness because the loop is closed: a fly that "
+                "approaches sees a larger cue, which drives its lamina harder.",
+                font=fonts["tiny"],
+                fill=DIM,
+            )
+            draw.text(
+                (26, footer_y + 32),
                 f"commit {reference['summary'].get('code_commit', 'unknown')}   "
                 f"graph sha256 {reference['summary']['graph']['source_sha256'][:16]}   "
                 f"seed {reference['summary']['seed']}   "

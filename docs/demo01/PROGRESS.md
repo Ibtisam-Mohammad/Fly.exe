@@ -17,8 +17,8 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 | S0 | Route measurement: which sensory->descending path is structurally usable | DONE 2026-09-10 |
 | S1 | A neural-only operating point that passes frozen C1-C5 on a visual route | **PASSED** 2026-09-10: 31 of 108 candidates met all five criteria |
 | S2 | E-provenance decoder tuned on development scenarios, then frozen | **FROZEN** 2026-09-10: yaw gain 1.6, threshold 0.6, sign +1 |
-| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | contract frozen; stance defect found and fixed; matrix running |
-| S4 | Video: brain view + body view + traces + control comparison | renderer built and validated; final render pending |
+| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | **CLOSED**: first placement INVALID, lateral placement passes all five |
+| S4 | Video: brain view + body view + traces + control comparison | **CLOSED**: eight per-variant videos and two comparisons rendered |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
 
 ## S0 findings (measured 2026-09-10, read-only, exact graph)
@@ -345,3 +345,21 @@ the sign-agreement fraction, below the one-half threshold my earlier implementat
 with the readout lateralisation intact. Had the mismatch with the frozen contract not been
 caught, that metric would have been failing settings for a reason unrelated to what the
 criterion is about.
+
+## S3 closed: two evaluations, one failure and one pass
+
+| | first placement, cue at 40 deg | lateral placement, cue at 90 deg |
+|---|---|---|
+| A1 starts still, then moves | PASS, 15.29 mm | PASS, 12.10 mm |
+| A2 caused by the readout | PASS, 0.150 | PASS, 0.1896 |
+| A3 requires the stimulus | **FAIL**, approach 1.906 mm | PASS, approach 0.135 mm |
+| A4 turn is cue-locked | PASS | PASS |
+| A5 topology gate | PASS, 21.196 mm | PASS, 20.107 mm |
+| verdict | **INVALID AS A CAUSAL CLAIM** | **FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC** |
+
+Every threshold is identical between the two. The only difference is the cue bearing, and it
+was chosen by measuring that the standing drift runs at +11.5 degrees and computing the
+closure it produces at each bearing. The prediction was 0.142 mm and the measurement 0.135.
+
+Both results stay on the record with their own videos and verdicts. A reader who wants to
+discount the second because the first failed has everything needed to do so.

@@ -316,3 +316,75 @@ degrees, so 90 degrees is outside its development range and the fly must turn tw
 Removing a body artifact from a control does not make the task easier for the brain. The
 retinal lateralisation is stronger at 90 degrees, landing on column 21.59 of the ipsilateral
 eye against -15.47 for the contralateral one, compared with 12.32 and -6.21 at 40 degrees.
+
+### The result
+
+Four variants, identical seed, 20 s each, from a clean tree at commit `a826dbb`. Verdict at
+`runs/demo01-visual-lateral/acceptance.json`.
+
+| variant | displacement | cue distance | locomoted |
+|---|---|---|---|
+| exact | 12.10 mm | 14.02 -> **1.94 mm** | yes, onset 1.665 s |
+| readout-ablated | 2.29 mm | 14.02 -> 13.89 mm | **no** |
+| stimulus-absent | 2.29 mm | 14.02 -> 13.89 mm | **no** |
+| shuffled-connectome | 32.20 mm | 14.02 -> **43.10 mm** | yes |
+
+| criterion | result | measured | threshold |
+|---|---|---|---|
+| A1 starts still, then moves | PASS | 12.097 mm, locomoted | >= 3.0 mm |
+| A2 caused by the neural readout | PASS | 0.1896 of exact, never locomoted | <= 0.25 |
+| A3 requires the stimulus | PASS | 0.1896 of exact, approach 0.135 mm | <= 0.25, <= 1.0 mm |
+| A4 turn is cue-locked | PASS | -1.149 Hz and -38.37 deg share a sign | same sign |
+| A5 topology gate | PASS | shuffle diverges 20.107 mm | >= 3.0 mm |
+
+**Verdict: FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC.**
+
+The intact loop closed 12.08 mm of a 14.02 mm gap. The two causal controls closed 0.135 mm
+and never once entered the locomoting state, a 93-fold ratio in approach.
+
+**The drift prediction held to 0.01 mm.** Before this run, the measured drift direction
+predicted 0.142 mm of closure for a cue at this bearing. The controls closed 0.135 mm. That
+is the diagnosis of the first failure confirmed quantitatively: A3 failed at 40 degrees
+because passive forward drift closes distance to an obliquely placed cue, and it passes at
+90 degrees because the same drift is perpendicular.
+
+**A4 passed in a more demanding way than the criterion strictly required.** The mean cue
+bearing over the locomoting intervals is -38.4 degrees, not the +90 the cue started at,
+because the fly overshot and circled, spending most of its moving time with the cue on its
+right. The mean readout difference is correspondingly negative at -1.149 Hz. The descending
+asymmetry therefore tracked the cue *through a reversal of side*, which is what the
+criterion exists to test and stronger than a bearing that never changed sign. The
+sign-agreement fraction, reported and not scored, was 0.863.
+
+## What may now be claimed, exactly
+
+**May claim.** The body's behaviour depends on the simulated neural readout, computed on the
+exact released graph with all 165,122 neurons and all 25,563,197 edges built and executed,
+and it requires the stimulus. The exact connectivity, rather than merely a network of its
+size and degree distribution, is responsible at this operating point.
+
+**May not claim, whatever the numbers say.** That this is what a fly does. That any
+parameter here is a measurement. That any mechanism is validated. That the tier has changed.
+V0 Structural remains the only supported stage tier and the Stage 2 exit gate remains at v4,
+0 of 3.
+
+**Caveats a reader is entitled to without asking.** The first cue placement, at 40 degrees,
+failed this same contract and that result stays on the record; this placement was chosen by
+measuring the drift direction, not by searching for one that passed. A single passing
+configuration is not a general claim. The retina-to-lamina synapse is not executed at all.
+Leg movement comes from an engineered pattern generator with no contribution from the
+simulated ventral cord. The body is a female prior driven by a male CNS. The turn direction
+is an engineering choice: one sign flip turns this approach into a retreat. And 24,122 of
+the 165,122 executed neurons carry no released soma position and so cannot be drawn, which
+every rendered frame states.
+
+## A closing observation the comparison video makes visible
+
+The readout-ablated brain is dimmer than the exact brain, which the ablation alone does not
+explain, since the readout is zeroed only after the brain has computed it. The reason is the
+loop: the exact fly approaches, so its cue looms larger and drives the lamina harder, while
+the ablated fly stands still and its retinal input never grows. The two brains begin
+identical and diverge because their *sensory input* diverges once their bodies do. That
+divergence is the closed loop showing itself, and the panel caption was corrected from
+"identical brain" to say so, because the original wording was true only at the first
+interval.
