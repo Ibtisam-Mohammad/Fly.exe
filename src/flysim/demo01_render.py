@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -834,7 +834,9 @@ def render_recording(
     # 770x640 is about 900 MB of uint8 if held in a list, which is a large amount of
     # memory to spend on frames that are consumed strictly in order.
     body_reader = imageio.get_reader(body_video) if body_video.is_file() else None
-    body_iterator = body_reader.iter_data() if body_reader is not None else None
+    body_iterator: Iterator[Any] | None = (
+        iter(body_reader.iter_data()) if body_reader is not None else None
+    )
     body_frame: np.ndarray | None = None
     body_exhausted = body_iterator is None
 

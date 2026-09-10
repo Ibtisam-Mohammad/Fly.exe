@@ -36,6 +36,9 @@ def variant(
     locomoted: bool = True,
     initial: float = 14.0,
     final: float = 8.0,
+    locked: bool | None = True,
+    mean_difference: float = 1.4,
+    mean_bearing: float = 32.0,
     agreement: float | None = 0.8,
     drift: float = 0.05,
     heading: float = 0.5,
@@ -49,6 +52,9 @@ def variant(
         locomoted=locomoted,
         locomotion_onset_us=540000 if locomoted else None,
         quiescent_displacement_mm=drift,
+        cue_locked=locked,
+        mean_readout_difference_hz=mean_difference,
+        mean_cue_bearing_deg=mean_bearing,
         cue_locked_sign_agreement=agreement,
     )
 
@@ -64,6 +70,7 @@ def _clean_controls() -> dict[str, VariantSummary]:
             displacement=0.4,
             locomoted=False,
             final=14.0,
+            locked=None,
             agreement=None,
         ),
         "stimulus-absent": variant(
@@ -71,6 +78,7 @@ def _clean_controls() -> dict[str, VariantSummary]:
             displacement=0.5,
             locomoted=False,
             final=14.2,
+            locked=None,
             agreement=None,
         ),
     }
@@ -108,7 +116,9 @@ def test_the_predecessors_failure_mode_is_refused() -> None:
         **{
             "exact": variant("exact", displacement=9.0),
             "readout-ablated": variant("readout-ablated", displacement=8.9),
-            "stimulus-absent": variant("stimulus-absent", displacement=0.4, locomoted=False),
+            "stimulus-absent": variant(
+                "stimulus-absent", displacement=0.4, locomoted=False, locked=None
+            ),
         }
     )
     assert verdict["claim"] == CLAIM_INVALID
@@ -122,7 +132,9 @@ def test_an_ablated_variant_that_walks_a_little_but_locomotes_still_fails() -> N
         **{
             "exact": variant("exact", displacement=20.0),
             "readout-ablated": variant("readout-ablated", displacement=1.0, locomoted=True),
-            "stimulus-absent": variant("stimulus-absent", displacement=0.4, locomoted=False),
+            "stimulus-absent": variant(
+                "stimulus-absent", displacement=0.4, locomoted=False, locked=None
+            ),
         }
     )
     assert verdict["criteria"]["A2_the_behaviour_is_caused_by_the_neural_readout"][
@@ -136,7 +148,9 @@ def test_a_fly_that_walks_without_a_cue_fails_the_stimulus_criterion() -> None:
     verdict = judge(
         **{
             "exact": variant("exact", displacement=9.0),
-            "readout-ablated": variant("readout-ablated", displacement=0.4, locomoted=False),
+            "readout-ablated": variant(
+                "readout-ablated", displacement=0.4, locomoted=False, locked=None
+            ),
             "stimulus-absent": variant(
                 "stimulus-absent", displacement=8.5, locomoted=True, final=8.5
             ),
@@ -151,7 +165,9 @@ def test_a_stimulus_absent_run_that_drifts_toward_the_cue_fails() -> None:
     verdict = judge(
         **{
             "exact": variant("exact", displacement=20.0),
-            "readout-ablated": variant("readout-ablated", displacement=0.4, locomoted=False),
+            "readout-ablated": variant(
+                "readout-ablated", displacement=0.4, locomoted=False, locked=None
+            ),
             "stimulus-absent": variant(
                 "stimulus-absent", displacement=2.0, locomoted=False, initial=14.0, final=10.0
             ),
@@ -173,11 +189,21 @@ def test_a_fly_that_never_moves_is_no_demonstration() -> None:
     assert not verdict["criteria"]["A1_the_fly_starts_still_and_then_moves"]["passed"]
 
 
-def test_a_turn_that_does_not_track_the_cue_side_is_refused() -> None:
-    """Displacement in a plausible direction can be luck; A4 asks the narrow question."""
+def test_a_readout_that_leans_the_wrong_way_is_refused() -> None:
+    """Displacement in a plausible direction can be luck; A4 asks the narrow question.
+
+    The contract compares two means: the readout asymmetry and the cue bearing must share
+    a sign over the locomoting intervals.
+    """
     verdict = judge(
         **{
-            "exact": variant("exact", displacement=9.0, agreement=0.35),
+            "exact": variant(
+                "exact",
+                displacement=9.0,
+                locked=False,
+                mean_difference=-1.4,
+                mean_bearing=32.0,
+            ),
             **_clean_controls(),
         }
     )
@@ -185,14 +211,43 @@ def test_a_turn_that_does_not_track_the_cue_side_is_refused() -> None:
     assert verdict["claim"] == CLAIM_INVALID
 
 
-def test_an_absent_agreement_fails_rather_than_passing_by_default() -> None:
+def test_an_absent_locking_state_fails_rather_than_passing_by_default() -> None:
     verdict = judge(
         **{
-            "exact": variant("exact", displacement=9.0, agreement=None),
+            "exact": variant("exact", displacement=9.0, locked=None, agreement=None),
             **_clean_controls(),
         }
     )
     assert not verdict["criteria"]["A4_the_turn_is_cue_locked"]["passed"]
+
+
+def test_a4_is_the_contracts_comparison_of_means_not_a_fraction_of_intervals() -> None:
+    """The two tests disagree, and the difference is not cosmetic.
+
+    A fly turning toward a cue drives the bearing through zero, where its sign is noise,
+    so a per-interval fraction is systematically harsher on an approach than on an
+    avoidance. The sweep measured exactly that: 0.854 for avoidance against 0.718 for
+    approach at the same gain. The contract compares means, so this does too, and the
+    fraction is reported without being scored.
+    """
+    verdict = judge(
+        **{
+            "exact": variant(
+                "exact",
+                displacement=9.0,
+                locked=True,
+                mean_difference=0.8,
+                mean_bearing=21.0,
+                agreement=0.42,
+            ),
+            **_clean_controls(),
+        }
+    )
+    a4 = verdict["criteria"]["A4_the_turn_is_cue_locked"]
+    # A fraction below one half does not fail the criterion, because it is not the test.
+    assert a4["passed"]
+    assert a4["sign_agreement_fraction_reported_not_scored"] == pytest.approx(0.42)
+    assert "share a sign" in a4["test"]
 
 
 def test_a_divergent_shuffle_earns_the_topology_claim() -> None:
@@ -255,13 +310,16 @@ def test_every_variant_is_reported_even_when_it_fails() -> None:
         **{
             "exact": variant("exact", displacement=9.0),
             "readout-ablated": variant("readout-ablated", displacement=8.9),
-            "stimulus-absent": variant("stimulus-absent", displacement=0.4, locomoted=False),
+            "stimulus-absent": variant(
+                "stimulus-absent", displacement=0.4, locomoted=False, locked=None
+            ),
         }
     )
     assert set(verdict["measured"]) == {"exact", "readout-ablated", "stimulus-absent"}
     for row in verdict["measured"].values():
         assert "displacement_mm" in row
         assert "quiescent_displacement_mm" in row
+        assert "mean_readout_difference_hz" in row
 
 
 def test_the_console_summary_states_the_claim() -> None:

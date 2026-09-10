@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from flysim.config import load_json, sha256_json
 from flysim.demo01_render import load_trace
 from flysim.demo01_visual import VISUAL_LEFT_READOUT, VISUAL_RIGHT_READOUT
@@ -42,6 +44,11 @@ class VariantSummary:
     locomoted: bool
     locomotion_onset_us: int | None
     quiescent_displacement_mm: float
+    # A4 as the contract states it: do the two means share a sign?
+    cue_locked: bool | None
+    mean_readout_difference_hz: float
+    mean_cue_bearing_deg: float
+    # Reported, never scored. See _cue_locked for why it is not the criterion.
     cue_locked_sign_agreement: float | None
 
     @property
@@ -61,15 +68,28 @@ def _quiescent_displacement(rows: list[dict[str, Any]], quiescent_us: int) -> fl
     )
 
 
-def _cue_locked_sign_agreement(rows: list[dict[str, Any]]) -> float | None:
-    """Fraction of locomoting intervals where the readout asymmetry matches the cue side.
+def _cue_locked(rows: list[dict[str, Any]]) -> tuple[bool | None, float, float, float | None]:
+    """A4 exactly as the frozen contract states it, plus the diagnostic it is not.
 
-    A displacement in a plausible direction can be luck. This asks the narrower question
-    the operating-point search actually selected for: does the left-right difference in
-    the decoded descending populations track which side the cue is on?
+    The contract's words are: "the mean signed difference between the two decoded
+    descending populations must have the same sign as the cue's mean signed bearing, over
+    the intervals in which the decoder is LOCOMOTING." That is a comparison of two means,
+    and it is what this returns.
+
+    An earlier version of this function tested something else -- the fraction of intervals
+    whose signs agreed, against a threshold of one half -- and the difference is not
+    cosmetic. A fly that turns *toward* a cue drives the bearing through zero, where its
+    sign is noise, so the per-interval fraction is systematically harsher on an approach
+    than on an avoidance. The sweep showed exactly that: at the same gain the avoidance
+    decoder scored 0.854 and the approach decoder 0.718. Comparing means is insensitive to
+    it, because the mean bearing stays on the side the cue was on.
+
+    The fraction is still returned, as a diagnostic that is reported and not scored.
     """
+    differences: list[float] = []
+    bearings: list[float] = []
     agree = 0
-    total = 0
+    counted = 0
     for row in rows:
         if row["command"]["state"] != "LOCOMOTING":
             continue
@@ -79,14 +99,22 @@ def _cue_locked_sign_agreement(rows: list[dict[str, Any]]) -> float | None:
         left = float(row["readout_hz"].get(VISUAL_LEFT_READOUT, 0.0))
         right = float(row["readout_hz"].get(VISUAL_RIGHT_READOUT, 0.0))
         difference = left - right
-        if difference == 0.0 or bearing == 0.0:
-            continue
-        total += 1
-        if (difference > 0.0) == (bearing > 0.0):
-            agree += 1
-    if total == 0:
-        return None
-    return agree / total
+        differences.append(difference)
+        bearings.append(float(bearing))
+        if difference != 0.0 and bearing != 0.0:
+            counted += 1
+            if (difference > 0.0) == (bearing > 0.0):
+                agree += 1
+    if not differences:
+        return None, 0.0, 0.0, None
+    mean_difference = float(np.mean(differences))
+    mean_bearing = float(np.mean(bearings))
+    if mean_difference == 0.0 or mean_bearing == 0.0:
+        locked: bool | None = False
+    else:
+        locked = (mean_difference > 0.0) == (mean_bearing > 0.0)
+    fraction = agree / counted if counted else None
+    return locked, mean_difference, mean_bearing, fraction
 
 
 def read_variant(directory: Path, quiescent_us: int) -> VariantSummary:
@@ -97,6 +125,7 @@ def read_variant(directory: Path, quiescent_us: int) -> VariantSummary:
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     rows = load_trace(directory / "trace.jsonl")
     outcome = summary["outcome"]
+    locked, mean_difference, mean_bearing, fraction = _cue_locked(rows)
     return VariantSummary(
         variant=str(summary["variant"]),
         displacement_mm=float(outcome["displacement_mm"]),
@@ -110,7 +139,10 @@ def read_variant(directory: Path, quiescent_us: int) -> VariantSummary:
             else None
         ),
         quiescent_displacement_mm=_quiescent_displacement(rows, quiescent_us),
-        cue_locked_sign_agreement=_cue_locked_sign_agreement(rows),
+        cue_locked=locked,
+        mean_readout_difference_hz=mean_difference,
+        mean_cue_bearing_deg=mean_bearing,
+        cue_locked_sign_agreement=fraction,
     )
 
 
@@ -161,8 +193,7 @@ def evaluate(
         and absent.approach_mm <= float(a3_rule["max_absent_approach_mm"])
     )
 
-    agreement = exact.cue_locked_sign_agreement
-    a4 = agreement is not None and agreement > 0.5
+    a4 = bool(exact.cue_locked)
 
     a5_rule = criteria["A5_topology_claim_gate"]
     a5_divergence = (
@@ -207,7 +238,12 @@ def evaluate(
                 "locomoted": value.locomoted,
                 "locomotion_onset_us": value.locomotion_onset_us,
                 "quiescent_displacement_mm": value.quiescent_displacement_mm,
-                "cue_locked_sign_agreement": value.cue_locked_sign_agreement,
+                "cue_locked": value.cue_locked,
+                "mean_readout_difference_hz": value.mean_readout_difference_hz,
+                "mean_cue_bearing_deg": value.mean_cue_bearing_deg,
+                "cue_locked_sign_agreement_reported_not_scored": (
+                    value.cue_locked_sign_agreement
+                ),
             }
             for name, value in sorted(variants.items())
         },
@@ -233,8 +269,14 @@ def evaluate(
             },
             "A4_the_turn_is_cue_locked": {
                 "passed": bool(a4),
-                "sign_agreement_fraction": agreement,
-                "threshold": 0.5,
+                "mean_readout_difference_hz": exact.mean_readout_difference_hz,
+                "mean_cue_bearing_deg": exact.mean_cue_bearing_deg,
+                "test": (
+                    "the two means share a sign, exactly as the frozen contract states"
+                ),
+                "sign_agreement_fraction_reported_not_scored": (
+                    exact.cue_locked_sign_agreement
+                ),
             },
             "A5_topology_claim_gate": {
                 "passed": bool(a5),
