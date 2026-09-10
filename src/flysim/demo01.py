@@ -294,6 +294,12 @@ class Demo01Populations:
             "monitor_sizes": {name: len(bodies) for name, bodies in self.monitors.items()},
             "entry_body_ids": list(self.entry_body_ids),
             "readout_body_ids": list(self.readout_body_ids),
+            "entry_populations": {
+                name: list(bodies) for name, bodies in self.entry.items()
+            },
+            "readout_populations": {
+                name: list(bodies) for name, bodies in self.readout.items()
+            },
             "excluded_unknown_side": dict(self.excluded_unknown_side),
             "entry_bodies_with_column_coordinates": len(self.entry_hex),
             "laterality_source": (
