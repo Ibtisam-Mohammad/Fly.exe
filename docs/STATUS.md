@@ -1308,6 +1308,18 @@ nothing. Full record in `docs/evidence/DEMO01_FULL_GRAPH_EMBODIMENT.md`, decisio
 ADR-2026-014, working ledger in `docs/demo01/PROGRESS.md`, and the exploratory pilot that
 shaped the grid in `docs/demo01/PILOT.md`.
 
+**Re-run 2026-09-11 with the presentation rebuilt (ADR-2026-015). Every reported outcome
+reproduced to 0.000e+00 and the verdict is unchanged.** The body is no longer rendered inside
+the simulation loop: the run records the model's full generalised position vector once per
+coupling interval and the body is replayed offline. Three presentation defects were fixed,
+none of which touched a number. The brightness map saturated at about a decayed spike count
+of 2 against a real range reaching 76, which was flattening the eightfold difference between
+the exact graph and its degree-preserving shuffle. The stimulus-absent control's video drew
+the cue it is defined by lacking. And the cue turned out to have no collision and no height,
+which nothing had stated: the encoder saturates angular radius at a hemisphere once the fly
+is nearer than the radius, so a successful run ends with the fly standing inside a sphere
+wider than itself. It is now drawn translucent for that reason.
+
 **The olfactory route was tried first and failed, 0 of 24 operating points.** The cause was
 structural rather than parametric: no direct edges from receptor neurons to the steering
 descending cells, a three-synapse path, signed contact-share flow of 6.6e-05 arriving at
