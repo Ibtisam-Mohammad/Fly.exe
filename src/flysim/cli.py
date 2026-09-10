@@ -428,6 +428,53 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_stp_joint_holdout(args: argparse.Namespace) -> int:
+    from flysim.stp_joint_holdout import run_joint_holdout
+
+    result = run_joint_holdout(
+        contract_path=args.experiment,
+        fit_artifact_path=args.fit_artifact,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "unsealing": result["unsealing"],
+            "internal_consistency_check": result["internal_consistency_check"],
+            "cohort": {
+                "pulses": result["cohort"]["pulses"],
+                "first_pulse_pa": result["cohort"]["first_pulse_magnitude"],
+                "animals_first_pulse": result["cohort"]["animals_per_pulse"][0],
+                "normalised_head": result["cohort"]["normalised"][:6],
+                "normalised_tail": result["cohort"]["normalised"][-5:],
+            },
+            "scores": {
+                role: {
+                    "fraction_inside": row["fraction_inside"],
+                    "pulses_inside": row["pulses_inside"],
+                    "pulses_scored": row["pulses_scored"],
+                    "weighted_squared_error": row["weighted_squared_error"],
+                    "steady_state_predicted": row["steady_state_predicted"],
+                }
+                for role, row in result["scores"].items()
+            },
+            "hypotheses": {
+                k: v for k, v in result["hypotheses"].items() if k != "verdict_note"
+            },
+            "verdict": result["verdict"],
+            "verdict_note": result["verdict_note"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_stp_joint(args: argparse.Namespace) -> int:
     from flysim.stp_joint import run_joint_fit
 
@@ -2272,6 +2319,34 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_stp_joint_holdout = stage2_commands.add_parser(
+        "stp-joint-holdout",
+        help="open the sealed day-0 1 Hz train once and score the jointly-fitted models",
+    )
+    stage2_stp_joint_holdout.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-stp-joint-holdout-v1.json",
+    )
+    stage2_stp_joint_holdout.add_argument(
+        "--fit-artifact",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-stp-joint-fit-v1.json",
+    )
+    stage2_stp_joint_holdout.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_stp_joint_holdout.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_stp_joint_holdout.add_argument("--output", type=Path, required=True)
+    stage2_stp_joint_holdout.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_stp_joint_holdout.set_defaults(func=_command_stage2_stp_joint_holdout)
 
     stage2_stp_joint = stage2_commands.add_parser(
         "stp-joint",

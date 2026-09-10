@@ -1,0 +1,329 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-stp-joint-holdout-v1",
+  "title": "Score the jointly-fitted ORN-to-PN models once against the sealed day-0 1 Hz train",
+  "status": "PREREGISTERED. Every criterion and every predicted number was written before Fig3G was opened.",
+  "provenance": "M/F",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": [
+    "ND-06",
+    "VAL-02"
+  ],
+  "depends_on": {
+    "fit_contract": "configs/experiments/stage2-stp-joint-fit-v1.json",
+    "fit_artifact": "evidence/stage2/stage2-stp-joint-fit-v1.json",
+    "fit_artifact_sha256": "cba8cacef199777872aca7a7cb6553dd2602728d5cbbcac03afedbbdf760af3f",
+    "fit_artifact_code_commit": "e869a0da7c2454525e68aa139ee33b90c6244425",
+    "spent_arrays": [
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+        "variables": [
+          "new_all_flies_PP_10ms_control",
+          "new_all_flies_PP_30ms_control",
+          "new_all_flies_PP_100ms_control",
+          "new_all_flies_PP_300ms_control",
+          "new_all_flies_PP_1000ms_control"
+        ],
+        "why_it_is_spent": "scored 2026-09-09, then used as half the joint fit set"
+      },
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+        "variables": [
+          "all_flies_1Hz_control"
+        ],
+        "why_it_is_spent": "opened 2026-09-10 while characterising the latency arrays, then used as the other half of the joint fit set"
+      },
+      {
+        "file": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
+        "variables": [
+          "new_all_flies_PP_10ms_control",
+          "new_all_flies_PP_30ms_control",
+          "new_all_flies_PP_100ms_control",
+          "new_all_flies_PP_300ms_control",
+          "new_all_flies_PP_1000ms_control"
+        ],
+        "why_it_is_spent": "scored 2026-09-10 by the developmental holdout"
+      }
+    ]
+  },
+  "why_this_is_different_from_every_previous_attempt": {
+    "the_fit_now_sees_the_parameter_that_matters": "Every earlier candidate was fitted to a paired-pulse curve alone, which cannot constrain the resource recovery constant, so every one drove that constant to its bound and then collapsed in a sustained train. The joint fit includes a 32-pulse 1 Hz trajectory and the constant comes out at 7096 ms, interior to its box.",
+    "the_fits_have_degrees_of_freedom": "Thirty-six points against four parameters, thirty-two residual degrees of freedom, and goodness-of-fit p values of 0.79 and 0.77. The previous primary had zero residual degrees of freedom and no p at all.",
+    "the_holdout_is_a_genuine_unseen_cohort": "Fig3G has never been decoded. It is distinct from Fig3B by stored-byte digest and by animal count, 20 against 17, matching the published legends for the day-0 and day-2-to-4 cohorts."
+  },
+  "the_cohort": {
+    "file": "rozenfeld2023-repo/Figure 3/Fig3G.mat",
+    "variable": "all_flies_1Hz_control",
+    "cohort": "wild type, 0 days post eclosion, 20 animals, 32 pulses at 1 Hz",
+    "published_legend": "G The average eEPSC amplitude was reduced by cacRNAi for 0-day-old flies (1 Hz stimulation frequency; wt n = 20 and cacRNAi n = 19 flies).",
+    "status": "UNSPENT. Never decoded.",
+    "everything_else_stays_sealed": "Fig3G's RNAi array, Fig5B, Fig5D, Fig6D, every remaining RNAi cohort and the whole Takagi corpus."
+  },
+  "the_developmental_caveat_declared_in_advance": "The fit set is day 2 to 4 and this cohort is day 0, and the models carry no age parameter, so a failure tests a conjunction: that the model describes this synapse, and that the wild-type 1 Hz trajectory is already mature at eclosion. A failure cannot be cleanly attributed between the two. This is the same caveat the paired-pulse holdout carried, restated rather than forgotten, and it caps what a pass is worth.",
+  "observation_model": {
+    "assumption_id": "VAL-02",
+    "normalisation": "the cohort-mean trajectory divided by its own first element, magnitudes taken because the arrays hold negative evoked currents. Identical to the fit.",
+    "missing_data_rule": "a non-finite entry excludes that animal at that pulse only, and the count is reported",
+    "first_pulse_excluded_from_scoring": "It is exactly one for the data and for every model alike under this normalisation, so it carries no information and has no standard error. A forced consequence of the normalisation rather than a choice.",
+    "the_internal_consistency_check_this_contract_registers": "The cohort-mean first-pulse magnitude must be a plausible evoked current for this synapse, of the same sign and order as Fig3B's 50.43 pA. If it is positive, or differs by more than a factor of five, the array is not what this contract believes it is and the run must record NO VERDICT rather than a score. This check exists because the train experiment of earlier today scored latency arrays as amplitudes and no registered check could have caught it."
+  },
+  "frozen_models": {
+    "primary": {
+      "family_id": "facilitation-depression",
+      "parameters": {
+        "resting_utilisation": 0.007760370924271978,
+        "facilitation_increment": 0.07706701812983233,
+        "facilitation_tau_ms": 32.5546454433904,
+        "recovery_tau_ms": 7096.017678837662
+      },
+      "one_hz_trajectory": [
+        1.0,
+        0.926842,
+        0.868653,
+        0.822369,
+        0.785555,
+        0.756273,
+        0.732982,
+        0.714457,
+        0.699722,
+        0.688002,
+        0.67868,
+        0.671265,
+        0.665367,
+        0.660676,
+        0.656945,
+        0.653977,
+        0.651616,
+        0.649739,
+        0.648245,
+        0.647057,
+        0.646113,
+        0.645361,
+        0.644763,
+        0.644288,
+        0.64391,
+        0.643609,
+        0.64337,
+        0.643179,
+        0.643028,
+        0.642908,
+        0.642812,
+        0.642736
+      ],
+      "steady_state_last_five": 0.6429323932066177,
+      "paired_pulse": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.480765474800296
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.222502198344176
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 0.9546784457853431
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9253792183699951
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9472591319159545
+        }
+      ],
+      "joint_weighted_sse": 25.4578096918126,
+      "goodness_of_fit_p": 0.7870733424174755,
+      "degrees_of_freedom": 32,
+      "effective_first_pulse_utilisation": 0.08422932040738922,
+      "predicted_7hz_steady_state": 0.1948764695245776
+    },
+    "secondary": {
+      "family_id": "parallel-release-components",
+      "parameters": {
+        "facilitation_step": 1.315642849616148,
+        "facilitation_tau_ms": 27.438896383612796,
+        "utilisation": 0.18530374571537445,
+        "recovery_tau_ms": 13057.119014852045
+      },
+      "one_hz_trajectory": [
+        1.0,
+        0.914179,
+        0.849416,
+        0.800544,
+        0.763663,
+        0.735832,
+        0.71483,
+        0.698981,
+        0.687021,
+        0.677995,
+        0.671184,
+        0.666045,
+        0.662166,
+        0.659239,
+        0.65703,
+        0.655364,
+        0.654106,
+        0.653157,
+        0.65244,
+        0.6519,
+        0.651492,
+        0.651184,
+        0.650952,
+        0.650777,
+        0.650644,
+        0.650545,
+        0.650469,
+        0.650412,
+        0.650369,
+        0.650337,
+        0.650313,
+        0.650294
+      ],
+      "steady_state_last_five": 0.6503451357556808,
+      "paired_pulse": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 1.4937170197357927
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 1.2021799553134525
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 0.9528334919777358
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.9365079165992668
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.95372808723911
+        }
+      ],
+      "joint_weighted_sse": 25.942813238882987,
+      "goodness_of_fit_p": 0.7661311294205781,
+      "degrees_of_freedom": 32,
+      "effective_first_pulse_utilisation": 0.09265187285768722,
+      "predicted_7hz_steady_state": 0.5316459664169301
+    },
+    "null_nd06_v0_1": {
+      "family_id": "depression-only",
+      "parameters": {
+        "utilisation": 0.22,
+        "recovery_tau_ms": 893.0
+      },
+      "one_hz_trajectory": [
+        1.0,
+        0.928206,
+        0.909931,
+        0.905279,
+        0.904095,
+        0.903794,
+        0.903717,
+        0.903697,
+        0.903692,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691,
+        0.903691
+      ],
+      "steady_state_last_five": 0.9036906242424031,
+      "paired_pulse": [
+        {
+          "interval_ms": 10.0,
+          "predicted": 0.7824653476135158
+        },
+        {
+          "interval_ms": 30.0,
+          "predicted": 0.7873145763497753
+        },
+        {
+          "interval_ms": 100.0,
+          "predicted": 0.8034628817028029
+        },
+        {
+          "interval_ms": 300.0,
+          "predicted": 0.843257322445224
+        },
+        {
+          "interval_ms": 1000.0,
+          "predicted": 0.9302191662089894
+        }
+      ]
+    }
+  },
+  "the_null_is_the_refuted_predecessor": "ND-06 v0.1 at its registered 0.22 and 893 ms, which predicts a 1 Hz steady state of 0.904. It is a real published mechanism rather than a horizontal line, and the previous holdout's constant null produced a margin that flattered the result.",
+  "hypotheses": [
+    {
+      "id": "J1",
+      "name": "the frozen trajectory tracks an unseen cohort",
+      "primary": true,
+      "statement": "The primary frozen model's 1 Hz trajectory lies within 1.96 standard errors of the day-0 cohort mean at at least 80 percent of the 31 scorable pulses.",
+      "criterion": "at least 0.80 of scorable pulses inside",
+      "why_this_threshold": "It is the same threshold the joint fit's E1 screen used on the training train, fixed there before this contract existed and reused here unchanged so that the holdout is scored no more leniently than the fit.",
+      "degenerate_outcome_check": "If fewer than 20 of the 31 pulses are scorable, because of non-finite entries or zero standard errors, J1 is NO VERDICT."
+    },
+    {
+      "id": "J2",
+      "name": "it beats the refuted predecessor",
+      "primary": true,
+      "statement": "The primary frozen model's weighted squared error on the day-0 trajectory is at most half that of ND-06 v0.1 on the same data.",
+      "criterion": "ratio of weighted error, model over v0.1, at most 0.5",
+      "degenerate_outcome_check": "If ND-06 v0.1 itself satisfies J1 on this cohort, then J1 does not discriminate and the verdict rests on J2 alone, which is recorded."
+    },
+    {
+      "id": "J3",
+      "name": "the steady state",
+      "primary": false,
+      "statement": "The day-0 steady state, the mean of the last five normalised pulses, is compared against the primary's frozen 0.6429, the secondary's 0.6497 and v0.1's 0.9037. Reported, with the cohort's own 95 percent interval.",
+      "reported_either_way": true
+    },
+    {
+      "id": "J4",
+      "name": "the secondary model, and the independent check that disagrees with the selection",
+      "primary": false,
+      "statement": "The secondary model is scored on the same cohort and reported. The committed selection rule made facilitation-depression primary on a joint residual of 25.5 against 25.9, a difference of 0.4 on 32 degrees of freedom and therefore meaningless; the independent Kazama and Wilson check, which was deliberately kept out of the objective, favours the secondary decisively, 0.532 against 0.195 for a measured 0.60. If the holdout also favours the secondary, that is recorded as the fit set having been unable to choose and an independent observable having chosen for it. It does not retrospectively make the secondary the primary: the selection rule was committed and it stands.",
+      "reported_either_way": true
+    }
+  ],
+  "expected_outcome_stated_before_the_run": {
+    "prediction": "The primary is expected to pass J1 and J2. Its 1 Hz steady state of 0.643 is close to the day-2-to-4 measured 0.703, and v0.1's 0.904 is far from it, so the comparison should be decisive unless the day-0 cohort differs substantially from the day-2-to-4 one.",
+    "what_would_be_the_informative_surprise": "A day-0 steady state near 0.9. That would mean the wild-type synapse depresses much less at eclosion than at two to four days, the developmental caveat would dominate, and the holdout would have tested maturation rather than the model.",
+    "why_this_is_written_down": "So that an expected pass cannot be reported afterwards as a stronger confirmation than it is."
+  },
+  "acceptance": {
+    "verdict_rule": "PASS if and only if J1 and J2 both pass. J3 and J4 are reported and do not enter the verdict.",
+    "what_a_pass_would_establish": "That a short-term-plasticity model for the ORN-to-PN synapse, fitted to a paired-pulse curve and a train in one cohort and frozen with every predicted number written down beforehand, predicts an unseen cohort's train trajectory to within its measurement error and does so far better than the refuted rule it replaces. That would be this project's first passed dynamical validation, and it is worth a V1-limited tier on the ORN-to-PN train observable in one laboratory, carrying the day-0 developmental caveat.",
+    "what_a_pass_would_not_establish": "Not V2. Nothing about another laboratory, glomerulus or synapse class, nothing about latencies or absolute amplitudes, nothing about any perturbation, and nothing about edge sign, which stays unresolved under ND-10. It would not resolve the release-probability incompatibility: the primary's effective first-pulse utilisation is 0.084 against a measured 0.79, and the recorded structural bound says no single-pool family can reconcile those.",
+    "what_a_failure_would_establish": "That a model fitted to both observables in one cohort still does not generalise to another cohort of the same observable, which would close the paired-pulse-plus-train route and leave only perturbation data or a different preparation.",
+    "no_refitting": "No parameter may be changed on this outcome and no successor may cite this test as evidence for its values.",
+    "no_criterion_may_be_restated": "J1's threshold, J2's margin, the normalisation, the missing-data rule, the internal consistency check and both degenerate-outcome checks are closed as of this commit.",
+    "scored_once": "Fig3G's wild-type array is opened once."
+  },
+  "claim_boundary": "One scoring pass over one sealed wild-type train array against models frozen beforehand, in a day-0 cohort whose maturity relative to the day-2-to-4 fit set is not established. It opens one array and can award at most a V1-limited tier.",
+  "last_reviewed": "2026-09-10"
+}
