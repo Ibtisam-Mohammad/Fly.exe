@@ -726,3 +726,29 @@ exact reproduction of either cohort.
 
 **Stage 2 exit gate unchanged at v4, 0 of 3.** Its legs are cellular, synaptic kinetics and
 circuit; this is a plasticity module and none of them.
+
+### The pass, audited, 2026-09-10
+
+Independent audit of `male-cns-orn-pn-stp-v0.3`: **VALIDATED WITH NARROWER CLAIM**. Nothing
+changed; the audit is attached to the contract and the registry.
+
+The J1 and J2 arithmetic re-derives exactly. What narrowed the claim is that **the
+registered criteria are also cleared by Fig3B's own training-cohort mean trajectory**, a
+zero-parameter predictor, at J1 29/31 and J2 ratio 0.2446. The pass therefore shows the
+frozen curve is not contradicted at 1 Hz and beats the refuted v0.1 tenfold - not that the
+mechanism is identified. Every future criterion in this tier must carry a strong
+training-derived baseline, which none has ever done.
+
+Three reporting corrections: the goodness-of-fit `p = 0.79 on 32 df` treats correlated
+repeated measures as independent and the effective dimensionality is about five; the
+scoring intervals were 1.2-2.3 times too wide because the normalisation's denominator was
+treated as exact; and the holdout's independence rests on published age labels only, with
+the day-0 paired-pulse cohort of the same size having been opened before the freeze.
+
+**Neither rule is promoted.** The fit separates them by 0.4 on 32 points, the holdout by
+1.2 on 31, and the one independent observable favours the secondary decisively, 0.532
+against 0.195 for a measured 0.60.
+
+**The corpus has run out.** 66 of 66 files now accounted for; no unspent wild-type
+ORN-to-PN train remains and none exists above 1 Hz. `V1-limited` stands unchanged, and
+Stage 2 stays at v4, 0 of 3.

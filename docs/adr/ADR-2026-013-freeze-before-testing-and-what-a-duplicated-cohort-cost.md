@@ -728,3 +728,195 @@ kinetics and circuit, and this is none of them: it is a plasticity module, and t
 synaptic leg requires unitary waveforms this repository does not ship. V0 Structural
 remains the only supported *stage* tier; what changes is that one registered dynamics
 module now carries a V1-limited validation of its own, which is the first in this project.
+
+## Twelfth amendment, 2026-09-10 - the audit of the pass, and the corpus running out
+
+The eleventh amendment recorded a pass. This one records an independent audit of that
+pass, requested with the standing instruction to change no model, threshold, artifact or
+verdict while answering. Nothing was changed. The audit is attached verbatim to both
+`stage2-stp-joint-holdout-v1.json` and `short-term-plasticity-v0.3.json` under
+`independent_audit`, and its verdict is **VALIDATED WITH NARROWER CLAIM**.
+
+**The arithmetic held.** J1 at 31 of 31 and J2 at a ratio of 0.0962 re-derive exactly from
+the raw arrays. The freeze predates the unsealing, gated by the contract's own
+`values_opened` flag and by the fit-artifact checksum the runner requires. No parameter
+moved on the outcome. Five findings narrow what the pass means, and three of them are
+corrections to my own reporting.
+
+**Finding 1, and it is the one that matters.** The registered criteria are also passed by
+a predictor with no mechanism in it. Fig3B's own normalised mean trajectory - the
+*training* cohort's curve, zero parameters, available before Fig3G was opened - scores J1
+at 29 of 31 and J2 at a ratio of 0.2446. Both clear the registered bars.
+
+| predictor on the 31 Fig3G pulses | weighted SSE | ratio vs v0.1 | inside | RMSE |
+|---|---|---|---|---|
+| v0.3 primary | 13.41 | 0.096 | 31/31 | 0.0873 |
+| v0.3 secondary | 14.60 | 0.105 | 31/31 | 0.0913 |
+| ND-06 v0.1, the registered null | 139.32 | 1.000 | 18/31 | 0.2357 |
+| constant 1.0 | 254.96 | 1.830 | 10/31 | 0.3226 |
+| best constant 0.6714, oracle | 23.87 | 0.171 | 31/31 | 0.1236 |
+| **Fig3B training mean, zero parameters** | **34.08** | **0.245** | **29/31** | 0.1318 |
+
+The mean standard error across those pulses is 0.127, so the primary's RMSE of 0.0873 is
+inside the noise floor - and so is every predictor in the bottom three rows. The
+registered degeneracy check was not wrong: it asked whether the *refuted predecessor*
+passes J1 and correctly found it does not, at 0.581. What was missing is a strong baseline
+drawn from the training data, and **no criterion in this project has ever carried one**.
+That is the design lesson and it is now a requirement on every successor contract.
+
+So J1 and J2 establish that the frozen curve is not contradicted at 1 Hz and that it beats
+the refuted rule by a factor of ten. They do not establish that the mechanism is
+identified. The model does beat the training mean, 13.41 against 34.08, but that margin
+was never registered and may not be claimed as a passed test.
+
+**Finding 2, a correction.** The reported `p = 0.7871 on 32 degrees of freedom` is invalid
+as stated. It treats 36 correlated repeated measures as 36 independent observations: the
+31 train points come from repeated stimulation of the same cells, every one is divided by
+the same estimated first-pulse mean, and the methods say several protocols ran in one
+cell, so the 5 paired-pulse points are probably not independent of the train either.
+Bootstrapping over animals gives a mean lag-1 correlation of 0.656, a participation ratio
+of 4.91 and a Kish effective count of 3.28. Scored properly as a Mahalanobis distance on
+the leading principal components, the primary gives 2.70 on 5 df (p = 0.75) and 9.19 on 10
+(p = 0.51), while v0.1 gives 27.77 on 5 (p = 4.0e-05) and 62.93 on 10 (p = 1.0e-09). The
+*conclusions* survive - the model is consistent, the null is decisively rejected - but
+four parameters constrained by roughly five to ten effective degrees of freedom is a far
+weaker constraint than "36 points, 32 df" implies. The frozen numbers are left in place
+because they are what the run computed and rewriting them would falsify the record; the
+correction travels with them.
+
+**Finding 3, a correction.** The registered standard error divides each pulse's raw error
+by the *point estimate* of the first-pulse mean, treating that denominator as exact.
+Because an animal with a large first response has large later responses, the ratio is
+steadier than its numerator, and the correct bootstrap error is 0.44 to 0.85 times the
+registered one. The J1 intervals were therefore 1.2 to 2.3 times too wide. Recomputed
+properly the primary still passes at 31 of 31 and the secondary at 30 of 31, so the defect
+flattered the test without changing its outcome - but it is a defect and the fix belongs
+in the next scorer.
+
+**Finding 4, a correction, and the one I should have caught before freezing.** The contract
+called Fig3G "a genuine unseen cohort". Subject identity cannot be determined from this
+corpus at all: the MAT files hold bare double matrices with no animal, cell or date
+identifier, and `Figure_3.m` - the authors' own script - titles both the 3B and 3G sections
+simply `1Hz`, carrying no age label. The day-0 assignment rests entirely on the published
+legend. The authors *do* use that vocabulary in their code elsewhere, `Figure_6.m` titling
+panels `day 0` and `day 2-4`, so the labels are theirs and not my inference - but they are
+not attached to the Figure 3 arrays, and **this paper has already broken legend-implied
+distinctness once**, which is why the earlier developmental holdout was voided.
+
+Worse, and undisclosed: `Fig3H` is the day-0 *paired-pulse* cohort with n = 20 at 10 ms,
+matching Fig3G's n = 20 exactly, and it was opened on 2026-09-10 as the surviving arm of
+that voided holdout - **before this freeze**. The methods say "Ten seconds of rest were
+afforded to the cell in between recordings", which describes several protocols run in one
+cell. So Fig3G's twenty cells are probably Fig3H's twenty cells. The *array* had never
+been decoded, which is what the contract claimed and is true; the *animals* had been, under
+a different protocol, and their day-0 paired-pulse behaviour was known to me before the
+freeze. The fit used only Fig3D and Fig3B and the selection rule was committed in advance,
+so the leak into the numbers is nil and the leak into the analyst is small - but it existed
+and the contract should have said so. The audit's classification: independent of the
+*fitting* cohorts is **probable, not established**; against everything opened before the
+freeze, **same subjects, different protocol** cannot be excluded.
+
+One red flag was checked and discarded. Sixty exact float values are shared between Fig3B
+and Fig3G, one of them a first-pulse magnitude matching to 7e-15 pA. That is digitisation:
+Fig3B alone holds 60 internal exact repeats among 544 entries and Fig3G 46 among 640, the
+same rate, and the two rows carrying the shared value differ by up to 17.7 pA and share
+none of their 32 pulses. Exact-value coincidence carries no identity information here,
+which also means the stored-byte duplicate guard is informative only for whole arrays -
+which is how it is used.
+
+**Finding 5.** The 7 Hz miss is a protocol mismatch *and* a failure, and the first does not
+excuse the second. Kazama and Wilson's 0.60 is a discussion-section round number with no
+error bar, from minimal single-axon stimulation in VM2, against Rozenfeld's compound
+antennal-nerve stimulation across a `GH146-QF` mixture. But **this project refuted ND-06
+v0.2 on precisely this number.** By the same standard the primary's 0.195 is a failure on
+the only external check available - a factor of three, in the same direction that killed
+its predecessor. `short-term-plasticity-v0.3.json` now carries
+`neither_rule_is_promoted`, saying in terms that no consumer may treat
+`facilitation-depression` as preferred and that any use above 1 Hz should prefer the
+secondary or carry both.
+
+### The corpus is now closed, and it has run out
+
+The whole-repository audit could read 61 of 66 files and honestly recorded the other five
+as an open question rather than concluding from "an amplitude series would be out of place
+in a behaviour figure". That question is now answered by measurement. The repository ships
+the MATLAB script that generates each figure, and reading the authors' code is reading
+provenance, not a reserved value:
+
+| file | what it actually holds |
+|---|---|
+| `Fig8B.mat` | `IAAvs`, a table of behavioural **learning indices**. The table object is also why the v5 reader fails - it handles numeric matrices |
+| `FigS13.mat` | the same for Syn-RNAi, plus Y-maze `% correct choice` |
+| `Fig1D.mat` | spike-train **correlation against bin size**, per odour |
+| `FigS4A.mat` | the same, per odour, Cac-RNAi |
+| `FigS8E.mat` | the same, Syn-RNAi |
+
+**The claim is now about 66 of 66 files.** No unread file holds an ORN-to-PN
+evoked-amplitude train series, and the reason is measured rather than plausible.
+
+With that, Figure 3 resolves completely: three ages, each with a train panel and a
+paired-pulse panel - day 0 in `Fig3G`/`Fig3H`, day 1 in `Fig3I`/`Fig3J`, day 2 to 4 in
+`Fig3B`/`Fig3D`. The wild-type control was recorded **twice, not three times**: the day-1
+panels reuse the day-2-to-4 wild-type arrays verbatim, which is exactly the recorded
+`Fig3B ≡ Fig3I` and `Fig3D ≡ Fig3J` duplication. Each age has its own cacophony-RNAi
+cohort, and those three RNAi train arrays - 18, 19 and 22 animals - are stored distinctly.
+
+**So there is no unspent wild-type ORN-to-PN train left, and no train-amplitude array at
+any frequency but 1 Hz.** The only higher-frequency per-pulse data are Fig3E_and_F's 10,
+20 and 60 Hz *latency* and jitter arrays, which no registered model generates. The 7 Hz
+question that divides the two frozen models **cannot be settled with Rozenfeld data**, and
+the next wild-type train holdout does not exist to be preregistered. That is a hard
+boundary and it is better to have it measured than assumed.
+
+### Why the remaining perturbation data is asymmetric, not discriminating
+
+Three cacophony-RNAi train cohorts and three RNAi paired-pulse cohorts are still sealed.
+Cacophony is the presynaptic Cav2 alpha-1 subunit, so knockdown reads naturally as a
+reduction in release probability, which would be a one-parameter prediction from a frozen
+model. Before proposing that as the next contract it was simulated, because asserting a
+divergence from a term in isolation is the error recorded in the fourth amendment. It does
+not do what it looks like it does.
+
+Scaling each frozen model's release parameter by `f` from 1.0 down to 0.1:
+
+```
+                 PPR at 10 ms          1 Hz steady state
+  f          primary  secondary       primary  secondary
+1.00          1.4808     1.4937        0.6429     0.6503
+0.60          1.5072     1.4838        0.6509     0.7097
+0.25          1.5317     1.4703        0.6580     0.8212
+0.10          1.5426     1.4627        0.6611     0.9116
+```
+
+Two things follow. **The paired-pulse curve is nearly blind to release probability in both
+families** - a tenfold reduction moves the 10 ms ratio by 0.06 against a measured standard
+error of 0.055 - so `f` cannot be fitted from an RNAi paired-pulse curve. That is the same
+non-identifiability that caused four consecutive failures, in a new place. And **the
+primary has no usable release knob at all**: its resting utilisation is 0.0078, at its box
+bound, contributing about nine per cent of the effective first-pulse utilisation of 0.0842,
+the rest coming from the facilitation increment. Scaling it changes almost nothing.
+
+That asymmetry is itself testable and worth stating now, from an exact sweep of `f` over
+the whole reduction range [0, 1]:
+
+```
+                       1 Hz steady state        7 Hz steady state
+  primary                [0.6429, 0.6632]        [0.1949, 0.2093]
+  secondary              [0.6503, 1.0000]        [0.5316, 1.0036]
+```
+
+So a measured cacophony-RNAi day-2-to-4 1 Hz steady state outside roughly [0.60, 0.70]
+would refute the primary **for any release-probability reduction whatever**, and would not
+embarrass the secondary, whose reachable set covers almost everything. The 7 Hz row says
+the same thing more sharply and belongs beside the fifth finding: no reduction in release
+probability brings the primary within 0.39 of Kazama and Wilson's 0.60, so that miss cannot
+be explained away as a difference in release probability between preparations. A test that can kill one model and cannot kill the other is worth
+running, but it must be registered as what it is - a one-sided refutation attempt on the
+primary under a declared perturbation assumption - and not as a discrimination experiment.
+A failure would also not be cleanly attributable, since "cacophony knockdown scales release
+probability and nothing else" is an assumption ND-06 does not currently carry.
+
+**The Stage 2 gate is unchanged at v4, 0 of 3, and V0 Structural remains the only supported
+stage tier.** The audit confirms both. What the audit changed is the size of the claim, not
+the tier: `V1-limited` still stands, and now says explicitly that its criteria are cleared
+by a model-free baseline.

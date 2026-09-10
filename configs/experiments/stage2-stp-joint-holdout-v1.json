@@ -365,5 +365,120 @@
     ],
     "the_honest_caveat_on_the_day_0_difference": "The day-0 steady state is 0.555 and the day-2-to-4 steady state, in the fit set, is 0.703. The models predict 0.643 and 0.650, between the two. So the frozen curve is not tracking a cohort identical to the one it was fitted to; it lands inside the day-0 error bars at every pulse while sitting above the day-0 mean and below the day-2-to-4 mean. That the day-0 cohort's intervals are wide enough to contain it is part of why J1 passes, and the registered degeneracy check confirms the intervals are not so wide that the refuted null also passes.",
     "no_refitting": "No parameter changed. The frozen values stand exactly as committed at 042a225, and no successor may cite this test as evidence for its own values."
+  },
+  "independent_audit": {
+    "audited_on": "2026-09-10",
+    "what_was_audited": "The claim that male-cns-orn-pn-stp-v0.3 is the project's first validated dynamics module. The audit re-read the frozen contracts and both evidence artifacts, re-derived J1 and J2 from the raw arrays, recomputed them under a corrected error model, scored three baselines the contract never registered, and re-examined the independence argument. Nothing was refitted and no threshold moved.",
+    "the_verdict_stands_as_computed": "J1 at 31 of 31 and J2 at a ratio of 0.0962 reproduce exactly from the raw arrays. The scoring code does what the contract says, the freeze predates the unsealing, and no parameter changed on the outcome. The arithmetic is not in question.",
+    "finding_1_the_criteria_do_not_separate_the_model_from_a_model_free_baseline": {
+      "what_was_found": "The training cohort's own mean trajectory -- Fig3B's normalised curve, a zero-parameter predictor with no mechanism in it, available before Fig3G was opened -- passes both registered criteria on the holdout: J1 at 29 of 31, a fraction of 0.935 against the 0.80 threshold, and J2 at a ratio of 0.2446 against the 0.5 limit. A constant fitted to the holdout itself passes at 31 of 31 and a ratio of 0.1713.",
+      "the_table": {
+        "columns": "weighted SSE, ratio against ND-06 v0.1, pulses inside of 31, RMSE, RMSE over observed range, RMSE over observed mean",
+        "v0_3_primary": [
+          13.41,
+          0.0962,
+          31,
+          0.0873,
+          0.17,
+          0.125
+        ],
+        "v0_3_secondary": [
+          14.6,
+          0.1048,
+          31,
+          0.0913,
+          0.177,
+          0.13
+        ],
+        "nd06_v0_1_the_registered_null": [
+          139.32,
+          1.0,
+          18,
+          0.2357,
+          0.458,
+          0.336
+        ],
+        "constant_1_0_no_plasticity": [
+          254.96,
+          1.8301,
+          10,
+          0.3226,
+          0.626,
+          0.461
+        ],
+        "best_constant_0_6714_fitted_on_the_holdout": [
+          23.87,
+          0.1713,
+          31,
+          0.1236,
+          0.24,
+          0.176
+        ],
+        "fig3b_training_cohort_empirical_mean": [
+          34.08,
+          0.2446,
+          29,
+          0.1318,
+          0.256,
+          0.188
+        ],
+        "mean_standard_error_across_the_31_pulses": 0.127,
+        "note_on_the_noise_floor": "The primary's RMSE of 0.0873 is below the mean standard error of 0.127, so the model sits inside the measurement noise. So does every predictor in the bottom three rows. Being inside the noise is what J1 tests, and at this sample size it is not discriminating."
+      },
+      "what_it_costs_the_claim": "J1 and J2 as registered establish that the frozen curve is not wrong at 1 Hz and that it beats the refuted ND-06 v0.1 decisively. They do not establish that the mechanism is identified, because a curve carrying no mechanism at all clears the same two bars. The model does beat that baseline, 13.41 against 34.08, but that margin was not a registered criterion and may not be claimed as a passed test.",
+      "what_it_does_not_cost": "The degeneracy check registered in the contract was not wrong. It asked whether the refuted predecessor passes J1 and correctly found that it does not, at 0.581. What was missing is a strong baseline drawn from the training data, and no criterion in this project has ever carried one. That is the concrete design lesson and it belongs in the next contract."
+    },
+    "finding_2_the_goodness_of_fit_p_is_invalid_as_reported": {
+      "what_was_claimed": "A chi-square goodness of fit of 25.4578 on 32 residual degrees of freedom, p = 0.7871, computed as 36 points minus 4 parameters.",
+      "why_it_is_wrong": "It treats 36 correlated repeated measures as 36 independent observations. The 31 train points come from repeated stimulation of the same cells; every one is divided by the same estimated first-pulse mean, which correlates all of them by construction; and the methods say several protocols were run in one cell, so the 5 paired-pulse points are probably not independent of the 31 train points either.",
+      "measured_correlation_structure_bootstrap_over_animals_b_20000": {
+        "mean_pairwise_correlation_between_pulses": 0.282,
+        "mean_lag_1_correlation": 0.656,
+        "covariance_eigenvalues_top_8": [
+          11.59,
+          5.4,
+          4.21,
+          2.31,
+          2.13,
+          1.51,
+          1.08,
+          0.62
+        ],
+        "principal_components_for_95_percent_of_variance": 10,
+        "participation_ratio": 4.91,
+        "kish_effective_points": 3.28
+      },
+      "the_corrected_statement": "The effective dimensionality of the 31-pulse train block is roughly 5, not 31. Scored properly as a Mahalanobis distance on the leading principal components of the bootstrap covariance, the primary gives chi-square 2.70 on 5 degrees of freedom, p = 0.75, and 9.19 on 10, p = 0.51, while ND-06 v0.1 gives 27.77 on 5, p = 4.0e-05, and 62.93 on 10, p = 1.0e-09. So the conclusion that the model is statistically consistent with the data survives, and the rejection of the null survives strongly. What does not survive is the specific figure p = 0.79 on 32 degrees of freedom, or any claim resting on 36 independent observations. Four parameters constrained by roughly 5 to 10 effective degrees of freedom is a far weaker constraint than the artifact implies.",
+      "where_the_wrong_number_appears": "In this registry's primary_rule and secondary_rule as goodness_of_fit_p and degrees_of_freedom, in the joint-fit artifact, and in ADR-2026-013's eleventh amendment. The values are left in place because they are what the frozen run computed and rewriting them would falsify the record. This block is the correction and it travels with them."
+    },
+    "finding_3_the_registered_error_bars_are_too_wide": {
+      "what_was_found": "The registered standard error divides each pulse's raw standard error by the point estimate of the first-pulse cohort mean, treating that denominator as exact. Because an animal with a large first response also has large later responses, the ratio is more stable than its numerator, and the correct bootstrap standard error of the normalised mean is smaller -- between 0.44 and 0.85 times the registered value across the 31 pulses. The intervals J1 used are therefore about 1.2 to 2.3 times wider than they should be, which made J1 easier than intended.",
+      "does_the_verdict_survive": "Yes. Recomputed with the proper bootstrap standard error the primary still passes J1 at 31 of 31; the secondary drops to 30 of 31 and would also still pass. J2's ratio is barely affected because both models are weighted identically, moving from 0.0962 to 0.1013. The defect flattered the test without changing its outcome.",
+      "the_fix_for_the_next_contract": "Score against a bootstrap standard error of the whole normalisation pipeline, resampling animals and renormalising each resample, rather than propagating no uncertainty through the denominator."
+    },
+    "finding_4_the_independence_claim_overstates_what_is_established": {
+      "what_the_contract_says": "That the holdout is a genuine unseen cohort, distinct from Fig3B by stored-byte digest and by animal count, 20 against 17, matching the published legends for the day-0 and day-2-to-4 cohorts.",
+      "what_the_audit_establishes": "Subject identity cannot be determined from this corpus at all. The MAT files hold bare double matrices and no animal, cell or date identifier exists anywhere. The authors' own plotting script carries no age label either: the Fig3B and Fig3G sections of Figure_3.m are both titled simply 1Hz. The day-0 and day-2-to-4 assignment rests entirely on the published figure legends. The authors do use that vocabulary in their own code elsewhere, Figure_6.m titling panels day 0 and day 2-4, so the labels are theirs rather than an inference, but they are not attached to the Figure 3 arrays in the repository.",
+      "and_this_paper_has_already_broken_legend_implied_distinctness": "Fig3J, labelled the 1-day comparison, is bit-identical to Fig3D, labelled the 2-to-4-day comparison. The authors reused one wild-type reference across two age comparisons, which is why the earlier developmental holdout was voided. A legend age label is therefore demonstrably not proof of a distinct cohort in this dataset. Fig3G is byte-different from Fig3B and Fig3I, so it is not that same reuse, but the argument from legends is weaker here than it would be in a paper without that precedent.",
+      "the_disclosure_the_contract_should_have_carried": "Fig3H is the day-0 paired-pulse cohort with n = 20 at 10 ms, matching Fig3G's n = 20 exactly, and it was opened and scored on 2026-09-10 as the surviving arm of the voided developmental holdout, before this contract's freeze. The methods say that ten seconds of rest were afforded to the cell in between recordings, which describes several protocols run in one cell. So Fig3G's twenty cells are probably Fig3H's twenty cells. The train ARRAY had never been decoded, which is what the contract claimed and is true. The ANIMALS had been, under a different protocol, and their day-0 paired-pulse behaviour was known to the analyst before the freeze. The fit itself used only Fig3D and Fig3B and the selection rule was committed in advance, so the leak into the numbers is nil and the leak into the analyst is small but real. It was not disclosed and it should have been.",
+      "the_classification_the_audit_returns": {
+        "against_the_fitting_cohorts_fig3b_and_fig3d": "biologically independent -- PROBABLE, NOT ESTABLISHED. Supported only by published age labels plus the fact that terminal in-vivo whole-cell recording cannot revisit an animal days later, which no source in this repository states.",
+        "against_everything_opened_before_the_freeze": "SAME SUBJECTS, DIFFERENT PROTOCOL is the most likely state and cannot be excluded, because of Fig3H."
+      },
+      "one_red_flag_checked_and_discarded": "Sixty exact float values are shared between Fig3B and Fig3G, including one first-pulse magnitude identical to within 7e-15 pA. This is digitisation, not overlap: Fig3B alone holds 60 internal exact repeats among 544 entries and Fig3G 46 among 640, the same rate. The two rows carrying the shared first-pulse value differ by up to 17.7 pA and share none of their 32 pulses. Exact-value coincidence carries no identity information in this corpus, which also means the stored-byte duplicate guard is informative only for whole arrays -- which is how it is used."
+    },
+    "finding_5_the_7hz_miss_is_a_failure_and_a_protocol_mismatch_at_once": {
+      "the_source_exactly": "Kazama and Wilson 2008, Neuron 58:401-413. A discussion-section round number with no error bar: at frequencies mimicking the basal firing rate of a typical ORN, 7 Hz, synaptic responses depress by about 40 per cent but remain relatively strong. Minimal single-axon stimulation in glomerulus VM2 at a 0.033 Hz baseline, against Rozenfeld's compound antennal-nerve stimulation at 0.2 Hz across the unstated glomerular mixture labelled by GH146-QF.",
+      "why_the_primary_predicts_0_195": "Its effective first-pulse utilisation is 0.0842 and its recovery constant 7096 ms. At 7 Hz the gap is 143 ms, so exp(-143/7096) = 0.980 and only 2 per cent of the depleted resource returns between pulses against 8.4 per cent consumed. The secondary's parallel non-depleting component contributes a floor of half its facilitation regardless of depletion, which is why it reaches 0.532.",
+      "the_classification_and_why_it_is_not_softened": "Both, and the second does not excuse the first. The protocols are not the same observable and 0.60 has no error bar. But this project refuted ND-06 v0.2 on precisely this number when its candidates predicted about 0.08. By the same standard, the primary's 0.195 against 0.60 is a failure of the frozen module on the only external check available, a factor of three in the same direction that killed its predecessor. That the registry keeps facilitation-depression as the named primary rule while recording this is a live inconsistency, not a resolved caveat, and it is why neither_rule_is_promoted now says so explicitly."
+    },
+    "what_the_audit_did_not_disturb": [
+      "The freeze order. The models and every predicted pulse were committed at 042a225 and the holdout opened afterwards, gated by the contract's own values_opened flag and by the fit-artifact checksum the holdout runner requires.",
+      "The five guards. Each ran and each established what it claims, including the internal consistency check on the first-pulse magnitude, which remains the first check in this project that the data could fail on their own terms.",
+      "The Stage 2 exit gate, unchanged at v4, 0 of 3, and V0 Structural as the only supported stage tier. The artifacts stated this correctly and the audit confirms it.",
+      "The single-pool release-probability bound and the ND-10 edge-sign gap, both untouched by the pass and correctly recorded as untouched."
+    ],
+    "the_narrowest_defensible_claim": "Two ORN-to-PN short-term-plasticity models, fitted jointly to a spent paired-pulse curve and a spent 1 Hz train and frozen with every predicted value checksum-pinned before the test array was opened, reproduce an unseen day-0 wild-type 32-pulse 1 Hz trajectory within its pointwise measurement error at all 31 scorable pulses, with a weighted residual of 13.41 against the refuted ND-06 v0.1's 139.32. The registered criteria are also satisfied by the training cohort's own mean trajectory, so this is a demonstrated absence of contradiction at 1 Hz and a decisive improvement on v0.1, not an identification of the mechanism. Scoring is pointwise on correlated repeated measures worth roughly 3 to 10 independent checks. The holdout's biological independence from the fit set rests on published age labels in a paper that has already reused a wild-type array across age labels. The frozen primary misses the only external observable by a factor of three.",
+    "verdict": "VALIDATED WITH NARROWER CLAIM"
   }
 }

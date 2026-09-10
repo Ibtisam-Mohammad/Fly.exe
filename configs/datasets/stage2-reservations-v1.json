@@ -371,5 +371,49 @@
       "Fig3G_wild_type": "UNSPENT. Day 0, twenty animals, thirty-two pulses at 1 Hz. Never decoded: the audits that touched it read structures and stored-byte digests only. It is a genuine unspent train-amplitude holdout."
     },
     "the_seventh_instance": "This is the seventh claim this session that was inferred rather than measured, and the fourth about what a file contains. The pattern is now: a file was dismissed on one property, a join size read off a row count, a preparation read off a plotting label, a cohort's independence read off a legend, a model's train behaviour read off one term, and which sites matter read off which sites survive. Every one flattered the project except this one, which did the opposite -- it made the goal look unreachable when it was not."
+  },
+  "the_five_unreadable_files_closed_2026_09_10": {
+    "closed_on": "2026-09-10",
+    "why_it_was_closed": "The whole-repository structure audit could read 61 of 66 files and recorded the remaining five as an open question, explicitly refusing to conclude from 'an evoked-amplitude train series would be out of place in a behaviour figure'. That refusal was right and the question is now answered by measurement rather than by plausibility.",
+    "how": "The repository ships the MATLAB script that generates each figure. Each script names the variables it loads and shows what is plotted from them. Reading the authors' code is reading provenance, not reading a reserved value, so this cost nothing under the reservation rule and required no repair to the project's reader.",
+    "what_each_of_the_five_actually_holds": {
+      "Figure 8/Fig8B.mat": "IAAvs, a MATLAB table of behavioural learning indices for Orco-GAL4, UAS-Cac-RNAi and Orco-GAL4;UAS-Cac-RNAi, plotted as 'Learning index' on a -100 to 100 axis. Not electrophysiology. The table object is also why the v5 structure reader fails on the dimensions subelement: the reader handles numeric matrices, and this is a table.",
+      "Figure S13/FigS13.mat": "The same shape for Syn-RNAi: an IAAvs learning-index table plus Y-maze '% correct choice' vectors. Behaviour.",
+      "Figure 1/Fig1D.mat": "all_flies_all_odors_GH146 and all_flies_all_odors_Cac, plotted as spike-train correlation against bin size in milliseconds. An odour-response correlation curve, 25 MB, not an evoked-amplitude series.",
+      "Figure S4/FigS4A.mat": "GH146_all_flies_2_hep, Cac_all_flies_2_hep and the same per odour for linalool and ethyl acetate, plotted as correlation against bin size. Same quantity as Fig1D, per odour.",
+      "Figure S8/FigS8E.mat": "The same correlation-against-bin-size quantity for Syn-RNAi."
+    },
+    "the_qualification_is_withdrawn": "The claim is now about 66 of 66 files. None of the five holds an ORN-to-PN evoked-amplitude train series, and the reason is measured rather than assumed.",
+    "the_reader_defect_is_now_explained_not_merely_recorded": "Fig8B and FigS13 are v5 containers holding MATLAB table objects. flysim.reservations.read_mat_structure handles numeric matrices and fails on the dimensions subelement of a table. Fixing it is still not needed by any contract, but it is no longer an unexplained limitation."
+  },
+  "orn_to_pn_train_amplitude_inventory_2026_09_10": {
+    "compiled_on": "2026-09-10",
+    "method": "Stored-element-byte digests and array shapes across every candidate file, plus the authors' plotting scripts for the role of each variable. No value was decoded.",
+    "every_orn_to_pn_1hz_train_amplitude_array_in_the_corpus": {
+      "wild type, day 2 to 4": {
+        "array": "Fig3B all_flies_1Hz_control, 17 by 32",
+        "status": "SPENT -- the joint fit set",
+        "note": "Fig3I all_flies_1Hz_control is bit-identical to it and is therefore the same spent data"
+      },
+      "wild type, day 0": {
+        "array": "Fig3G all_flies_1Hz_control, 20 by 32",
+        "status": "SPENT -- scored 2026-09-10 by stage2-stp-joint-holdout-v1"
+      },
+      "cacophony RNAi, day 2 to 4": {
+        "array": "Fig3B all_flies_1Hz_RNAi, 18 by 32",
+        "status": "SEALED, and a distinct stored array"
+      },
+      "cacophony RNAi, day 0": {
+        "array": "Fig3G all_flies_1Hz_RNAi, 19 by 32",
+        "status": "SEALED, and a distinct stored array"
+      },
+      "cacophony RNAi, day 1": {
+        "array": "Fig3I all_flies_1Hz_RNAi, 22 by 32",
+        "status": "SEALED, and a distinct stored array -- Fig3I reuses the day-2-to-4 wild-type control but its RNAi cohort is its own"
+      }
+    },
+    "the_consequence_that_matters": "There is no unspent wild-type ORN-to-PN train-amplitude array left in this corpus, and there is no train-amplitude array at any frequency other than 1 Hz. The only higher-frequency per-pulse data in the corpus are the 10, 20 and 60 Hz LATENCY and jitter arrays of Fig3E_and_F, which no registered model generates. So the 7 Hz question that divides the two frozen models cannot be settled with Rozenfeld data at all, and a further wild-type train holdout does not exist to be preregistered.",
+    "the_structure_of_figure_3_now_fully_resolved": "Three ages, each a train panel and a paired-pulse panel: day 0 in Fig3G and Fig3H, day 1 in Fig3I and Fig3J, day 2 to 4 in Fig3B and Fig3D. The wild-type control was recorded twice, not three times: the day-1 panels reuse the day-2-to-4 wild-type arrays verbatim, which is exactly the Fig3B-equals-Fig3I and Fig3D-equals-Fig3J duplication already on record. Each age has its own cacophony-RNAi cohort.",
+    "what_is_left_unspent_and_relevant": "Three distinct cacophony-RNAi train cohorts and three distinct cacophony-RNAi paired-pulse cohorts. These are perturbation data and ND-06 carries no perturbation model, so using them requires a new declared assumption about what cacophony knockdown does to the parameters. See the twelfth amendment of ADR-2026-013 for why that route is asymmetric rather than discriminating."
   }
 }

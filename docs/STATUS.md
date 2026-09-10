@@ -1242,3 +1242,57 @@ frozen curve lands inside day-0 error bars while tracking neither cohort's mean 
 supported stage tier. The gate's three legs are cellular, synaptic kinetics and circuit;
 this is a plasticity module and none of them. What changed is that one registered dynamics
 module now carries a validation of its own, which is a first.
+
+## The pass, audited, 2026-09-10
+
+`male-cns-orn-pn-stp-v0.3` was independently audited. **Verdict: VALIDATED WITH NARROWER
+CLAIM.** No model, threshold, artifact or verdict was changed; the audit is attached to the
+holdout contract and the registry under `independent_audit`, and ADR-2026-013's twelfth
+amendment carries the reasoning.
+
+**The arithmetic held.** J1 at 31 of 31 and J2 at 0.0962 re-derive exactly from the raw
+arrays, the freeze predates the unsealing, and nothing was refitted.
+
+**What narrowed it, and three of the five are corrections to my own reporting:**
+
+```
+1  the criteria do not separate the model from a model-free baseline
+   Fig3B's own training-cohort mean trajectory - zero parameters - passes J1 at
+   29/31 (0.935 vs 0.80) and J2 at 0.2446 (vs 0.5). So does a fitted constant.
+   The primary's RMSE 0.0873 is below the mean standard error of 0.127.
+2  p = 0.79 on 32 df is invalid: 36 correlated repeated measures scored as
+   independent. Lag-1 correlation 0.656, participation ratio 4.91, Kish 3.28.
+   Done properly: primary 2.70 on 5 df (p=0.75), v0.1 27.77 on 5 (p=4e-05).
+   The conclusions survive; the number does not.
+3  the registered error bars are 1.2-2.3x too wide - the normalisation's
+   denominator was treated as exact. Verdict survives the correction.
+4  "a genuine unseen cohort" overstates it. No subject identifier exists in the
+   corpus; Figure_3.m carries no age label; and Fig3H, the day-0 paired-pulse
+   cohort with the same n = 20, was opened BEFORE the freeze. The array was
+   unseen, the animals probably were not. Undisclosed and it should not have been.
+5  the 7 Hz miss is both a protocol mismatch and a real failure. v0.2 was
+   refuted on that number; by the same standard 0.195 vs 0.60 counts against
+   the primary. The registry now says neither rule is promoted.
+```
+
+**The corpus is closed and it has run out.** The five previously unreadable files were
+resolved from the authors' own plotting scripts: two hold behavioural learning-index
+tables, three hold spike-train correlation against bin size. The claim is now about 66 of
+66 files. Figure 3 resolves as three ages - day 0, day 1, day 2 to 4 - each with a train
+and a paired-pulse panel, the wild-type control recorded twice rather than three times.
+**No unspent wild-type ORN-to-PN train remains, and no train-amplitude array exists at any
+frequency but 1 Hz.** The 7 Hz question cannot be settled with Rozenfeld data.
+
+**What is left is asymmetric.** Three cacophony-RNAi train cohorts remain sealed. Simulated
+before proposing: the paired-pulse curve is nearly blind to release probability in both
+families, so the perturbation scale cannot be fitted from it, and the primary's resting
+utilisation is at its bound contributing 9% of effective utilisation, so it has no release
+knob. Sweeping the scale across the whole reduction range, the primary's 1 Hz steady state
+stays in [0.6429, 0.6632] and its 7 Hz steady state in [0.1949, 0.2093], while the
+secondary spans [0.6503, 1.0000] and [0.5316, 1.0036]. That supports a one-sided refutation
+attempt on the primary, not a discrimination experiment, and it must be registered as such.
+It also closes one escape route on the 7 Hz miss: no reduction in release probability brings
+the primary within 0.39 of the measured 0.60.
+
+**Stage 2 exit gate unchanged at v4, 0 of 3. V0 Structural remains the only supported stage
+tier.** The audit confirms both.

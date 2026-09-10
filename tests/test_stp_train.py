@@ -468,3 +468,108 @@ def test_the_v0_3_registry_records_the_tier_and_the_open_problems() -> None:
     assert "prefer the secondary" in separation
     # Nothing is wired into a runner yet and the file must say so.
     assert "not implemented" in registry["engine_coverage"]["numpy_circuit_runner"]
+
+
+def test_the_audit_is_attached_to_both_the_contract_and_the_registry() -> None:
+    """A pass carries its audit in the same files, or the audit is decoration."""
+    for name in (
+        "configs/experiments/stage2-stp-joint-holdout-v1.json",
+        "configs/neural/short-term-plasticity-v0.3.json",
+    ):
+        record = json.loads((REPO / name).read_text(encoding="utf-8"))["independent_audit"]
+        assert record["verdict"] == "VALIDATED WITH NARROWER CLAIM"
+        # The arithmetic was not what the audit disputed, and that must stay on record.
+        assert "reproduce exactly" in record["the_verdict_stands_as_computed"]
+
+
+def test_the_audit_records_that_a_model_free_baseline_clears_the_criteria() -> None:
+    """The single finding that caps what the pass is worth."""
+    record = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
+    )["independent_audit"]
+    finding = record["finding_1_the_criteria_do_not_separate_the_model_from_a_model_free_baseline"]
+    table = finding["the_table"]
+    # Fig3B's own mean trajectory carries no mechanism and clears both bars.
+    weighted_sse, ratio, inside = table["fig3b_training_cohort_empirical_mean"][:3]
+    assert inside / 31 >= 0.80, "the baseline passes J1"
+    assert ratio <= 0.5, "the baseline passes J2"
+    # And it must be beaten by the model, which is a margin and not a passed test.
+    assert table["v0_3_primary"][0] < weighted_sse
+    assert "may not be claimed" in finding["what_it_costs_the_claim"]
+    # The noise floor has to be stated: passing J1 means sitting inside the error bars.
+    assert table["mean_standard_error_across_the_31_pulses"] > table["v0_3_primary"][3]
+
+
+def test_the_audit_corrects_the_goodness_of_fit_and_the_error_bars() -> None:
+    record = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
+    )["independent_audit"]
+    gof = record["finding_2_the_goodness_of_fit_p_is_invalid_as_reported"]
+    structure = gof["measured_correlation_structure_bootstrap_over_animals_b_20000"]
+    assert structure["participation_ratio"] < 31, "31 pulses are not 31 independent checks"
+    assert structure["kish_effective_points"] < 10
+    assert "does not survive" in gof["the_corrected_statement"]
+    # The frozen numbers stay put; the correction travels beside them.
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
+    )
+    assert registry["primary_rule"]["degrees_of_freedom"] == 32
+    assert "left in place" in gof["where_the_wrong_number_appears"]
+    bars = record["finding_3_the_registered_error_bars_are_too_wide"]
+    assert bars["does_the_verdict_survive"].startswith("Yes")
+
+
+def test_the_audit_downgrades_the_independence_claim_and_discloses_fig3h() -> None:
+    record = json.loads(
+        (REPO / "configs/experiments/stage2-stp-joint-holdout-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )["independent_audit"]
+    finding = record["finding_4_the_independence_claim_overstates_what_is_established"]
+    classification = finding["the_classification_the_audit_returns"]
+    against_fit = classification["against_the_fitting_cohorts_fig3b_and_fig3d"]
+    assert "PROBABLE, NOT ESTABLISHED" in against_fit
+    assert "SAME SUBJECTS, DIFFERENT PROTOCOL" in classification[
+        "against_everything_opened_before_the_freeze"
+    ]
+    # The undisclosed pre-freeze opening has to be named, not softened.
+    disclosure = finding["the_disclosure_the_contract_should_have_carried"]
+    assert "Fig3H" in disclosure and "before this contract" in disclosure
+    assert "should have been" in disclosure
+    # And the coincidence that looked alarming must be recorded as discarded, with why.
+    assert "digitisation" in finding["one_red_flag_checked_and_discarded"]
+
+
+def test_neither_frozen_rule_is_promoted() -> None:
+    """The one independent observable favours the secondary; the file must not hide that."""
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
+    )
+    note = registry["neither_rule_is_promoted"]
+    assert "No consumer of this file may treat the primary as preferred" in note
+    assert "0.532" in note and "0.195" in note
+    assert registry["tier"] == "V1-limited", "the audit narrowed the claim, not the tier"
+    assert "model-free baseline" in registry["tier_after_audit"]
+
+
+def test_the_corpus_inventory_is_closed_and_says_what_ran_out() -> None:
+    """66 of 66 files, and the consequence stated rather than left for a reader."""
+    manifest = json.loads(
+        (REPO / "configs/datasets/stage2-reservations-v1.json").read_text(encoding="utf-8")
+    )
+    closed = manifest["the_five_unreadable_files_closed_2026_09_10"]
+    assert len(closed["what_each_of_the_five_actually_holds"]) == 5
+    assert "66 of 66" in closed["the_qualification_is_withdrawn"]
+    # The reader defect is explained now, not merely recorded.
+    assert "table" in closed["the_reader_defect_is_now_explained_not_merely_recorded"]
+    inventory = manifest["orn_to_pn_train_amplitude_inventory_2026_09_10"]
+    arrays = inventory["every_orn_to_pn_1hz_train_amplitude_array_in_the_corpus"]
+    spent = [k for k, v in arrays.items() if v["status"].startswith("SPENT")]
+    sealed = [k for k, v in arrays.items() if v["status"].startswith("SEALED")]
+    assert len(spent) == 2 and all("wild type" in k for k in spent)
+    assert len(sealed) == 3 and all("RNAi" in k for k in sealed)
+    # The hard boundary has to be explicit: no wild-type train left, nothing above 1 Hz.
+    consequence = inventory["the_consequence_that_matters"]
+    assert "no unspent wild-type" in consequence
+    assert "other than 1 Hz" in consequence
+    assert "cannot be settled with Rozenfeld data" in consequence
