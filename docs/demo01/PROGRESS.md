@@ -278,3 +278,30 @@ inhibition did the work that adaptation was introduced to do.
 against a floor of 0.02, so the selected point sits about one part in a hundred inside that
 criterion. The pilot predicted this and the grid was built to bracket it; it is a fragile
 margin and it is not hidden.
+
+## S2 in progress: what the decoder sweep has already settled
+
+Three rows in, two findings are already firm and both are worth recording before the
+selection is made, so that neither can look like a post-hoc reading.
+
+**The turn direction is entirely the decoder's, and this is now measured rather than
+argued.** Flipping the decoder's sign with everything else identical:
+
+| yaw gain | threshold | sign | walked | mean approach | cue-locked agreement | mean turn |
+|---|---|---|---|---|---|---|
+| 0.80 | 0.60 | **+1** | 3/3 | **+12.07 mm** | 0.691 | 54.1 deg |
+| 0.80 | 0.60 | **-1** | 3/3 | **-5.86 mm** | 0.715 | 48.1 deg |
+
+One engineering number turns a 12 mm approach into a 6 mm retreat, while the cue-locked
+agreement -- the quantity that is a property of the network rather than of the decoder --
+barely moves, 0.691 against 0.715. That is exactly the correction to D1: the network
+determines which descending side is stronger for a given cue side, and the decoder's sign
+determines what the body does about it.
+
+**The forward-threshold axis is degenerate at this operating point.** Rows 1 and 3 differ
+only in the threshold, 0.60 against 1.20 Hz, and are identical to the last decimal in every
+reported quantity. The selected operating point's cue response is 2.435 Hz, well above both,
+so the threshold never binds. Half the sweep is therefore duplicated work, which is a
+finding about the grid rather than about the decoder, and the sweep is being run to
+completion anyway because the selection rule was declared over the whole grid before any of
+it ran.
