@@ -683,5 +683,23 @@ the first column must be frequency-independent.
 **There is no unspent wild-type ORN->PN amplitude holdout in this corpus.** A
 whole-repository structure audit of all 66 MAT files found no train amplitude series in any
 of the 61 that could be read; five could not be read and are recorded as an open question.
-So the recovery constant cannot be measured from this corpus by anyone. Advancing this tier needs a different dataset. The Stage 2
+So the recovery constant cannot be measured from the Rozenfeld corpus by anyone. It can
+be constrained from published values this project already holds -- see the sustained-train
+section below, which withdraws the claim that a different dataset is required. The Stage 2
 gate stays at v4, 0 of 3; V0 Structural remains the only supported tier.
+
+### Both candidates refuted on the sustained-train observable, 2026-09-10
+
+Kazama and Wilson's published 7 Hz steady state is about 0.60. Candidate A predicts 0.074
+and candidate B 0.082 - eight times too much depression - while the refuted ND-06 v0.1
+predicts 0.441. Neither candidate was ever fitted to that number and both were frozen and
+committed before the check was conceived.
+
+The cause is the recovery constant the paired-pulse curve cannot constrain (300 and 1000 ms
+means differ by 0.0003), which every family drove to its bound. Invisible over one pair,
+catastrophic over a train.
+
+**No registered rule survives both observables.** v0.1 is refuted on paired pulses; both
+successors on trains. The next contract must fit jointly to a paired-pulse curve and a
+published train constraint, and needs no new data. Stage 2 gate unchanged at v4, 0 of 3;
+V0 Structural remains the only supported tier.

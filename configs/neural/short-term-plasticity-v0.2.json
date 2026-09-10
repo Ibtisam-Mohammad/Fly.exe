@@ -262,7 +262,7 @@
     "track_a_genn_engine": "not implemented",
     "why_this_is_recorded_now": "Neither frozen rule can yet be executed inside a circuit simulation. They exist as closed-form and state-machine predictors of a paired-pulse ratio. Wiring them into the runners is work that should not be done until the holdout says whether either of them survives."
   },
-  "validation_status": "FROZEN, UNVALIDATED, AND NOW WITHOUT A REMAINING HOLDOUT as of 2026-09-10. This file is a candidate-family set, not a rule. Its registered developmental holdout returned NO VERDICT because the primary cohort was the training set. Its registered train experiment is VOID because the arrays it scored are per-pulse latencies rather than amplitudes, which the intake mis-described on 2026-09-09. No validation tier is awarded and none may be cited. The corpus contains no ORN-to-PN train amplitude series at all, so the pinned recovery constant is unmeasurable from it rather than merely unmeasured, and advancing this rule requires a different dataset rather than a different contract. The release-probability incompatibility recorded above is untouched by any of this and remains the sharpest open problem.",
+  "validation_status": "REFUTED as of 2026-09-10. This file is a candidate-family set, not a rule, and both of its candidates are now refuted. Their registered developmental holdout returned NO VERDICT because its primary cohort was the training set; their registered train experiment was VOID because the arrays held latencies; and a consistency check against Kazama and Wilson's published 7 Hz steady state, which has been in the ND-06 registry since before these candidates existed and which they were never fitted to, shows both predicting about 0.08 against a measured 0.60 -- eight times too much depression, and six times worse than the refuted predecessor they were built to replace. No validation tier is awarded and none may be cited. The demonstration is that a short-term-plasticity rule fitted to paired-pulse ratios alone cannot be a usable rule, because the recovery constant that dominates sustained-train behaviour is exactly the parameter a paired-pulse curve cannot constrain. The next contract must fit jointly to a paired-pulse curve and at least one published train constraint, and needs no data the project does not already hold.",
   "what_this_registry_does_not_do": [
     "It does not reinstate the retired synaptic leg of the Stage 2 gate, which needs unitary waveforms this repository does not ship. The gate stays at v4 and 0 of 3.",
     "It does not resolve edge sign, which is ND-10 and stays unresolved wherever receptor evidence is absent.",
@@ -323,5 +323,53 @@
     "no_candidate_is_refuted_or_supported_by_it": true,
     "what_it_changes_for_this_registry": "There is no unspent wild-type ORN-to-PN amplitude holdout in this corpus, and there never was one. Rozenfeld and colleagues' repository offers, for this synapse: per-animal mean evoked amplitude at 1 Hz in Fig3B, Fig3G and Fig3I, of which Fig3B and Fig3I are bit-identical; paired-pulse ratios in Fig3D, Fig3H and Fig3J, of which Fig3D and Fig3J are bit-identical; miniature EPSC amplitude and frequency in Fig5B; and Bruchpilot puncta in Fig5D. No train amplitude series exists anywhere in it. So the resource recovery constant cannot be measured from this corpus by anyone, the plan to settle it with the trains was built on a mis-read header, and the candidates' pinned constant remains unmeasurable rather than merely unmeasured.",
     "the_corpus_claim_and_its_qualification": "A whole-repository structure audit on 2026-09-10 read all 66 MAT files and confirmed that no ORN-to-PN evoked-amplitude train series exists in any of the 61 that could be read. Five could not be read -- three are MATLAB v7.3 and two defeat this project's v5 structure reader -- so the claim covers 61 of 66 files and not the repository. Four of the five belong to odour-response or behaviour figures, which makes an amplitude train series unlikely there, and 'unlikely' is recorded as an open question rather than as a conclusion."
+  },
+  "the_sustained_train_consistency_check": {
+    "what_this_is": "A consistency check of already-committed parameters against a published number that has been in the ND-06 registry since before these candidates existed. It is NOT a preregistered holdout test and it is not presented as one: the target was known when the check was conceived. What makes it worth anything is that the parameters were frozen and committed first, the predictions follow deterministically from them, and no tuning was possible. The freeze is checkable in git history.",
+    "no_new_data_was_needed": "None. The measurement has been recorded in configs/neural/short-term-plasticity-v0.1.json since that registry was written, as the external test the depression-only rule failed. The claim in the previous session summary that advancing this required procuring a new dataset was wrong: a train observable capable of refuting these candidates was already in the project's own registry.",
+    "the_published_measurement": {
+      "source": "Kazama and Wilson 2008, https://doi.org/10.1016/j.neuron.2008.02.030",
+      "quoted": "At frequencies mimicking the basal firing rate of a typical ORN (7 Hz), synaptic responses depress by about 40% but remain relatively strong.",
+      "steady_state_relative_to_the_first_pulse": 0.6,
+      "its_weakness_recorded_when_v0_1_was_scored_against_it": "'About 40%' is a discussion-section round number with no error bar. It cannot support a fine discrimination and it is not being asked to: the candidates miss it by a factor of eight."
+    },
+    "predicted_steady_state_by_model_and_frequency": {
+      "candidate_A_two_timescale_facilitation_free": {
+        "7Hz": 0.07439752634763455,
+        "10Hz": 0.058052017441299265,
+        "20Hz": 0.038735732667529076,
+        "60Hz": 0.027048954610271698
+      },
+      "candidate_B_facilitation_depression": {
+        "7Hz": 0.08193389749859067,
+        "10Hz": 0.05881480641052182,
+        "20Hz": 0.03035721855302868,
+        "60Hz": 0.010319889933938531
+      },
+      "nd06_v0_1_the_refuted_predecessor": {
+        "7Hz": 0.44088763461828184,
+        "10Hz": 0.3500600697597519,
+        "20Hz": 0.20745913301435603,
+        "60Hz": 0.0788771542689413
+      }
+    },
+    "the_result": {
+      "candidate_A_at_7Hz": 0.07439752634763455,
+      "candidate_B_at_7Hz": 0.08193389749859067,
+      "measured": 0.6,
+      "candidate_A_shortfall_factor": 8.064784267105903,
+      "candidate_B_shortfall_factor": 7.322976427556378,
+      "the_refuted_predecessor_does_far_better": "ND-06 v0.1 predicts 0.4409 against the measured 0.60, a shortfall of 1.36. The successors are worse than the rule they were built to replace, on this observable, by a factor of six.",
+      "verdict": "BOTH CANDIDATES REFUTED on the sustained-train observable"
+    },
+    "why_this_happens_and_what_it_demonstrates": "The paired-pulse curve cannot constrain the resource recovery constant: the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled standard error of 0.0277, so every candidate family drove that constant to the top of its box. A constant of 20000 ms means essentially no recovery between pulses. Over a 1000 ms paired pulse that is harmless and invisible. Over a sustained train it is catastrophic: the resource never refills and the response collapses to a few per cent. So the demonstration is precise and it is about the OBSERVABLE rather than about the mechanism -- a short-term-plasticity rule fitted to paired-pulse ratios alone cannot be a usable rule, because the parameter that dominates its behaviour in any sustained train is exactly the parameter that observable cannot see.",
+    "what_it_does_not_show": "It does not restore ND-06 v0.1, which stays refuted on the paired-pulse observable for reasons no parameter can repair: its ratios cannot exceed one and cannot decrease with interval. The position is that v0.1 is refuted on paired pulses, both successors are refuted on sustained trains, and no registered rule survives both. It also does not identify the right mechanism; it rules two out.",
+    "the_concrete_next_experiment_restated": "A successor must be constrained by a sustained-train observable at fit time, not only tested against one afterwards. Kazama and Wilson's 7 Hz value and Nagel, Hong and Wilson's 10 Hz trajectory are both usable as fitting constraints because both are published and neither is a holdout this project could otherwise spend. Fitting a family jointly to the Rozenfeld paired-pulse curve and to at least one train constraint is the next contract, and it needs no data the project does not already hold. The release-probability incompatibility recorded separately in this registry remains open and is not addressed by it.",
+    "provenance": {
+      "parameters_frozen_in": "configs/experiments/stage2-stp-developmental-holdout-v1.json",
+      "frozen_at_commit": "fbeedbf240ac1db6594a03b94ca5a0438d1ba67c",
+      "predictions_are_deterministic_given_those_parameters": true,
+      "computed_on": "2026-09-10"
+    }
   }
 }

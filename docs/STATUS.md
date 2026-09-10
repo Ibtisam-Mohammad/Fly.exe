@@ -1162,3 +1162,41 @@ repository. Four of the five belong to odour-response or behaviour figures where
 amplitude train series would be out of place, and that is left as an open question rather
 than a conclusion, because "would be out of place" is the inference this session has been
 punished for six times.
+
+### Both candidates are refuted, and no new data was needed
+
+The claim that advancing this synapse required procuring a different dataset was wrong. The
+refuting measurement was already in the project's own ND-06 v0.1 registry: Kazama and
+Wilson's 7 Hz steady state of about **0.60**, recorded there as the external test the
+depression-only rule failed. The v0.2 candidates were never fitted to it, and their
+predictions follow deterministically from parameters frozen and committed at `c7f45bf`.
+
+```
+model                             7 Hz     10 Hz     20 Hz     60 Hz
+candidate A (2-timescale)       0.0744    0.0581    0.0387    0.0270
+candidate B (facil + depr)      0.0819    0.0588    0.0304    0.0103
+ND-06 v0.1 (refuted on pairs)   0.4409    0.3501    0.2075    0.0789
+measured, Kazama & Wilson 7 Hz    ~0.60
+```
+
+**Both candidates predict about eight times too much depression, and the rule they were
+built to replace is six times closer.**
+
+The cause is the one the fit already flagged and could not act on: the paired-pulse curve
+cannot constrain the recovery constant - 300 ms and 1000 ms means differ by 0.0003 - so
+every family drove it to its bound, and a bound-valued recovery constant is invisible
+across one pair and catastrophic across a sustained train.
+
+**So the demonstration is about the observable, not the mechanism.** A
+short-term-plasticity rule fitted to paired-pulse ratios alone cannot be a usable rule,
+because the parameter that dominates sustained-train behaviour is exactly the one that
+observable cannot see. The excellent fit, the unrecoverable parameters and the eight-fold
+train failure are one finding.
+
+No registered rule now survives both observables: v0.1 is refuted on paired pulses, both
+successors on trains. This is not a preregistered holdout test and is not presented as one -
+the target was known; what makes it worth anything is that the parameters were frozen and
+committed first, verifiably.
+
+**Next contract:** fit a family jointly to the Rozenfeld paired-pulse curve *and* at least
+one published train constraint. It needs no data the project does not already hold.

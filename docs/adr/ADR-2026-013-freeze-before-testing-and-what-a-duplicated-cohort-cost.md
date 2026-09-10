@@ -597,3 +597,62 @@ The audit also confirmed that `Fig3G`'s wild-type 1 Hz array carries 20 animals 
 `Fig3B`'s and `Fig3I`'s 17, matching the published legends and consistent with the recorded
 finding that `Fig3B` and `Fig3I` are bit-identical while `Fig3G` is a separate day-0
 recording.
+
+## Tenth amendment, 2026-09-10 - both candidates are refuted, and no new data was needed
+
+The ninth amendment closed with the position that advancing this synapse required a
+different dataset. **That was wrong**, and the check that shows it was available the whole
+time, in this project's own registry.
+
+`ND-06 v0.1` records Kazama and Wilson's measurement as the external test the
+depression-only rule failed: *"At frequencies mimicking the basal firing rate of a typical
+ORN (7 Hz), synaptic responses depress by about 40% but remain relatively strong"* - a
+steady state of about **0.60**. The v0.2 candidates were fitted to Rozenfeld paired-pulse
+ratios and were never fitted to that number. Their predictions for it follow
+deterministically from parameters frozen and committed at `c7f45bf`, before this check was
+conceived, which is checkable in git.
+
+| model | 7 Hz | 10 Hz | 20 Hz | 60 Hz |
+|---|---|---|---|---|
+| candidate A, two-timescale facilitation | **0.074** | 0.058 | 0.039 | 0.027 |
+| candidate B, facilitation + depression | **0.082** | 0.059 | 0.030 | 0.010 |
+| ND-06 v0.1, the refuted predecessor | **0.441** | 0.350 | 0.208 | 0.079 |
+| **measured (Kazama & Wilson, 7 Hz)** | **~0.60** | | | |
+
+**Both candidates are refuted.** They predict about eight times too much depression, and
+the rule they were built to replace is six times closer to the measurement.
+
+**Why, and what it demonstrates.** The paired-pulse curve cannot constrain the resource
+recovery constant - the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled
+standard error of 0.0277 - so every family drove that constant to the top of its box. A
+constant of 20000 ms means essentially no recovery between pulses. Across a single 1000 ms
+pair that is harmless and invisible; across a sustained train the resource never refills
+and the response collapses to a few per cent.
+
+So the demonstration this session was asked for is precise, and it is about the
+**observable** rather than the mechanism: *a short-term-plasticity rule fitted to
+paired-pulse ratios alone cannot be a usable rule, because the parameter that dominates its
+behaviour in any sustained train is exactly the parameter that observable cannot see.* That
+is why the fit looked excellent, why the identifiability check flagged every parameter as
+unrecoverable, and why the candidates nonetheless fail by a factor of eight the moment a
+train is asked of them. The three findings are one finding.
+
+**What it does not show.** It does not restore v0.1, which stays refuted on paired pulses
+for reasons no parameter can repair: its ratios cannot exceed one and cannot decrease with
+interval. The honest position is that v0.1 is refuted on paired pulses, both successors are
+refuted on sustained trains, and **no registered rule survives both observables**. It also
+identifies no correct mechanism; it rules two out.
+
+**This is not a preregistered holdout test and is not presented as one.** The target was
+known when the check was conceived. Its value rests entirely on the parameters having been
+frozen and committed first, with the predictions following deterministically - and that
+much is verifiable rather than asserted.
+
+**The concrete next experiment, corrected.** Not procurement. A successor must be
+constrained by a sustained-train observable *at fit time*, not merely tested against one
+afterwards. Kazama and Wilson's 7 Hz value and Nagel, Hong and Wilson's 10 Hz trajectory
+are both published, both already in the corpus, and neither is a holdout this project could
+otherwise spend. Fitting a family jointly to the Rozenfeld paired-pulse curve and to at
+least one train constraint is the next contract, and it needs no data the project does not
+already hold. The release-probability incompatibility remains open and is untouched by any
+of this.

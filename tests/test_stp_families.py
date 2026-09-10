@@ -720,3 +720,55 @@ def test_the_bound_refuses_impossible_heterogeneous_inputs() -> None:
             interval_ms=10.0,
             recovery_tau_ms=893.0,
         )
+
+
+def test_the_frozen_candidates_collapse_in_a_sustained_train() -> None:
+    """The refutation that needed no new data, pinned so it cannot be quietly lost.
+
+    Kazama and Wilson measured a 7 Hz steady state of about 0.60 at this synapse. Both
+    frozen candidates predict about 0.08 -- eight times too much depression -- and the
+    refuted predecessor they were built to replace predicts 0.44, six times closer. The
+    cause is that the paired-pulse curve cannot constrain the recovery constant, so every
+    family drove it to its bound, and a bound-valued recovery constant is invisible over
+    one pair and catastrophic over a sustained train.
+    """
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-developmental-holdout-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    frozen = contract["frozen_models"]
+    measured = 0.60
+    for role in ("primary", "secondary"):
+        model = frozen[role]
+        names = FAMILIES[model["family_id"]].parameter_names
+        theta = tuple(model["parameters"][name] for name in names)
+        interval = 1000.0 / 7.0
+        values = amplitudes(model["family_id"], theta, [i * interval for i in range(420)])
+        steady = float(np.mean(values[-5:] / values[0]))
+        assert steady < 0.10, role
+        assert measured / steady > 5.0, role
+    # The refuted predecessor does far better on this observable, which is the point.
+    values = amplitudes("depression-only", (0.22, 893.0), [i * 1000.0 / 7.0 for i in range(420)])
+    predecessor = float(np.mean(values[-5:] / values[0]))
+    assert 0.40 < predecessor < 0.50
+    assert measured / predecessor < 1.5
+
+
+def test_the_registry_records_both_candidates_as_refuted() -> None:
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    check = registry["the_sustained_train_consistency_check"]
+    assert check["the_result"]["verdict"] == (
+        "BOTH CANDIDATES REFUTED on the sustained-train observable"
+    )
+    assert check["the_result"]["candidate_A_shortfall_factor"] > 5.0
+    assert check["the_result"]["candidate_B_shortfall_factor"] > 5.0
+    # It must not be dressed up as a preregistered holdout test.
+    assert "NOT a preregistered holdout test" in check["what_this_is"]
+    assert "the target was known" in check["what_this_is"]
+    # And the earlier claim that procurement was needed must be withdrawn explicitly.
+    assert "was wrong" in check["no_new_data_was_needed"]
+    assert "REFUTED as of 2026-09-10" in registry["validation_status"]
+    assert "No validation tier is awarded" in registry["validation_status"]

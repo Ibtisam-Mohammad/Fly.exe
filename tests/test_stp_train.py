@@ -197,7 +197,10 @@ def test_the_registry_records_the_void_and_still_claims_no_tier() -> None:
         "no_candidate_is_refuted_or_supported_by_it"
     ] is True
     assert "No validation tier is awarded" in registry["validation_status"]
-    assert "unmeasurable from it" in registry["validation_status"]
+    # The status has since moved from "no holdout left" to "refuted": the 7 Hz check
+    # needed no new data, which withdrew the procurement claim.
+    assert "REFUTED as of 2026-09-10" in registry["validation_status"]
+    assert "needs no data the project does not already hold" in registry["validation_status"]
 
 
 def test_the_margins_in_the_module_and_the_contract_agree() -> None:
