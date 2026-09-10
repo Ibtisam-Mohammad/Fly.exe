@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo01-visual-operating-point-v1",
+  "title": "Neural-only operating-point search for the DEMO-01 visual route: retinotopic lamina entry, full optic lobe, posterior descending readout",
+  "status": "PREREGISTERED. Committed before the search runs. Engineering calibration, not evidence.",
+  "provenance": "P/E",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": [
+    "DATA-03",
+    "DATA-04",
+    "ND-01",
+    "ND-03",
+    "ND-04",
+    "ND-10",
+    "DEMO-02",
+    "DEMO-03"
+  ],
+  "supersedes_route_of": "demo01-operating-point-v1",
+  "why_this_exists": {
+    "the_predecessor_failed": "demo01-operating-point-v1 searched 24 points on the olfactory route and 0 of 24 met the four criteria. The best candidate raised descending drive 1.72 Hz against a 2.0 Hz threshold, and its selectivity indices of exactly plus and minus 1.000 were one spike against zero rather than an asymmetry. That artifact is recorded in full at evidence/demo01/demo01-operating-point-v1.json and is not being reinterpreted here.",
+    "the_cause_was_structural_not_parametric": "Measured on the exact graph: zero direct edges from olfactory receptor neurons to DNa01 or DNa02; a three-synapse path; signed contact-share flow of 6.6e-05 of the injected signal arriving at the four steering cells, about one part in fifteen thousand; each of those cells integrating 756 to 1201 inputs at an excitatory-to-inhibitory contact ratio between 1.17 and 2.04; and laterality contralaterally biased at the first hop (index -0.835) and gone by the third (+0.140). A gain scales both sides equally, so no operating point on any grid could repair the laterality.",
+    "what_was_ruled_out_by_measurement": "The unresolved-sign policy is not the cause: it zeroes 2.62 per cent of edges globally and 0.4 to 0.5 per cent of contacts at the readout cells. Readout width is not the cause: widening from 4 cells to the whole 1,304-body descending pool raised the cue response only to 0.58 Hz. Input magnitude is not the cause: tripling receptor drive from 100 to 300 Hz changed descending output by under 3 per cent.",
+    "why_the_criteria_are_neural_only": "Choosing network parameters by whether the fly reaches a target cannot distinguish a good network from a bad network with a compensating decoder. Every criterion below is measurable with no body attached, and the scoring function is written so no behavioural quantity can enter it."
+  },
+  "why_this_route": {
+    "measured_alternatives": "Every sensory-to-descending route the released annotations offer was measured with the same signed contact-share method before this contract was written. LC4 to DNp02/03/04/06 is one synapse, 19,465 contacts, 19.95 per cent of the target's input, flow 1.35e-01, laterality +1.00/+0.97/+1.00/+0.86 over four hops. LC10 to AOTU019 is 43.52 per cent of that cell's input. JO to the descending pool is 48,225 contacts. Gustatory to GNG588 is 59 contacts and unusable. The olfactory route that failed is 2,000 times weaker than the looming route.",
+    "photoreceptors_cannot_be_the_entry": "Photoreceptors carry 66,533 outgoing edges over 4,045 of 4,114 bodies, but 100.0 per cent of those edges and 100.0 per cent of their contacts are zeroed by the frozen sign policy. Fly photoreceptors are histaminergic; histamine is absent from the transmitter model; the consensus prediction is therefore unresolved and the registered zero policy removes them. Inventing a sign for 66,533 edges to enable a demonstration would be a larger fabrication than entering one synapse downstream. The retina-to-lamina synapse is declared as the one link this demonstration cannot execute.",
+    "the_lamina_can": "L1 to L5, 8,883 bodies, 69.8 per cent carrying released column coordinates, over 877 distinct left-eye columns spanning hex1 1 to 36 and hex2 1 to 39. L1 output is predicted wholly inhibitory and L2 to L5 wholly excitatory, which is the ON/OFF split of the lamina, so the relative L1 drive is searched rather than assumed.",
+    "retinotopy_survives": "Two disjoint hex patches of the left lamina drive LC4 response vectors whose cosine similarity is +0.000, fully orthogonal. Participation ratio 15 to 23 of 126 LC4 cells per patch.",
+    "laterality_survives": "A left-eye patch reaches descending neurons at hop 3 with left/right flow +2.5e-03 against -2.0e-05, index +1.000.",
+    "the_optic_lobe_participates_functionally": "59,799 of 99,154 optic-lobe neurons are reached at hop 1 and 99,128 at hop 2; all 1,304 descending neurons by hop 3. The 89,390-neuron optic lobe computes the visual response rather than being stepped beside it."
+  },
+  "the_behaviour_target_and_why_its_sign_is_not_chosen": {
+    "target": "A stationary fly; a spatial visual cue on one side; activity through the full MaleCNS; lateralised descending activity; locomotion initiation with a consistent cue-side-dependent turn; the cue's retinal position changes as the body moves; the loop closes.",
+    "the_sign_is_read_not_chosen": "The strongest route in this connectome is looming to escape descending neurons, and the canonical approach route (LC10a to AOTU019 to DNa02) is 23 times weaker and predicted inhibitory at its final synapse, 586 contacts. Rather than force an approach behaviour onto an avoidance circuit, the turn's direction is whatever the frozen network produces. Turning toward the cue and turning away from it are both acceptable outcomes and the observed sign is reported.",
+    "why_this_matters": "Picking the behaviour first and then hunting for parameters that produce it is how a demonstration becomes a workaround. The circuit is fixed; the behaviour is measured."
+  },
+  "what_is_searched_and_what_is_fixed": {
+    "searched": "Synaptic millivolts per contact, the inhibitory-to-excitatory weight ratio, the spike-frequency adaptation increment, the maximum lamina firing rate, and the ON/OFF pathway balance. Five axes, all P/E.",
+    "fixed": "Every membrane and synapse constant from TRACKA-01, the 0.1 ms synaptic delay, the 100 us neural step, the entry gain at 1.0, tonic drive at 0.0, the per-target normalisation exponent at 0.0, the retinal map, the cue geometry and the readout filter constant.",
+    "the_entry_gain_is_fixed_at_one_on_purpose": "The predecessor multiplied injected entry neurons' outgoing weights by 10. Here entry sits at about 5,300 retinotopically driven lamina cells whose downstream pathway is intact, so an artificial entry gain is not needed and carrying one would make the input layer stronger than the anatomy says.",
+    "two_axes_were_fixed_by_pilot_measurement_not_by_preference": "Tonic drive and the per-target normalisation exponent are both held at 0.0 because the pilot measured them to be useless and harmful respectively. Both remain available in the engine and both defaults reproduce the original weights.",
+    "not_searched_on_purpose": "The readout filter constant, so the operating point is not chosen for a filter that flatters it, and the locomotor decoder, which is not touched until the network is frozen."
+  },
+  "fixed_parameters": {
+    "neural_dt_us": 100,
+    "resting_mv": -52.0,
+    "reset_mv": -52.0,
+    "threshold_mv": -45.0,
+    "membrane_tau_ms": 20.0,
+    "synapse_tau_ms": 5.0,
+    "refractory_ms": 2.2,
+    "synaptic_delay_ms": 0.1,
+    "reset_synaptic_state_on_spike": true,
+    "central_entry_outgoing_gain": 1.0,
+    "tonic_drive_mv": 0.0,
+    "synaptic_target_normalisation_exponent": 0.0,
+    "adaptation_tau_ms": 200.0,
+    "lamina_baseline_rate_hz": 1.0,
+    "receptive_field_sigma_columns": 2.0,
+    "loom_half_angle_deg": 15.0
+  },
+  "searched_grid": {
+    "synaptic_mv_per_contact": [
+      0.5,
+      0.6,
+      0.7
+    ],
+    "inhibitory_weight_gain": [
+      1.5,
+      2.0,
+      2.5
+    ],
+    "adaptation_increment_mv": [
+      0.0,
+      1.0
+    ],
+    "lamina_max_rate_hz": [
+      200.0,
+      300.0,
+      400.0
+    ],
+    "lamina_on_off_balance": [
+      0.0,
+      1.0
+    ]
+  },
+  "grid_size": 108,
+  "why_this_grid": {
+    "synaptic_mv_per_contact": "0.6 met every criterion in the pilot; 0.5 and 0.7 bracket it. The pilot measured 0.8 and above lifting the resting baseline above zero, and 0.275 leaving the network silent, so the range is deliberately narrow and centred.",
+    "inhibitory_weight_gain": "The engine previously asserted that a predicted-inhibitory contact and a predicted-excitatory contact deflect the membrane equally, which nothing supports: the signs are transmitter predictions, and the cholinergic and GABAergic synapses being predicted differ in receptor conductance and reversal potential. 1.5, 2.0 and 2.5 bracket the pilot's working value. The pilot measured 1.0 leaving the central brain self-sustaining at 31.9 Hz and 4.0 or more silencing it below the activity floor.",
+    "adaptation_increment_mv": "0.0 is the engine's original behaviour and is included as the honest baseline, so the search can report whether adaptation is needed at all rather than assuming it. 1.0 is the pilot's working value.",
+    "lamina_max_rate_hz": "Lamina monopolar cells are graded rather than spiking in the animal, so no measured rate exists to carry over and this is a declared surrogate for a graded cell's peak output. The pilot measured 150 Hz leaving the cue response at 1.17 Hz against the 2.0 Hz threshold and 300 Hz clearing it, so 200, 300 and 400 bracket the transition.",
+    "lamina_on_off_balance": "The multiplier on the L1 populations, whose predicted output sign is inhibitory. 0.0 drives only the excitatory OFF and wide-field pathways, which is the natural encoding for a dark object; 1.0 drives every lamina pathway alike. The pilot only ever tested 0.0, so both ends are searched here."
+  },
+  "unresolved_sign_policy": "zero",
+  "coupling_us": 15000,
+  "epochs": {
+    "baseline_us": 750000,
+    "cue_us": 1500000,
+    "recovery_us": 1500000,
+    "note": "5.25 s of biological time per candidate. The first 40 per cent of each epoch is discarded as transient and the remainder averaged. Identical to the odour contract, and longer than the pilot's epochs on every phase."
+  },
+  "retina_map": {
+    "hex1_min": 1.0,
+    "hex1_max": 36.0,
+    "hex2_min": 1.0,
+    "hex2_max": 39.0,
+    "azimuth_min_deg": -10.0,
+    "azimuth_max_deg": 160.0,
+    "elevation_min_deg": -60.0,
+    "elevation_max_deg": 60.0,
+    "note": "A declared linear correspondence between visual direction and released column index, spanning the observed hex1 1..36 and hex2 1..39 ranges. Azimuth is signed toward the ipsilateral side, so a cue on the fly's left lands inside the left eye's index range and outside the right eye's. This is P/E: the released table carries column indices but no optical axis, and nothing here claims a given column looks at a given point in the world."
+  },
+  "cue_geometry": {
+    "cue_bearing_deg": 45.0,
+    "cue_distance_mm": 10.0,
+    "cue_radius_mm": 3.0,
+    "note": "A 3 mm object 10 mm away at 45 degrees to one side subtends an angular radius of 17.5 degrees, giving a loom term of 0.54 against the 15 degree half-angle. The bilateral contrast this produces is a property of the retinal map rather than of a diffusion field: the ipsilateral eye's gaussian centre lands inside its column range and the contralateral eye's lands 7 columns outside it. The odour cue it replaces presented a measured bilateral difference of only 0.012180, a 3.3 per cent contrast."
+  },
+  "readout": {
+    "readout_filter_tau_ms": 150.0,
+    "why": "At a 15 ms coupling interval one spike is 66.7 Hz, so an unfiltered per-interval count is a 0-1-2 counter. A 150 ms one-pole causal filter spans ten intervals, short against the 1.5 s cue epochs and long enough to resolve rates below the spike quantum. Raw integer counts are retained beside the filtered value. Identical to the odour contract."
+  },
+  "decoded_readout_populations": {
+    "left": "dn-visual-left",
+    "right": "dn-visual-right",
+    "declaration": "released type prefix DNp, released somaSide",
+    "sizes": "160 left and 158 right",
+    "why_this_group": "Measured on the exact graph with the whole LC/LPLC/LLPC family as driver, and with laterality averaged over left-driver and right-driver so a fixed anatomical asymmetry cancels: all descending 656/648 bodies take 3.56 per cent of their input contacts from visual projection neurons at laterality +0.918/+0.318/+0.526 over three hops; DNp* 160/158 take 8.83 per cent at +0.961/+0.504/+0.420; DNa* 26/26 take 2.71 per cent; DNg* 426/422 take 0.44 per cent; DNp02/03/04/06 4/4 take 38.03 per cent at +0.994/+0.894/+1.000. The whole pool is two thirds DNg and DNge, which are visually blind, and averaging a lateralised signal into them is what held the measured index at 0.03 to 0.09. DNp* keeps the drive and the laterality while staying large enough that its index is a rate comparison rather than a spike count.",
+    "also_recorded_never_decoded": "dn-loom (DNp02/03/04/06, 4 per side), dn-steer (DNa01/DNa02, 2 per side) and dn-pool (every descending neuron, 656/648) are all recorded every interval. The narrow pairs are too small to average away the spike quantum at a 15 ms interval, which is exactly how the odour search produced indices of plus and minus 1.000 from single spikes, so they are reported and not steered on."
+  },
+  "neural_criteria": {
+    "baseline_max_hz": 5.0,
+    "saturation_max_fraction": 0.25,
+    "min_cue_response_hz": 2.0,
+    "min_selectivity_index": 0.2,
+    "max_recovery_fraction": 0.5,
+    "min_active_fraction": 0.02,
+    "max_active_fraction": 0.9,
+    "min_readout_spikes_per_cue_epoch": 20,
+    "statements": {
+      "C1_stable_nonsaturated": "Descending drive at rest is at most 5 Hz; the descending pool's mean rate is at most a quarter of the 454.5 Hz refractory ceiling; and between 2 and 90 per cent of the descending pool fires at least once per interval while the cue is on.",
+      "C2_cue_responsive": "The better of the two cue sides raises mean descending drive at least 2 Hz above baseline.",
+      "C3_bilateral_selectivity_reverses": "The left-right selectivity index must change sign between a left cue and a right cue, and the swing between the two indices must be at least 0.2. Sign reversal is required rather than magnitude, because a fixed anatomical asymmetry would satisfy a one-sided threshold while carrying no information about which side the cue is on.",
+      "C4_recovers_to_baseline": "After the cue is removed, drive falls to within half of the cue-evoked increment above baseline.",
+      "C5_enough_spikes_to_be_meaningful": "Each cue epoch's scored intervals must contain at least 20 raw spikes across the two decoded readout populations. ADDED relative to the odour contract, and it only tightens: the odour search's plus and minus 1.000 indices came from one spike against zero, and neither the magnitude nor the reversal test means anything at that count. This makes that degenerate outcome unreachable rather than hoping a threshold catches it."
+    },
+    "the_bar_did_not_move": "C1 to C4 carry the identical thresholds and the identical arithmetic registered for the odour contract that failed. The route changed; the bar did not. score_operating_point in flysim.demo01 is left untouched because it is part of that recorded failed experiment, and the visual route is scored by a separate function so neither record can be edited by work on the other."
+  },
+  "acceptance": {
+    "what_this_run_can_establish": "Whether any point on the registered P/E grid makes the exact full graph carry a lateralised visual cue from the retinotopic lamina, through the optic lobe, to selective descending activity under the transmitter-only LIF. Nothing more.",
+    "what_it_cannot_establish": "Anything biological. The winning parameters are not measurements, the LIF is a transmitter-sign regression rather than fitted physiology, the retinal map and the lamina rates are declared surrogates, and no tier is awarded or changed.",
+    "if_nothing_passes": "That is the result and it is reported as a concrete neural-operating-point failure. Combined with the olfactory failure it would mean the transmitter-only LIF cannot carry any sensory cue to descending neurons on this graph at any searched gain, which is a specific falsifiable statement about the dynamics layer and would point at ND-10 rather than at the connectome.",
+    "selection_rule": "Among candidates meeting all five criteria, the one with the largest selectivity swing. Declared before the run. Selection happens only inside the passing set, so it cannot trade a failed criterion for a better number elsewhere.",
+    "no_criterion_may_be_restated": "The five criteria, their thresholds, the grid, the epochs, the retinal map, the cue geometry and the filter constant are closed as of this commit.",
+    "every_candidate_is_recorded": "Passing or failing, every searched point and its five criterion values are written to the artifact. A search that reports only its winner is not a search."
+  },
+  "claim_boundary": "An engineering calibration sweep over five P/E parameters, scored on five neural criteria with no body attached. It selects an operating point, awards no tier, and validates no mechanism. V0 Structural remains the project tier.",
+  "last_reviewed": "2026-09-10",
+  "a_pilot_informed_this_grid": {
+    "declared_because_it_matters": "An exploratory pilot on short epochs was run before this contract was committed, and it determined the grid, three additions to the dynamics layer and the choice of decoded readout. Every pilot number is recorded in docs/demo01/PILOT.md. Piloting before preregistration is legitimate; piloting and then quietly rewriting the contract afterwards is not, which is why the pilot is published rather than paraphrased.",
+    "what_the_pilot_established": [
+      "Per-target synaptic normalisation is counterproductive at every gain: it silences the network rather than rebalancing it, refuting the hypothesis that motivated adding it. It is fixed at 0.0 here.",
+      "Tonic drive buys nothing: setting it to zero left the central brain at 13.9 to 71.7 Hz, so the background is self-sustaining recurrent activity rather than injected bias. It is fixed at 0.0 here.",
+      "Without a stabilising mechanism the network is silent at 0.275 mV per contact and self-sustaining at 0.600, with no band between. Spike-frequency adaptation opens one.",
+      "The whole 1,304-body descending pool is two thirds DNg and DNge, which take 0.44 per cent of their input contacts from visual projection neurons. That is why its selectivity index never exceeded 0.089. DNp* takes 8.83 per cent and is the decoded readout.",
+      "One point met all five criteria in the pilot: 0.60 mV per contact, inhibitory gain 2.0, adaptation 1.0 mV, lamina 300 Hz. Its descending active fraction was 0.0202 against a 0.02 floor, marginal by one part in a hundred, so this grid brackets it on every axis rather than assuming it."
+    ],
+    "the_criteria_were_not_touched_by_the_pilot": "C1 to C4 carry the thresholds registered for the failed odour contract and C5 only tightens. The pilot changed the stimulus, the declared populations and the dynamics parameters. It did not move a threshold."
+  },
+  "new_pe_dynamics_parameters_declared_here": {
+    "inhibitory_weight_gain": "Millivolts per inhibitory contact relative to an excitatory one. P/E. Default 1.0 reproduces every recorded run exactly and is omitted from the model identity while it holds that value.",
+    "adaptation_increment_mv": "Spike-frequency adaptation: millivolts of after-hyperpolarisation added per spike, decaying with adaptation_tau_ms. P/E, universal in real neurons but not measured here. Default 0.0 generates a byte-identical kernel to the one that predates it.",
+    "synaptic_target_normalisation_exponent": "Attenuation-only per-target scaling. P/E. Measured counterproductive in the pilot and fixed at 0.0 here; retained in the engine with the pilot table as the reason.",
+    "none_of_these_is_biologically_validated": "All three are engineering parameters in a transmitter-sign LIF. They do not move the project tier, which stays V0 Structural, and none of them is a measurement."
+  }
+}

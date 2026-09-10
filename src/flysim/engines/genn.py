@@ -8,7 +8,7 @@ import json
 import os
 import shutil
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -111,10 +111,43 @@ class TrackAGeNNParameters:
     central_entry_outgoing_gain: float
     tonic_drive_mv: float
     reset_synaptic_state_on_spike: bool
+    # Attenuation-only per-target synaptic normalisation. A neuron integrating far more
+    # incoming contacts than the median has, by cable theory, more membrane area and a
+    # lower input resistance, so one contact deflects it less. This exponent declares how
+    # much of that scaling to apply:
+    #
+    #     scale[target] = (reference / max(in_contacts[target], reference)) ** exponent
+    #
+    # with reference the median incoming-contact count over neurons that receive any
+    # input. At 0.0 every scale is exactly 1.0 and the weights are byte-identical to a
+    # run that predates this parameter, which is why 0.0 is the default. At 1.0 total
+    # synaptic drive becomes size-invariant. Sparsely connected neurons are never
+    # amplified, so the normalisation cannot manufacture instability at the tail.
+    # P/E: a declared cable-theory-shaped choice, not a measurement.
+    synaptic_target_normalisation_exponent: float = 0.0
+    # Spike-frequency adaptation. Each spike adds this many millivolts to an
+    # after-hyperpolarisation that decays with adaptation_tau_ms and is subtracted from
+    # the effective resting baseline. At 0.0 the generated kernel is byte-identical to the
+    # one that predates this parameter. P/E: universal in real neurons, but the value here
+    # is declared, not measured.
+    adaptation_increment_mv: float = 0.0
+    adaptation_tau_ms: float = 200.0
+    # Millivolts per inhibitory contact, relative to an excitatory one. The engine's
+    # original behaviour is 1.0, which asserts that a predicted-inhibitory contact and a
+    # predicted-excitatory contact deflect the membrane equally. Nothing supports that:
+    # the signs are transmitter predictions, and the cholinergic and GABAergic synapses
+    # being predicted differ in conductance and reversal potential. P/E, searched.
+    inhibitory_weight_gain: float = 1.0
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> TrackAGeNNParameters:
-        values = cls(**{name: raw[name] for name in cls.__dataclass_fields__})
+        values = cls(
+            **{
+                name: raw[name]
+                for name in cls.__dataclass_fields__
+                if name in raw or cls.__dataclass_fields__[name].default is MISSING
+            }
+        )
         if min(
             values.neural_dt_us,
             values.membrane_tau_ms,
@@ -127,6 +160,16 @@ class TrackAGeNNParameters:
             raise ConfigurationError("Track A synaptic scale cannot be negative")
         if values.central_entry_outgoing_gain < 1.0:
             raise ConfigurationError("Track A central-entry gain cannot be below one")
+        if not 0.0 <= values.synaptic_target_normalisation_exponent <= 1.0:
+            raise ConfigurationError(
+                "Per-target synaptic normalisation exponent must lie in [0, 1]"
+            )
+        if values.adaptation_increment_mv < 0.0:
+            raise ConfigurationError("Adaptation increment cannot be negative")
+        if values.adaptation_tau_ms <= 0.0:
+            raise ConfigurationError("Adaptation time constant must be positive")
+        if values.inhibitory_weight_gain < 0.0:
+            raise ConfigurationError("Inhibitory weight gain cannot be negative")
         if values.synaptic_delay_ms * 1000 % values.neural_dt_us != 0:
             raise ConfigurationError("Track A synaptic delay must align with the neural step")
         if values.delay_steps < 1:
@@ -194,6 +237,9 @@ class TrackAGeNNEngine:
         self._local_by_dense: np.ndarray | None = None
         self._group_dense_indices: tuple[np.ndarray, ...] = ()
         self._sparse_layout: dict[str, Any] = {}
+        self._flat_offsets: np.ndarray | None = None
+        self._flat_index_by_dense: np.ndarray | None = None
+        self._pool_flat_index: dict[str, np.ndarray] = {}
         self._last_counts: dict[int, float] = {}
         self._last_pool_counts: dict[str, np.ndarray] = {}
         self._model_identity: str | None = None
@@ -267,18 +313,58 @@ class TrackAGeNNEngine:
             if per_neuron is not None
             else ()
         )
-        neuron_model = create_neuron_model(
-            "MaleCNSTrackALIF",
-            params=shared_names,
-            vars=(
-                *promoted_vars,
-                ("V", "scalar"),
-                ("G", "scalar"),
-                ("RefracTime", "scalar"),
-                ("SpikeCount", "scalar"),
-                ("InputRateHz", "scalar"),
-            ),
-            sim_code="""
+        # Adaptation is opt-in, and when it is off the model below is character-for-
+        # character the one that predates it, so every recorded run regenerates the same
+        # kernel and the same model identity.
+        adapting = values.adaptation_increment_mv > 0.0
+        if adapting:
+            adaptation_params = ("AdaptDecay", "AdaptIncrement")
+            neuron_model = create_neuron_model(
+                "MaleCNSTrackAAdaptiveLIF",
+                params=(*shared_names, *adaptation_params),
+                vars=(
+                    *promoted_vars,
+                    ("V", "scalar"),
+                    ("G", "scalar"),
+                    ("A", "scalar"),
+                    ("RefracTime", "scalar"),
+                    ("SpikeCount", "scalar"),
+                    ("InputRateHz", "scalar"),
+                ),
+                sim_code="""
+                A = A * AdaptDecay;
+                if (RefracTime > 0.0) {
+                    RefracTime -= dt;
+                    V = Vreset;
+                }
+                else {
+                    const scalar oldG = G;
+                    const scalar baseline = Vrest + Tonic - A;
+                    V = baseline + ((V - baseline) * MembraneDecay)
+                        + (oldG * SynapticVoltageCoefficient);
+                    G = oldG * SynapseDecay;
+                    G += Isyn;
+                }
+                """,
+                threshold_condition_code=(
+                    "(InputRateHz > 0.0 && gennrand_uniform() < InputRateHz * dt / 1000.0) "
+                    "|| (RefracTime <= 0.0 && V > Vthresh)"
+                ),
+                reset_code=reset_code + " A += AdaptIncrement;",
+            )
+        else:
+            neuron_model = create_neuron_model(
+                "MaleCNSTrackALIF",
+                params=shared_names,
+                vars=(
+                    *promoted_vars,
+                    ("V", "scalar"),
+                    ("G", "scalar"),
+                    ("RefracTime", "scalar"),
+                    ("SpikeCount", "scalar"),
+                    ("InputRateHz", "scalar"),
+                ),
+                sim_code="""
             if (RefracTime > 0.0) {
                 RefracTime -= dt;
                 V = Vreset;
@@ -292,23 +378,33 @@ class TrackAGeNNEngine:
                 G += Isyn;
             }
             """,
-            threshold_condition_code=(
-                "(InputRateHz > 0.0 && gennrand_uniform() < InputRateHz * dt / 1000.0) || "
-                "(RefracTime <= 0.0 && V > Vthresh)"
-            ),
-            reset_code=reset_code,
-        )
+                threshold_condition_code=(
+                    "(InputRateHz > 0.0 && gennrand_uniform() < InputRateHz * dt / 1000.0) "
+                    "|| (RefracTime <= 0.0 && V > Vthresh)"
+                ),
+                reset_code=reset_code,
+            )
         identity = hashlib.sha256()
         identity.update(TRACK_A_GENN_MODEL_VERSION.encode())
         identity.update(graph.source_sha256.encode())
         identity.update(signs.astype("<f4", copy=False).tobytes())
         identity.update(np.asarray(sorted(entry_body_ids), dtype="<u8").tobytes())
+        # A parameter added after a run was recorded must not change that run's identity
+        # when it sits at the value which reproduces the older behaviour exactly. Each new
+        # field is therefore omitted from the identity while it is neutral, and included
+        # the moment it is not.
+        identity_payload = {
+            name: getattr(values, name) for name in values.__dataclass_fields__
+        }
+        if values.synaptic_target_normalisation_exponent == 0.0:
+            identity_payload.pop("synaptic_target_normalisation_exponent")
+        if not adapting:
+            identity_payload.pop("adaptation_increment_mv")
+            identity_payload.pop("adaptation_tau_ms")
+        if values.inhibitory_weight_gain == 1.0:
+            identity_payload.pop("inhibitory_weight_gain")
         identity.update(
-            json.dumps(
-                {name: getattr(values, name) for name in values.__dataclass_fields__},
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
+            json.dumps(identity_payload, sort_keys=True, separators=(",", ":")).encode()
         )
         # The random seed configures runtime RNG state but does not change the
         # generated CUDA model; all seeds of one graph/parameter variant share
@@ -344,6 +440,10 @@ class TrackAGeNNEngine:
         )
         local_by_dense = np.empty(graph.neuron_count, dtype=np.uint32)
         populations: list[Any] = []
+        adaptation_values = {
+            "AdaptDecay": float(np.exp(-values.dt_ms / values.adaptation_tau_ms)),
+            "AdaptIncrement": values.adaptation_increment_mv,
+        }
         homogeneous_params = {
             "MembraneDecay": values.membrane_decay,
             "SynapseDecay": values.synapse_decay,
@@ -355,6 +455,8 @@ class TrackAGeNNEngine:
             "Tonic": values.tonic_drive_mv,
         }
         neuron_params = {} if per_neuron is not None else homogeneous_params
+        if adapting:
+            neuron_params = {**neuron_params, **adaptation_values}
         for group_index, dense_indices in enumerate(group_dense_indices):
             if dense_indices.size == 0:
                 raise ConfigurationError(
@@ -370,6 +472,8 @@ class TrackAGeNNEngine:
                 "SpikeCount": 0.0,
                 "InputRateHz": 0.0,
             }
+            if adapting:
+                neuron_vars["A"] = 0.0
             if per_neuron is not None:
                 for name in HETEROGENEOUS_NEURON_PARAMETER_NAMES:
                     neuron_vars[name] = per_neuron[name][dense_indices]
@@ -384,6 +488,42 @@ class TrackAGeNNEngine:
                     neuron_vars,
                 )
             )
+
+        # Per-target normalisation scale, computed once over the whole graph so every
+        # projection uses the same reference. Exactly ones at exponent 0.
+        target_scale = np.ones(graph.neuron_count, dtype=np.float32)
+        normalisation_report: dict[str, Any] = {
+            "exponent": values.synaptic_target_normalisation_exponent,
+            "applied": False,
+        }
+        if values.synaptic_target_normalisation_exponent > 0.0:
+            in_contacts = np.bincount(
+                graph.target_indices,
+                weights=graph.contact_counts.astype(np.float64),
+                minlength=graph.neuron_count,
+            )
+            receiving = in_contacts[in_contacts > 0.0]
+            if receiving.size == 0:
+                raise ConfigurationError(
+                    "Per-target normalisation needs at least one neuron with input"
+                )
+            reference = float(np.median(receiving))
+            ratio = reference / np.maximum(in_contacts, reference)
+            target_scale = np.power(
+                ratio, values.synaptic_target_normalisation_exponent
+            ).astype(np.float32)
+            normalisation_report = {
+                "exponent": values.synaptic_target_normalisation_exponent,
+                "applied": True,
+                "reference_in_contacts_median": reference,
+                "attenuated_neuron_count": int(np.count_nonzero(target_scale < 1.0)),
+                "min_scale": float(target_scale.min()),
+                "mean_scale": float(target_scale.mean()),
+                "rule": (
+                    "scale = (median_in_contacts / max(in_contacts, median)) ** exponent; "
+                    "attenuation only, never amplification"
+                ),
+            }
 
         logical_edges = 0
         padded_slots = 0
@@ -409,6 +549,12 @@ class TrackAGeNNEngine:
                     * np.where(
                         source_entry[selection],
                         np.float32(values.central_entry_outgoing_gain),
+                        np.float32(1.0),
+                    )
+                    * target_scale[target_dense[selection]]
+                    * np.where(
+                        source_signs[selection] < 0.0,
+                        np.float32(values.inhibitory_weight_gain),
                         np.float32(1.0),
                     )
                 )
@@ -469,7 +615,29 @@ class TrackAGeNNEngine:
             "padding_factor": padded_slots / logical_edges,
             "central_entry_body_count": len(entry_body_ids),
             "central_entry_outgoing_gain": values.central_entry_outgoing_gain,
+            "per_target_normalisation": normalisation_report,
+            "inhibitory_weight_gain": values.inhibitory_weight_gain,
+            "spike_frequency_adaptation": {
+                "enabled": adapting,
+                "increment_mv_per_spike": values.adaptation_increment_mv,
+                "tau_ms": values.adaptation_tau_ms,
+                "kernel": (
+                    "MaleCNSTrackAAdaptiveLIF" if adapting else "MaleCNSTrackALIF"
+                ),
+            },
         }
+        # Flat offsets over the disjoint degree-bucket populations. The buckets partition
+        # the neurons, so concatenating their SpikeCount views yields one array that any
+        # pool can be gathered from with a single vectorised take.
+        sizes = [int(indices.size) for indices in group_dense_indices]
+        self._flat_offsets = np.concatenate(
+            [np.zeros(1, dtype=np.int64), np.cumsum(np.asarray(sizes, dtype=np.int64))]
+        )[:-1]
+        self._flat_index_by_dense = (
+            self._flat_offsets[group_by_dense.astype(np.int64)]
+            + local_by_dense.astype(np.int64)
+        )
+        self._pool_flat_index.clear()
         self._t_us = 0
         self._last_counts.clear()
         self._last_pool_counts.clear()
@@ -516,27 +684,30 @@ class TrackAGeNNEngine:
         if any(not isinstance(identifier, int) for identifier in ids):
             raise ConfigurationError("Track A GeNN output IDs must be numeric body IDs")
         assert self._group_by_dense is not None and self._local_by_dense is not None
-        count_variables = tuple(pop.vars["SpikeCount"] for pop in self._populations)
-        for variable in count_variables:
-            variable.pull_from_device()
-        values: list[float] = []
+        body_ids = [int(identifier) for identifier in ids]
+        key = f"__read_outputs__{len(body_ids)}"
+        index = self._pool_flat_index.get(key)
+        if index is None:
+            index = self._flat_index(body_ids)
+            self._pool_flat_index[key] = index
+        flat = self._flat_counts()
+        cumulative_all = flat[index].astype(np.float64)
+        previous_all = np.fromiter(
+            (self._last_counts.get(body_id, 0.0) for body_id in body_ids),
+            dtype=np.float64,
+            count=len(body_ids),
+        )
+        if np.any(cumulative_all < previous_all):
+            raise CausalityError("Track A spike counter moved backward")
+        delta_all = cumulative_all - previous_all
         # The raw per-interval spike count is retained beside the derived rate. At a
         # 15 ms coupling interval one spike is 66.7 Hz, so a consumer that wants to
         # filter the rate causally needs the integer count rather than the quantised
         # rate it was divided into.
-        counts: list[int] = []
-        for identifier in ids:
-            assert isinstance(identifier, int)
-            dense_index = graph.dense_index(identifier)
-            group_index = int(self._group_by_dense[dense_index])
-            local_index = int(self._local_by_dense[dense_index])
-            cumulative = float(count_variables[group_index].view[local_index])
-            previous = self._last_counts.get(identifier, 0.0)
-            if cumulative < previous:
-                raise CausalityError("Track A spike counter moved backward")
-            values.append((cumulative - previous) / (window_us / 1_000_000.0))
-            counts.append(round(cumulative - previous))
-            self._last_counts[identifier] = cumulative
+        values = (delta_all / (window_us / 1_000_000.0)).tolist()
+        counts = np.rint(delta_all).astype(np.int64).tolist()
+        for body_id, cumulative in zip(body_ids, cumulative_all.tolist(), strict=True):
+            self._last_counts[body_id] = cumulative
         return NeuralOutputFrame(
             t_us=self._t_us,
             ids=ids,
@@ -572,45 +743,60 @@ class TrackAGeNNEngine:
         )
         return self._group_by_dense[dense], self._local_by_dense[dense]
 
+    def _flat_index(self, body_ids: Sequence[int]) -> np.ndarray:
+        """Indices into the concatenated SpikeCount view for these bodies."""
+        graph, _ = self._require_ready()
+        assert self._flat_index_by_dense is not None
+        dense = np.fromiter(
+            (graph.dense_index(int(body_id)) for body_id in body_ids),
+            dtype=np.int64,
+            count=len(body_ids),
+        )
+        return self._flat_index_by_dense[dense]
+
+    def _flat_counts(self) -> np.ndarray:
+        """One concatenated, device-synchronised SpikeCount array over every neuron."""
+        variables = tuple(pop.vars["SpikeCount"] for pop in self._populations)
+        for variable in variables:
+            variable.pull_from_device()
+        return np.concatenate([np.asarray(variable.view) for variable in variables])
+
     def population_activity(
         self, pools: Mapping[str, Sequence[int]], window_us: int
     ) -> dict[str, dict[str, float]]:
         """Binned spike activity per named pool, differenced since the last call.
 
         This is the global-activity recorder. It reads whole populations rather than
-        per-neuron traces, so a 1314-body descending pool costs one device pull and four
-        numbers, not a membrane trace at the 0.1 ms neural step.
+        per-neuron traces, so an 89,390-body optic lobe costs one device pull and a
+        vectorised gather, not a membrane trace at the 0.1 ms neural step.
         """
         self._require_ready()
         if window_us <= 0:
             raise ConfigurationError("Population activity window must be positive")
-        variables = tuple(pop.vars["SpikeCount"] for pop in self._populations)
-        for variable in variables:
-            variable.pull_from_device()
-        views = tuple(np.asarray(variable.view) for variable in variables)
+        flat = self._flat_counts()
         seconds = window_us / 1_000_000.0
         report: dict[str, dict[str, float]] = {}
         for name, body_ids in pools.items():
             if not body_ids:
                 raise ConfigurationError(f"Activity pool {name} is empty")
-            groups, locals_ = self._locate(body_ids)
-            cumulative = np.array(
-                [float(views[g][i]) for g, i in zip(groups, locals_, strict=True)],
-                dtype=np.float64,
-            )
+            index = self._pool_flat_index.get(name)
+            if index is None or index.size != len(body_ids):
+                index = self._flat_index(body_ids)
+                self._pool_flat_index[name] = index
+            cumulative = flat[index].astype(np.float64)
             previous = self._last_pool_counts.get(name)
             if previous is None:
                 previous = np.zeros_like(cumulative)
-            if np.any(cumulative < previous - 1e-9):
-                raise CausalityError(f"Spike counter for pool {name} moved backward")
             delta = cumulative - previous
+            if np.any(delta < 0.0):
+                raise CausalityError(f"Track A spike counter moved backward in pool {name}")
             self._last_pool_counts[name] = cumulative
             report[name] = {
-                "bodies": float(len(body_ids)),
+                "bodies": float(index.size),
                 "spikes": float(delta.sum()),
-                "mean_rate_hz": float(delta.sum() / len(body_ids) / seconds),
-                "active_fraction": float(np.count_nonzero(delta) / len(body_ids)),
-                "max_rate_hz": float(delta.max() / seconds),
+                "mean_rate_hz": float(delta.sum() / index.size / seconds),
+                "active_fraction": float(np.count_nonzero(delta) / index.size),
+                "max_rate_hz": float(delta.max() / seconds) if index.size else 0.0,
             }
         return report
 

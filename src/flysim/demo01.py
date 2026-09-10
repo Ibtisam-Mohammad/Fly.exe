@@ -64,21 +64,55 @@ from flysim.errors import ConfigurationError, DatasetError
 # from rootSide, because ORN somata sit outside the CNS and carry no somaSide.
 SIDE_COLUMNS = ("somaSide", "rootSide")
 
+# Released retinotopic column coordinates. Present for optic-lobe neurons only, and read
+# verbatim: nothing here recomputes or interpolates a column assignment.
+HEX_COLUMNS = ("assignedOlHex1", "assignedOlHex2")
+
 
 @dataclass(frozen=True, slots=True)
 class PopulationSpec:
-    """One anatomically declared population: a type, a side, and where the side came from."""
+    """One anatomically declared population: a type, a side, and where the side came from.
+
+    ``match_column`` names the annotation column the type is matched against. It defaults
+    to ``type`` so a bare cell type keeps working, and becomes ``superclass`` or ``class``
+    when a whole anatomical class is declared -- every descending neuron on one side, say.
+    ``additional_types`` accepts further values in the same column, which is how a
+    functional group of separately named cell types becomes one declared population
+    without inventing a name the annotation table does not carry.
+    """
 
     name: str
     cell_type: str
     side: str | None
     side_column: str
     role: str
+    match_column: str = "type"
+    additional_types: tuple[str, ...] = ()
+    # When set, the column value is accepted if it begins with any of these prefixes.
+    # The released type names carry an anatomical naming convention -- DNp for posterior
+    # descending, DNa for anterior, and so on -- so a prefix declares a real anatomical
+    # group without enumerating every member type by hand.
+    type_prefixes: tuple[str, ...] = ()
+
+    @property
+    def accepted_types(self) -> tuple[str, ...]:
+        return (self.cell_type, *self.additional_types)
+
+    def accepts(self, value: object) -> bool:
+        if value is None:
+            return False
+        text = str(value)
+        if self.type_prefixes:
+            return text.startswith(self.type_prefixes)
+        return text in self.accepted_types
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "cell_type": self.cell_type,
+            "accepted_types": list(self.accepted_types),
+            "type_prefixes": list(self.type_prefixes),
+            "match_column": self.match_column,
             "side": self.side,
             "side_column": self.side_column,
             "role": self.role,
@@ -129,18 +163,34 @@ class Demo01Populations:
     monitors: dict[str, tuple[int, ...]]
     specs: tuple[PopulationSpec, ...]
     excluded_unknown_side: dict[str, int]
+    # Retinotopic column coordinates for entry bodies that carry them, taken verbatim
+    # from the released assignedOlHex1/assignedOlHex2 annotation columns. Empty for
+    # routes whose entry layer carries no column assignment.
+    entry_hex: dict[int, tuple[float, float]] = field(default_factory=dict)
 
     @classmethod
     def resolve(
-        cls, annotations_path: Path, graph: SparseConnectome
+        cls,
+        annotations_path: Path,
+        graph: SparseConnectome,
+        *,
+        entry_specs: tuple[PopulationSpec, ...] | None = None,
+        readout_specs: tuple[PopulationSpec, ...] | None = None,
+        monitor_pools: dict[str, dict[str, str]] | None = None,
+        require_hex: bool = False,
     ) -> Demo01Populations:
         import pyarrow.feather as feather
 
+        entry_specs = ENTRY_SPECS if entry_specs is None else entry_specs
+        readout_specs = READOUT_SPECS if readout_specs is None else readout_specs
+        monitor_pools = MONITOR_POOLS if monitor_pools is None else monitor_pools
         if not annotations_path.is_file():
             raise DatasetError(f"Annotation table is missing: {annotations_path}")
         digest = hashlib.sha256(annotations_path.read_bytes()).hexdigest()
         table = feather.read_table(annotations_path)
         needed = {"bodyId", "type", "class", "superclass", *SIDE_COLUMNS}
+        if require_hex:
+            needed |= set(HEX_COLUMNS)
         missing = sorted(needed - set(table.column_names))
         if missing:
             raise DatasetError(f"Annotation table lacks columns {missing}")
@@ -151,8 +201,8 @@ class Demo01Populations:
             bodies: list[int] = []
             unknown = 0
             sides = columns[spec.side_column]
-            for index, cell_type in enumerate(columns["type"]):
-                if cell_type != spec.cell_type:
+            for index, value in enumerate(columns[spec.match_column]):
+                if not spec.accepts(value):
                     continue
                 body_id = int(columns["bodyId"][index])
                 if body_id not in in_graph:
@@ -166,19 +216,37 @@ class Demo01Populations:
         entry: dict[str, tuple[int, ...]] = {}
         readout: dict[str, tuple[int, ...]] = {}
         excluded: dict[str, int] = {}
-        for spec in (*ENTRY_SPECS, *READOUT_SPECS):
+        entry_names = {spec.name for spec in entry_specs}
+        for spec in (*entry_specs, *readout_specs):
             bodies, unknown = resolve_spec(spec)
             if not bodies:
                 raise DatasetError(
                     f"Declared population {spec.name} ({spec.cell_type} "
                     f"{spec.side_column}={spec.side}) resolved to no body in the graph"
                 )
-            (entry if spec in ENTRY_SPECS else readout)[spec.name] = bodies
+            (entry if spec.name in entry_names else readout)[spec.name] = bodies
             if unknown:
                 excluded[spec.cell_type] = unknown
 
+        entry_hex: dict[int, tuple[float, float]] = {}
+        if require_hex:
+            wanted = {body for bodies in entry.values() for body in bodies}
+            hex1, hex2 = columns[HEX_COLUMNS[0]], columns[HEX_COLUMNS[1]]
+            for index, body in enumerate(columns["bodyId"]):
+                body_id = int(body)
+                if body_id not in wanted:
+                    continue
+                if hex1[index] is None or hex2[index] is None:
+                    continue
+                entry_hex[body_id] = (float(hex1[index]), float(hex2[index]))
+            if not entry_hex:
+                raise DatasetError(
+                    "A retinotopic route needs released column coordinates, but no entry "
+                    "body carries assignedOlHex1/assignedOlHex2"
+                )
+
         monitors: dict[str, tuple[int, ...]] = {}
-        for name, rule in MONITOR_POOLS.items():
+        for name, rule in monitor_pools.items():
             values = columns[rule["column"]]
             bodies = tuple(
                 sorted(
@@ -204,8 +272,9 @@ class Demo01Populations:
             entry=entry,
             readout=readout,
             monitors=monitors,
-            specs=(*ENTRY_SPECS, *READOUT_SPECS),
+            specs=(*entry_specs, *readout_specs),
             excluded_unknown_side=excluded,
+            entry_hex=entry_hex,
         )
 
     @property
@@ -226,6 +295,7 @@ class Demo01Populations:
             "entry_body_ids": list(self.entry_body_ids),
             "readout_body_ids": list(self.readout_body_ids),
             "excluded_unknown_side": dict(self.excluded_unknown_side),
+            "entry_bodies_with_column_coordinates": len(self.entry_hex),
             "laterality_source": (
                 "released annotation columns only: somaSide for central neurons, rootSide "
                 "for olfactory afferents whose somata lie outside the CNS"
