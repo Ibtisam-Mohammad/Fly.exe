@@ -763,11 +763,11 @@ def verdict_card(
     else:
         measured = verdict["measured"]
         criteria = verdict["criteria"]
-        rows = "   ".join(
-            f"{name}: {row['displacement_mm']:.2f} mm"
+        rows = "    |    ".join(
+            f"{name} {row['displacement_mm']:.2f} mm"
             for name, row in measured.items()
         )
-        marks = "   ".join(
+        marks = "    |    ".join(
             f"{name.split('_')[0]} {'PASS' if row['passed'] else 'FAIL'}"
             for name, row in criteria.items()
         )
