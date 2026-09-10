@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -87,21 +87,53 @@ class EmbodiedResult:
     summary: dict[str, Any]
 
 
-def _shuffle_preserving_degree(
+def _shuffled_graph(
     graph: SparseConnectome, seed: int
-) -> np.ndarray:
-    """Permute edge targets within out-degree-matched blocks, keeping every count.
+) -> tuple[SparseConnectome, dict[str, Any]]:
+    """A copy of the graph with edge targets permuted, and a report of what was preserved.
 
     The control has to differ from the exact graph in *who connects to whom* and in
     nothing else, or a difference in behaviour could be a difference in edge count or
     degree distribution instead of topology. Permuting the target array preserves the
     number of edges exactly, preserves every neuron's out-degree exactly, and preserves
     the multiset of contact counts exactly, while destroying which pairs they join.
+
+    A **new** connectome is returned rather than the original being edited. The graph's
+    arrays are read-only memory maps of the released files, so mutating them in place
+    would at best raise and at worst rewrite the release on disk. A control that damages
+    its own input data is not a control.
     """
     rng = np.random.default_rng(seed)
-    permuted = np.asarray(graph.target_indices).copy()
+    original = np.asarray(graph.target_indices)
+    permuted = original.copy()
     rng.shuffle(permuted)
-    return permuted
+    shuffled = replace(graph, target_indices=permuted)
+    out_degree_before = np.bincount(
+        np.asarray(graph.source_indices), minlength=graph.neuron_count
+    )
+    out_degree_after = np.bincount(
+        np.asarray(shuffled.source_indices), minlength=shuffled.neuron_count
+    )
+    report = {
+        "rule": (
+            "the target array is permuted, so the edge count, every out-degree and the "
+            "multiset of contact counts are preserved exactly and only which pairs the "
+            "edges join changes"
+        ),
+        "edges": int(shuffled.edge_count),
+        "edges_unchanged": int(shuffled.edge_count) == int(graph.edge_count),
+        "out_degree_preserved": bool(np.array_equal(out_degree_before, out_degree_after)),
+        "contact_multiset_preserved": bool(
+            np.array_equal(
+                np.sort(np.asarray(graph.contact_counts)),
+                np.sort(np.asarray(shuffled.contact_counts)),
+            )
+        ),
+        "targets_changed": int(np.count_nonzero(original != permuted)),
+        "source_arrays_were_not_mutated": True,
+        "seed": seed,
+    }
+    return shuffled, report
 
 
 class Demo01Recorder:
@@ -234,26 +266,8 @@ def run_embodied(
     # 25,563,197 of them.
     shuffle_report: dict[str, Any] | None = None
     if variant == "shuffled-connectome":
-        original_targets = np.asarray(graph.target_indices).copy()
-        permuted = _shuffle_preserving_degree(graph, seed)
-        out_degree_before = np.bincount(
-            np.asarray(graph.source_indices), minlength=graph.neuron_count
-        )
-        graph.target_indices[:] = permuted
-        out_degree_after = np.bincount(
-            np.asarray(graph.source_indices), minlength=graph.neuron_count
-        )
-        shuffle_report = {
-            "rule": (
-                "the target array is permuted, so the edge count, every out-degree and the "
-                "multiset of contact counts are preserved exactly and only which pairs the "
-                "edges join changes"
-            ),
-            "edges": int(graph.edge_count),
-            "out_degree_preserved": bool(np.array_equal(out_degree_before, out_degree_after)),
-            "targets_changed": int(np.count_nonzero(original_targets != permuted)),
-            "seed": seed,
-        }
+        graph, shuffle_report = _shuffled_graph(graph, seed)
+        graph.validate()
 
     parameters = {**contract["fixed_parameters"], **operating_point}
     engine = TrackAGeNNEngine(build_root / f"{sha256_json(parameters)[:12]}", variant="exact")

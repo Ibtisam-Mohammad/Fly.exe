@@ -28,7 +28,11 @@ from flysim.demo01_acceptance import (  # noqa: E402
 )
 from flysim.demo01_body import Demo01BodyParameters  # noqa: E402
 from flysim.demo01_embodied import CONTROL_VARIANTS, run_embodied  # noqa: E402
-from flysim.demo01_render import build_soma_positions, render_recording  # noqa: E402
+from flysim.demo01_render import (  # noqa: E402
+    build_soma_positions,
+    render_comparison,
+    render_recording,
+)
 from flysim.demo01_visual import VisualDecoderParameters  # noqa: E402
 from flysim.errors import ReadinessError  # noqa: E402
 
@@ -214,6 +218,15 @@ def main() -> int:
             for result in results
         },
     }
+    if args.render and len(results) > 1:
+        panel = render_comparison(
+            output_root,
+            positions_path=positions,
+            fps=args.fps,
+            variants=[result.variant for result in results],
+        )
+        print(f"comparison video: {panel} ({panel.stat().st_size / 1e6:.1f} MB)")
+
     comparison["acceptance"] = verdict
     (output_root / "control-comparison.json").write_text(
         json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8"

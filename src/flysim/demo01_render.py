@@ -63,6 +63,11 @@ REGION_TINT: dict[str, tuple[float, float, float]] = {
 }
 DEFAULT_TINT = (0.72, 0.76, 0.88)
 
+# Readout population names used only for the on-frame captions. Declared here rather
+# than imported so the renderer does not depend on the route module.
+VISUAL_LEFT_READOUT_NAME = "dn-visual-left"
+VISUAL_RIGHT_READOUT_NAME = "dn-visual-right"
+
 ROLE_COLOURS = {
     "entry": (0.35, 1.00, 0.45),
     "readout": (1.00, 0.28, 0.38),
@@ -931,9 +936,236 @@ def render_recording(
     return output_path.resolve()
 
 
+# --------------------------------------------------------------------------------------
+# The control comparison: four identical-seed runs side by side
+# --------------------------------------------------------------------------------------
+#
+# This is the shot that carries the causal evidence, and it is the one a viewer should be
+# shown before the single-run video rather than after. Four runs from an identical seed,
+# on the same time axis: the exact graph, the same brain with its readout silenced, the
+# same everything with no cue, and a degree-preserving shuffle of the graph. If the four
+# panels look alike, the demonstration has not shown what it claims, and the frame says so
+# rather than leaving the viewer to notice.
+
+COMPARISON_PANEL_ORDER = (
+    "exact",
+    "readout-ablated",
+    "stimulus-absent",
+    "shuffled-connectome",
+)
+
+COMPARISON_CAPTIONS = {
+    "exact": "EXACT: the released graph, all 25,563,197 edges",
+    "readout-ablated": "READOUT ABLATED: identical brain, body cannot hear it",
+    "stimulus-absent": "STIMULUS ABSENT: identical everything, no cue",
+    "shuffled-connectome": "SHUFFLED: same edge count and out-degrees, rewired",
+}
+
+
+def render_comparison(
+    run_root: Path,
+    *,
+    positions_path: Path,
+    output_path: Path | None = None,
+    fps: int = 30,
+    variants: Sequence[str] = COMPARISON_PANEL_ORDER,
+    glow_decay: float = 0.78,
+) -> Path:
+    """Composite the control variants into one frame each, on a shared clock.
+
+    Each panel shows that variant's brain activity and its trajectory, and the panel
+    footer carries its measured displacement. Panels for variants that were not run are
+    drawn as explicit gaps rather than omitted, so a missing control is visible.
+    """
+    try:
+        import imageio.v2 as imageio
+        from PIL import Image, ImageDraw
+    except ImportError as exc:  # pragma: no cover - environment guard
+        raise ReadinessError("Rendering needs imageio and Pillow") from exc
+
+    loaded: dict[str, dict[str, Any]] = {}
+    for variant in variants:
+        directory = run_root / variant
+        if not (directory / "summary.json").is_file():
+            continue
+        summary = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
+        rows = load_trace(directory / "trace.jsonl")
+        spikes = SpikeRecording(directory / "spikes.npz")
+        loaded[variant] = {"summary": summary, "rows": rows, "spikes": spikes}
+    if "exact" not in loaded:
+        raise ReadinessError(
+            f"The comparison needs the exact run at {run_root / 'exact'}"
+        )
+
+    reference = loaded["exact"]
+    atlas = BrainAtlas.load(
+        positions_path,
+        neuron_count=reference["spikes"].neuron_count,
+        entry_body_ids=reference["summary"]["populations"].get("entry_body_ids", ()),
+        readout_body_ids=reference["summary"]["populations"].get("readout_body_ids", ()),
+    )
+    row_by_dense = np.full(reference["spikes"].neuron_count, -1, dtype=np.int64)
+    row_by_dense[atlas.dense_index] = np.arange(atlas.drawn, dtype=np.int64)
+
+    fonts = _fonts()
+    coupling_us = int(reference["summary"]["coupling_us"])
+    interval_s = coupling_us / 1_000_000.0
+    intervals = len(reference["rows"])
+    frame_count = max(1, round(intervals * interval_s * fps))
+
+    header = 78
+    footer = 52
+    panel_w = FRAME_WIDTH // 2
+    panel_h = (FRAME_HEIGHT - header - footer) // 2
+    brain_h = panel_h - 96
+    glow = {variant: np.zeros(atlas.drawn, dtype=np.float32) for variant in loaded}
+
+    output_path = output_path or run_root / "control-comparison.mp4"
+    writer = imageio.get_writer(output_path, fps=fps, codec="libx264", quality=9)
+    try:
+        for frame_index in range(frame_count):
+            t_s = frame_index / fps
+            cursor = min(intervals - 1, int(t_s / interval_s))
+            previous = (
+                min(intervals - 1, int((frame_index - 1) / fps / interval_s))
+                if frame_index
+                else -1
+            )
+            canvas = Image.new("RGB", (FRAME_WIDTH, FRAME_HEIGHT), BACKGROUND)
+            draw = ImageDraw.Draw(canvas)
+
+            draw.rectangle((0, 0, FRAME_WIDTH, header), fill=(13, 16, 23))
+            draw.text(
+                (26, 8),
+                "MaleCNS full-graph closed loop: identical-seed controls",
+                font=fonts["title"],
+                fill=INK,
+            )
+            draw.text(
+                (26, 40),
+                "Same seed, same body, same decoder, same operating point. If these four "
+                f"panels behave alike, the demonstration has not shown a neural cause.   "
+                f"t = {t_s:5.2f} s",
+                font=fonts["small"],
+                fill=DIM,
+            )
+            draw.text(
+                (FRAME_WIDTH - 640, 14),
+                "V0 STRUCTURAL - ENGINEERING DEMONSTRATION - NOT VALIDATED PHYSIOLOGY",
+                font=fonts["small"],
+                fill=WARN,
+            )
+
+            for index, variant in enumerate(variants):
+                col, rowi = index % 2, index // 2
+                x0 = col * panel_w
+                y0 = header + rowi * panel_h
+                draw.rectangle(
+                    (x0 + 4, y0 + 4, x0 + panel_w - 4, y0 + panel_h - 4),
+                    outline=(34, 40, 52),
+                )
+                if variant not in loaded:
+                    draw.text(
+                        (x0 + 20, y0 + panel_h // 2),
+                        f"{variant}: NOT RUN",
+                        font=fonts["body"],
+                        fill=WARN,
+                    )
+                    continue
+                payload = loaded[variant]
+                rows = payload["rows"]
+                local_cursor = min(len(rows) - 1, cursor)
+                state = glow[variant]
+                state *= glow_decay
+                for interval in range(previous + 1, local_cursor + 1):
+                    if interval >= payload["spikes"].intervals:
+                        break
+                    indices, counts = payload["spikes"].interval(interval)
+                    if indices.size == 0:
+                        continue
+                    target = row_by_dense[indices]
+                    keep = target >= 0
+                    if np.any(keep):
+                        np.add.at(state, target[keep], counts[keep])
+                brain = render_brain(
+                    atlas,
+                    state,
+                    azimuth_rad=math.radians(6.0 * t_s * 0.5),
+                    elevation_rad=math.radians(6.0),
+                    width=panel_w - 16,
+                    height=brain_h,
+                    view="dorsal",
+                )
+                canvas.paste(Image.fromarray(brain), (x0 + 8, y0 + 30))
+
+                draw.text(
+                    (x0 + 14, y0 + 8),
+                    COMPARISON_CAPTIONS.get(variant, variant),
+                    font=fonts["body"],
+                    fill=INK if variant == "exact" else DIM,
+                )
+                row = rows[local_cursor]
+                travelled = math.hypot(
+                    row["pose"]["x_mm"] - rows[0]["pose"]["x_mm"],
+                    row["pose"]["y_mm"] - rows[0]["pose"]["y_mm"],
+                )
+                left = float(row["readout_hz"].get(VISUAL_LEFT_READOUT_NAME, 0.0))
+                right = float(row["readout_hz"].get(VISUAL_RIGHT_READOUT_NAME, 0.0))
+                draw.text(
+                    (x0 + 14, y0 + brain_h + 36),
+                    f"travelled {travelled:6.2f} mm    DNp L/R {left:5.2f}/{right:5.2f} Hz"
+                    f"    {row['command']['state']}",
+                    font=fonts["small"],
+                    fill=INK,
+                )
+                draw_trajectory_inset(
+                    draw,
+                    rows,
+                    local_cursor,
+                    box=(
+                        x0 + panel_w - 214,
+                        y0 + panel_h - 210,
+                        x0 + panel_w - 14,
+                        y0 + panel_h - 10,
+                    ),
+                    cue_xy=(
+                        float(payload["summary"]["body"]["cue_xy_mm"][0]),
+                        float(payload["summary"]["body"]["cue_xy_mm"][1]),
+                    ),
+                    cue_radius_mm=float(payload["summary"]["body"]["cue_radius_mm"]),
+                    fonts=fonts,
+                )
+
+            footer_y = FRAME_HEIGHT - footer
+            draw.rectangle((0, footer_y, FRAME_WIDTH, FRAME_HEIGHT), fill=(13, 16, 23))
+            draw.text(
+                (26, footer_y + 6),
+                "The shuffle preserves the edge count, every out-degree and the multiset "
+                "of contact counts, and changes only which pairs the edges join, so a "
+                "difference between it and the exact run cannot be a difference in size.",
+                font=fonts["tiny"],
+                fill=DIM,
+            )
+            draw.text(
+                (26, footer_y + 24),
+                f"commit {reference['summary'].get('code_commit', 'unknown')}   "
+                f"graph sha256 {reference['summary']['graph']['source_sha256'][:16]}   "
+                f"seed {reference['summary']['seed']}   "
+                "verdict computed separately by the frozen acceptance contract",
+                font=fonts["tiny"],
+                fill=DIM,
+            )
+            writer.append_data(np.asarray(canvas))
+    finally:
+        writer.close()
+    return output_path.resolve()
+
+
 __all__ = [
     "BODY_WIDTH",
     "BRAIN_WIDTH",
+    "COMPARISON_CAPTIONS",
+    "COMPARISON_PANEL_ORDER",
     "FOOTER_HEIGHT",
     "FRAME_HEIGHT",
     "FRAME_WIDTH",
@@ -948,5 +1180,6 @@ __all__ = [
     "build_strips",
     "load_trace",
     "render_brain",
+    "render_comparison",
     "render_recording",
 ]

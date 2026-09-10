@@ -56,6 +56,9 @@ packages = ["src/flysim"]
 [tool.pytest.ini_options]
 addopts = "-q --strict-config --strict-markers"
 testpaths = ["tests"]
+markers = [
+    "slow: tens of seconds of body physics or a full-graph build",
+]
 
 [tool.ruff]
 line-length = 100

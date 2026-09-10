@@ -33,6 +33,12 @@ import numpy as np
 
 from flysim.contracts import ActuatorCommandFrame
 from flysim.engines.body import COMMAND_FORWARD, COMMAND_YAW
+from flysim.engines.flygym import (
+    STATION_KEEPING_DOF,
+    STATION_KEEPING_LEFT_LEGS,
+    STATION_KEEPING_LEGS,
+    _clamp,
+)
 from flysim.errors import CausalityError, ConfigurationError
 
 # Every engineered stand-in this body relies on, named so the video and the artifact can
@@ -43,8 +49,11 @@ SCAFFOLDS: tuple[str, ...] = (
     "simulated VNC contributes to leg movement.",
     "Leg adhesion at a fixed gain, which no fly possesses as a switchable actuator.",
     "A female NeuroMechFly body prior driven by a male CNS graph.",
-    "Standing is holding the default leg pose with adhesion engaged, not a postural "
-    "control system.",
+    "Standing is a proportional-integral controller holding thorax pose through the "
+    "femur-tibia pitch of all six legs, ported from Track A. Without it a body commanded "
+    "to stand drifts at about 2 mm/s. A fly does this with load-sensing sensilla and "
+    "chordotonal reflexes distributed through the ventral cord, and nothing in a fly "
+    "resembles one pose estimate driving six joints in common mode.",
     "The cue is a geometric object with a radius and a position. It has no texture, no "
     "luminance spectrum and no background.",
 )
@@ -65,9 +74,32 @@ class Demo01BodyParameters:
     cue_height_mm: float
     max_forward_mm_s: float
     max_yaw_rad_s: float
+    # Station keeping, carried over unchanged from Track A's measured controller. See the
+    # module docstring for why it is not optional.
+    station_keeping_gain_rad_per_mm: float = 0.02
+    station_keeping_integral_rad_per_mm_s: float = 0.06
+    station_keeping_yaw_gain_rad_per_rad: float = 0.05
+    station_keeping_yaw_integral_rad_per_rad_s: float = 0.4
+    station_keeping_max_offset_rad: float = 0.07
+    station_keeping_max_yaw_offset_rad: float = 0.02
+    station_keeping_settle_us: int = 2000000
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> Demo01BodyParameters:
+        station: dict[str, Any] = {
+            name: float(raw[name])
+            for name in (
+                "station_keeping_gain_rad_per_mm",
+                "station_keeping_integral_rad_per_mm_s",
+                "station_keeping_yaw_gain_rad_per_rad",
+                "station_keeping_yaw_integral_rad_per_rad_s",
+                "station_keeping_max_offset_rad",
+                "station_keeping_max_yaw_offset_rad",
+            )
+            if name in raw
+        }
+        if "station_keeping_settle_us" in raw:
+            station["station_keeping_settle_us"] = int(raw["station_keeping_settle_us"])
         values = cls(
             physics_dt_us=int(raw["physics_dt_us"]),
             initial_x_mm=float(raw["initial_x_mm"]),
@@ -80,6 +112,7 @@ class Demo01BodyParameters:
             cue_height_mm=float(raw["cue_height_mm"]),
             max_forward_mm_s=float(raw["max_forward_mm_s"]),
             max_yaw_rad_s=float(raw["max_yaw_rad_s"]),
+            **station,
         )
         if values.physics_dt_us <= 0:
             raise ConfigurationError("Physics timestep must be positive")
@@ -87,6 +120,14 @@ class Demo01BodyParameters:
             raise ConfigurationError("Cue radius must be positive")
         if values.max_forward_mm_s <= 0.0 or values.max_yaw_rad_s <= 0.0:
             raise ConfigurationError("Command normalisation scales must be positive")
+        if values.station_keeping_max_offset_rad < 0.0:
+            raise ConfigurationError("Station-keeping offset limit must not be negative")
+        if values.station_keeping_max_yaw_offset_rad < 0.0:
+            raise ConfigurationError("Station-keeping yaw offset limit must not be negative")
+        if values.station_keeping_settle_us % values.physics_dt_us:
+            raise ConfigurationError(
+                "Station-keeping settle window must be a whole number of physics steps"
+            )
         return values
 
 
@@ -161,6 +202,9 @@ class Demo01VisualBody:
         self._actuator_type = ActuatorType.POSITION
         self._leg_dofs = leg_dofs
         self._actuated_dofs = fly.get_actuated_jointdofs_order(ActuatorType.POSITION)
+        self._actuator_index = {
+            dof.name: index for index, dof in enumerate(self._actuated_dofs)
+        }
         joint_order = fly.get_jointdofs_order()
         mujoco.mj_forward(simulation.mj_model, simulation.mj_data)
         initial_angles = simulation.get_joint_angles(fly_name)
@@ -178,6 +222,16 @@ class Demo01VisualBody:
         simulation.mj_data.qvel[:] = 0.0
         mujoco.mj_forward(simulation.mj_model, simulation.mj_data)
         self._standing_targets = settled.copy()
+        # The controller's state has to exist before the convergence window runs it.
+        self._station_keeping_channel = self._build_station_keeping_channel()
+        self._station_reference: tuple[float, float, float] | None = None
+        self._station_fore_aft_integral_mm_s = 0.0
+        self._station_yaw_integral_rad_s = 0.0
+        self._station_error_mm = 0.0
+        self._station_peak_error_mm = 0.0
+        self._station_offsets_rad = (0.0, 0.0)
+        self._station_settle_us = 0
+        self._converge_station_keeping()
         controller.reset(seed=seed, init_magnitudes=np.zeros(6, dtype=np.float64))
         self._command = {COMMAND_FORWARD: 0.0, COMMAND_YAW: 0.0}
         self._t_us = 0
@@ -218,6 +272,193 @@ class Demo01VisualBody:
             COMMAND_YAW: frame.value_for(COMMAND_YAW, 0.0),
         }
 
+    def _build_station_keeping_channel(self) -> tuple[tuple[int, float], ...]:
+        """Actuator index and differential sign for each leg the controller acts through.
+
+        The femur-tibia pitch of all six legs: common mode shifts the body fore-aft over
+        planted feet, differential mode yaws it. Both channels were chosen in Track A by
+        measuring the drift response of every leg joint group, and FTi pitch has the
+        largest authority in each mode.
+        """
+        channel: list[tuple[int, float]] = []
+        for leg in STATION_KEEPING_LEGS:
+            name = STATION_KEEPING_DOF.format(leg=leg)
+            try:
+                index = self._actuator_index[name]
+            except KeyError as exc:
+                raise ConfigurationError(
+                    f"Station-keeping channel {name} is not an actuated DOF"
+                ) from exc
+            channel.append((index, 1.0 if leg in STATION_KEEPING_LEFT_LEGS else -1.0))
+        return tuple(channel)
+
+    def _release_station_reference(self) -> None:
+        """Forget where the body was standing, but keep the bias that holds it up.
+
+        The integral converges on the actuator bias that cancels the drift force, and
+        that force is a property of the standing configuration and the body's load rather
+        than of any particular position. Discarding it whenever the fly walks would make
+        every new stance re-converge from zero, and that re-convergence excursion is most
+        of the displacement the standing criteria measure.
+        """
+        self._station_reference = None
+        self._station_offsets_rad = (0.0, 0.0)
+
+    def _reset_station_keeping(self) -> None:
+        """Forget the pose *and* the bias. Only for when the controller is switched off."""
+        self._release_station_reference()
+        self._station_fore_aft_integral_mm_s = 0.0
+        self._station_yaw_integral_rad_s = 0.0
+
+    def _converge_station_keeping(self) -> None:
+        """Charge the station-keeping integral before the run starts, changing nothing else.
+
+        Without this the first stance spends a second or two converging on the actuator
+        bias that holds the body still, and that excursion is a controller startup
+        transient scored as a stance defect.
+
+        The window is a calibration, not simulated behaviour, so the body must come out of
+        it exactly as it went in. Every physics state the settle touches is saved and
+        restored, and the only thing carried forward is the controller's own integral.
+        """
+        mujoco = self._mujoco
+        settle_us = self.parameters.station_keeping_settle_us
+        if settle_us <= 0 or not any(
+            (
+                self.parameters.station_keeping_gain_rad_per_mm,
+                self.parameters.station_keeping_integral_rad_per_mm_s,
+                self.parameters.station_keeping_yaw_gain_rad_per_rad,
+                self.parameters.station_keeping_yaw_integral_rad_per_rad_s,
+            )
+        ):
+            return
+        data = self._simulation.mj_data
+        saved = (
+            np.array(data.qpos, copy=True),
+            np.array(data.qvel, copy=True),
+            np.array(data.act, copy=True),
+            np.array(data.ctrl, copy=True),
+            float(data.time),
+        )
+        adhered = np.ones(6, dtype=bool)
+        for _ in range(settle_us // self.parameters.physics_dt_us):
+            targets = self._standing_targets.copy()
+            self._apply_station_keeping(targets)
+            self._simulation.set_actuator_inputs(
+                self._fly_name, self._actuator_type, targets
+            )
+            self._simulation.set_leg_adhesion_states(self._fly_name, adhered)
+            self._simulation.step()
+        data.qpos[:] = saved[0]
+        data.qvel[:] = saved[1]
+        data.act[:] = saved[2]
+        data.ctrl[:] = saved[3]
+        data.time = saved[4]
+        mujoco.mj_forward(self._simulation.mj_model, data)
+        self._release_station_reference()
+        self._station_peak_error_mm = 0.0
+        self._station_settle_us = settle_us
+
+    @staticmethod
+    def _clamped_integral(accumulated: float, gain: float, limit: float) -> float:
+        if gain == 0.0:
+            return 0.0
+        bound = abs(limit / gain)
+        return min(bound, max(-bound, accumulated))
+
+    def _apply_station_keeping(self, targets: np.ndarray) -> None:
+        """Null uncommanded drift by shifting the stance legs, never the physics.
+
+        Ported unchanged from Track A, whose measurements are in
+        docs/evidence/TRACK_A_STATION_KEEPING.md. Three of its design decisions are load
+        bearing and are kept rather than rediscovered:
+
+        the integral term does the work, because the channel's response reverses sign near
+        0.055 rad so a proportional gain stiff enough to hold a small error saturates that
+        narrow band and limit-cycles;
+
+        the offset limit is part of the control design and not a safety margin, because the
+        measured response is non-monotone -- drift falls from +1.02 mm/s at zero offset
+        through zero near 0.055 rad but is +1.40 mm/s at 0.12 rad, worse than no control --
+        so both the proportional term and the wound-up integral have to stay inside the
+        first monotone branch;
+
+        there is deliberately no rate term, because differentiating thorax pose over a
+        millisecond step measures contact jitter rather than drift, and the smallest rate
+        gain Track A swept moved the body 5.9 mm instead of 0.36 mm.
+
+        Provenance E. No biological content.
+        """
+        proportional = self.parameters.station_keeping_gain_rad_per_mm
+        integral = self.parameters.station_keeping_integral_rad_per_mm_s
+        yaw_proportional = self.parameters.station_keeping_yaw_gain_rad_per_rad
+        yaw_integral = self.parameters.station_keeping_yaw_integral_rad_per_rad_s
+        if not any((proportional, integral, yaw_proportional, yaw_integral)):
+            self._reset_station_keeping()
+            return
+        x_mm, y_mm, _, heading_rad = self.pose()
+        if self._station_reference is None:
+            # Latch where standing began, so the fly holds where it stopped rather than
+            # being pulled back toward its spawn.
+            self._station_reference = (x_mm, y_mm, heading_rad)
+            self._station_offsets_rad = (0.0, 0.0)
+            self._station_error_mm = 0.0
+            return
+        reference_x, reference_y, reference_heading = self._station_reference
+        delta_x = x_mm - reference_x
+        delta_y = y_mm - reference_y
+        # Fore-aft in the frame the reference pose defined, so a body that has rotated
+        # corrects along its own axis rather than the world's.
+        fore_aft_mm = delta_x * math.cos(reference_heading) + delta_y * math.sin(
+            reference_heading
+        )
+        yaw_error_rad = math.atan2(
+            math.sin(heading_rad - reference_heading),
+            math.cos(heading_rad - reference_heading),
+        )
+        limit = self.parameters.station_keeping_max_offset_rad
+        yaw_limit = self.parameters.station_keeping_max_yaw_offset_rad
+        dt_s = self.parameters.physics_dt_us / 1_000_000.0
+        self._station_fore_aft_integral_mm_s = self._clamped_integral(
+            self._station_fore_aft_integral_mm_s + fore_aft_mm * dt_s, integral, limit
+        )
+        self._station_yaw_integral_rad_s = self._clamped_integral(
+            self._station_yaw_integral_rad_s + yaw_error_rad * dt_s, yaw_integral, yaw_limit
+        )
+        common = _clamp(
+            proportional * fore_aft_mm + integral * self._station_fore_aft_integral_mm_s,
+            limit,
+        )
+        differential = _clamp(
+            yaw_proportional * yaw_error_rad
+            + yaw_integral * self._station_yaw_integral_rad_s,
+            yaw_limit,
+        )
+        for index, sign in self._station_keeping_channel:
+            targets[index] += _clamp(common + sign * differential, limit)
+        self._station_offsets_rad = (common, differential)
+        self._station_error_mm = math.hypot(delta_x, delta_y)
+        self._station_peak_error_mm = max(
+            self._station_peak_error_mm, self._station_error_mm
+        )
+
+    def station_keeping(self) -> dict[str, Any]:
+        """What the controller did, for the run summary."""
+        return {
+            "settle_us": self._station_settle_us,
+            "held_pose_error_mm": self._station_error_mm,
+            "peak_pose_error_mm": self._station_peak_error_mm,
+            "common_offset_rad": self._station_offsets_rad[0],
+            "differential_offset_rad": self._station_offsets_rad[1],
+            "provenance": "E",
+            "ported_from": "Track A, docs/evidence/TRACK_A_STATION_KEEPING.md",
+            "why": (
+                "Without it a body commanded to stand travelled 6.675 mm and rotated 81 "
+                "degrees in three seconds with zero commands issued, which is more than "
+                "the run it was supposed to be a control for."
+            ),
+        }
+
     def _apply_physics_action(self) -> None:
         from flygym_demo.complex_terrain.hybrid_controller import HybridControllerObservation
 
@@ -228,8 +469,10 @@ class Demo01VisualBody:
         )
         if bool(np.allclose(descending, 0.0)):
             targets = self._standing_targets.copy()
+            self._apply_station_keeping(targets)
             adhesion = np.ones(6, dtype=bool)
         else:
+            self._release_station_reference()
             observation = HybridControllerObservation.from_sim(
                 self._simulation, self._fly_name
             )
@@ -334,6 +577,7 @@ class Demo01VisualBody:
             "cue_xy_mm": [self.parameters.cue_x_mm, self.parameters.cue_y_mm],
             "cue_radius_mm": self.parameters.cue_radius_mm,
             "provenance": "E",
+            "station_keeping": self.station_keeping(),
             "scaffolds": list(SCAFFOLDS),
             "sensor_channels_published": [],
             "why_no_sensor_channels": (

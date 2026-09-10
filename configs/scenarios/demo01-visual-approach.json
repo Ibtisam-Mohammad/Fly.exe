@@ -11,18 +11,31 @@
     "the_turn_direction_is_an_engineering_choice": "CORRECTED. An earlier wording claimed the turn direction is a property of the frozen network. It is not. The decoder carries an explicit turn sign of -1 or +1, so flipping one number turns an approach into an avoidance, which makes the direction of the behaviour an engineering choice rather than a measurement. What the network does determine is which descending side is stronger for a given cue side, and that the asymmetry reverses when the cue moves, which is what the operating-point search measured. The convention here is to turn toward the stronger side, declared rather than derived."
   },
   "body": {
-    "physics_dt_us": 1000,
+    "physics_dt_us": 500,
     "initial_x_mm": 0.0,
     "initial_y_mm": 0.0,
     "initial_heading_rad": 0.0,
-    "spawn_height_mm": 1.35,
+    "spawn_height_mm": 0.5,
     "cue_x_mm": 10.7,
     "cue_y_mm": 9.0,
     "cue_radius_mm": 2.5,
     "cue_height_mm": 2.5,
     "max_forward_mm_s": 12.0,
     "max_yaw_rad_s": 3.0,
-    "note": "The cue sits 14.0 mm away at 40.1 degrees to the fly's left, subtending an angular radius of 10.3 degrees at the start and growing as the fly approaches. The 40 degree bearing is inside the searched retinal map's ipsilateral range and well outside the contralateral eye's, which is what makes the input lateralised before any dynamics run."
+    "note": "The cue sits 14.0 mm away at 40.1 degrees to the fly's left, subtending an angular radius of 10.3 degrees at the start and growing as the fly approaches. The 40 degree bearing is inside the searched retinal map's ipsilateral range and well outside the contralateral eye's, which is what makes the input lateralised before any dynamics run.",
+    "station_keeping_gain_rad_per_mm": 0.02,
+    "station_keeping_integral_rad_per_mm_s": 0.12,
+    "station_keeping_yaw_gain_rad_per_rad": 0.05,
+    "station_keeping_yaw_integral_rad_per_rad_s": 0.4,
+    "station_keeping_max_offset_rad": 0.07,
+    "station_keeping_max_yaw_offset_rad": 0.02,
+    "station_keeping_settle_us": 2000000,
+    "why_these_body_values": {
+      "spawn_height_mm": "Track A's registered value. An earlier version of this scenario invented 1.35 mm, which made the fly fall about 0.9 mm and land hard: the thorax then sank from 1.374 to as low as 0.798 mm and the body slid. At 0.5 mm the thorax holds between 1.046 and 1.12 mm and lateral drift falls to under 0.01 mm.",
+      "physics_dt_us": "Track A's registered 500 us step. An earlier 1000 us step made leg contacts less stable, and 15 ms of coupling is 30 physics steps at this value.",
+      "station_keeping": "A body commanded to stand drifts, which is a documented property of this body prior rather than a fault in this module; see docs/evidence/TRACK_A_STATION_KEEPING.md. Measured here with no brain attached over the real 20 s duration: 14.413 mm with the controller off, 6.026 mm at Track A's registered integral gain of 0.06, and 2.294 mm at 0.12. The integral gain is doubled relative to Track A because this body actuates legs only while Track A also actuates head and proboscis degrees of freedom, so the gains are re-derived rather than inherited. The criterion is a body-only one, that a fly commanded to stand should stand, and no neural or behavioural quantity enters it.",
+      "the_offset_limits_are_not_safety_margins": "Track A measured the channel's drift response to be non-monotone, falling from +1.02 mm/s at zero offset through zero near 0.055 rad but rising to +1.40 mm/s at 0.12 rad, which is worse than no control at all. The limits keep both the proportional term and the wound-up integral inside the first monotone branch, and raising them would saturate the controller onto the worst available operating point. They are carried over unchanged."
+    }
   },
   "decoder": {
     "quiescent_us": 1500000,
@@ -46,7 +59,8 @@
     "exact": "The run itself.",
     "readout-ablated": "The declared descending readout is forced to zero after the brain has computed it. The brain runs identically; the body cannot hear it. Behaviour surviving this was never neural.",
     "stimulus-absent": "No cue. Everything else identical, including the seed and the lamina baseline drive.",
-    "shuffled-connectome": "The target array is permuted, so the edge count, every out-degree and the multiset of contact counts are preserved exactly and only which pairs the edges join changes. All 25,563,197 edges are still built and executed."
+    "shuffled-connectome": "The target array is permuted, so the edge count, every out-degree and the multiset of contact counts are preserved exactly and only which pairs the edges join changes. All 25,563,197 edges are still built and executed.",
+    "what_the_standing_variants_measure": "The readout-ablated and stimulus-absent variants never command a movement, so their displacement is the body's residual standing drift, measured at 2.294 mm over 20 s. That is the floor the exact run has to clear, and it is why the drift was fixed in the stance model rather than by relaxing the acceptance criteria."
   },
   "what_may_and_may_not_be_claimed": {
     "may_claim_if_the_controls_behave": "Full-graph causal embodiment: the body's behaviour depends on the simulated neural readout, on the exact released graph, with every neuron and every edge executed.",
