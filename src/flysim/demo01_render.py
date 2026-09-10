@@ -644,6 +644,156 @@ def _fonts() -> dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------------------
+# Opening and closing cards
+# --------------------------------------------------------------------------------------
+
+
+def _wrap(draw: Any, text: str, font: Any, width: int) -> list[str]:
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if draw.textlength(candidate, font=font) <= width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _card(
+    image_class: Any,
+    draw_module: Any,
+    fonts: dict[str, Any],
+    *,
+    heading: str,
+    lines: list[tuple[str, str]],
+    footer: str,
+) -> Any:
+    """One full-frame card. ``lines`` is a list of (label, body) pairs."""
+    canvas = image_class.new("RGB", (FRAME_WIDTH, FRAME_HEIGHT), BACKGROUND)
+    draw = draw_module.Draw(canvas)
+    y = 120
+    draw.text((140, y), heading, font=fonts["title"], fill=INK)
+    y += 70
+    draw.line((140, y, FRAME_WIDTH - 140, y), fill=(40, 48, 62), width=2)
+    y += 40
+    for label, body in lines:
+        if label:
+            draw.text((140, y), label, font=fonts["body"], fill=WARN)
+            y += 30
+        for wrapped in _wrap(draw, body, fonts["body"], FRAME_WIDTH - 320):
+            draw.text((160, y), wrapped, font=fonts["body"], fill=INK if label else DIM)
+            y += 27
+        y += 20
+    footer_y = FRAME_HEIGHT - 130
+    for wrapped in _wrap(draw, footer, fonts["small"], FRAME_WIDTH - 320):
+        draw.text((140, footer_y), wrapped, font=fonts["small"], fill=DIM)
+        footer_y += 26
+    return canvas
+
+
+def opening_card(summary: dict[str, Any], fonts: dict[str, Any]) -> Any:
+    from PIL import Image, ImageDraw
+
+    graph = summary["graph"]
+    populations = summary["populations"]
+    entry = sum(populations["entry_sizes"].values())
+    return _card(
+        Image,
+        ImageDraw,
+        fonts,
+        heading="A visual cue reaching a body through the whole released MaleCNS graph",
+        lines=[
+            (
+                "WHAT IS EXECUTED",
+                f"{graph['neurons']:,} neurons and {graph['edges']:,} edges, every one "
+                "built and stepped. The engine refuses to run if a single registered edge "
+                "is missing.",
+            ),
+            (
+                "THE ONLY ROUTE FROM WORLD TO BODY",
+                "cue geometry, then a retinotopic drive on "
+                f"{entry:,} lamina monopolar cells, then the full runtime, then a declared "
+                "descending readout, a causal filter, an engineering decoder, and the "
+                "body. The decoder takes no sensor input and the body publishes no sensory "
+                "channel, so there is no shortcut to disable.",
+            ),
+            (
+                "WHAT IS NOT EXECUTED",
+                "The retina. All 66,533 photoreceptor output edges are zeroed by the "
+                "frozen sign policy, because fly photoreceptors are histaminergic and "
+                "histamine is absent from the transmitter model. Entry is one synapse "
+                "downstream.",
+            ),
+            (
+                "TIER",
+                "V0 Structural. This is an engineering demonstration. The network "
+                "parameters are P/E, the decoder and body are E, and nothing here is "
+                "validated physiology or a measurement of a fly.",
+            ),
+        ],
+        footer=(
+            f"commit {summary.get('code_commit', 'unknown')}    "
+            f"graph sha256 {graph['source_sha256'][:16]}    seed {summary['seed']}"
+        ),
+    )
+
+
+def verdict_card(
+    summary: dict[str, Any], verdict: dict[str, Any] | None, fonts: dict[str, Any]
+) -> Any:
+    from PIL import Image, ImageDraw
+
+    if verdict is None:
+        lines = [
+            (
+                "NO VERDICT HAS BEEN COMPUTED",
+                "This recording has not been through the frozen acceptance contract, so "
+                "nothing about causation may be read off it. A single run that looks right "
+                "is exactly what the predecessor demonstration produced while its body was "
+                "not listening to its brain.",
+            )
+        ]
+    else:
+        measured = verdict["measured"]
+        criteria = verdict["criteria"]
+        rows = "   ".join(
+            f"{name}: {row['displacement_mm']:.2f} mm"
+            for name, row in measured.items()
+        )
+        marks = "   ".join(
+            f"{name.split('_')[0]} {'PASS' if row['passed'] else 'FAIL'}"
+            for name, row in criteria.items()
+        )
+        lines = [
+            ("VERDICT", str(verdict["claim"])),
+            ("", str(verdict["claim_text"])),
+            ("DISPLACEMENT BY VARIANT", rows),
+            ("FROZEN CRITERIA", marks),
+            (
+                "WHAT MAY NEVER BE CLAIMED",
+                str(verdict["may_never_claim"]),
+            ),
+        ]
+    return _card(
+        Image,
+        ImageDraw,
+        fonts,
+        heading="What this does and does not establish",
+        lines=lines,
+        footer=(
+            "The contract was committed before these runs, and the code that applies it "
+            "cannot run a simulation or alter a threshold."
+        ),
+    )
+
+
 def render_recording(
     run_directory: Path,
     *,
@@ -692,6 +842,14 @@ def render_recording(
     output_path = output_path or run_directory / "demo.mp4"
     writer = imageio.get_writer(output_path, fps=fps, codec="libx264", quality=9)
 
+    verdict_path = run_directory.parent / "acceptance.json"
+    verdict = (
+        json.loads(verdict_path.read_text(encoding="utf-8"))
+        if verdict_path.is_file()
+        else None
+    )
+    card_seconds = 6
+
     coupling_us = int(summary["coupling_us"])
     interval_s = coupling_us / 1_000_000.0
     frame_period_s = 1.0 / fps
@@ -705,6 +863,9 @@ def render_recording(
 
     frame_count = max(1, round(len(rows) * interval_s * fps))
     try:
+        opening = np.asarray(opening_card(summary, fonts))
+        for _ in range(card_seconds * fps):
+            writer.append_data(opening)
         for frame_index in range(frame_count):
             t_s = frame_index * frame_period_s
             cursor = min(len(rows) - 1, int(t_s / interval_s))
@@ -931,6 +1092,9 @@ def render_recording(
                 fill=DIM,
             )
             writer.append_data(np.asarray(canvas))
+        closing = np.asarray(verdict_card(summary, verdict, fonts))
+        for _ in range(card_seconds * fps):
+            writer.append_data(closing)
     finally:
         writer.close()
     return output_path.resolve()
@@ -1179,7 +1343,9 @@ __all__ = [
     "build_soma_positions",
     "build_strips",
     "load_trace",
+    "opening_card",
     "render_brain",
     "render_comparison",
     "render_recording",
+    "verdict_card",
 ]

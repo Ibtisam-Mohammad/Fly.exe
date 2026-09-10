@@ -1323,8 +1323,8 @@ with 19.95% of their input contacts, about 2,000 times the olfactory flow.
 **The retina cannot be executed and this is declared rather than worked around.** All 66,533
 photoreceptor output edges are zeroed by the frozen ND-10 sign policy: fly photoreceptors
 are histaminergic and histamine is absent from the transmitter model. Entry is therefore one
-synapse downstream at the lamina monopolar cells L1, L2 and L5, 6,199 bodies carrying
-released column coordinates over 877 distinct left-eye columns. Retinotopy survives to the
+synapse downstream at the lamina monopolar cells L1, L2 and L5, 5,307 of 5,342 declared
+bodies carrying released column coordinates over 877 distinct left-eye columns. Retinotopy survives to the
 lobula, with two disjoint hex patches driving LC4 response vectors of cosine similarity
 +0.000, and 99,128 of 99,154 optic-lobe neurons lie on the path by hop 2, so the optic lobe
 computes the visual response rather than being stepped beside it.

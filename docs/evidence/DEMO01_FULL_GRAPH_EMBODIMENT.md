@@ -78,8 +78,9 @@ scenario and on every rendered frame.
 
 ## Entry: the retinotopic lamina
 
-L1, L2 and L5, 6,199 bodies carrying released `assignedOlHex1`/`assignedOlHex2` column
-coordinates over 877 distinct left-eye columns. L3 and L4 are excluded, and the reason is a
+L1, L2 and L5: 5,342 bodies declared, of which **5,307 carry released
+`assignedOlHex1`/`assignedOlHex2` column coordinates** over 877 distinct left-eye columns.
+The 35 without one are held at baseline rather than given an invented retinal position. L3 and L4 are excluded, and the reason is a
 property of the release rather than a modelling choice: released columns cover L3 on the
 right only, 892 of 892 against 0 of 880 on the left, and L4 on neither side. Driving them
 would have put a two-fold left-right imbalance into the entry layer before any dynamics ran.
