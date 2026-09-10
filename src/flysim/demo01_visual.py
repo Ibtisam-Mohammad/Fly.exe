@@ -43,10 +43,16 @@ So the loop is::
 
 One consequence is recorded rather than hidden. The strongest route in this connectome is
 looming to escape descending neurons, and the canonical approach route (LC10a to AOTU019
-to DNa02) is both 23 times weaker and predicted *inhibitory* at its final synapse. The
-declared behaviour target is therefore a cue-side-dependent turn whose **sign is read off
-the frozen network**, not chosen in advance. Turning toward the cue and turning away from
-it are both acceptable outcomes; which one occurs is a measured property.
+to DNa02) is both 23 times weaker and predicted *inhibitory* at its final synapse. So the
+declared behaviour target is a cue-side-dependent turn rather than an approach.
+
+What the network determines, and what the operating-point search measures, is **which
+descending side is stronger for a given cue side, and that this reverses when the cue
+moves**. What the network does *not* determine is the direction the fly then turns: the
+decoder carries an explicit sign, so flipping one engineering number turns an approach into
+an avoidance. The convention here is to turn toward the stronger side, and it is declared
+rather than derived. Presenting the resulting approach as the network's own choice would be
+an over-claim.
 
 Every parameter in this module is P/E or E. Nothing here is validated physiology.
 """
@@ -658,14 +664,14 @@ class VisualLocomotorState(StrEnum):
 class VisualDecoderParameters:
     """How descending rates become forward and yaw drive. Every value is E provenance.
 
-    ``turn_sign`` is the one parameter that deserves comment. The strongest visual route
-    in this connectome runs from looming detectors to escape descending neurons, and the
-    canonical approach route is both far weaker and predicted inhibitory at its final
-    synapse, so whether a cue on the left produces a left turn or a right turn is a
-    property of the frozen network rather than something to choose. The decoder therefore
-    carries an explicit sign, fitted once on development scenarios and frozen with the
-    rest of the decoder, and the value it takes is reported as a measurement of the
-    network. Turning toward the cue and turning away from it are both acceptable outcomes.
+    ``turn_sign`` is the one parameter that deserves comment, and an earlier version of
+    this docstring got it wrong. It may only be -1 or +1, and it selects whether a
+    lateralised readout steers toward the stronger side or away from it. That means the
+    *direction* of the behaviour is an engineering choice, not a property of the network:
+    flipping this one number turns an approach into an avoidance. What the network
+    determines is which descending side is stronger for a given cue side, and that the
+    asymmetry reverses when the cue moves. The convention adopted here is +1, turn toward
+    the stronger side, and it is declared rather than derived.
     """
 
     quiescent_us: int

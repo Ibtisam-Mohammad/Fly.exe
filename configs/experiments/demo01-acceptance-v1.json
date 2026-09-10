@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo01-acceptance-v1",
+  "title": "DEMO-01 engineering acceptance contract: what the closed-loop demonstration may and may not claim",
+  "status": "PREREGISTERED. Committed before the final control matrix runs. Engineering acceptance, not evidence.",
+  "provenance": "E for the acceptance logic; the run it judges is P/E for the network and E for the decoder and body.",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": ["DATA-03", "DATA-04", "ND-01", "ND-03", "ND-04", "ND-10", "DEMO-02", "DEMO-03"],
+
+  "why_this_exists": {
+    "the_defect_it_guards_against": "The predecessor demonstration reached its behaviour through two sensor-to-motor shortcuts. Measured on its own recorded traces, steering correlated with the raw odour gradient at +0.975 and with the descending readout at +0.132, and with every synaptic weight zeroed the fly still walked 100.2 mm at +0.994 correlation with the gradient. A demonstration that looks right and is not caused by the brain is worse than no demonstration, because it is persuasive.",
+    "so_the_claim_is_gated_on_controls_not_on_appearance": "The exact run is not evidence of anything on its own. What licenses a causal claim is that the control variants fail, from an identical seed, with the same body, the same decoder and the same network.",
+    "why_freeze_it_first": "Deciding after seeing the numbers which comparison counts is how a demonstration becomes a post-hoc story. The thresholds below are closed as of this commit and may not be restated."
+  },
+
+  "what_is_being_judged": {
+    "the_loop": "cue geometry -> retinotopic lamina encoder -> full MaleCNS runtime, 165,122 neurons and all 25,563,197 edges built and stepped -> declared posterior descending readout -> causal exponential filter -> E decoder -> engineered walking controller -> MuJoCo body -> the cue's retinal position changes",
+    "operating_point": "Whatever demo01-visual-operating-point-v1 selected. The demonstration reads it from the frozen artifact and may not substitute its own.",
+    "sensorimotor_delay": "One coupling interval, 15 ms. A command decoded from brain activity over one interval drives the body over the next, because a brain cannot move a body with activity it has not produced yet.",
+    "duration_us": 20000000,
+    "seed": 1
+  },
+
+  "control_variants": {
+    "exact": "The run itself.",
+    "readout-ablated": "The two decoded descending populations are forced to zero after the brain has computed them. The brain runs identically and the body cannot hear it.",
+    "stimulus-absent": "No cue. Identical seed, identical body, identical lamina baseline drive.",
+    "shuffled-connectome": "The edge target array is permuted, so the edge count, every out-degree and the multiset of contact counts are preserved exactly and only which pairs the edges join changes. All 25,563,197 edges are still built and executed."
+  },
+
+  "acceptance_criteria": {
+    "A1_the_fly_starts_still_and_then_moves": {
+      "statement": "In the exact run the fly must be stationary through the declared quiescent period and must then initiate locomotion, defined as the decoder reaching its LOCOMOTING state and a net displacement of at least 3.0 mm over the run.",
+      "min_displacement_mm": 3.0,
+      "why": "Without this there is no behaviour to explain and the remaining criteria are vacuous."
+    },
+    "A2_the_behaviour_is_caused_by_the_neural_readout": {
+      "statement": "The readout-ablated variant must produce at most one quarter of the exact run's displacement, and must never reach the LOCOMOTING state.",
+      "max_ablated_displacement_fraction": 0.25,
+      "ablated_must_not_locomote": true,
+      "why": "This is the criterion the predecessor failed. If the body still walks when the readout is silenced, the walking was never neural."
+    },
+    "A3_the_behaviour_requires_the_stimulus": {
+      "statement": "The stimulus-absent variant must produce at most one quarter of the exact run's displacement, and its final distance to where the cue would have been must not decrease by more than 1.0 mm.",
+      "max_absent_displacement_fraction": 0.25,
+      "max_absent_approach_mm": 1.0,
+      "why": "Distinguishes a cue-driven turn from a network that walks in some direction regardless."
+    },
+    "A4_the_turn_is_cue_locked": {
+      "statement": "In the exact run the mean signed difference between the two decoded descending populations must have the same sign as the cue's mean signed bearing, over the intervals in which the decoder is LOCOMOTING.",
+      "why": "A displacement in the right direction could be luck. This asks whether the readout asymmetry tracks which side the cue is on, which is the property the operating-point search selected for."
+    },
+    "A5_topology_claim_gate": {
+      "statement": "A claim that MaleCNS topology matters, as opposed to a network of this size and degree distribution, requires the shuffled-connectome variant to differ from the exact run by at least 3.0 mm of displacement or to fail A1.",
+      "min_shuffled_divergence_mm": 3.0,
+      "this_criterion_is_optional_to_pass": true,
+      "why_optional": "A1 to A4 license the causal-embodiment claim. A5 licenses a strictly stronger claim about topology. Failing A5 does not invalidate the demonstration; it bounds what may be said about it, and that bound must then be stated rather than omitted."
+    }
+  },
+
+  "claim_ladder": {
+    "if_A1_fails": "There is no demonstration. Report the failure and the measured numbers.",
+    "if_A1_passes_and_A2_or_A3_fails": "The demonstration is INVALID as a causal claim, exactly as the predecessor was, and must be reported as such. No video may be presented as a brain controlling a body.",
+    "if_A1_to_A4_pass_and_A5_fails": "May claim: full-graph causal embodiment. The body's behaviour depends on the simulated neural readout, computed on the exact released graph with every neuron and every edge executed, and it requires the stimulus. Must also state that a degree-preserving shuffle of the same graph was not distinguished, so the demonstration does not show that MaleCNS connectivity specifically is responsible.",
+    "if_A1_to_A5_pass": "May additionally claim that the exact MaleCNS connectivity, and not merely a network of its size and degree distribution, is responsible for the behaviour at this operating point.",
+    "may_never_claim": "That this is what a fly does; that any parameter here is a measurement; that any mechanism is validated; or that the tier has changed. The tier is V0 Structural."
+  },
+
+  "declared_limitations_that_must_travel_with_any_claim": {
+    "the_retina_is_not_executed": "All 66,533 photoreceptor output edges are zeroed by the frozen ND-10 sign policy, because fly photoreceptors are histaminergic and histamine is absent from the transmitter model. Entry is one synapse downstream, at the lamina monopolar cells L1, L2 and L5.",
+    "the_locomotor_system_is_engineered": "Leg movement comes from a published engineered central pattern generator driven by two normalised descending drives. No part of the simulated ventral nerve cord contributes to it.",
+    "the_body_is_the_wrong_sex": "A female NeuroMechFly body prior driven by a male CNS graph.",
+    "the_turn_direction_is_an_engineering_choice": "The decoder carries an explicit turn sign of -1 or +1. The network determines which descending side is stronger for a given cue side; the sign determines whether that becomes an approach or an avoidance. Reporting an approach as though the network chose it would be an over-claim.",
+    "the_dynamics_are_a_transmitter_sign_regression": "Not fitted physiology. The lamina rates, the retinal map, the excitatory-inhibitory ratio, the spike-frequency adaptation and the per-contact scale are all declared engineering values.",
+    "l3_and_l4_are_excluded": "Released column coordinates cover L3 on the right only, 892 of 892 against 0 of 880 on the left, and L4 on neither side. Driving them would put a two-fold left-right imbalance into the entry layer before any dynamics ran.",
+    "24122_neurons_cannot_be_drawn": "141,000 of 165,122 bodies carry a released soma position. The rest are simulated and recorded but absent from the brain view, and every rendered frame states the count."
+  },
+
+  "what_the_video_must_show_on_every_frame": [
+    "the tier, V0 Structural, and that this is an engineering demonstration rather than validated physiology",
+    "that network parameters are P/E and the decoder and body are E",
+    "the engineered stand-ins by name",
+    "that the retina-to-lamina synapse is not executed, and why",
+    "how many bodies are drawn against how many are executed",
+    "that brightness is spike count over recent frames rather than membrane voltage",
+    "the code commit, the graph digest and the seed"
+  ],
+
+  "no_criterion_may_be_restated": "A1 to A5, their thresholds, the duration, the seed and the control set are closed as of this commit. If the demonstration fails one, the failure is recorded and the claim is narrowed; the criterion is not rewritten.",
+  "every_variant_is_recorded": "Passing or failing, all four variants write a full recording and a summary, and the comparison is written whether or not it is flattering.",
+  "claim_boundary": "An engineering acceptance test for a demonstration. It awards no tier, validates no mechanism, and changes no scientific status. V0 Structural remains the project tier.",
+  "last_reviewed": "2026-09-10"
+}

@@ -68,6 +68,24 @@ are acceptable outcomes and the sign is reported. This keeps the user's stated l
 structure (stationary -> cue -> neural -> locomotion/turn -> closed-loop update) while
 refusing to pick a behaviour the anatomy does not support.
 
+**Correction to D1, made 2026-09-10 after the first embodied run.** D1 said the turn
+direction is "read off the frozen network, not chosen". That was an over-claim, and the
+first closed-loop run made it obvious: the decoder carries an explicit `turn_sign` of -1 or
++1, so flipping one engineering number turns an approach into an avoidance. The direction
+of the behaviour is therefore **not** a property of the network alone.
+
+What *is* a property of the network, and what the operating-point search actually measured,
+is narrower and still worth having: **which descending side is stronger for a given cue
+side, and that this reverses when the cue moves.** The decoder then maps that asymmetry to
+a turn under a declared sign convention -- turn toward the stronger side. With the pilot
+operating point and that convention the fly approached the cue, walking 5.87 mm and turning
+29.3 degrees toward it over 3 s, and the cue distance fell from 13.38 to 7.60 mm. Reporting
+that as the network having chosen to approach would be wrong.
+
+The acceptance contract encodes the corrected version: criterion A4 asks whether the
+readout asymmetry tracks the cue side, not whether the fly went the "right" way, and the
+declared limitations state that the turn direction is an engineering choice.
+
 **D2. Entry populations.** LC4, LPLC2 (loom) and LC10a (small object), lateralised by the
 released `somaSide` column. 586 bodies. All are `visual_projection` superclass, so they
 cannot overlap the descending readout.

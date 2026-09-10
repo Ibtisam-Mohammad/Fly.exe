@@ -300,8 +300,11 @@ def test_the_scenario_declares_what_may_not_be_claimed() -> None:
     assert "V0 Structural" in claims["may_never_claim"]
     # The retina limitation must be stated in the scenario, not only in the code.
     assert "66,533" in claims["the_retina_is_not_executed"]
-    # And the turn direction must not be presented as a design choice.
-    assert "not_chosen" in json.dumps(scenario["what_this_scenario_is"])
+    # The turn direction must be presented as the engineering choice it is: one sign
+    # flips approach into avoidance, so it is not a property of the network.
+    what = scenario["what_this_scenario_is"]
+    assert "the_turn_direction_is_an_engineering_choice" in what
+    assert "engineering choice" in what["the_turn_direction_is_an_engineering_choice"]
 
 
 def test_the_decoder_in_the_scenario_cannot_see_the_world() -> None:

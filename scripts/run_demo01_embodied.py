@@ -21,6 +21,11 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 from flysim.connectome import SparseConnectome  # noqa: E402
+from flysim.demo01_acceptance import (  # noqa: E402
+    evaluate,
+    read_variant,
+    summarise_for_console,
+)
 from flysim.demo01_body import Demo01BodyParameters  # noqa: E402
 from flysim.demo01_embodied import CONTROL_VARIANTS, run_embodied  # noqa: E402
 from flysim.demo01_render import build_soma_positions, render_recording  # noqa: E402
@@ -56,6 +61,11 @@ def main() -> int:
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--allow-dirty-tree", action="store_true")
     parser.add_argument("--progress", action="store_true")
+    parser.add_argument(
+        "--acceptance",
+        type=Path,
+        default=REPO / "configs/experiments/demo01-acceptance-v1.json",
+    )
     args = parser.parse_args()
 
     root: Path = args.root
@@ -162,12 +172,31 @@ def main() -> int:
             f"{result.initial_distance_mm:10.2f} {result.final_distance_mm:9.2f} {onset}"
         )
     print("=" * 96)
-    print(
-        "The demonstration may claim full-graph causal embodiment only if the "
-        "readout-ablated and stimulus-absent variants fail to produce the behaviour. It "
-        "may claim that MaleCNS topology matters only if the exact graph diverges "
-        "meaningfully from the shuffled one."
-    )
+
+    # The verdict is computed by code that cannot run a simulation and cannot alter a
+    # threshold, from a contract committed before these runs.
+    verdict = None
+    if {"exact", "readout-ablated", "stimulus-absent"} <= set(variants):
+        summaries = {
+            result.variant: read_variant(result.directory, decoder.quiescent_us)
+            for result in results
+        }
+        verdict = evaluate(
+            contract_path=args.acceptance,
+            variants=summaries,
+            quiescent_us=decoder.quiescent_us,
+        )
+        print(summarise_for_console(verdict))
+        (output_root / "acceptance.json").write_text(
+            json.dumps(verdict, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(f"\nverdict: {output_root / 'acceptance.json'}")
+    else:
+        print(
+            "Acceptance not evaluated: it needs the exact, readout-ablated and "
+            "stimulus-absent variants, and this invocation ran only "
+            f"{sorted(variants)}."
+        )
     comparison = {
         "schema_version": "1.0",
         "operating_point": operating_point,
@@ -185,6 +214,7 @@ def main() -> int:
             for result in results
         },
     }
+    comparison["acceptance"] = verdict
     (output_root / "control-comparison.json").write_text(
         json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

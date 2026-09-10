@@ -255,7 +255,12 @@ class Demo01VisualBody:
     # -- rendering ----------------------------------------------------------------
 
     def render_frame(self, *, cue_visible: bool = True) -> np.ndarray:
-        """One RGB frame from the tracking camera, with the cue drawn into the scene.
+        """One RGB frame framing both the fly and the cue, with the cue drawn in.
+
+        The camera is a free camera aimed at the midpoint between the fly and the cue and
+        pulled back far enough to hold both, rather than the body-fixed tracking camera,
+        which sits close enough that the object the fly is reacting to is off screen. A
+        demonstration whose stimulus is not visible does not show what it claims to.
 
         The cue is added as a viewer-scene geom rather than a model body, so the physics
         the fly experiences is identical whether or not a frame is rendered. Nothing the
@@ -267,12 +272,24 @@ class Demo01VisualBody:
             self._renderer = mujoco.Renderer(
                 self._simulation.mj_model, height=height, width=width
             )
-        camera_id = mujoco.mj_name2id(
-            self._simulation.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, self._camera_name
+        x_mm, y_mm, z_mm, heading = self.pose()
+        camera = mujoco.MjvCamera()
+        mujoco.mjv_defaultFreeCamera(self._simulation.mj_model, camera)
+        cue_x, cue_y = self.parameters.cue_x_mm, self.parameters.cue_y_mm
+        separation = math.hypot(cue_x - x_mm, cue_y - y_mm)
+        camera.lookat[:] = (
+            0.5 * (x_mm + cue_x),
+            0.5 * (y_mm + cue_y),
+            max(1.0, 0.5 * (z_mm + self.parameters.cue_height_mm)),
         )
-        self._renderer.update_scene(
-            self._simulation.mj_data, camera=camera_id if camera_id >= 0 else -1
-        )
+        # Enough distance to hold both, with a floor so the shot does not collapse onto
+        # the fly when it arrives.
+        camera.distance = max(7.0, 1.15 * separation + 2.5 * self.parameters.cue_radius_mm)
+        # Look along the fly's heading from behind and above, so a turn is visible as a
+        # turn rather than as a translation across frame.
+        camera.azimuth = math.degrees(heading) + 150.0
+        camera.elevation = -26.0
+        self._renderer.update_scene(self._simulation.mj_data, camera=camera)
         if cue_visible:
             self._add_cue_geom()
         return np.asarray(self._renderer.render())

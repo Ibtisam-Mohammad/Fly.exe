@@ -235,7 +235,7 @@ def render_brain(
     elevation_rad: float,
     width: int,
     height: int,
-    exposure: float = 1.35,
+    exposure: float = 1.7,
     view: str = "frontal",
 ) -> np.ndarray:
     """One brain frame. ``glow`` is a per-drawn-neuron activity level, already decayed."""
@@ -646,7 +646,7 @@ def render_recording(
     output_path: Path | None = None,
     fps: int = 30,
     orbit_degrees_per_second: float = 9.0,
-    glow_decay: float = 0.62,
+    glow_decay: float = 0.78,
     title: str | None = None,
 ) -> Path:
     """Composite one recording into an MP4. Reads only; simulates nothing."""
@@ -844,6 +844,11 @@ def render_recording(
 
             cue = row["cue"]
             bearing = cue["bearing_deg"]
+            # The body view has a bright sky, so the caption needs its own ground.
+            draw.rectangle(
+                (BRAIN_WIDTH + 8, HEADER_HEIGHT + 6, FRAME_WIDTH - 8, HEADER_HEIGHT + 74),
+                fill=(10, 12, 18),
+            )
             draw.text(
                 (BRAIN_WIDTH + 16, HEADER_HEIGHT + 12),
                 "body: FlyGym / MuJoCo, engineered walking controller",

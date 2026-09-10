@@ -5,13 +5,11 @@
   "provenance": "E",
   "status": "Engineering demonstration scenario. Not evidence, not a tier, not a measurement.",
   "last_reviewed": "2026-09-10",
-
   "what_this_scenario_is": {
     "the_loop": "cue geometry -> retinotopic lamina encoder -> full MaleCNS runtime -> declared descending readout -> causal filter -> E decoder -> engineered walking controller -> MuJoCo body -> the cue's retinal position changes -> back to the encoder",
-    "the_behaviour_target": "A stationary fly; a dark object 14 mm away and 40 degrees to one side; activity through the full graph; lateralised descending activity; locomotion initiation with a consistent cue-side-dependent turn; the loop closing as the body moves.",
-    "the_turn_direction_is_not_chosen": "The strongest visual route in this connectome runs from looming detectors to escape descending neurons, and the canonical approach route is 23 times weaker and predicted inhibitory at its final synapse. Whether the fly turns toward the cue or away from it is a property of the frozen network. Both are acceptable outcomes and the observed one is reported."
+    "the_behaviour_target": "A stationary fly; a dark object 14 mm away and 40 degrees to one side; activity through the full graph; lateralised, cue-side-dependent descending activity; locomotion initiation with a turn whose direction follows from the declared sign convention; the loop closing as the body moves.",
+    "the_turn_direction_is_an_engineering_choice": "CORRECTED. An earlier wording claimed the turn direction is a property of the frozen network. It is not. The decoder carries an explicit turn sign of -1 or +1, so flipping one number turns an approach into an avoidance, which makes the direction of the behaviour an engineering choice rather than a measurement. What the network does determine is which descending side is stronger for a given cue side, and that the asymmetry reverses when the cue moves, which is what the operating-point search measured. The convention here is to turn toward the stronger side, declared rather than derived."
   },
-
   "body": {
     "physics_dt_us": 1000,
     "initial_x_mm": 0.0,
@@ -26,7 +24,6 @@
     "max_yaw_rad_s": 3.0,
     "note": "The cue sits 14.0 mm away at 40.1 degrees to the fly's left, subtending an angular radius of 10.3 degrees at the start and growing as the fly approaches. The 40 degree bearing is inside the searched retinal map's ipsilateral range and well outside the contralateral eye's, which is what makes the input lateralised before any dynamics run."
   },
-
   "decoder": {
     "quiescent_us": 1500000,
     "forward_half_rate_hz": 6.0,
@@ -41,18 +38,16 @@
       "forward_threshold_hz": "The registered search's passing candidates raise descending drive by 2 to 4 Hz above a zero baseline, so a 1.2 Hz threshold sits inside the evoked response and above the baseline.",
       "forward_half_rate_hz": "A half-saturation constant, so forward drive is 0.5 at 6 Hz of descending drive rather than saturating at the first spike.",
       "yaw_gain_per_hz": "Chosen so the left-right difference the search measured produces a turn inside the body's yaw range rather than pinning the command at its limit.",
-      "turn_sign": "Fitted on development scenarios and frozen. It selects which way a lateralised readout steers; it is not a gain and may only be -1 or +1."
+      "turn_sign": "Declared, not fitted to an outcome. It may only be -1 or +1 and selects whether the decoder steers toward the stronger descending side or away from it. Because one number flips approach into avoidance, the direction of the behaviour is an engineering choice and is reported as such."
     },
     "what_the_decoder_cannot_see": "Everything except two descending population rates. It takes no sensor frame, no pose, no distance and no time-to-target. There is no gain to zero because there is no sensory term."
   },
-
   "controls": {
     "exact": "The run itself.",
     "readout-ablated": "The declared descending readout is forced to zero after the brain has computed it. The brain runs identically; the body cannot hear it. Behaviour surviving this was never neural.",
     "stimulus-absent": "No cue. Everything else identical, including the seed and the lamina baseline drive.",
     "shuffled-connectome": "The target array is permuted, so the edge count, every out-degree and the multiset of contact counts are preserved exactly and only which pairs the edges join changes. All 25,563,197 edges are still built and executed."
   },
-
   "what_may_and_may_not_be_claimed": {
     "may_claim_if_the_controls_behave": "Full-graph causal embodiment: the body's behaviour depends on the simulated neural readout, on the exact released graph, with every neuron and every edge executed.",
     "may_claim_only_if_shuffled_diverges": "That MaleCNS topology matters, rather than that a network of this size and degree distribution matters.",

@@ -43,6 +43,7 @@ import numpy as np
 
 from flysim.config import load_json, sha256_json
 from flysim.connectome import SparseConnectome
+from flysim.contracts import ActuatorCommandFrame, SignalType
 from flysim.demo01 import FilteredDescendingReadout, ReadoutParameters
 from flysim.demo01_body import Demo01BodyParameters, Demo01VisualBody
 from flysim.demo01_visual import (
@@ -56,7 +57,7 @@ from flysim.demo01_visual import (
     VisualLocomotorDecoder,
 )
 from flysim.demo01_visual_probe import resolve_visual_populations
-from flysim.engines.body import COMMAND_FORWARD, COMMAND_YAW
+from flysim.engines.body import COMMAND_FORWARD, COMMAND_IDS, COMMAND_YAW
 from flysim.engines.genn import TrackAGeNNEngine
 from flysim.errors import ConfigurationError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
@@ -305,6 +306,28 @@ def run_embodied(
     intervals = duration_us // coupling_us
     video_period_us = max(coupling_us, round(1_000_000 / fps))
     next_frame_us = 0
+    # A command computed from brain activity over [t, t+dt] drives the body over
+    # [t+dt, t+2dt]. That one-interval sensorimotor delay is not a convenience: a brain
+    # cannot move a body with activity it has not produced yet, and stamping the command
+    # at the body's current time would have the body act on its own future. The first
+    # interval therefore runs on an explicit zero command.
+    pending = ActuatorCommandFrame(
+        t_us=0,
+        ids=COMMAND_IDS,
+        values=(0.0, 0.0, 0.0, 0.0),
+        units="normalized-drive [0,1], normalized-drive [-1,1], normalized, normalized",
+        signal_type=SignalType.ACTUATOR_COMMAND,
+        provenance="E",
+        assumption_ids=("MOTOR-06", "DEMO-03"),
+        metadata={
+            "decoder_state": "QUIESCENT",
+            "sensor_terms_in_command": [],
+            "why_zero": (
+                "The first coupling interval precedes any brain output, so the body is "
+                "commanded to stand rather than given a guessed drive."
+            ),
+        },
+    )
     initial_x, initial_y, _, initial_heading = body.pose()
     initial_distance = body.cue_distance_mm()
     onset_us: int | None = None
@@ -312,16 +335,19 @@ def run_embodied(
     try:
         for step in range(intervals):
             t_us = step * coupling_us
+            # The body acts on the command decoded from the previous interval's brain
+            # activity, which is what the one-interval delay above means in code.
+            applied = pending
+            body.apply_actuators(applied)
             x_mm, y_mm, _, heading = body.pose()
             frame_in = encoder.encode(t_us, cue, x_mm=x_mm, y_mm=y_mm, heading_rad=heading)
             engine.push_inputs(frame_in)
             engine.step_until(t_us + coupling_us)
             raw = engine.read_outputs(readout_ids, coupling_us)
             neural = readout.read(raw)
-            command = controller.decode(neural)
+            pending = controller.decode(neural)
             if onset_us is None and controller.state.value == "LOCOMOTING":
-                onset_us = command.t_us
-            body.apply_actuators(command)
+                onset_us = pending.t_us
             body.step_until(t_us + coupling_us)
             activity = engine.population_activity(pools, coupling_us)
             spikes = engine.spike_counts_since_last_frame()
@@ -360,9 +386,15 @@ def run_embodied(
                         name: value["active_fraction"] for name, value in activity.items()
                     },
                     "command": {
-                        "forward": command.value_for(COMMAND_FORWARD, 0.0),
-                        "yaw": command.value_for(COMMAND_YAW, 0.0),
-                        "state": command.metadata["decoder_state"],
+                        "forward": applied.value_for(COMMAND_FORWARD, 0.0),
+                        "yaw": applied.value_for(COMMAND_YAW, 0.0),
+                        "state": applied.metadata["decoder_state"],
+                    },
+                    "command_decoded_this_interval": {
+                        "forward": pending.value_for(COMMAND_FORWARD, 0.0),
+                        "yaw": pending.value_for(COMMAND_YAW, 0.0),
+                        "state": pending.metadata["decoder_state"],
+                        "drives_the_body_next_interval": True,
                     },
                 },
                 spikes,
@@ -375,8 +407,8 @@ def run_embodied(
                     f"  [{step:5d}/{intervals}] t={t_us / 1e6:6.2f}s "
                     f"dn L/R {neural.value_for(VISUAL_LEFT_READOUT):6.2f}/"
                     f"{neural.value_for(VISUAL_RIGHT_READOUT):6.2f} Hz  "
-                    f"fwd {command.value_for(COMMAND_FORWARD, 0.0):5.3f} "
-                    f"yaw {command.value_for(COMMAND_YAW, 0.0):+6.3f}  "
+                    f"fwd {pending.value_for(COMMAND_FORWARD, 0.0):5.3f} "
+                    f"yaw {pending.value_for(COMMAND_YAW, 0.0):+6.3f}  "
                     f"d={body.cue_distance_mm():6.2f}mm  {controller.state.value}",
                     flush=True,
                 )
@@ -427,6 +459,13 @@ def run_embodied(
         "populations": populations.as_dict(),
         "body": body.describe(),
         "coupling_us": coupling_us,
+        "sensorimotor_delay_us": coupling_us,
+        "why_a_delay": (
+            "A command decoded from brain activity over one coupling interval drives the "
+            "body over the next one. A brain cannot move a body with activity it has not "
+            "produced yet, and applying the command inside the interval that produced it "
+            "would have the body act on its own future."
+        ),
         "duration_us": duration_us,
         "intervals": intervals,
         "build_seconds": build_seconds,
