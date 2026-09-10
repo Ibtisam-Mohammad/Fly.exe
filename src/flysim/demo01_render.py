@@ -830,14 +830,13 @@ def render_recording(
     fonts = _fonts()
 
     body_video = run_directory / "body.mp4"
-    body_frames: list[np.ndarray] = []
-    if body_video.is_file():
-        body_reader = imageio.get_reader(body_video)
-        try:
-            for frame in body_reader.iter_data():
-                body_frames.append(np.asarray(frame))
-        finally:
-            body_reader.close()
+    # Read the body frames one at a time rather than buffering them. A 20 s run at
+    # 770x640 is about 900 MB of uint8 if held in a list, which is a large amount of
+    # memory to spend on frames that are consumed strictly in order.
+    body_reader = imageio.get_reader(body_video) if body_video.is_file() else None
+    body_iterator = body_reader.iter_data() if body_reader is not None else None
+    body_frame: np.ndarray | None = None
+    body_exhausted = body_iterator is None
 
     output_path = output_path or run_directory / "demo.mp4"
     writer = imageio.get_writer(output_path, fps=fps, codec="libx264", quality=9)
@@ -916,9 +915,15 @@ def render_recording(
             inset_x = 10
             inset_y = HEADER_HEIGHT + PANEL_HEIGHT - inset_size - 30
             canvas.paste(Image.fromarray(frontal), (inset_x, inset_y))
-            if body_frames:
-                body = body_frames[min(frame_index, len(body_frames) - 1)]
-                image = Image.fromarray(body)
+            if body_iterator is not None and not body_exhausted:
+                try:
+                    body_frame = np.asarray(next(body_iterator))
+                except StopIteration:
+                    # The body video ends when the recording does; hold the last frame
+                    # rather than blanking the panel under the closing card.
+                    body_exhausted = True
+            if body_frame is not None:
+                image = Image.fromarray(body_frame)
                 if image.size != (BODY_WIDTH, PANEL_HEIGHT):
                     image = image.resize((BODY_WIDTH, PANEL_HEIGHT))
                 canvas.paste(image, (BRAIN_WIDTH, HEADER_HEIGHT))
@@ -1097,6 +1102,8 @@ def render_recording(
             writer.append_data(closing)
     finally:
         writer.close()
+        if body_reader is not None:
+            body_reader.close()
     return output_path.resolve()
 
 
