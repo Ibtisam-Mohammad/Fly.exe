@@ -15,10 +15,10 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 | stage | what it closes | state |
 |-------|----------------|-------|
 | S0 | Route measurement: which sensory->descending path is structurally usable | DONE 2026-09-10 |
-| S1 | A neural-only operating point that passes frozen C1-C5 on a visual route | RUNNING: pilot done (docs/demo01/PILOT.md), contract committed, 108-point search launched |
-| S2 | E-provenance decoder tuned on development scenarios, then frozen | not started |
-| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | not started |
-| S4 | Video: brain view + body view + traces + control comparison | not started |
+| S1 | A neural-only operating point that passes frozen C1-C5 on a visual route | **PASSED** 2026-09-10: 31 of 108 candidates met all five criteria |
+| S2 | E-provenance decoder tuned on development scenarios, then frozen | running |
+| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | contract frozen; stance defect found and fixed; matrix pending |
+| S4 | Video: brain view + body view + traces + control comparison | renderer built and validated; final render pending |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
 
 ## S0 findings (measured 2026-09-10, read-only, exact graph)
@@ -210,3 +210,71 @@ It cannot support: anything biological. The lamina rates, the retinal map, the E
 the adaptation and the per-contact scale are all declared engineering values. The
 retina-to-lamina synapse is not executed at all, because the frozen sign policy zeroes
 every photoreceptor edge. Tier stays V0 Structural.
+
+## S1 result: the registered search passed
+
+Run from a clean tree at commit `31736d2`, evidence-grade, artifact
+`evidence/demo01/demo01-visual-operating-point-v1.json`
+sha256 `1f10b63d0bd3ab8c63c7b01d7d3994ca469624b210c323dfce95a1d3152bace5`.
+**31 of 108 candidates met all five criteria.**
+
+Selected by the rule declared before the run, the largest selectivity swing inside the
+passing set:
+
+| parameter | value |
+|---|---|
+| synaptic mV per contact | 0.5 |
+| inhibitory weight gain | 1.5 |
+| spike-frequency adaptation | 0.0 mV |
+| lamina maximum rate | 400 Hz |
+| ON/OFF balance | 1.0 |
+
+What it measured, against the thresholds carried over from the failed odour contract:
+
+| quantity | measured | threshold |
+|---|---|---|
+| baseline descending drive | 0.000 Hz | <= 5.0 |
+| cue-evoked response | 2.435 Hz | >= 2.0 |
+| selectivity, left cue | +0.607 | reversal required |
+| selectivity, right cue | -0.340 | reversal required |
+| selectivity swing | 0.947 | >= 0.2 |
+| recovery residual | 0.004 | <= 0.5 |
+| descending active fraction | 0.0208 | in [0.02, 0.9] |
+| readout spikes per cue epoch | 665 and 713 | >= 20 |
+
+Which criteria actually bind, counted over all 108 candidates:
+
+| criterion | failures |
+|---|---|
+| C1 stability | 62 |
+| C2 cue responsiveness | 51 |
+| C3 selectivity reverses | 4 |
+| C4 recovery | 13 |
+| C5 spike floor | 0 |
+
+Three things in that table are worth saying out loud.
+
+**The stability-against-responsiveness tension is the whole problem**, exactly as the pilot
+found: C1 and C2 account for 113 of the 130 failures, and they fail in opposite directions.
+
+**C3 almost never fails, which vindicates the readout choice rather than the criterion.**
+Once the decoded readout moved from the whole descending pool to the 318-body posterior
+descending group, lateralisation stopped being the hard part. On the odour route C3 was
+unreachable at any gain.
+
+**C5 never binds, and adding it was still right.** It exists because the odour search
+produced selectivity indices of exactly plus and minus 1.000 from a single spike. On this
+route the readout emits 165 to 1,162 spikes per cue epoch, so the degenerate outcome simply
+never arises -- which is what a guard against a known failure mode looks like when the
+failure mode has been removed by other means.
+
+**Adaptation was not needed at the selected point.** The winner uses 0.0 mV, though 12 of
+the 31 passing candidates use 1.0 mV. I added spike-frequency adaptation in response to the
+pilot's latching, and at an inhibitory gain of 1.5 the network does not need it. It stays in
+the engine, defaulting to off, and the honest summary is that rebalancing excitation against
+inhibition did the work that adaptation was introduced to do.
+
+**One number is marginal and is reported as such.** The descending active fraction is 0.0208
+against a floor of 0.02, so the selected point sits about one part in a hundred inside that
+criterion. The pilot predicted this and the grid was built to bracket it; it is a fragile
+margin and it is not hidden.

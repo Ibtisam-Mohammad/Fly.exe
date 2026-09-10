@@ -1296,3 +1296,68 @@ the primary within 0.39 of the measured 0.60.
 
 **Stage 2 exit gate unchanged at v4, 0 of 3. V0 Structural remains the only supported stage
 tier.** The audit confirms both.
+
+
+---
+
+## DEMO-01: a closed loop through the whole released graph (2026-09-10, branch `demo-01-embodiment`)
+
+**The tier does not move. V0 Structural remains the only supported stage tier and the Stage 2
+exit gate remains at v4, 0 of 3.** DEMO-01 is an engineering demonstration and awards
+nothing. Full record in `docs/evidence/DEMO01_FULL_GRAPH_EMBODIMENT.md`, decisions in
+ADR-2026-014, working ledger in `docs/demo01/PROGRESS.md`, and the exploratory pilot that
+shaped the grid in `docs/demo01/PILOT.md`.
+
+**The olfactory route was tried first and failed, 0 of 24 operating points.** The cause was
+structural rather than parametric: no direct edges from receptor neurons to the steering
+descending cells, a three-synapse path, signed contact-share flow of 6.6e-05 arriving at
+cells that integrate 756 to 1,201 inputs at an excitatory-to-inhibitory contact ratio of
+1.17 to 2.04, and laterality contralaterally biased at hop 1 and gone by hop 3. A gain
+scales both sides equally, so no grid could have repaired it. Sign policy, readout width and
+input magnitude were each ruled out by separate measurement.
+
+**Every alternative route the released annotations offer was then measured before any code
+was written.** The looming visual route reaches escape descending neurons in one synapse
+with 19.95% of their input contacts, about 2,000 times the olfactory flow.
+
+**The retina cannot be executed and this is declared rather than worked around.** All 66,533
+photoreceptor output edges are zeroed by the frozen ND-10 sign policy: fly photoreceptors
+are histaminergic and histamine is absent from the transmitter model. Entry is therefore one
+synapse downstream at the lamina monopolar cells L1, L2 and L5, 6,199 bodies carrying
+released column coordinates over 877 distinct left-eye columns. Retinotopy survives to the
+lobula, with two disjoint hex patches driving LC4 response vectors of cosine similarity
++0.000, and 99,128 of 99,154 optic-lobe neurons lie on the path by hop 2, so the optic lobe
+computes the visual response rather than being stepped beside it.
+
+**The registered visual search passed: 31 of 108 candidates met all five criteria**, from a
+clean tree at commit `31736d2`, artifact sha256 `1f10b63d0bd3ab8c…`. C1 to C4 carry the
+identical thresholds registered for the failed odour contract. C5 was added and only
+tightens, requiring a minimum raw spike count so the single-spike selectivity indices of
+plus and minus 1.000 the odour search produced are unreachable. The odour scorer was left
+untouched because it is part of a recorded failed experiment.
+
+The selected point measured a 0.000 Hz baseline, a 2.435 Hz cue response against a 2.0 Hz
+threshold, a selectivity swing of 0.947 against 0.2 that reverses with cue side, and a
+recovery residual of 0.004 against 0.5. **Its descending active fraction is 0.0208 against a
+floor of 0.02, which is a fragile margin and is reported as one.**
+
+**Three P/E dynamics parameters were added and one of them refuted my own hypothesis.**
+Per-target synaptic normalisation, which I proposed as the fix for the odour failure,
+silences the network at every gain; it is fixed at 0.0 with the measurement as the reason.
+Spike-frequency adaptation turned out unnecessary at the selected point. The inhibitory
+weight gain is the one that mattered, used by 25 of the 31 passing candidates, and it is
+less of an assumption than what it replaced: the engine previously asserted that a
+predicted-inhibitory and a predicted-excitatory contact deflect the membrane equally.
+
+**The first control matrix returned INVALID and the evaluator was right.** The two variants
+never commanded to move travelled 6.675 mm in three seconds against the exact run's
+5.870 mm, so the criteria were failing on a stance artifact. Fixed in the body, not the
+criterion: a spawn height and physics step I had invented were replaced by Track A's
+registered values, and Track A's station-keeping controller was ported properly. Residual
+standing drift over the real 20 s duration fell from 14.413 mm with the controller off to
+2.294 mm.
+
+**What the demonstration may claim is gated on controls, not on appearance.** The acceptance
+contract was committed before the matrix ran and the evaluator that applies it cannot run a
+simulation or alter a threshold. Nothing here may ever claim that this is what a fly does,
+that any parameter is a measurement, or that any mechanism is validated.
