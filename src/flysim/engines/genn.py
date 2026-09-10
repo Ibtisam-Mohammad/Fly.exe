@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import shutil
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -194,6 +195,7 @@ class TrackAGeNNEngine:
         self._group_dense_indices: tuple[np.ndarray, ...] = ()
         self._sparse_layout: dict[str, Any] = {}
         self._last_counts: dict[int, float] = {}
+        self._last_pool_counts: dict[str, np.ndarray] = {}
         self._model_identity: str | None = None
         self._cell_parameters: dict[str, Any] = {}
         self._loaded = False
@@ -470,6 +472,7 @@ class TrackAGeNNEngine:
         }
         self._t_us = 0
         self._last_counts.clear()
+        self._last_pool_counts.clear()
         self._loaded = True
 
     def push_inputs(self, frame: NeuralInputFrame) -> None:
@@ -517,6 +520,11 @@ class TrackAGeNNEngine:
         for variable in count_variables:
             variable.pull_from_device()
         values: list[float] = []
+        # The raw per-interval spike count is retained beside the derived rate. At a
+        # 15 ms coupling interval one spike is 66.7 Hz, so a consumer that wants to
+        # filter the rate causally needs the integer count rather than the quantised
+        # rate it was divided into.
+        counts: list[int] = []
         for identifier in ids:
             assert isinstance(identifier, int)
             dense_index = graph.dense_index(identifier)
@@ -527,6 +535,7 @@ class TrackAGeNNEngine:
             if cumulative < previous:
                 raise CausalityError("Track A spike counter moved backward")
             values.append((cumulative - previous) / (window_us / 1_000_000.0))
+            counts.append(round(cumulative - previous))
             self._last_counts[identifier] = cumulative
         return NeuralOutputFrame(
             t_us=self._t_us,
@@ -541,6 +550,7 @@ class TrackAGeNNEngine:
                 "model_identity": self._model_identity,
                 "variant": self.variant,
                 "window_us": window_us,
+                "spike_counts": dict(zip(ids, counts, strict=True)),
                 "full_graph": True,
                 "neurons": graph.neuron_count,
                 "edges": graph.edge_count,
@@ -550,6 +560,81 @@ class TrackAGeNNEngine:
                 "warning": "Shiu transmitter-only regression baseline; not fitted physiology",
             },
         )
+
+    def _locate(self, body_ids: Sequence[int]) -> tuple[np.ndarray, np.ndarray]:
+        """Group and within-group indices for a set of body IDs."""
+        graph, _ = self._require_ready()
+        assert self._group_by_dense is not None and self._local_by_dense is not None
+        dense = np.fromiter(
+            (graph.dense_index(int(body_id)) for body_id in body_ids),
+            dtype=np.int64,
+            count=len(body_ids),
+        )
+        return self._group_by_dense[dense], self._local_by_dense[dense]
+
+    def population_activity(
+        self, pools: Mapping[str, Sequence[int]], window_us: int
+    ) -> dict[str, dict[str, float]]:
+        """Binned spike activity per named pool, differenced since the last call.
+
+        This is the global-activity recorder. It reads whole populations rather than
+        per-neuron traces, so a 1314-body descending pool costs one device pull and four
+        numbers, not a membrane trace at the 0.1 ms neural step.
+        """
+        self._require_ready()
+        if window_us <= 0:
+            raise ConfigurationError("Population activity window must be positive")
+        variables = tuple(pop.vars["SpikeCount"] for pop in self._populations)
+        for variable in variables:
+            variable.pull_from_device()
+        views = tuple(np.asarray(variable.view) for variable in variables)
+        seconds = window_us / 1_000_000.0
+        report: dict[str, dict[str, float]] = {}
+        for name, body_ids in pools.items():
+            if not body_ids:
+                raise ConfigurationError(f"Activity pool {name} is empty")
+            groups, locals_ = self._locate(body_ids)
+            cumulative = np.array(
+                [float(views[g][i]) for g, i in zip(groups, locals_, strict=True)],
+                dtype=np.float64,
+            )
+            previous = self._last_pool_counts.get(name)
+            if previous is None:
+                previous = np.zeros_like(cumulative)
+            if np.any(cumulative < previous - 1e-9):
+                raise CausalityError(f"Spike counter for pool {name} moved backward")
+            delta = cumulative - previous
+            self._last_pool_counts[name] = cumulative
+            report[name] = {
+                "bodies": float(len(body_ids)),
+                "spikes": float(delta.sum()),
+                "mean_rate_hz": float(delta.sum() / len(body_ids) / seconds),
+                "active_fraction": float(np.count_nonzero(delta) / len(body_ids)),
+                "max_rate_hz": float(delta.max() / seconds),
+            }
+        return report
+
+    def read_state(self, body_ids: Sequence[int]) -> dict[str, list[float]]:
+        """Membrane voltage and synaptic state for a declared, selected body set.
+
+        Deliberately not every neuron and deliberately not at the neural step: the caller
+        names the bodies and calls this at coupling boundaries.
+        """
+        self._require_ready()
+        if not body_ids:
+            raise ConfigurationError("read_state needs at least one body ID")
+        groups, locals_ = self._locate(body_ids)
+        out: dict[str, list[float]] = {}
+        for name in ("V", "G", "SpikeCount"):
+            variables = tuple(pop.vars[name] for pop in self._populations)
+            for variable in variables:
+                variable.pull_from_device()
+            views = tuple(np.asarray(variable.view) for variable in variables)
+            out[name] = [
+                float(views[g][i]) for g, i in zip(groups, locals_, strict=True)
+            ]
+        out["body_ids"] = [float(body_id) for body_id in body_ids]
+        return out
 
     def checkpoint(self) -> dict[str, Any]:
         graph, _ = self._require_ready()

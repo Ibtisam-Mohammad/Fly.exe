@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo01-operating-point-v1",
+  "title": "Neural-only operating-point search for the DEMO-01 full-graph embodiment",
+  "status": "PREREGISTERED. Committed before the search runs. Engineering calibration, not evidence.",
+  "provenance": "P/E",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": ["DATA-03", "DATA-04", "ND-01", "ND-03", "ND-04", "SENS-03", "DEMO-02"],
+
+  "why_this_exists": {
+    "the_defect_this_acts_on": "The predecessor demonstration eon-malecns-v0.2 reached its behaviour through two engineered paths that bypassed the graph. The controller added odor_gradient_yaw_gain_rad_s * (odor_left - odor_right) directly into yaw, and the encoder injected an odour-proportional rate directly into oDN1, whose rate became the forward drive. Measured on the recorded control traces, steering correlated with the raw odour gradient at +0.975 and with the descending readout at +0.132, and with every synaptic weight zeroed the fly still walked 100.2 mm at +0.994 correlation with the gradient. Both paths are removed in DEMO-01.",
+    "why_the_search_is_needed": "With the bypasses gone the behaviour has to come from the graph, and the predecessor's registered operating point does not deliver it. In the exact full-graph run the steering descending readout averaged 2.98 Hz on the left and 0.19 Hz on the right with 70.9 per cent of seeking intervals at exactly zero on all three readouts, while a shuffled connectome produced more activity than the real one. That is not a regime any decoder can steer from.",
+    "why_the_criteria_are_neural_only": "Choosing network parameters by whether the fly reaches the food cannot distinguish a good network from a bad network with a compensating decoder. Every criterion below is measurable with no body attached, and the scoring function is constructed so that no behavioural quantity can enter it."
+  },
+
+  "what_is_searched_and_what_is_fixed": {
+    "searched": "tonic drive, synaptic millivolts per contact, the outgoing gain applied at injected entry neurons, and the maximum ORN firing rate. Four axes, all P/E.",
+    "fixed": "Every membrane and synapse constant from TRACKA-01, the 0.1 ms synaptic delay, the 100 us neural step and the registered SENS-03 odour field.",
+    "not_searched_on_purpose": "The readout filter constant and the locomotor decoder. The filter is fixed here so that the operating point is not chosen for a filter that flatters it, and the decoder is not tuned until the network is frozen."
+  },
+
+  "fixed_parameters": {
+    "neural_dt_us": 100,
+    "resting_mv": -52.0,
+    "reset_mv": -52.0,
+    "threshold_mv": -45.0,
+    "membrane_tau_ms": 20.0,
+    "synapse_tau_ms": 5.0,
+    "refractory_ms": 2.2,
+    "synaptic_delay_ms": 0.1,
+    "reset_synaptic_state_on_spike": true,
+    "orn_baseline_rate_hz": 2.0
+  },
+
+  "searched_grid": {
+    "tonic_drive_mv": [0.0, 2.0],
+    "synaptic_mv_per_contact": [0.02, 0.075, 0.275],
+    "central_entry_outgoing_gain": [1.0, 10.0],
+    "orn_max_rate_hz": [100.0, 300.0]
+  },
+  "grid_size": 24,
+  "why_this_grid": {
+    "synaptic_mv_per_contact": "The registered 0.275 mV is retained as the top of the range. Two smaller values are included because entry now sits at olfactory receptor neurons with a median out-degree of 123 rather than at projection neurons, so the same per-contact scale delivers far more charge per spike than it did in the predecessor.",
+    "central_entry_outgoing_gain": "1.0 removes the gain entirely, which is the honest baseline; 10.0 is the registered value. Whether an entry gain is needed at all is one of the questions the search answers.",
+    "orn_max_rate_hz": "The predecessor drove projection-neuron entries at 1000 Hz. Receptor neurons firing at 100 to 300 Hz is the range the physiology literature reports for strong odour, so the registered 1000 Hz is deliberately not carried over.",
+    "tonic_drive_mv": "Zero is the registered value. A 2 mV tonic term is included because a network whose descending neurons never reach threshold cannot be selective, and a declared subthreshold bias is a cheaper fallback than raising synaptic gain until the network saturates."
+  },
+
+  "unresolved_sign_policy": "zero",
+  "coupling_us": 15000,
+  "epochs": {
+    "baseline_us": 750000,
+    "cue_us": 1500000,
+    "recovery_us": 1500000,
+    "note": "5.25 s of biological time per candidate. The first 40 per cent of each epoch is discarded as transient and the remainder is averaged."
+  },
+  "cue_geometry": {
+    "cue_forward_offset_mm": 5.0,
+    "cue_lateral_offset_mm": 3.0,
+    "source_strength": 2.4,
+    "softening_mm2": 0.35,
+    "half_saturation": 0.12,
+    "antenna_separation_mm": 0.3,
+    "note": "The registered SENS-03 field, sampled at the two antenna positions of a fly at the origin heading along +x, with the source 5 mm ahead and 3 mm to one side. Identical field to the embodied run."
+  },
+  "readout": {
+    "readout_filter_tau_ms": 150.0,
+    "why": "At a 15 ms coupling interval one spike is 66.7 Hz, so an unfiltered per-interval count is a 0-1-2 counter. A 150 ms one-pole causal filter spans ten intervals, which is short against the 1.5 s cue epochs and long enough to resolve rates below the spike quantum. Raw integer counts are retained beside the filtered value."
+  },
+
+  "neural_criteria": {
+    "baseline_max_hz": 5.0,
+    "saturation_max_fraction": 0.25,
+    "min_cue_response_hz": 2.0,
+    "min_selectivity_index": 0.2,
+    "max_recovery_fraction": 0.5,
+    "min_active_fraction": 0.02,
+    "max_active_fraction": 0.9,
+    "statements": {
+      "C1_stable_nonsaturated": "Descending drive at rest is at most 5 Hz; the descending pool's mean rate is at most a quarter of the 454.5 Hz refractory ceiling; and between 2 and 90 per cent of the descending pool fires at least once per interval while the cue is on.",
+      "C2_cue_responsive": "The better of the two cue sides raises mean descending drive at least 2 Hz above baseline.",
+      "C3_bilateral_selectivity_reverses": "The left-right selectivity index must change sign between a left cue and a right cue, and the swing between the two indices must be at least 0.2. Sign reversal is required rather than magnitude, because a fixed anatomical asymmetry would satisfy a one-sided threshold while carrying no information about which side the cue is on.",
+      "C4_recovers_to_baseline": "After the cue is removed, drive falls to within half of the cue-evoked increment above baseline."
+    }
+  },
+
+  "acceptance": {
+    "what_this_run_can_establish": "Whether any point on the registered P/E grid makes the exact full graph produce stimulus-selective descending activity under the transmitter-only LIF. Nothing more.",
+    "what_it_cannot_establish": "Anything biological. The winning parameters are not measurements, the LIF is a transmitter-sign regression rather than fitted physiology, and no tier is awarded or changed.",
+    "if_nothing_passes": "That is the result and it is reported as a concrete neural-operating-point failure. It would mean the transmitter-only LIF cannot carry an olfactory cue from receptor neurons to steering descending neurons at any searched gain, which is a specific, falsifiable statement about the current dynamics layer rather than about the connectome.",
+    "selection_rule": "Among candidates meeting all four criteria, the one with the largest selectivity swing is selected. Declared before the run.",
+    "no_criterion_may_be_restated": "The four criteria, their thresholds, the grid, the epochs, the cue geometry and the filter constant are closed as of this commit.",
+    "every_candidate_is_recorded": "Passing or failing, every searched point and its four criterion values are written to the artifact. A search that reports only its winner is not a search."
+  },
+
+  "claim_boundary": "An engineering calibration sweep over four P/E parameters, scored on four neural criteria with no body attached. It selects an operating point, awards no tier, and validates no mechanism. V0 Structural remains the project tier.",
+  "last_reviewed": "2026-09-10"
+}
