@@ -574,3 +574,122 @@ def test_the_release_probability_incompatibility_is_recorded_with_its_escape_hat
     # And the one mechanism that could rescue a high release probability must be named.
     assert "saturation" in block["the_escape_hatch_that_must_be_named"]
     assert "heterogeneity" in block["which_is_most_likely_wrong_and_why_it_matters"]
+
+
+def test_the_train_contract_is_preregistered_and_names_only_control_arrays() -> None:
+    """The last unspent wild-type holdout: its criteria are closed before it is opened."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert contract["values_opened"] is False
+    variables = contract["the_data"]["variables"]
+    assert len(variables) == 4
+    assert all(name.endswith("_control") for name in variables)
+    assert not any("RNAi" in name for name in variables)
+    assert not any("rise_time" in name for name in variables)
+
+
+def test_the_train_contract_records_unknown_overlap_with_consequences_declared() -> None:
+    """A classification without a pre-declared consequence is a measurement with no rule."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    audit = contract["subject_independence_audit"]
+    assert audit["classification"] == "UNKNOWN-OVERLAP"
+    consequences = audit["consequences_declared_now_for_each_class"]
+    assert set(consequences) == {
+        "if_biological_independent",
+        "if_unknown_overlap_which_is_the_recorded_classification",
+        "if_protocol_only",
+    }
+    recorded = consequences["if_unknown_overlap_which_is_the_recorded_classification"]
+    # The asymmetry is the whole point: a failure means more than a pass under this class.
+    assert "FAILURE is stronger" in recorded
+    assert "PASS is weaker" in recorded
+    assert "V1-limited" in recorded
+    assert audit["no_value_was_opened_to_establish_any_of_this"] is True
+
+
+def test_the_train_contract_uses_the_refuted_predecessor_as_its_null() -> None:
+    """The answer to the previous holdout's weak-null problem, on the record."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    nulls = contract["the_nulls"]
+    assert "ND-06 v0.1" in nulls["null_1_is_a_real_mechanism_not_a_horizontal_line"]
+    assert "factor of 26" in nulls["why_this_matters_here"]
+    models = contract["frozen_predictions"]["models"]
+    assert "null_1_nd06_v0_1_depression_only" in models
+    null = models["null_1_nd06_v0_1_depression_only"]
+    assert null["parameters"] == {"utilisation": 0.22, "recovery_tau_ms": 893.0}
+    # It must actually be a discriminating null: never facilitating, and far from the
+    # candidates on the one number the paired-pulse protocol could not measure.
+    for row in null["by_frequency"].values():
+        assert row["peak_pulse_one_indexed"] == 1
+        assert row["second_over_first"] < 1.0
+    assert null["by_frequency"]["1Hz"]["steady_state_last_five_mean"] > 0.85
+    for label in ("candidate_A_two_timescale_facilitation_free",
+                  "candidate_B_facilitation_depression"):
+        assert models[label]["by_frequency"]["1Hz"]["steady_state_last_five_mean"] < 0.45
+
+
+def test_the_frozen_train_predictions_still_reproduce_from_their_parameters() -> None:
+    """The same freeze check the developmental holdout uses, applied before it is run."""
+    from flysim.stp_families import amplitudes, family
+
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for label, model in contract["frozen_predictions"]["models"].items():
+        names = family(model["family_id"]).parameter_names
+        theta = tuple(model["parameters"][name] for name in names)
+        for row in model["by_frequency"].values():
+            interval = 1000.0 / row["hertz"]
+            values = amplitudes(
+                model["family_id"], theta, [i * interval for i in range(row["pulses"])]
+            )
+            curve = values / values[0]
+            assert len(row["trajectory"]) == row["pulses"], label
+            for recorded, recomputed in zip(row["trajectory"], curve, strict=True):
+                assert abs(recorded - recomputed) < 1e-6, label
+            assert row["peak_pulse_one_indexed"] == int(curve.argmax()) + 1, label
+
+
+def test_the_two_candidates_are_separable_on_trains_unlike_on_paired_pulses() -> None:
+    """Why this observable is worth the last holdout: they differ by up to 0.55 here."""
+    contract = json.loads(
+        (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    models = contract["frozen_predictions"]["models"]
+    left = models["candidate_A_two_timescale_facilitation_free"]["by_frequency"]
+    right = models["candidate_B_facilitation_depression"]["by_frequency"]
+    worst = 0.0
+    for name in left:
+        gaps = [
+            abs(a - b)
+            for a, b in zip(left[name]["trajectory"], right[name]["trajectory"], strict=True)
+        ]
+        worst = max(worst, max(gaps))
+    assert worst > 0.5
+    # On the paired-pulse curve their widest gap was under 0.08, which is why that
+    # observable could not adjudicate between them.
+    holdout = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    paired = holdout["frozen_models"]
+    gaps = [
+        abs(a["predicted"] - b["predicted"])
+        for a, b in zip(
+            paired["primary"]["predicted"], paired["secondary"]["predicted"], strict=True
+        )
+    ]
+    assert max(gaps) < 0.08
+    assert worst > 6.0 * max(gaps)
