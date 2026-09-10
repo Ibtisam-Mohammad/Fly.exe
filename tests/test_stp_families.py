@@ -34,6 +34,7 @@ from flysim.stp_families import (
     effective_first_pulse_utilisation,
     family,
     fit_family,
+    heterogeneous_paired_pulse_ratio,
     leave_one_out,
     maximum_single_pool_release_probability,
     nelder_mead,
@@ -640,4 +641,82 @@ def test_the_bounds_refuse_impossible_inputs() -> None:
     with pytest.raises(ConfigurationError, match="ratio must be positive"):
         maximum_single_pool_release_probability(
             paired_pulse_ratio=0.0, interval_ms=10.0, recovery_tau_ms=893.0
+        )
+
+
+def test_heterogeneity_makes_paired_pulse_depression_worse_not_better() -> None:
+    """The claim I got backwards, killed by a Monte Carlo of the thing itself.
+
+    The argument was: a paired pulse facilitates because the first pulse preferentially
+    depletes the high-probability sites, leaving low-probability survivors. The survivors
+    do carry the second response and they carry *less* of it, because the sites removed
+    were the ones contributing most. Simulated here rather than argued.
+    """
+    rng = np.random.default_rng(0)
+    interval, tau = 10.0, 893.0
+    survived = math.exp(-interval / tau)
+    for sites in (
+        np.full(50, 0.79),
+        np.array([0.95] * 25 + [0.63] * 25),
+        np.array([1.0] * 25 + [0.58] * 25),
+    ):
+        mean = float(sites.mean())
+        variance = float(sites.var())
+        analytic = heterogeneous_paired_pulse_ratio(
+            mean_release_probability=mean,
+            release_probability_variance=variance,
+            interval_ms=interval,
+            recovery_tau_ms=tau,
+        )
+        # Monte Carlo the site-by-site process directly.
+        trials = 120_000
+        released = rng.random((trials, sites.size)) < sites
+        recovered = rng.random((trials, sites.size)) < (1.0 - survived)
+        available = ~released | recovered
+        second = available & (rng.random((trials, sites.size)) < sites)
+        simulated = second.sum(1).mean() / released.sum(1).mean()
+        assert simulated == pytest.approx(analytic, abs=3e-3)
+        # And the point: never above the homogeneous value at the same mean.
+        assert analytic <= 1.0 - survived * mean + 1e-12
+        if variance > 0.0:
+            assert analytic < 1.0 - survived * mean
+
+
+def test_the_ceiling_depends_only_on_the_mean_release_probability() -> None:
+    """Heterogeneity cannot rescue a high release probability, because the spread cancels."""
+    interval, tau = 10.0, 893.0
+    reference = single_pool_paired_pulse_ceiling(
+        release_probability=KAZAMA_WILSON_RELEASE_PROBABILITY,
+        interval_ms=interval,
+        recovery_tau_ms=tau,
+    )
+    rng = np.random.default_rng(3)
+    for _ in range(50):
+        # Any distribution with the same mean gives the same first response and the same
+        # upper bound on the second, so the ceiling cannot move.
+        spread = float(rng.uniform(0.0, 0.20))
+        sites = np.clip(
+            rng.normal(KAZAMA_WILSON_RELEASE_PROBABILITY, spread, 200), 0.001, 1.0
+        )
+        sites = sites * KAZAMA_WILSON_RELEASE_PROBABILITY / sites.mean()
+        survived = math.exp(-interval / tau)
+        bound = float(np.mean(1.0 - sites * survived) / np.mean(sites))
+        assert bound == pytest.approx(reference, rel=1e-9)
+    assert reference < 0.3
+
+
+def test_the_bound_refuses_impossible_heterogeneous_inputs() -> None:
+    with pytest.raises(ConfigurationError, match="mean release probability must lie"):
+        heterogeneous_paired_pulse_ratio(
+            mean_release_probability=0.0,
+            release_probability_variance=0.01,
+            interval_ms=10.0,
+            recovery_tau_ms=893.0,
+        )
+    with pytest.raises(ConfigurationError, match="variance cannot be negative"):
+        heterogeneous_paired_pulse_ratio(
+            mean_release_probability=0.5,
+            release_probability_variance=-0.01,
+            interval_ms=10.0,
+            recovery_tau_ms=893.0,
         )

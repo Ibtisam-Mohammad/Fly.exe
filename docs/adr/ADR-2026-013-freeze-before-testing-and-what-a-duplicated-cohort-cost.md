@@ -363,20 +363,12 @@ on the pinned recovery constant.
 synapse is near 0.79; that the Rozenfeld paired-pulse ratios measure the same quantity at
 the same synapse; or that a single homogeneous pool describes it.
 
-**The third is the leading candidate, and it explains both measurements at once.**
-Multiple-probability fluctuation analysis estimates `p` under a binomial model with uniform
-release probability, and heterogeneity across sites biases that estimate upward.
-Independently, a heterogeneous population facilitates on a paired pulse with no change in
-per-site probability at all, because the first pulse preferentially depletes the
-high-probability sites and the survivors are the low-probability ones. One failed
-assumption accounts for the inflated `p` and for the facilitation together.
-
-**Which makes the family this exercise excluded the mechanistically indicated one.** The
-parallel-release-components family is the one that encodes site heterogeneity, and it was
-excluded on E2 — its frozen band was wider than the data at 10 and 30 ms. That exclusion
-stands and was correct: it is a statement about what five summary statistics can pin down,
-not about the mechanism. But it means the two frozen candidates are best read as effective
-descriptions of a heterogeneous population rather than as accounts of it.
+**The third was offered here as the leading candidate, on the argument that a
+heterogeneous population facilitates because the first pulse preferentially depletes the
+high-probability sites. That argument is wrong and is withdrawn by the seventh amendment
+below: heterogeneity makes paired-pulse depression worse, and the bound holds over any
+distribution of per-site probabilities with the mean alone.** What survives is set out
+there.
 
 **The escape hatch, named so it cannot be produced later.** Postsynaptic saturation raises
 a measured paired-pulse ratio, so if these recordings saturate, the true presynaptic ratio
@@ -412,3 +404,71 @@ replaced v0.1. It has not; v0.1 is refuted and its candidates are unvalidated, s
 project's honest position is an empty slot rather than a succession. The registry id is now
 `male-cns-orn-pn-stp-candidates-v0.2` and the file states in its first field that nothing
 in it may be used as the ORN-to-PN plasticity rule in a simulation.
+
+## Seventh amendment, 2026-09-10 — the heterogeneity resolution is wrong, and the bound is more general than it was stated to be
+
+The fifth amendment, committed an hour before this one, offered site heterogeneity as the
+leading resolution of the incompatibility and said "a heterogeneous population facilitates
+on a paired pulse with no change in per-site probability, because the first pulse
+preferentially depletes the high-probability sites and the survivors are the
+low-probability ones."
+
+**That is backwards, and it is the fifth instance of the pattern — written into the very
+commit that documented the fourth.**
+
+The survivors do carry the second response, and they carry *less* of it, because the sites
+removed were the ones contributing most. With no facilitation, a pool with any distribution
+of release probabilities gives
+
+```
+PPR = 1 − c·E[p²]/E[p] = 1 − c·(E[p] + Var[p]/E[p])
+```
+
+which is strictly *below* the homogeneous `1 − c·E[p]` whenever the variance is positive.
+Simulated site by site rather than argued:
+
+| pool, all with E[p] = 0.79 | PPR, no facilitation | PPR, facilitation to certainty |
+|---|---|---|
+| homogeneous 0.79 | 0.2188 | 0.2770 |
+| bimodal 0.95 / 0.63 | 0.1868 | 0.2770 |
+| extreme 1.0 / 0.58 | 0.1636 | 0.2770 |
+
+**And the bound is more general than the fifth amendment claimed.** It does not need the
+sites to be identical: `R1 = N·E[p]·q` and `R2 ≤ N·(1 − E[p]·c)·q`, so the ceiling is
+`(1 − E[p]·c)/E[p]` with the mean alone — the spread cancels exactly, which the right-hand
+column above shows. Heterogeneity is therefore *eliminated* as a resolution rather than
+being the leading one. That makes the incompatibility stronger, not weaker.
+
+**What actually survives**, now that a whole class of explanations is closed:
+
+1. **The mean release probability is not 0.79 here.** MPFA assumes a uniform release
+   probability and heterogeneity is a known source of bias in it — so heterogeneity stays
+   relevant, as a reason to distrust the number rather than as a mechanism. The direction
+   of that bias must be checked against the method literature and not assumed; this ADR has
+   already been burned twice this session by assuming a direction.
+2. **The two measurements are of different things.** Kazama and Wilson stimulated the
+   antennal nerve at 0.033 Hz; Rozenfeld and colleagues used minimal stimulation of ORN
+   axons at 0.2 Hz through `GH146-QF`, which labels about 60 % of projection neurons across
+   an unstated mixture of glomeruli.
+3. **One vesicle per site fails** — multivesicular release, or recruitment of sites not
+   available on the first pulse. This is the only surviving presynaptic *mechanism*,
+   because it is the assumption the bound actually needs, and it is the one to design an
+   experiment against.
+4. **Postsynaptic saturation**, already recorded in `VAL-02` and weak under minimal
+   stimulation.
+
+**What this withdraws.** The fifth amendment's closing claim that the excluded
+parallel-release-components family was "the mechanistically indicated one" because it
+encodes heterogeneity. It is withdrawn. That family's facilitating component works because
+it facilitates, not because the pool is mixed. Its standing is exactly what E2 said: a band
+wider than the data at 10 and 30 ms, which is a statement about the power of five summary
+statistics and nothing more.
+
+**On the pattern.** Four of the five instances were about data — a plotting label, a row
+count, a figure legend. The fourth and fifth are about mathematics: reasoning about one
+term of an expression while forgetting what multiplies it, and then reasoning about which
+sites survive while forgetting which sites mattered. Both were one simulation away from
+being caught, and in both cases the wrong version was the one that made the project's
+position look better — here, by offering a tidy resolution to an inconvenient
+incompatibility. The rule has to extend past data checks to any claim about a model's
+behaviour: simulate it before writing it down.

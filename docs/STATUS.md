@@ -1090,18 +1090,25 @@ it could ask for. Neither number depends on the pinned recovery constant. So at 
 of three things is false: that `p` is near 0.79 here; that the Rozenfeld ratios measure the
 same quantity at the same synapse; or that a single homogeneous pool describes it.
 
-**The third is the leading candidate and it explains both measurements at once.** MPFA
-estimates `p` under a uniform-probability binomial, and site heterogeneity biases that
-estimate upward; independently, a heterogeneous population facilitates on a paired pulse
-with no change in per-site probability, because the first pulse preferentially depletes the
-high-probability sites. One failed assumption accounts for the inflated `p` and the
-facilitation together.
+**Correction, same day: heterogeneity is not the resolution, and the bound is more
+general than stated.** This section first offered site heterogeneity as the leading
+explanation, on the argument that the first pulse preferentially depletes high-probability
+sites and the low-probability survivors facilitate. Backwards — the survivors carry *less*,
+because the sites removed were contributing most. With no facilitation a mixed pool gives
+`1 − c(E[p] + Var/E[p])`, strictly worse than homogeneous: at E[p] = 0.79 a bimodal
+0.95/0.63 pool gives 0.187 against the homogeneous 0.219. And the ceiling holds over *any*
+distribution with the mean alone — the spread cancels exactly. Fifth instance of the
+pattern, written into the commit that documented the fourth, and the second one about
+mathematics rather than data. See ADR-2026-013's seventh amendment.
 
-Which makes the **parallel-release-components** family — excluded on E2 because its frozen
-band was wider than the data at 10 and 30 ms — the mechanistically indicated one. That
-exclusion stands and was correct; it is a statement about what five summary statistics can
-pin down, not about the mechanism. It does mean the two frozen candidates are best read as
-effective descriptions of a heterogeneous population rather than accounts of it.
+**So heterogeneity is eliminated, which makes the incompatibility stronger.** What
+survives: the mean `p` is not 0.79 here (MPFA assumes uniform `p`, and its bias direction
+must be checked rather than assumed); the two measurements are of different preparations;
+**one vesicle per site fails** — multivesicular release or recruitment of unavailable
+sites, the only surviving presynaptic mechanism because it is the assumption the bound
+needs; or postsynaptic saturation. The claim that the excluded parallel family was
+"mechanistically indicated" is withdrawn: it facilitates because it facilitates, not
+because the pool is mixed.
 
 The one escape hatch, named in advance: postsynaptic saturation raises a measured ratio, so
 saturating recordings would make the true presynaptic ratio lower and the violation

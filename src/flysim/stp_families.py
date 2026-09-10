@@ -665,7 +665,12 @@ KAZAMA_WILSON_RELEASE_PROBABILITY_SD = 0.02
 def single_pool_paired_pulse_ceiling(
     *, release_probability: float, interval_ms: float, recovery_tau_ms: float
 ) -> float:
-    """The largest paired-pulse ratio one homogeneous pool can produce, at any facilitation.
+    """The largest paired-pulse ratio a pool can produce, at any facilitation.
+
+    Named for the single-pool case it was derived for; it holds for a heterogeneous pool
+    too, with the mean release probability as the argument. What it does assume is one
+    vesicle per site per stimulus, which is the assumption that actually has to fail if
+    the measured release probability and the measured facilitation are both right.
 
     Take N release sites, each holding at most one vesicle, each releasing with probability
     ``p1`` at rest; let the second pulse release with probability ``p2``, and let a site
@@ -680,9 +685,15 @@ def single_pool_paired_pulse_ceiling(
 
     It matters because Kazama and Wilson measured a release probability of 0.79 at this
     synapse and Rozenfeld and colleagues measured a paired-pulse ratio of 1.51 at 10 ms.
-    Those two numbers are not merely in tension under a single-pool model; they are
-    incompatible with it by a factor of about five and a half, and no facilitation
-    mechanism can close the gap.
+    Those two numbers are not merely in tension; they are incompatible by a factor of
+    about five and a half, and no facilitation mechanism can close the gap.
+
+    **The bound does not need the sites to be identical.** For a pool whose sites carry
+    any distribution of release probabilities, the first response is ``N E[p] q`` and the
+    second is at most ``N (1 - E[p] e^{-dt/tau}) q``, so the same expression bounds the
+    ratio with ``E[p]`` in place of ``p``. Only the mean matters; the spread cancels. See
+    :func:`heterogeneous_paired_pulse_ratio` for the companion result, which is that
+    heterogeneity without facilitation makes paired-pulse depression strictly *worse*.
     """
     if not 0.0 < release_probability <= 1.0:
         raise ConfigurationError("A release probability must lie in (0, 1]")
@@ -692,6 +703,45 @@ def single_pool_paired_pulse_ceiling(
         raise ConfigurationError("A recovery time constant must be positive")
     survived = math.exp(-interval_ms / recovery_tau_ms)
     return (1.0 - release_probability * survived) / release_probability
+
+
+def heterogeneous_paired_pulse_ratio(
+    *,
+    mean_release_probability: float,
+    release_probability_variance: float,
+    interval_ms: float,
+    recovery_tau_ms: float,
+) -> float:
+    """The paired-pulse ratio of a heterogeneous pool with no facilitation at all.
+
+    For sites with any distribution of release probabilities, releasing at the same
+    probabilities on both pulses,
+
+        R1 = N E[p] q,   R2 = N (E[p] - c E[p^2]) q,
+        PPR = 1 - c E[p^2] / E[p] = 1 - c (E[p] + Var[p] / E[p])
+
+    which is *below* the homogeneous value ``1 - c E[p]`` whenever the variance is
+    positive. This function exists to kill an argument that looks plausible and is
+    backwards: that a paired pulse facilitates because the first pulse preferentially
+    depletes the high-probability sites and the low-probability survivors carry the
+    second response. The survivors do carry it, and they carry *less* of it, because the
+    sites removed were the ones contributing most. Depleting the strong sites lowers the
+    second response; it cannot raise it.
+
+    The ceiling in :func:`single_pool_paired_pulse_ceiling` is therefore unchanged by
+    heterogeneity, since it depends on ``E[p]`` alone, and heterogeneity is not available
+    as a resolution of the incompatibility between the measured release probability and
+    the measured facilitation.
+    """
+    if not 0.0 < mean_release_probability <= 1.0:
+        raise ConfigurationError("A mean release probability must lie in (0, 1]")
+    if release_probability_variance < 0.0:
+        raise ConfigurationError("A variance cannot be negative")
+    if recovery_tau_ms <= 0.0:
+        raise ConfigurationError("A recovery time constant must be positive")
+    survived = math.exp(-interval_ms / recovery_tau_ms)
+    second_moment = mean_release_probability**2 + release_probability_variance
+    return 1.0 - survived * second_moment / mean_release_probability
 
 
 def maximum_single_pool_release_probability(
