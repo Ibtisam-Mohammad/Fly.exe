@@ -16,6 +16,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -150,14 +151,6 @@ def main() -> int:
             f"{result.final_distance_mm:6.2f} mm   "
             f"onset {result.locomotion_onset_us}"
         )
-        if args.render:
-            video = render_recording(
-                directory,
-                positions_path=positions,
-                fps=args.fps,
-                title=f"MaleCNS full-graph closed loop - {variant}",
-            )
-            print(f"  video {video} ({video.stat().st_size / 1e6:.1f} MB)")
 
     print("\n" + "=" * 96)
     print(
@@ -201,7 +194,20 @@ def main() -> int:
             "stimulus-absent variants, and this invocation ran only "
             f"{sorted(variants)}."
         )
-    comparison = {
+    # Rendering happens only now. The closing card carries the verdict, and the verdict
+    # does not exist until every variant has run, so rendering inside the variant loop
+    # would have stamped "no verdict has been computed" onto all four videos.
+    if args.render:
+        for result in results:
+            video = render_recording(
+                result.directory,
+                positions_path=positions,
+                fps=args.fps,
+                title=f"MaleCNS full-graph closed loop - {result.variant}",
+            )
+            print(f"  video {video} ({video.stat().st_size / 1e6:.1f} MB)")
+
+    comparison: dict[str, Any] = {
         "schema_version": "1.0",
         "operating_point": operating_point,
         "decoder": decoder.as_dict(),
