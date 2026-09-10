@@ -370,6 +370,7 @@
       "frozen_at_commit": "fbeedbf240ac1db6594a03b94ca5a0438d1ba67c",
       "predictions_are_deterministic_given_those_parameters": true,
       "computed_on": "2026-09-10"
-    }
+    },
+    "superseded_conclusion": "The claim that no train amplitude series exists in this corpus is withdrawn. Fig3B, Fig3G and Fig3I hold 32-pulse 1 Hz amplitude trajectories. The measured wild-type steady state is 0.703, which lies between this registry's candidates at 0.341 and 0.402 and the refuted predecessor at 0.904: all three accounts are wrong, in opposite directions. The refutation of both candidates stands and is strengthened -- they over-depress against a directly measured trajectory as well as against Kazama and Wilson's published value."
   }
 }

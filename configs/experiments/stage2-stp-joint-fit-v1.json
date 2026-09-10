@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage2-stp-joint-fit-v1",
+  "title": "Fit the ORN-to-PN plasticity families jointly to a paired-pulse curve and a 1 Hz train, on spent data only",
+  "status": "PREREGISTERED. Committed before the joint fit is run and before the holdout is opened.",
+  "provenance": "F",
+  "preregistered_on": "2026-09-10",
+  "values_opened": false,
+  "assumption_ids": ["ND-06", "ND-04", "VAL-02"],
+
+  "why_this_exists": {
+    "the_diagnosis_this_acts_on": "A paired-pulse curve cannot constrain the resource recovery constant. Rozenfeld's 300 ms and 1000 ms wild-type cohort means differ by 0.0003 against a pooled standard error of 0.0277, so every family fitted to that curve alone drove the constant to the top of its box. A bound-valued recovery constant is invisible across a single pair and catastrophic across a sustained train, and both frozen v0.2 candidates duly predicted a 7 Hz steady state near 0.08 against Kazama and Wilson's published 0.60.",
+    "what_changed": "The corpus does hold a train amplitude series, and the earlier claim that it does not is withdrawn. Fig3B, Fig3G and Fig3I each carry a 32-column per-pulse evoked-amplitude trajectory over a 1 Hz train, exactly as the methods describe: 'To measure eEPSC amplitudes and kinetics, 32 eEPSCs were evoked at 1 Hz and averaged.' The authors averaged those columns to one number per animal; the columns themselves are the trajectory. Fig3B's wild-type array depresses from 1.000 to a plateau near 0.70 with all seventeen animals finite at every pulse.",
+    "so_the_fix_is_not_a_new_dataset": "It is to fit both observables at once. The recovery constant that the paired-pulse curve cannot see is directly constrained by 32 pulses at 1 Hz."
+  },
+
+  "the_fit_set_is_entirely_spent": {
+    "paired_pulse": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3D.mat",
+      "variables": [
+        "new_all_flies_PP_10ms_control",
+        "new_all_flies_PP_30ms_control",
+        "new_all_flies_PP_100ms_control",
+        "new_all_flies_PP_300ms_control",
+        "new_all_flies_PP_1000ms_control"
+      ],
+      "spent_on": "2026-09-09, by stage2-depression-external-test-v1"
+    },
+    "train": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+      "variable": "all_flies_1Hz_control",
+      "cohort": "wild type, 2 to 4 days post eclosion, 17 animals, 32 pulses at 1 Hz",
+      "spent_on": "2026-09-10, opened while characterising the mis-described latency arrays of Fig3E_and_F",
+      "the_expenditure_is_disclosed_not_minimised": "That opening was legitimate corpus-correction work and it still spent a holdout. Had the file been correctly classified on 2026-09-09 it would have been the natural holdout for this contract, and it is not available as one now. Its day-0 counterpart Fig3G is."
+    },
+    "why_fitting_to_them_costs_nothing_further": "Both are already spent and can never test anything again. Refusing to fit to them would protect nothing and would leave the diagnosis unacted upon."
+  },
+
+  "what_is_deliberately_kept_out_of_the_objective": {
+    "kazama_and_wilson_7hz": "Their reported steady state of about 0.60 at 7 Hz is a different laboratory and a different preparation. It is computed for every fitted family and reported beside the fit, and it is not a fitting target. That leaves one independent published number to check the joint fit against after the fact.",
+    "why_this_matters": "The v0.2 candidates were refuted by exactly that number. Putting it into the objective now would convert the only independent check into a training constraint, which is the rule the 7 Hz failure was originally recorded under and it holds identically here."
+  },
+
+  "families_considered": [
+    "pinned-published-depression",
+    "facilitation-depression-classic",
+    "facilitation-depression",
+    "parallel-release-components",
+    "two-timescale-facilitation",
+    "two-timescale-facilitation-free",
+    "depression-only"
+  ],
+  "the_family_list_is_unchanged_on_purpose": "The same seven families as stage2-stp-family-selection-v1, refitted against a second observable. Adding a family now, having seen that the previous two failed on trains, would be choosing a mechanism to fit a known failure. If none of the seven survives the joint fit, that is the result and a new family needs its own contract.",
+
+  "the_objective": {
+    "form": "weighted least squares over both observables at once, weights one over the squared standard error at each point",
+    "paired_pulse_points": 5,
+    "train_points": "the 31 scorable pulses of the 32, the first being exactly one by construction for the data and for every model alike",
+    "train_normalisation": "the cohort-mean trajectory divided by its own first element, magnitudes taken because the arrays hold negative evoked currents. The per-animal alternative divides by a single noisy measurement and is not used.",
+    "no_reweighting_between_observables": "The two observables enter with their own standard errors and nothing else. No relative weight is chosen, because any such choice would be a free parameter selected after seeing which observable a family fails."
+  },
+
+  "screens": {
+    "e1_consistency_with_both_observables": {
+      "paired_pulse": "the fitted curve must lie inside the fit set's 95 percent interval at all five intervals",
+      "train": "the fitted trajectory must lie within 1.96 standard errors of the cohort mean at at least 80 percent of the 31 scorable pulses",
+      "why_80_percent_and_not_all": "Thirty-one points at 95 percent confidence will produce about one and a half excursions by chance from a correct model, and demanding all of them would fail a correct model almost always. Eighty percent tolerates six misses, which is generous, and it is fixed now."
+    },
+    "e2_not_reused": "The bootstrap sharpness screen of the previous contract is not applied here. With 36 points against four or five parameters the frozen prediction is necessarily far sharper than the data, so the screen has no work to do and applying it would be theatre.",
+    "e3_not_needed": "No family pins a constant in this fit. The two-timescale family's recovery constant, pinned in the previous contract because the paired-pulse curve could not see it, is fitted here because the train can. That is the entire point of the exercise.",
+    "selection": "among families passing E1 on both observables, the lowest joint weighted residual is the primary",
+    "if_nothing_is_eligible": "Nothing is frozen, Fig3G stays sealed, and the result is that no family among the seven can satisfy both observables at once. That would be a stronger and more useful finding than any of the individual refutations so far, and it is not to be avoided by relaxing E1."
+  },
+
+  "reported_but_not_gating": [
+    "the chi-square goodness of fit, which with 36 points has real degrees of freedom for the first time in this exercise and is still not a validation",
+    "which parameters sit at a box bound, reported rather than excluded, because a bound now means the joint data genuinely prefer an extreme value rather than that the observable is blind",
+    "the effective first-pulse utilisation against Kazama and Wilson's measured release probability of 0.79, which the recorded structural incompatibility says no family can reconcile",
+    "the predicted 7 Hz steady state against their measured 0.60"
+  ],
+
+  "the_holdout_this_freezes_for": {
+    "file": "rozenfeld2023-repo/Figure 3/Fig3G.mat",
+    "variable": "all_flies_1Hz_control",
+    "cohort": "wild type, 0 days post eclosion, 20 animals, 32 pulses at 1 Hz",
+    "status": "UNSPENT. Never decoded. The audits that touched this file read structures and stored-byte digests only.",
+    "it_is_distinct_from_the_fit_set": "The stored-byte digest audit of 2026-09-10 found Fig3B and Fig3G different, and their animal counts differ, 17 against 20, matching the published legends for the day-2-to-4 and day-0 cohorts. Fig3I is bit-identical to Fig3B and is therefore already spent.",
+    "the_developmental_caveat_declared_in_advance": "Fig3G is a day-0 cohort and the fit set is day 2 to 4, so scoring it tests a conjunction: that the model describes this synapse, and that the wild-type 1 Hz train trajectory does not change over the first days after eclosion. A failure cannot be cleanly attributed between the two. This is the same caveat the earlier paired-pulse holdout carried and it is restated rather than forgotten.",
+    "its_contract_is_separate": "stage2-stp-joint-holdout-v1, to be committed with the frozen numbers in it before Fig3G is opened. Nothing in this contract licenses opening it."
+  },
+
+  "acceptance": {
+    "what_this_run_can_establish": "Which of the seven families can satisfy a paired-pulse curve and a 1 Hz train simultaneously, and what the recovery constant is when an observable that can see it is included.",
+    "what_this_run_cannot_establish": "Anything about whether the winner is right. It is fitted to everything it is scored against here.",
+    "no_tier": "V0 remains the only supported tier and this run cannot change that.",
+    "no_criterion_may_be_restated": "E1's two thresholds, the objective, the normalisation and the family list are closed as of this commit."
+  },
+
+  "claim_boundary": "A joint fit on two spent observables. It opens two already-spent files, awards no tier, and its only product is a frozen model and the record of what the two observables together do and do not determine.",
+  "last_reviewed": "2026-09-10"
+}

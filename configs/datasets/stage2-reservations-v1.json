@@ -57,19 +57,22 @@
           "path": "rozenfeld2023-repo/Figure 3/Fig3B.mat",
           "kind": "matlab-v5",
           "role": "per-animal evoked-EPSC amplitude at 1 Hz in absolute picoamps; reserved and not scored, because ND-04 carries no absolute conductance scale for this synapse",
-          "reserve_all": true
+          "reserve_all": true,
+          "role_corrected_2026_09_10": "A 32-column per-pulse evoked-amplitude trajectory over a 1 Hz train, one row per animal. The absolute scale is unscoreable under ND-04, but the trajectory normalised to its own first pulse needs no scale and is a train observable. The earlier classification dismissed the file on the absolute amplitude alone."
         },
         {
           "path": "rozenfeld2023-repo/Figure 3/Fig3G.mat",
           "kind": "matlab-v5",
           "role": "as Fig3B for the second cohort; reserved, not scored",
-          "reserve_all": true
+          "reserve_all": true,
+          "role_corrected_2026_09_10": "A 32-column per-pulse evoked-amplitude trajectory over a 1 Hz train, one row per animal. The absolute scale is unscoreable under ND-04, but the trajectory normalised to its own first pulse needs no scale and is a train observable. The earlier classification dismissed the file on the absolute amplitude alone."
         },
         {
           "path": "rozenfeld2023-repo/Figure 3/Fig3I.mat",
           "kind": "matlab-v5",
           "role": "as Fig3B for the third cohort; reserved, not scored",
-          "reserve_all": true
+          "reserve_all": true,
+          "role_corrected_2026_09_10": "A 32-column per-pulse evoked-amplitude trajectory over a 1 Hz train, one row per animal. The absolute scale is unscoreable under ND-04, but the trajectory normalised to its own first pulse needs no scale and is a train observable. The earlier classification dismissed the file on the absolute amplitude alone."
         },
         {
           "path": "rozenfeld2023-repo/Figure 1/Fig1H.mat",
@@ -330,7 +333,7 @@
     "method": "flysim.reservations.read_mat_structure over every MAT file in the repository. Variable names, classes and array shapes only; the reader is structurally incapable of returning a value and no payload was decoded. Structure is not a value under the reservation rule, so the audit spent nothing.",
     "files_examined": 66,
     "files_read_successfully": 61,
-    "the_claim_as_it_now_stands": "Across all 61 readable files there is no ORN-to-PN evoked-amplitude train series. The only per-pulse arrays over a stimulation train are Fig3E_and_F's, which are latencies, and the 32-column arrays of Fig3B, Fig3G and Fig3I, which are the 32 eEPSCs evoked at 1 Hz that the methods say were averaged to give one amplitude per animal. Everything else wide is odour-evoked calcium or spiking population data, raw whole-cell traces, or behaviour.",
+    "the_claim_as_it_now_stands": "SUPERSEDED. The audit's finding that the only per-pulse train arrays are Fig3E_and_F's latencies and the 32-column arrays of Fig3B, Fig3G and Fig3I was correct; the conclusion drawn from it was not. Those 32-column arrays ARE per-pulse amplitude trajectories over a 1 Hz train, which is exactly what the corpus was said to lack. See correction_the_corpus_does_hold_train_amplitude_series.",
     "the_qualification_that_must_travel_with_it": "Five files could not be read and their contents are unknown. The claim is therefore about 61 of 66 files and not about the repository. Four of the five sit in figures about odour responses or behaviour, where an evoked-amplitude train series would be out of place, but 'would be out of place' is an inference of exactly the kind this session has been punished for six times, so it is recorded as an open question rather than as a conclusion.",
     "the_five_unreadable_files": {
       "Figure 1/Fig1D.mat": "MATLAB v7.3, an HDF5 container the header-only reader deliberately does not parse",
@@ -341,5 +344,32 @@
     },
     "a_defect_in_the_project_reader_not_in_the_data": "Fig8B and FigS13 are version 5 containers that this project's structure reader cannot parse, failing on the dimensions subelement. That is a limitation of flysim.reservations.read_mat_structure -- most likely a variable class it does not handle, such as a cell array or a struct -- and not a property of the files. It is recorded here rather than fixed, because fixing it is not needed for any current contract and because an unrecorded reader limitation is how a corpus gets described from the files that happened to open.",
     "what_the_audit_also_settled": "Fig3G's wild-type 1 Hz array has 20 animals against Fig3B's and Fig3I's 17, which matches the published legends for the day-0 and 2-to-4-day cohorts and is consistent with the recorded finding that Fig3B and Fig3I are bit-identical while Fig3G is a separate day-0 recording."
+  },
+  "correction_the_corpus_does_hold_train_amplitude_series": {
+    "corrected_on": "2026-09-10",
+    "the_claim_withdrawn": "That no ORN-to-PN train amplitude series exists anywhere in the Rozenfeld corpus, and that advancing this synapse therefore required a different dataset.",
+    "what_is_actually_there": "Fig3B, Fig3G and Fig3I each hold a 32-column array of per-pulse evoked amplitudes over a 1 Hz train. The methods say so: 'To measure eEPSC amplitudes and kinetics, 32 eEPSCs were evoked at 1 Hz and averaged.' The authors averaged the 32 columns to one number per animal for their figure; the columns themselves are the trajectory. Fig3B's wild-type array is negative-going, seventeen animals finite at every one of the 32 columns, and it depresses from 1.000 to a plateau near 0.70.",
+    "the_measured_trajectory": {
+      "file": "rozenfeld2023-repo/Figure 3/Fig3B.mat",
+      "variable": "all_flies_1Hz_control",
+      "cohort": "wild type, 2 to 4 days post eclosion, 17 animals",
+      "first_pulse_magnitude_pa": 50.43,
+      "normalised_pulses_1_5_10_20_32": [
+        1.0,
+        0.893,
+        0.64,
+        0.56,
+        0.637
+      ],
+      "steady_state_last_five_mean": 0.7032
+    },
+    "why_this_matters_more_than_the_other_six": "It is the claim that closed the goal off. Having decided the corpus held no train amplitude series, the recorded conclusion was that the recovery constant is unmeasurable here and that progress needed procurement. Both were wrong. The measured 1 Hz steady state is 0.703, which sits BETWEEN the refuted predecessor's 0.904 and the two candidates' 0.341 and 0.402 -- so all three registered accounts are wrong, in opposite directions, and the data to constrain the parameter that separates them was in the corpus the whole time.",
+    "how_it_was_missed": "Fig3B was classified on 2026-09-09 as 'per-animal evoked-EPSC amplitude at 1 Hz in absolute picoamps; reserved and not scored, because ND-04 carries no absolute conductance scale for this synapse'. That is true of the absolute amplitude and irrelevant to the trajectory: normalising the 32 columns to the first pulse needs no conductance scale at all. A file was dismissed on a property of one statistic derivable from it, without asking what else it contained.",
+    "what_is_now_spent_and_what_is_not": {
+      "Fig3B_wild_type": "SPENT on 2026-09-10, opened while characterising the mis-described latency arrays. Legitimate corpus-correction work, and it spent a holdout. It becomes a fitting set.",
+      "Fig3I_wild_type": "bit-identical to Fig3B, therefore also spent and carrying no new animals",
+      "Fig3G_wild_type": "UNSPENT. Day 0, twenty animals, thirty-two pulses at 1 Hz. Never decoded: the audits that touched it read structures and stored-byte digests only. It is a genuine unspent train-amplitude holdout."
+    },
+    "the_seventh_instance": "This is the seventh claim this session that was inferred rather than measured, and the fourth about what a file contains. The pattern is now: a file was dismissed on one property, a join size read off a row count, a preparation read off a plotting label, a cohort's independence read off a legend, a model's train behaviour read off one term, and which sites matter read off which sites survive. Every one flattered the project except this one, which did the opposite -- it made the goal look unreachable when it was not."
   }
 }

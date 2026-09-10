@@ -428,6 +428,55 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_stp_joint(args: argparse.Namespace) -> int:
+    from flysim.stp_joint import run_joint_fit
+
+    result = run_joint_fit(
+        contract_path=args.experiment,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        restarts=args.restarts,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "train_summary": {
+                "pulses": result["fit_set"]["train"]["pulses"],
+                "first_pulse_pa": result["fit_set"]["train"]["first_pulse_magnitude"],
+                "normalised_head": result["fit_set"]["train"]["normalised"][:6],
+                "normalised_tail": result["fit_set"]["train"]["normalised"][-5:],
+            },
+            "summary": [
+                {
+                    "family_id": name,
+                    "sse": row["fit"]["weighted_sse"],
+                    "sse_paired": row["fit"]["weighted_sse_paired_pulse"],
+                    "sse_train": row["fit"]["weighted_sse_train"],
+                    "df": row["fit"]["degrees_of_freedom"],
+                    "p": row["fit"]["goodness_of_fit_p"],
+                    "paired_inside": row["e1_paired_pulse_inside"],
+                    "train_fraction": row["e1_train_fraction_inside"],
+                    "eligible": row["eligible"],
+                    "steady_state_1hz": row["steady_state_1hz"],
+                    "at_bound": row["fit"]["parameters_at_a_bound"],
+                    "parameters": row["fit"]["parameters"],
+                }
+                for name, row in result["families"].items()
+            ],
+            "eligible": result["eligible"],
+            "selection": result["selection"],
+            "kazama_wilson_7hz_check": result["independent_check_not_in_the_objective"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_stp_train(args: argparse.Namespace) -> int:
     from flysim.stp_train import run_stp_train_discrimination
 
@@ -2223,6 +2272,30 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_stp_joint = stage2_commands.add_parser(
+        "stp-joint",
+        help="fit the plasticity families jointly to the spent paired-pulse curve and 1 Hz train",
+    )
+    stage2_stp_joint.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "stage2-stp-joint-fit-v1.json",
+    )
+    stage2_stp_joint.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_stp_joint.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_stp_joint.add_argument("--output", type=Path, required=True)
+    stage2_stp_joint.add_argument("--restarts", type=int, default=48)
+    stage2_stp_joint.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_stp_joint.set_defaults(func=_command_stage2_stp_joint)
 
     stage2_stp_train = stage2_commands.add_parser(
         "stp-train",
