@@ -655,10 +655,13 @@ tier in the project.
 The wild-type trains in `Figure 3/Fig3E_and_F.mat` — 1, 10, 20 and 60 Hz, 32 to 112 pulses,
 18 animals — are now the **only** unspent wild-type ORN→PN holdout in the corpus. They
 measure the recovery constant this observable cannot identify; they would immediately
-expose the unbounded facilitation both frozen rules carry; they separate the additive from
-the multiplicative account, which a paired-pulse curve cannot; and at 60 Hz their 16.7 ms
-interval samples the fast facilitation component repeatedly, where the paired-pulse curve
-sees it at one point only.
+separate the additive from the multiplicative account, which a paired-pulse curve cannot —
+the two candidates predict second-to-first ratios of 1.026 and 0.951 at 10 Hz and put the
+peak at different pulses — and at 60 Hz their 16.7 ms interval samples the fast
+facilitation component repeatedly, where the paired-pulse curve sees it at one point only.
+An earlier version of this passage said the trains would expose unbounded facilitation in
+both rules. That was false: the facilitation multiplies a depleting resource and the
+predictions peak near 1.4 and decay. See ADR-2026-013's fourth amendment.
 
 Before that contract is written: run `duplicate_arrays` against those arrays, and compare
 the published animal counts. Every train array in the file reports 18 animals at every

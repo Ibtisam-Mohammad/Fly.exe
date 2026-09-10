@@ -80,7 +80,7 @@
       "parameters": 4,
       "mechanism": "two facilitating components with different calcium decay constants, multiplying one depleting resource",
       "declared_structural_choice": "Two constants are pinned and neither is a measurement. The fast facilitation constant is pinned at 5 ms for the reason above. The resource recovery constant is pinned at 20000 ms because the 300 ms and 1000 ms cohort means differ by 0.0003 against a pooled standard error of 0.0277, which fixes the depth of the plateau and says nothing whatever about its rate. The run is required to refit at several values of each pinned constant and to report how far the five scored predictions move; if either sweep moves them by more than 0.01 in ratio units the pinning is not harmless and the family is not eligible.",
-      "known_limitation": "Its facilitation is additive and has no ceiling, so it diverges in a long train. The sealed train arrays would test exactly that and are not opened here.",
+      "known_limitation": "Its facilitation is additive and has no ceiling of its own, but it multiplies a depleting resource and does not run away in a long train. An earlier version of this record claimed it diverges; that was asserted from the facilitation term in isolation and is false.",
       "why_four_free_parameters_and_two_pinned_constants": "The fit set forces two facilitation timescales: one exponential above the plateau cannot pass through the 10, 30 and 100 ms means at once, missing the 30 ms mean by 3.3 standard errors. But it does not supply enough information to fit both components fully. The fast component decays faster than the shortest recorded interval, so the data carry one number about it, and an exploratory five-parameter version produced a flat ridge along which doubling the step and shortening the constant to match left every prediction unchanged. The fast constant is therefore pinned at 5 ms, half the shortest interval and arbitrary within the set of values the protocol cannot separate, and the amplitude is fitted. Four free parameters against five means leaves one residual degree of freedom, so unlike the exploratory version this family does have a goodness-of-fit statistic."
     },
     {
@@ -171,7 +171,7 @@
     ],
     "excluded_and_why": {
       "Fig6D": "its paired-pulse ratios are recorded from GABAergic multiglomerular local interneurons labelled by 449-QF, not from uniglomerular projection neurons. ND-06's rule is class-specific to ORN-to-uniglomerular-PN edges, so this file scores a different synapse class and must not be used. It stays sealed.",
-      "Fig3E_and_F": "the train arrays. They are the decisive test of the pinned recovery constant and of the unbounded facilitation, and they are a different observable rather than a different cohort. They stay sealed and are the declared next experiment."
+      "Fig3E_and_F": "the train arrays. They are the decisive test of the pinned recovery constant and of the additive-versus-multiplicative structure, and they are a different observable rather than a different cohort. They stay sealed and are the declared next experiment."
     }
   },
   "claim_boundary": "A fit and a screen on spent data. It opens one already-spent file, awards no tier, and its only product is a frozen model and the record of what its parameters do and do not mean.",

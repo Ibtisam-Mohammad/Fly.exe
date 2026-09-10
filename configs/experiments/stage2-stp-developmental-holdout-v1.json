@@ -64,7 +64,7 @@
     },
     "excluded": {
       "Fig6D": "paired-pulse ratios recorded from GABAergic multiglomerular local interneurons labelled by 449-QF. A different synapse class from the ORN-to-uniglomerular-PN edges ND-06's rule is scoped to. It stays sealed.",
-      "Fig3E_and_F": "the train arrays at 1, 10, 20 and 60 Hz. A different observable rather than a different cohort, and the decisive test of both pinned constants and of the unbounded facilitation. It stays sealed and is the declared next experiment.",
+      "Fig3E_and_F": "the train arrays at 1, 10, 20 and 60 Hz. A different observable rather than a different cohort, and the decisive test of the pinned recovery constant and of the additive-versus-multiplicative structure. It stays sealed and is the declared next experiment.",
       "every_RNAi_array": "a perturbation the frozen models have no parameter for. Sealed."
     }
   },
@@ -162,7 +162,7 @@
       "degrees_of_freedom_on_the_fit_set": 0,
       "effective_first_pulse_utilisation": 0.10242927028921349,
       "against_the_measured_release_probability": 7.712639148647654,
-      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and unbounded, so it diverges in a long train."
+      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and has no ceiling of its own, but it multiplies a depleting resource and does not run away in a long train: over 112 pulses at 60 Hz it peaks near 1.4 times the first response at pulse four and falls to under three per cent of it by the end."
     },
     "secondary": {
       "family_id": "facilitation-depression",
@@ -294,7 +294,7 @@
   },
   "the_next_experiment_whatever_happens_here": {
     "what": "the sealed wild-type train arrays in rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat, at 1, 10, 20 and 60 Hz over 32 to 112 pulses in 18 animals",
-    "why_it_is_the_decisive_one": "It is a different observable, not another cohort, and it attacks every weakness this exercise exposed. The frozen models pin a resource recovery constant that the paired-pulse protocol cannot measure at all; a train measures it directly. Their facilitation is additive and unbounded, so they diverge in a long train; a 60 Hz train of 112 pulses would show that immediately. The additive and multiplicative accounts differ by a term that is invisible on a paired-pulse curve and compounds across a train. And the fast facilitation component that the paired-pulse curve sees only at its 10 ms point is sampled repeatedly by a 60 Hz train, whose interval is 16.7 ms.",
+    "why_it_is_the_decisive_one": "It is a different observable, not another cohort, and it attacks the weaknesses this exercise exposed. The frozen models pin a resource recovery constant that the paired-pulse protocol cannot measure at all; a 1 Hz train of 32 pulses measures it directly, and the two models predict steady states of 0.339 and 0.399 there. The additive and multiplicative accounts differ by a term that is invisible on a paired-pulse curve and compounds across a train: at 10 Hz they predict second-to-first ratios of 1.026 and 0.951 and put the peak at different pulses. And the fast facilitation component that the paired-pulse curve sees only at its 10 ms point is sampled repeatedly by a 60 Hz train, whose interval is 16.7 ms. An earlier version of this passage said the models would diverge in a long train and that a 60 Hz train would show it immediately. That was false, computed rather than asserted afterwards: the predictions are bounded near 1.4 and decay. The train experiment is a discrimination test, not an expected refutation.",
     "what_must_be_written_first": "Its own contract, naming the file, the variables, the normalisation, the missing-data rule and the acceptance limits, committed before those arrays are opened. Nothing in this contract licenses opening them."
   },
   "claim_boundary": "One scoring pass over two sealed wild-type cohorts, against models frozen beforehand. It can award at most a V1-limited tier on the paired-pulse observable, it opens ten arrays and nothing else, and it leaves the trains, the perturbations, the raw traces and the entire Takagi corpus sealed.",

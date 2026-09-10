@@ -1,6 +1,6 @@
 {
   "schema_version": "1.3",
-  "registry_id": "male-cns-short-term-plasticity-v0.2",
+  "registry_id": "male-cns-orn-pn-stp-candidates-v0.2",
   "dataset_id": "male-cns:v1.0",
   "assumption_ids": [
     "ND-04",
@@ -10,7 +10,8 @@
     "registry_id": "male-cns-short-term-plasticity-v0.1",
     "why": "v0.1 bound this synapse class to a depression-only Tsodyks-Markram rule with Nagel, Hong and Wilson's published utilisation of 0.22 and recovery constant of 893 ms. It faced two independent external tests and passed neither, and the second failure was structural rather than numerical: the measured paired-pulse ratios exceed one at three of five intervals and decrease with interval, and a single depleting resource can do neither at any parameter setting. No refitting could repair it, which is why this is a new registry rather than new values in the old one.",
     "v0_1_is_preserved_unchanged": "Its failing predictions, its two external tests and its verdicts stay exactly as recorded. Nothing here rewrites them.",
-    "what_the_successor_search_also_refuted": "The minimal repair does not work. A family that keeps the published utilisation and recovery constant exactly as v0.1 registers them and adds the missing facilitation is capped at a paired-pulse ratio of 1.388 by that pinning, against a measured 10 ms cohort mean of 1.5139, and it lands outside the fit set's own interval. So the diagnosis recorded on 2026-09-09 -- a missing mechanism rather than wrong parameters -- was half right. The mechanism was missing and the parameters are also wrong for this synapse as these recordings measure it."
+    "what_the_successor_search_also_refuted": "The minimal repair does not work. A family that keeps the published utilisation and recovery constant exactly as v0.1 registers them and adds the missing facilitation is capped at a paired-pulse ratio of 1.388 by that pinning, against a measured 10 ms cohort mean of 1.5139, and it lands outside the fit set's own interval. So the diagnosis recorded on 2026-09-09 -- a missing mechanism rather than wrong parameters -- was half right. The mechanism was missing and the parameters are also wrong for this synapse as these recordings measure it.",
+    "what_the_project_actually_has_now": "No usable ORN-to-PN short-term-plasticity rule at all. v0.1 is refuted and these two candidates are unvalidated, so the honest position is an empty slot rather than a succession. 'Supersedes' below describes what v0.1's failure forced, not a handover of a working rule."
   },
   "purpose": "To carry a short-term-plasticity rule for the ORN-to-PN synapse that was frozen before it was tested. Both rules below are fitted values, both are frozen with their predictions written down, and their only test is the sealed day-1 and day-0 wild-type cohorts under stage2-stp-developmental-holdout-v1. Until that test returns, this registry awards no tier and is an executable labelled alternative exactly as v0.1 was.",
   "how_these_rules_were_obtained": {
@@ -144,7 +145,7 @@
         "weighted_sse": 3.6249703024063755e-16,
         "degrees_of_freedom": 0,
         "goodness_of_fit_p": null,
-        "this_is_not_evidence": "The fit set is spent. A good fit to it is a property of the fitting, not of the synapse."
+        "this_is_not_evidence": "A chi-square goodness-of-fit p-value on five cohort means is not evidence that a mechanism is right, and a large one is not a virtue. With one residual degree of freedom a p near 0.9 says the residual is SMALLER than chance would give, which is what over-parameterisation looks like, not what a validated model looks like. With zero residual degrees of freedom, as the primary candidate has, no p exists at all. These numbers are reported so the fit can be audited and for no other purpose. Neither a saturated nor a near-saturated fit validates anything, and the earlier prose describing the best-fitting family as 'the best fit of all' invited exactly that reading."
       },
       "effective_first_pulse_utilisation": 0.10242927028921349,
       "against_the_measured_release_probability": {
@@ -154,7 +155,7 @@
         "source": "Kazama and Wilson 2008, multiple-probability fluctuation analysis",
         "the_tension_is_recorded_not_resolved": "Every family that could reproduce this paired-pulse curve needed an effective first-pulse utilisation between 0.07 and 0.13, which is eight to eleven times below the release probability Kazama and Wilson measured at this synapse. Mapping a fitted utilisation onto a per-site release probability needs one vesicle per site and no within-pair recovery, which the v0.1 registry already records as the reason the variance-derived value was not adopted, so this is not a clean contradiction. It is a large unexplained gap and it is recorded here rather than left out. A synapse with a release probability near 0.79 should barely facilitate at all, and these recordings facilitate by fifty per cent at 10 ms."
       },
-      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and unbounded, so it diverges in a long train."
+      "structural_limits": "Five free parameters against five cohort means leaves no residual degrees of freedom, so this family has no goodness-of-fit statistic and cannot be tested in sample at all. Its fast step and fast constant trade off along a ridge, so neither is separately determined by a curve whose shortest interval is 10 ms; what the data determine is the fast component's contribution at that one interval. Its facilitation is additive and has no ceiling of its own, but it multiplies a depleting resource and does not run away in a long train: over 112 pulses at 60 Hz it peaks near 1.4 times the first response at pulse four and falls under three per cent of it by the end."
     },
     {
       "rule_id": "orn-to-uniglomerular-pn",
@@ -234,7 +235,7 @@
         "weighted_sse": 6.2352566974691115,
         "degrees_of_freedom": 1,
         "goodness_of_fit_p": 0.012523143941590313,
-        "this_is_not_evidence": "The fit set is spent. A good fit to it is a property of the fitting, not of the synapse."
+        "this_is_not_evidence": "A chi-square goodness-of-fit p-value on five cohort means is not evidence that a mechanism is right, and a large one is not a virtue. With one residual degree of freedom a p near 0.9 says the residual is SMALLER than chance would give, which is what over-parameterisation looks like, not what a validated model looks like. With zero residual degrees of freedom, as the primary candidate has, no p exists at all. These numbers are reported so the fit can be audited and for no other purpose. Neither a saturated nor a near-saturated fit validates anything, and the earlier prose describing the best-fitting family as 'the best fit of all' invited exactly that reading."
       },
       "effective_first_pulse_utilisation": 0.08038293232895521,
       "against_the_measured_release_probability": {
@@ -261,7 +262,7 @@
     "track_a_genn_engine": "not implemented",
     "why_this_is_recorded_now": "Neither frozen rule can yet be executed inside a circuit simulation. They exist as closed-form and state-machine predictors of a paired-pulse ratio. Wiring them into the runners is work that should not be done until the holdout says whether either of them survives."
   },
-  "validation_status": "FROZEN, TESTED ONCE, NO VERDICT as of 2026-09-10. Both rules are fitted to spent data. Their registered holdout returned NO VERDICT because its primary cohort turned out to be bit-identical to the fit set; the one genuine unseen cohort was too noisy at the two short intervals to score the primary criterion, and passed the beat-a-constant criterion by a factor of 26. This registry awards no validation tier and must not be cited as one. What it now has that v0.1 never had is a frozen prediction that has outperformed a frozen null on animals it had not seen. The decisive test remains the sealed train arrays at 1, 10, 20 and 60 Hz, which are now the only unspent wild-type ORN-to-PN holdout in the corpus and which measure the recovery constant neither rule can identify.",
+  "validation_status": "FROZEN, TESTED ONCE, NO VERDICT as of 2026-09-10. This file is a candidate-family set, not a rule; both candidates are fitted to spent data and neither has passed a holdout. Their registered holdout returned NO VERDICT because its primary cohort turned out to be bit-identical to the fit set; the one genuine unseen cohort was too noisy at the two short intervals to score the primary criterion, and beat a weak frozen null on the secondary one. No validation tier is awarded and none may be cited. Separately, every candidate here needs a resting release probability below 0.40 to reproduce the measured 10 ms ratio, against a measured 0.79, which is a structural incompatibility with the single-pool assumption they all share and is recorded above. The next test is the sealed train arrays at 1, 10, 20 and 60 Hz, now the only unspent wild-type ORN-to-PN holdout, and the two candidates make sharply different and bounded predictions there.",
   "what_this_registry_does_not_do": [
     "It does not reinstate the retired synaptic leg of the Stage 2 gate, which needs unitary waveforms this repository does not ship. The gate stays at v4 and 0 of 3.",
     "It does not resolve edge sign, which is ND-10 and stays unresolved wherever receptor evidence is absent.",
@@ -281,16 +282,36 @@
       "cohort": "wild type, 0 days post eclosion, Fig3H, 20 to 21 animals per interval",
       "registered_role": "secondary; declared in advance not to enter the verdict",
       "A1_prediction_inside_the_measurement_error": "NO VERDICT. The frozen primary's prediction does lie inside all five intervals, but the 10 ms and 30 ms half-widths are about 0.19 and 0.17 against the registered 0.15 power limit, leaving three scorable intervals against a registered minimum of four. An interval that wide would contain many wrong predictions too, which is what the limit is for.",
-      "A2_better_than_a_frozen_constant": "PASSED, and this is the one substantive registered result. On 21 animals neither rule had seen, the primary's weighted residual is 1.493 against the frozen constant's 38.612, a factor of 26, against a registered requirement of 2. The secondary rule gives 1.279 on the same cohort.",
+      "A2_better_than_a_frozen_constant": "PASSED, and it is the one substantive registered result, but the margin should not be quoted without its null. On 21 animals neither rule had seen, the primary's weighted residual is 1.493 against the frozen constant's 38.612. That constant sits at 0.9785 while the cohort means span 0.92 to 1.46, so any curve with roughly the right shape beats it comfortably; the factor of 26 measures how much structure the data have, not how good the model is. What the result does establish is the thing worth establishing: a model frozen with its numbers written down beforehand outperformed a null also frozen beforehand, on animals it had not seen, under a criterion fixed in advance. That is a first for this project and it is not a tier.",
       "A3_shape": "PASSED, 4 of 4 adjacent directions, and the frozen constant passes it too, so it carries little.",
       "did_it_separate_the_two_frozen_rules": "No. The four-parameter single-facilitation rule does marginally better here than the five-parameter two-timescale rule, 1.279 against 1.493, which points the opposite way from the fit set where the two-timescale family was better by a factor of hundreds. The two curves differ by up to 0.075 at 100 ms, above the 0.02 separability limit, but that cohort's 100 ms half-width is 0.12. One cohort of this size cannot tell them apart, and neither rule may be preferred over the other on this evidence."
     },
-    "what_this_registry_may_now_claim": "That its primary rule, frozen with its parameters and its five predictions written down before the cohort was opened, tracks an unseen wild-type cohort about 26 times better than a frozen constant does, under a criterion fixed in advance. That is real and it is the first time any dynamical model in this project has been frozen and then beaten a null on unseen animals. It is not a validation tier: the registered experiment returns NO VERDICT because its primary cohort was the training set, and the criterion that asks whether the predictions land inside the measurement error returned NO VERDICT on power.",
+    "what_this_registry_may_now_claim": "That its primary candidate, frozen with its parameters and its five predictions written down before the cohort was opened, tracks an unseen wild-type cohort better than a frozen constant does, under a criterion fixed in advance. The null is weak and the margin should always be reported with it. It is the first time any dynamical model in this project has been frozen and then beaten any null on unseen animals, and it is not a validation tier: the registered experiment returns NO VERDICT because its primary cohort was the training set, and the criterion that asks whether the predictions land inside the measurement error returned NO VERDICT on power.",
     "what_it_may_not_claim": [
       "A passed holdout. The experiment as registered returns NO VERDICT.",
       "Any validation tier. V0 remains the only supported tier in the project.",
       "That the two-timescale mechanism is established. The one genuine cohort mildly favours the simpler rule and cannot separate them.",
-      "That the fit-set agreement means anything. The fit set was spent before the fit."
+      "That the fit-set agreement means anything. The fit set was spent before the fit.",
+      "That the 26-fold margin over the frozen constant is a strong result. The constant is a weak null against data with this much structure."
     ]
+  },
+  "what_this_file_is": "A frozen CANDIDATE-FAMILY SET, not a rule. It holds two mechanisms that survived a screen on spent data, frozen with their predictions written down. Neither has passed a holdout, the project's registered test of them returned NO VERDICT, and one genuine unseen cohort could not separate them. Nothing here may be used as the ORN-to-PN plasticity rule in a simulation, and the file was renamed from a v0.2 registry to a candidate set on 2026-09-10 because the earlier name implied a successor that had replaced something.",
+  "the_release_probability_incompatibility": {
+    "status": "The sharpest result this exercise produced, and it is a problem for every candidate rather than a property of one.",
+    "the_bound": "Take one homogeneous pool of release sites, each holding at most one vesicle, each releasing with probability p at rest; let the second pulse release with any probability up to one, and let a site that released be unavailable until it recovers. Then the paired-pulse ratio is (p2/p1)(1 - p1 exp(-dt/tau)), which is at most (1 - p exp(-dt/tau))/p. The bound is generous by construction: it allows instantaneous facilitation to certainty, no desensitisation, no postsynaptic saturation and an unchanged quantal size.",
+    "the_numbers": {
+      "measured_release_probability": "0.79 plus or minus 0.02, Kazama and Wilson 2008, multiple-probability fluctuation analysis, uniform across glomeruli",
+      "ceiling_at_that_probability_at_10ms": 0.277,
+      "measured_ratio_at_10ms": 1.5139,
+      "shortfall_factor": 5.5,
+      "largest_release_probability_compatible_with_the_measured_ratio": 0.3996,
+      "and_at_the_most_generous_end_of_the_measurement": 0.419,
+      "insensitive_to_the_recovery_constant": "At a 20000 ms recovery constant instead of 893 ms the ceiling is 0.2663 and the cap is 0.3979. The conclusion does not depend on the pinned value."
+    },
+    "what_it_means": "At least one of three things is false: that the resting release probability at this synapse is near 0.79; that the Rozenfeld paired-pulse ratios measure the same quantity at the same synapse; or that a single homogeneous pool describes it. No facilitation mechanism can reconcile the first and second, because the bound already grants facilitation everything it could ask for.",
+    "which_is_most_likely_wrong_and_why_it_matters": "The single-pool assumption. Multiple-probability fluctuation analysis estimates p under a binomial model with uniform release probability, and heterogeneity across release sites biases that estimate upward; independently, a heterogeneous population facilitates on a paired pulse without any change in per-site probability, because the first pulse preferentially depletes the high-probability sites and the survivors are the low-probability ones. One assumption failing explains both measurements at once, which is why it is the leading candidate. That is a testable mechanistic claim and it is not yet tested here.",
+    "the_consequence_for_this_candidate_set": "The parallel-release-components family is the one that encodes site heterogeneity, and it is the family this exercise excluded -- on E2, because its frozen prediction band was wider than the data at 10 and 30 ms. That exclusion was correct as a statement about what five summary statistics can pin down and it is not a statement about the mechanism. If the incompatibility above is resolved the way it appears to resolve, the excluded family is the mechanistically indicated one and the two frozen candidates are effective descriptions of a heterogeneous population rather than accounts of it.",
+    "the_escape_hatch_that_must_be_named": "Postsynaptic saturation raises a measured paired-pulse ratio, so if the recordings saturate, the true presynaptic ratio is lower than 1.5139 and the bound is less badly violated. VAL-02 records that mechanism. It is weak here because minimal stimulation is designed to stay off the saturating part of the curve, which was established on 2026-09-09, but it is not zero and it is the one route by which a high release probability could survive.",
+    "computed_by": "flysim.stp_families.single_pool_paired_pulse_ceiling and maximum_single_pool_release_probability, both asserted in the test suite"
   }
 }

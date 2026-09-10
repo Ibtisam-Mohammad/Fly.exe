@@ -989,9 +989,13 @@ may not be promoted, which the contract forbids in its own acceptance section.
   30 ms half-widths are 0.19 and 0.17 against the registered 0.15 power limit, leaving
   three scorable against a registered minimum of four.
 - **A2 PASSED** — weighted residual 1.493 against the frozen constant's 38.612 on 21
-  unseen animals, a factor of 26 against a required 2. This is the one substantive
-  registered result, and the first time any dynamical model here has been frozen and then
-  beaten a null on animals it had not seen. It is not a tier.
+  unseen animals, a factor of 26 against a required 2. **The margin must not be quoted
+  without its null:** that constant sits at 0.9785 while the cohort means span 0.92 to
+  1.46, so any curve with roughly the right shape beats it, and the factor of 26 measures
+  how much structure the data have rather than how good the model is. What it does
+  establish is narrower and still a first here — a model frozen beforehand outperformed a
+  null frozen beforehand on unseen animals, under a criterion fixed in advance. It is not
+  a tier.
 - **A3 PASSED** — 4 of 4 adjacent directions, and the constant passes it too.
 - The two frozen rules are **not** separated: the four-parameter one does marginally better
   on the genuine cohort, opposite to the fit set. Neither may be preferred.
@@ -1033,6 +1037,73 @@ types return. ADR-2026-012 third amendment.
   is what is tested. Names four blocking preconditions, none met.
 - The next synaptic experiment is not yet written. The wild-type trains at 1, 10, 20 and
   60 Hz are now the **only** unspent wild-type ORN→PN holdout in the corpus, which raises
-  the standard for the contract that opens them. Before writing it: run the duplicate-array
-  guard against those arrays and compare the published animal counts. Every train array
-  reports 18 animals at every frequency, which is a pattern to check rather than assume.
+  the standard for the contract that opens them. The duplicate-array guard has since been
+  run against them and they are clean; the published animal counts (18 at every frequency)
+  still need reconciling against the paper.
+
+### Corrections to the account above, same day
+
+Four claims in the session record were wrong or overstated and are corrected in
+ADR-2026-013's fourth, fifth and sixth amendments.
+
+**The candidates do not diverge in a long train.** The record said both carry additive,
+unbounded facilitation and therefore diverge, and that a 60 Hz train would show it
+immediately. Computed: the facilitation multiplies a *depleting* resource, so over 112
+pulses at 60 Hz the response peaks near 1.4 times the first at pulse three or four and
+falls under three per cent of it by the end. The claim came from reasoning about the
+facilitation term in isolation — the fourth instance of the pattern this session
+documented. It is now asserted in the test suite.
+
+This makes the trains a better experiment, not a worse one. The candidates predict
+second-to-first ratios of 1.026 against 0.951 at 10 Hz, put the peak at different pulses,
+and give 1 Hz steady states of 0.339 against 0.399 — that last pair being the direct test
+of the recovery constant the paired-pulse protocol cannot measure at all. It is a
+discrimination experiment, not an expected refutation.
+
+**The goodness-of-fit p-values were presented as if large were good.** With one residual
+degree of freedom a p near 0.9 says the residual is *smaller* than chance would give, which
+is over-parameterisation, not validation; the primary candidate has no p at all. Corrected
+wherever one is reported.
+
+**The A2 margin was quoted without its null.** See above.
+
+**`short-term-plasticity-v0.2` is renamed `male-cns-orn-pn-stp-candidates-v0.2`.** The old
+name implied a successor registry that had replaced v0.1. It has not: v0.1 is refuted and
+the candidates are unvalidated, so the project's position is an empty slot, not a
+succession. The file now states in its first field that nothing in it may be used as the
+ORN→PN plasticity rule in a simulation.
+
+### The sharpest result, and it is a problem rather than a finding
+
+**The measured release probability is incompatible with the measured facilitation, and no
+facilitation mechanism can reconcile them.** For one homogeneous pool of release sites at
+resting probability `p`, allowing the second pulse to release with *any* probability up to
+one, the paired-pulse ratio is bounded by `(1 − p·e^{−Δt/τ}) / p`.
+
+| | at p = 0.79 (`KW2008`) | required by the data |
+|---|---|---|
+| ceiling on PPR at 10 ms | **0.277** | measured **1.5139** |
+| largest p compatible with the measured ratio | | **0.400** |
+
+Short by a factor of five and a half, and the bound already grants facilitation everything
+it could ask for. Neither number depends on the pinned recovery constant. So at least one
+of three things is false: that `p` is near 0.79 here; that the Rozenfeld ratios measure the
+same quantity at the same synapse; or that a single homogeneous pool describes it.
+
+**The third is the leading candidate and it explains both measurements at once.** MPFA
+estimates `p` under a uniform-probability binomial, and site heterogeneity biases that
+estimate upward; independently, a heterogeneous population facilitates on a paired pulse
+with no change in per-site probability, because the first pulse preferentially depletes the
+high-probability sites. One failed assumption accounts for the inflated `p` and the
+facilitation together.
+
+Which makes the **parallel-release-components** family — excluded on E2 because its frozen
+band was wider than the data at 10 and 30 ms — the mechanistically indicated one. That
+exclusion stands and was correct; it is a statement about what five summary statistics can
+pin down, not about the mechanism. It does mean the two frozen candidates are best read as
+effective descriptions of a heterogeneous population rather than accounts of it.
+
+The one escape hatch, named in advance: postsynaptic saturation raises a measured ratio, so
+saturating recordings would make the true presynaptic ratio lower and the violation
+smaller. `VAL-02` records it. Minimal stimulation makes it weak, but not zero, and it is
+the only route by which `p ≈ 0.79` survives.

@@ -19,6 +19,7 @@ import pytest
 from flysim.errors import ConfigurationError
 from flysim.stp_families import (
     FAMILIES,
+    KAZAMA_WILSON_RELEASE_PROBABILITY,
     NAGEL_RECOVERY_TAU_MS,
     NAGEL_UTILISATION,
     PAIR_PERIOD_MS,
@@ -34,9 +35,11 @@ from flysim.stp_families import (
     family,
     fit_family,
     leave_one_out,
+    maximum_single_pool_release_probability,
     nelder_mead,
     paired_pulse,
     predict,
+    single_pool_paired_pulse_ceiling,
     synthetic_recovery,
     weighted_sse,
 )
@@ -517,3 +520,124 @@ def test_the_superseded_screen_is_preserved_and_says_what_it_would_have_decided(
         "what_the_superseded_screen_would_have_decided"
     ]
     assert "holdout has not been opened" in superseded["the_rule_this_does_not_break"]
+
+def test_neither_frozen_family_runs_away_in_a_long_train() -> None:
+    """The claim an earlier record got wrong, now computed and pinned.
+
+    Both frozen families carry additive facilitation with no ceiling of its own, and the
+    records said they therefore diverge in a long train. They do not: the facilitation
+    multiplies a depleting resource, and over 112 pulses at 60 Hz the product peaks near
+    1.4 times the first response within the first handful of pulses and falls to a few per
+    cent of it by the end. The false claim was asserted from the facilitation term in
+    isolation; this test is what should have been run instead.
+    """
+    frozen = {
+        "two-timescale-facilitation-free": (1.36968, 7.73042, 0.33854, 115.01354, 0.10243),
+        "facilitation-depression": (0.00687, 0.07402, 31.04546, 20000.0),
+    }
+    for family_id, theta in frozen.items():
+        for hertz, pulses in ((1, 32), (10, 100), (20, 100), (60, 112)):
+            interval = 1000.0 / hertz
+            values = amplitudes(family_id, theta, [index * interval for index in range(pulses)])
+            relative = values / values[0]
+            assert relative.max() < 1.6, (family_id, hertz)
+            assert relative[-1] < relative.max()
+            # The train ends far below where it started: depletion wins outright.
+            assert relative[-1] < 0.5, (family_id, hertz)
+        # And the 1 Hz steady state, which is what the pinned recovery constant governs.
+        slow = amplitudes(family_id, theta, [index * 1000.0 for index in range(32)])
+        assert 0.25 < float(slow[-1] / slow[0]) < 0.5
+
+
+def test_the_single_pool_bound_matches_its_closed_form_and_its_inverse() -> None:
+    for probability in (0.05, 0.2, 0.5, 0.79, 1.0):
+        for interval, tau in ((10.0, 893.0), (100.0, 20000.0), (0.0, 500.0)):
+            ceiling = single_pool_paired_pulse_ceiling(
+                release_probability=probability, interval_ms=interval, recovery_tau_ms=tau
+            )
+            expected = (1.0 - probability * math.exp(-interval / tau)) / probability
+            assert ceiling == pytest.approx(expected, rel=1e-12)
+            if ceiling <= 0.0:
+                # p = 1 at a vanishing interval empties the pool: the ratio is zero and
+                # there is nothing to invert. The degenerate corner, not a failure.
+                assert probability == pytest.approx(1.0) and interval == 0.0
+                continue
+            # The inverse must return the probability that makes the bound exactly tight.
+            recovered = maximum_single_pool_release_probability(
+                paired_pulse_ratio=ceiling, interval_ms=interval, recovery_tau_ms=tau
+            )
+            assert recovered == pytest.approx(probability, rel=1e-9)
+
+
+def test_a_high_release_probability_forbids_paired_pulse_facilitation() -> None:
+    """The measured release probability and the measured ratio are not both possible.
+
+    At Kazama and Wilson's 0.79 a single homogeneous pool cannot exceed a paired-pulse
+    ratio of about 0.28 at 10 ms, whatever facilitation is invoked, against a measured
+    1.5139. The bound is generous by construction: it allows the second pulse to release
+    with certainty, and it assumes no desensitisation and no change in quantal size.
+    """
+    ceiling = single_pool_paired_pulse_ceiling(
+        release_probability=KAZAMA_WILSON_RELEASE_PROBABILITY,
+        interval_ms=10.0,
+        recovery_tau_ms=893.0,
+    )
+    assert ceiling == pytest.approx(0.2770, abs=5e-4)
+    assert ceiling < 1.0
+    # Even the most generous end of the measured release probability does not help.
+    assert (
+        single_pool_paired_pulse_ceiling(
+            release_probability=0.75, interval_ms=10.0, recovery_tau_ms=893.0
+        )
+        < 0.35
+    )
+    # Read the other way: the measured ratio caps the resting probability below one half.
+    for ratio, interval in ((1.5139, 10.0), (1.1583, 30.0), (1.0286, 100.0)):
+        cap = maximum_single_pool_release_probability(
+            paired_pulse_ratio=ratio, interval_ms=interval, recovery_tau_ms=893.0
+        )
+        assert cap < 0.53
+        assert cap < KAZAMA_WILSON_RELEASE_PROBABILITY
+    # And the ceiling is monotone decreasing in the release probability, which is why
+    # no facilitation mechanism can rescue a high one.
+    ceilings = [
+        single_pool_paired_pulse_ceiling(
+            release_probability=value, interval_ms=10.0, recovery_tau_ms=893.0
+        )
+        for value in (0.1, 0.2, 0.4, 0.6, 0.79)
+    ]
+    assert all(later < earlier for earlier, later in pairwise(ceilings))
+
+
+def test_every_eligible_family_sits_below_that_cap() -> None:
+    """The fitted utilisations are consistent with the bound and not with the measurement."""
+    cap = maximum_single_pool_release_probability(
+        paired_pulse_ratio=1.5139, interval_ms=10.0, recovery_tau_ms=893.0
+    )
+    fitted = {
+        "two-timescale-facilitation-free": 0.1024,
+        "facilitation-depression": 0.0804,
+        "parallel-release-components": 0.1332,
+    }
+    for family_id, utilisation in fitted.items():
+        assert utilisation < cap, family_id
+    assert cap < KAZAMA_WILSON_RELEASE_PROBABILITY
+
+
+def test_the_bounds_refuse_impossible_inputs() -> None:
+    with pytest.raises(ConfigurationError, match="release probability must lie"):
+        single_pool_paired_pulse_ceiling(
+            release_probability=0.0, interval_ms=10.0, recovery_tau_ms=893.0
+        )
+    with pytest.raises(ConfigurationError, match="release probability must lie"):
+        single_pool_paired_pulse_ceiling(
+            release_probability=1.5, interval_ms=10.0, recovery_tau_ms=893.0
+        )
+    with pytest.raises(ConfigurationError, match="recovery time constant must be positive"):
+        single_pool_paired_pulse_ceiling(
+            release_probability=0.5, interval_ms=10.0, recovery_tau_ms=0.0
+        )
+    with pytest.raises(ConfigurationError, match="ratio must be positive"):
+        maximum_single_pool_release_probability(
+            paired_pulse_ratio=0.0, interval_ms=10.0, recovery_tau_ms=893.0
+        )

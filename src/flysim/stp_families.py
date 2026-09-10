@@ -273,8 +273,8 @@ def _amplitudes_two_timescale_facilitation(
 
     The resource recovery constant is pinned rather than fitted: see
     ``PINNED_RECOVERY_TAU_MS``. The facilitation is additive and has no ceiling, so this
-    family will diverge in a long train, which is exactly what the sealed train arrays
-    would test.
+    family's facilitation has no ceiling of its own, though it multiplies a depleting
+    resource and so does not run away in a long train.
     """
     fast_step = float(theta[0])
     slow_step, slow_tau = float(theta[1]), float(theta[2])
@@ -363,8 +363,8 @@ FAMILIES: dict[str, Family] = {
             "cohort means differ by 0.0003 against a pooled standard error of 0.0277, "
             "which fixes the depth of the plateau and says nothing about its rate. Four "
             "free parameters remain against five means. Its facilitation is additive and "
-            "unbounded, so it diverges in a long train, which is what the sealed train "
-            "arrays would test."
+            "unbounded but multiplies a depleting resource, so it does not run away in "
+            "a long train; see the train bound asserted in the test suite."
         ),
     ),
     "two-timescale-facilitation-free": Family(
@@ -390,7 +390,8 @@ FAMILIES: dict[str, Family] = {
             "ridge, so neither is separately determined by a curve whose shortest "
             "interval is 10 ms; what the data determine is the fast component's "
             "contribution at that one interval. Its facilitation is additive and "
-            "unbounded, so it diverges in a long train."
+            "unbounded but multiplies a depleting resource, so it does not run away in "
+            "a long train; see the train bound asserted in the test suite."
         ),
     ),
     "depression-only": Family(
@@ -476,8 +477,9 @@ FAMILIES: dict[str, Family] = {
         ),
         paired_pulse_ceiling=None,
         structural_limits=(
-            "Its facilitation is additive and unbounded, so it has no ceiling and will "
-            "diverge in a long train. On a paired-pulse curve it differs from M1 only by "
+            "Its facilitation is additive and has no ceiling of its own, though it sums "
+            "with a depleting component rather than multiplying one. On a paired-pulse "
+            "curve it differs from M1 only by "
             "the product of the two effects, a term that decays with the facilitation "
             "constant, so the two are expected to be nearly indistinguishable on this "
             "observable and clearly distinguishable on a train. Its resting share is "
@@ -655,6 +657,60 @@ def predict(family_id: str, theta: Sequence[float], intervals_ms: Sequence[float
 # The fitter. Nelder-Mead over a sigmoid-transformed box, restarted from a seeded
 # Latin-hypercube sample. scipy is not a declared dependency of this project.
 # --------------------------------------------------------------------------------------
+
+
+KAZAMA_WILSON_RELEASE_PROBABILITY_SD = 0.02
+
+
+def single_pool_paired_pulse_ceiling(
+    *, release_probability: float, interval_ms: float, recovery_tau_ms: float
+) -> float:
+    """The largest paired-pulse ratio one homogeneous pool can produce, at any facilitation.
+
+    Take N release sites, each holding at most one vesicle, each releasing with probability
+    ``p1`` at rest; let the second pulse release with probability ``p2``, and let a site
+    that released be unavailable until it recovers with the given constant. Then
+
+        R1 = N p1 q,   R2 = N p2 (1 - p1 e^{-dt/tau}) q,
+        PPR = (p2 / p1) (1 - p1 e^{-dt/tau})  <=  (1 - p1 e^{-dt/tau}) / p1
+
+    because no facilitation can push a probability above one. The bound is deliberately
+    generous: it allows instantaneous facilitation to certainty, no desensitisation, no
+    postsynaptic saturation and a quantal size that does not change.
+
+    It matters because Kazama and Wilson measured a release probability of 0.79 at this
+    synapse and Rozenfeld and colleagues measured a paired-pulse ratio of 1.51 at 10 ms.
+    Those two numbers are not merely in tension under a single-pool model; they are
+    incompatible with it by a factor of about five and a half, and no facilitation
+    mechanism can close the gap.
+    """
+    if not 0.0 < release_probability <= 1.0:
+        raise ConfigurationError("A release probability must lie in (0, 1]")
+    if interval_ms < 0.0:
+        raise ConfigurationError("An interval cannot be negative")
+    if recovery_tau_ms <= 0.0:
+        raise ConfigurationError("A recovery time constant must be positive")
+    survived = math.exp(-interval_ms / recovery_tau_ms)
+    return (1.0 - release_probability * survived) / release_probability
+
+
+def maximum_single_pool_release_probability(
+    *, paired_pulse_ratio: float, interval_ms: float, recovery_tau_ms: float
+) -> float:
+    """The largest resting release probability compatible with an observed ratio.
+
+    The inverse of :func:`single_pool_paired_pulse_ceiling`: solving
+    ``(1 - p e^{-dt/tau}) / p >= PPR`` gives ``p <= 1 / (PPR + e^{-dt/tau})``. A measured
+    ratio above one therefore caps the resting release probability below one half, whatever
+    facilitation is invoked.
+    """
+    if paired_pulse_ratio <= 0.0:
+        raise ConfigurationError("A paired-pulse ratio must be positive")
+    if interval_ms < 0.0:
+        raise ConfigurationError("An interval cannot be negative")
+    if recovery_tau_ms <= 0.0:
+        raise ConfigurationError("A recovery time constant must be positive")
+    return 1.0 / (paired_pulse_ratio + math.exp(-interval_ms / recovery_tau_ms))
 
 
 def _to_box(unbounded: np.ndarray, spec: Family) -> np.ndarray:

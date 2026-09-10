@@ -526,7 +526,51 @@ def test_the_registry_records_no_verdict_and_claims_no_tier() -> None:
     )
     assert registry["holdout"]["verdict"] == "NO VERDICT"
     assert "NO VERDICT" in registry["validation_status"]
-    assert "awards no validation tier" in registry["validation_status"]
+    assert "No validation tier is awarded" in registry["validation_status"]
     forbidden = registry["holdout"]["what_it_may_not_claim"]
     assert any("passed holdout" in entry.lower() for entry in forbidden)
     assert any("validation tier" in entry.lower() for entry in forbidden)
+    # The weak null must be disclosed wherever the margin is quoted.
+    assert any("weak null" in entry.lower() for entry in forbidden)
+
+
+def test_the_file_calls_itself_a_candidate_set_rather_than_a_rule() -> None:
+    """Renamed on 2026-09-10: the earlier name implied a successor that had replaced one."""
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    assert registry["registry_id"] == "male-cns-orn-pn-stp-candidates-v0.2"
+    assert "CANDIDATE-FAMILY SET, not a rule" in registry["what_this_file_is"]
+    assert "may be used as the ORN-to-PN" in registry["what_this_file_is"]
+    assert (
+        "No usable ORN-to-PN short-term-plasticity rule at all"
+        in registry["supersedes"]["what_the_project_actually_has_now"]
+    )
+
+
+def test_the_goodness_of_fit_language_does_not_imply_validation() -> None:
+    """A near-saturated fit's large p is an over-parameterisation signature, not a virtue."""
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    for rule in registry["rules"]:
+        note = rule["fit_quality_on_the_spent_fit_set"]["this_is_not_evidence"]
+        assert "not evidence that a mechanism is right" in note
+        assert "SMALLER than chance" in note
+        assert "Neither a saturated nor a near-saturated fit validates anything" in note
+
+
+def test_the_release_probability_incompatibility_is_recorded_with_its_escape_hatch() -> None:
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    block = registry["the_release_probability_incompatibility"]
+    numbers = block["the_numbers"]
+    assert numbers["measured_ratio_at_10ms"] == 1.5139
+    assert numbers["ceiling_at_that_probability_at_10ms"] < 0.3
+    assert numbers["largest_release_probability_compatible_with_the_measured_ratio"] < 0.5
+    # The conclusion must not depend on the pinned recovery constant.
+    assert "does not depend on the pinned value" in numbers["insensitive_to_the_recovery_constant"]
+    # And the one mechanism that could rescue a high release probability must be named.
+    assert "saturation" in block["the_escape_hatch_that_must_be_named"]
+    assert "heterogeneity" in block["which_is_most_likely_wrong_and_why_it_matters"]

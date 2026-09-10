@@ -248,8 +248,10 @@ the decisive next experiment on every count that matters:
 - they measure the resource recovery constant, which the paired-pulse protocol cannot
   identify at all — every family drove it to its bound, and the 300 and 1000 ms cohort
   means differ by 0.0003 against a pooled standard error of 0.0277;
-- both frozen rules carry additive, unbounded facilitation, so they diverge in a long
-  train, and 112 pulses at 60 Hz would show it immediately;
+- the two candidates make sharply different and bounded train predictions — a
+  second-to-first ratio of 1.026 against 0.951 at 10 Hz, with the peak at a different
+  pulse — so the trains discriminate between them (an earlier version of this line claimed
+  they would diverge in a long train, which is false; see the fourth amendment);
 - the additive and multiplicative accounts differ by a term invisible on a paired-pulse
   curve that compounds across a train;
 - and the fast facilitation component, which the paired-pulse curve sees only at its 10 ms
@@ -294,3 +296,119 @@ legend that misdescribes a cohort. Every train array reports 18 animals at every
 the digests confirm 24 distinct arrays, and the counts should still be reconciled against
 the paper's stated n before those arrays are scored. That part is not automatable and
 saying so is the point of this addendum.
+
+## Fourth amendment, 2026-09-10 — a false structural claim, and the bound that replaces it
+
+This ADR asserted, in Decision 2's table commentary and again in Consequences, that both
+frozen candidates "carry additive, unbounded facilitation, so they diverge in a long
+train", and used that to argue a 60 Hz train "would show it immediately". **It is false.**
+Computed rather than asserted:
+
+```
+model            Hz pulses   A2/A1   A3/A1  peak@  peak   last/A1
+primary  M4f      1     32   0.903   0.819      1  1.000    0.339
+primary  M4f     10    100   1.026   0.970      2  1.026    0.058
+primary  M4f     20    100   1.097   1.099      3  1.099    0.039
+primary  M4f     60    112   1.303   1.389      4  1.407    0.027
+secondary M1      1     32   0.924   0.857      1  1.000    0.399
+secondary M1     10    100   0.951   0.874      1  1.000    0.059
+secondary M1     20    100   1.075   1.001      2  1.075    0.030
+secondary M1     60    112   1.375   1.427      3  1.427    0.010
+```
+
+The facilitation has no ceiling of its own, but it *multiplies* a depleting resource that
+falls to one to three per cent by the end of a long train, so the product peaks near 1.4
+within the first few pulses and collapses. The claim was made by reasoning about the
+facilitation term in isolation. That is the fourth instance of the pattern this ADR
+records, and the correction is now asserted in the test suite rather than in prose.
+
+**It improves the case for the train experiment rather than weakening it.** The two
+candidates make finite, well-behaved and sharply different predictions: the second-to-first
+ratio at 10 Hz is 1.026 against 0.951, the peak sits at pulse 2 for one and pulse 1 for the
+other, and the 1 Hz steady states are 0.339 against 0.399 — that last pair being the direct
+test of the recovery constant the paired-pulse protocol cannot measure. The trains are a
+discrimination experiment, not an expected refutation.
+
+## Fifth amendment, 2026-09-10 — the measured release probability is incompatible with the measured facilitation
+
+Decision 5 recorded a "factor of six to eleven" tension between the fitted first-pulse
+utilisations and Kazama and Wilson's measured release probability, and called it "a large
+unexplained gap". That undersells it. The relation is structural and it can be stated as a
+bound.
+
+Take one homogeneous pool of release sites, each holding at most one vesicle, each
+releasing with probability `p` at rest. Let the second pulse release with any probability
+up to one — that is, grant facilitation everything it could possibly ask for — and let a
+site that released be unavailable until it recovers. Then
+
+```
+R1 = N p1 q,   R2 = N p2 (1 − p1 e^{−Δt/τ}) q
+PPR = (p2/p1)(1 − p1 e^{−Δt/τ})  ≤  (1 − p e^{−Δt/τ}) / p
+```
+
+| | at p = 0.79 | required by the data |
+|---|---|---|
+| ceiling on PPR at 10 ms | **0.277** | measured **1.5139** |
+| largest p compatible with the measured ratio | | **0.400** (0.419 at the CI's generous end) |
+| same, at a 20000 ms recovery constant | 0.266 | 0.398 |
+
+So a single homogeneous pool at the measured release probability cannot produce a
+paired-pulse ratio above about 0.28 at 10 ms, against a measured 1.51 — short by a factor
+of five and a half — and **no facilitation mechanism closes the gap**, because the bound
+already allows facilitation to certainty. Read the other way, the measured ratio caps the
+resting release probability below 0.40 whatever else is assumed. Neither statement depends
+on the pinned recovery constant.
+
+**At least one of three things is false:** that the resting release probability at this
+synapse is near 0.79; that the Rozenfeld paired-pulse ratios measure the same quantity at
+the same synapse; or that a single homogeneous pool describes it.
+
+**The third is the leading candidate, and it explains both measurements at once.**
+Multiple-probability fluctuation analysis estimates `p` under a binomial model with uniform
+release probability, and heterogeneity across sites biases that estimate upward.
+Independently, a heterogeneous population facilitates on a paired pulse with no change in
+per-site probability at all, because the first pulse preferentially depletes the
+high-probability sites and the survivors are the low-probability ones. One failed
+assumption accounts for the inflated `p` and for the facilitation together.
+
+**Which makes the family this exercise excluded the mechanistically indicated one.** The
+parallel-release-components family is the one that encodes site heterogeneity, and it was
+excluded on E2 — its frozen band was wider than the data at 10 and 30 ms. That exclusion
+stands and was correct: it is a statement about what five summary statistics can pin down,
+not about the mechanism. But it means the two frozen candidates are best read as effective
+descriptions of a heterogeneous population rather than as accounts of it.
+
+**The escape hatch, named so it cannot be produced later.** Postsynaptic saturation raises
+a measured paired-pulse ratio, so if these recordings saturate, the true presynaptic ratio
+is below 1.5139 and the bound is less badly violated. `VAL-02` records that mechanism. It
+is weak here because minimal stimulation is designed to stay off the saturating part of the
+curve, established on 2026-09-09, but it is not zero, and it is the only route by which a
+release probability near 0.79 survives.
+
+The bound and its inverse are `flysim.stp_families.single_pool_paired_pulse_ceiling` and
+`maximum_single_pool_release_probability`, both asserted in the test suite.
+
+## Sixth amendment, 2026-09-10 — three pieces of language that overstated their evidence
+
+**The goodness-of-fit statistic.** Decision 2's table prints p = 0.90 for the pinned
+two-timescale family and the prose called it "the best-fitting family". With one residual
+degree of freedom a p that large says the residual is *smaller* than chance would give,
+which is the signature of over-parameterisation, not of a validated model; and the primary
+candidate has no p at all, having zero residual degrees of freedom. Neither a saturated nor
+a near-saturated fit validates a mechanism. The p-values are reported so the fit can be
+audited and for nothing else, and the registry now says so at every place one appears.
+
+**The A2 margin.** Decision 6's table gives the frozen model's weighted residual as 1.493
+against the frozen constant's 38.612 and calls the factor of 26 "the one substantive
+registered result". The result stands; the margin should never be quoted without its null.
+That constant sits at 0.9785 while the day-0 cohort means span 0.92 to 1.46, so any curve
+with roughly the right shape beats it comfortably. The factor of 26 measures how much
+structure the data have, not how good the model is. What the result establishes is narrower
+and still worth having: a model frozen beforehand outperformed a null frozen beforehand on
+unseen animals, under a criterion fixed in advance.
+
+**The file name.** `short-term-plasticity-v0.2` implied a successor registry that had
+replaced v0.1. It has not; v0.1 is refuted and its candidates are unvalidated, so the
+project's honest position is an empty slot rather than a succession. The registry id is now
+`male-cns-orn-pn-stp-candidates-v0.2` and the file states in its first field that nothing
+in it may be used as the ORN-to-PN plasticity rule in a simulation.
