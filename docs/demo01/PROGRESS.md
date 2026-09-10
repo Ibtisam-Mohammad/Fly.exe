@@ -16,8 +16,8 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 |-------|----------------|-------|
 | S0 | Route measurement: which sensory->descending path is structurally usable | DONE 2026-09-10 |
 | S1 | A neural-only operating point that passes frozen C1-C5 on a visual route | **PASSED** 2026-09-10: 31 of 108 candidates met all five criteria |
-| S2 | E-provenance decoder tuned on development scenarios, then frozen | running |
-| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | contract frozen; stance defect found and fixed; matrix pending |
+| S2 | E-provenance decoder tuned on development scenarios, then frozen | **FROZEN** 2026-09-10: yaw gain 1.6, threshold 0.6, sign +1 |
+| S3 | Engineering acceptance contract frozen, identical-seed control matrix run | contract frozen; stance defect found and fixed; matrix running |
 | S4 | Video: brain view + body view + traces + control comparison | renderer built and validated; final render pending |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
 
@@ -305,3 +305,43 @@ so the threshold never binds. Half the sweep is therefore duplicated work, which
 finding about the grid rather than about the decoder, and the sweep is being run to
 completion anyway because the selection rule was declared over the whole grid before any of
 it ran.
+
+## S2 closed: the decoder, and the whole sweep
+
+All twelve settings walked in all three development scenarios, so the declared rule reduced
+to the approach ranking.
+
+| yaw gain | sign | mean approach | sign-agreement fraction | mean turn |
+|---|---|---|---|---|
+| **1.60** | **+1** | **+12.61 mm** | 0.718 | 89.8 deg |
+| 0.80 | +1 | +12.07 mm | 0.691 | 54.1 deg |
+| 3.20 | +1 | +5.00 mm | 0.729 | 52.8 deg |
+| 3.20 | -1 | -5.40 mm | 0.421 | 85.1 deg |
+| 0.80 | -1 | -5.86 mm | 0.715 | 48.1 deg |
+| 1.60 | -1 | -8.05 mm | 0.854 | 85.4 deg |
+
+Each row appears once here; the forward-threshold axis produced exact duplicates, so twelve
+searched settings yielded six distinct outcomes.
+
+**Approach is non-monotonic in the yaw gain, and this is the finding that mattered.** 0.8
+gave +12.07 mm, 1.6 gave +12.61 mm, and 3.2 gave only +5.00 mm. Too much steering gain
+makes the fly overshoot and oscillate rather than close on the cue, so picking the largest
+gain available would have made the demonstration measurably worse. That is the same shape
+Track A found in its station-keeping channel, where the response also reversed past a limit,
+and it is a reminder that more gain is not more control.
+
+**The threshold never binds.** Settings differing only in it were identical to the last
+decimal, because the frozen operating point's 2.435 Hz cue response sits well above both
+0.6 and 1.2 Hz. The scenario records that the value is arbitrary between the two searched
+rather than implying it was discriminated.
+
+**The sign result is the cleanest statement of the corrected D1.** At the winning gain, +1
+approaches by 12.61 mm and -1 retreats by 8.05 mm, while the sign-agreement fraction moves
+only from 0.718 to 0.854. The lateralisation is the network's; the direction is the
+decoder's.
+
+**And one row justifies the A4 fix on its own.** The 3.2 avoidance setting scores 0.421 on
+the sign-agreement fraction, below the one-half threshold my earlier implementation used,
+with the readout lateralisation intact. Had the mismatch with the frozen contract not been
+caught, that metric would have been failing settings for a reason unrelated to what the
+criterion is about.
