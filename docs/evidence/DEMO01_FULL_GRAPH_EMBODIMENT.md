@@ -388,3 +388,55 @@ identical and diverge because their *sensory input* diverges once their bodies d
 divergence is the closed loop showing itself, and the panel caption was corrected from
 "identical brain" to say so, because the original wording was true only at the first
 interval.
+
+## The 2026-09-11 re-run: a reproduction, and what the first videos were hiding
+
+The presentation was rebuilt (ADR-2026-015) after comparing these videos frame by frame
+against the EON Systems embodied-fly demonstration. The body is no longer rendered inside
+the simulation loop: the run records `qpos`, the model's full generalised position vector,
+once per coupling interval, and the body is replayed offline afterwards. That is a read
+against the simulation, and every appearance change happens in a separate object built only
+for rendering, so the trajectories should be untouched.
+
+**They are untouched, and this was measured rather than asserted.** All four variants were
+re-run from a clean tree at commit `e6e3588` and the frozen acceptance contract re-applied.
+
+| variant | displacement mm | heading change rad | cue distance mm | onset us | difference from 2026-09-10 |
+|---|---|---|---|---|---|
+| exact | 12.096694072 | -2.479595544 | 14.020681545 -> 1.941362152 | 1665000 | 0 |
+| readout-ablated | 2.293606299 | +0.159824556 | 14.020681545 -> 13.886002514 | none | 0 |
+| stimulus-absent | 2.293606299 | +0.159824556 | 14.020681545 -> 13.886002514 | none | 0 |
+| shuffled-connectome | 32.203305806 | +1.237121217 | 14.020681545 -> 43.103911657 | 1665000 | 0 |
+
+The largest absolute difference in any reported outcome is 0.000e+00, and all five criteria
+return the same verdicts, so the claim is unchanged: **FULL-GRAPH CAUSAL EMBODIMENT,
+TOPOLOGY-SPECIFIC**. The archived 2026-09-10 artifacts are kept at
+`runs/archive/demo01-visual-lateral-2026-09-10/`.
+
+**Three things the first videos got wrong, none of which touched a number.**
+
+The brightness map was destroying the control contrast. Measured on these recordings, a
+decayed spike count of 1.0 rendered at 0.95 of full white and 2.0 at 0.998, against a real
+per-neuron range reaching 76.3 with a median 99.9th percentile of 47.2. The
+shuffled-connectome control's median 99.9th percentile is 5.96, eightfold below the exact
+run's, and the display flattened both to white. The section above observes that the
+readout-ablated brain is visibly dimmer than the exact one; that observation was true, and
+the display was suppressing most of its magnitude.
+
+The stimulus-absent control's video drew the cue it is defined by lacking, because the
+renderer drew it unconditionally. The panel contradicted the caption directly above it. Cue
+visibility now comes from the recorded `cue.present` flag, and the trajectory inset omits it
+too.
+
+And the arrival could not be watched, because the camera framed the midpoint at a distance
+proportional to the fly-cue separation, so it collapsed as the fly closed. Asking why no
+camera angle fixed it surfaced a limitation this record did not previously state: **the cue
+has no collision and no height.** The encoder works in the horizontal plane and saturates
+angular radius at a hemisphere once the fly is nearer than the radius, so a successful run
+ends with the fly standing inside a sphere wider than itself. It is now drawn translucent
+for that reason, the declared scaffolds say so, and the on-frame caption says so at the
+moment it happens.
+
+**One further limitation, now stated.** The compiled world carries no light source at all,
+so nothing in the scene casts a shadow. A contact shadow was not added under the fly,
+because an invented shadow is invented light transport.

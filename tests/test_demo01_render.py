@@ -510,3 +510,40 @@ def test_the_caption_does_not_claim_a_turn_before_the_decoder_commands_one() -> 
     row["command"]["state"] = "QUIESCENT"
     text, _ = chapter_caption(row, "exact")
     assert "threshold" in text
+
+
+def test_every_caption_fits_inside_its_own_band() -> None:
+    """Measured in pixels with the font the renderer uses, not counted in characters.
+
+    The caption sits in a dark band along the bottom of the brain panel. One that overruns
+    it does not wrap or clip -- it draws straight across the body panel next door, which is
+    what the longest of these did on its first cut.
+    """
+    from PIL import Image, ImageDraw
+
+    from flysim.demo01_render import CHAPTER_BAND_WIDTH, _fonts
+
+    draw = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+    font = _fonts()["small"]
+
+    engulfed = _row(15000, 5.0, 1.0, 0.4, 0.2)
+    engulfed["cue"]["angular_radius_deg"] = 90.0
+    quiescent = _row(15000, 5.0, 1.0, 0.0, 0.0)
+    quiescent["command"]["state"] = "QUIESCENT"
+    absent = _row(15000, 5.0, 1.0, 0.0, 0.0)
+    absent["cue"]["present"] = False
+    symmetric = _row(15000, 3.0, 3.0, 0.4, 0.0)
+
+    cases = [
+        (engulfed, "exact"),
+        (quiescent, "exact"),
+        (absent, "stimulus-absent"),
+        (symmetric, "exact"),
+        (_row(15000, 5.0, 1.0, 0.4, 0.2), "exact"),
+        (_row(15000, 1.0, 5.0, 0.4, -0.2), "exact"),
+        (_row(15000, 5.0, 1.0, 0.4, 0.2), "readout-ablated"),
+    ]
+    for row, variant in cases:
+        text, _ = chapter_caption(row, variant)
+        width = draw.textlength(text, font=font)
+        assert width <= CHAPTER_BAND_WIDTH, (variant, text, width)

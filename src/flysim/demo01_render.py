@@ -49,6 +49,10 @@ LEGEND_HEIGHT = 282
 # on top of it hid the fly's left optic lobe behind the key that explains it.
 BRAIN_VIEW_LEFT = 350
 BRAIN_VIEW_WIDTH = BRAIN_WIDTH - BRAIN_VIEW_LEFT
+# The band along the bottom of the brain panel that carries the live caption. A caption
+# wider than this runs out of its own dark band and over the body panel, which is what the
+# first cut did with the longest of them.
+CHAPTER_BAND_WIDTH = BRAIN_VIEW_WIDTH - 24
 
 INK = (232, 236, 244)
 DIM = (128, 138, 156)
@@ -635,8 +639,7 @@ def chapter_caption(row: dict[str, Any], variant: str) -> tuple[str, tuple[int, 
     # no collision. Saying so is more useful than describing a turn that is already over.
     if float(row["cue"].get("angular_radius_deg", 0.0)) >= 89.999:
         return (
-            "the fly is inside the cue's radius: the encoder saturates its angular radius "
-            "at a hemisphere, and the cue is drawn see-through because it has no collision",
+            "the fly is inside the cue's radius; the encoder saturates at a hemisphere",
             INK,
         )
     state = str(row["command"].get("state", ""))
@@ -1778,6 +1781,7 @@ __all__ = [
     "BRAIN_VIEW_LEFT",
     "BRAIN_VIEW_WIDTH",
     "BRAIN_WIDTH",
+    "CHAPTER_BAND_WIDTH",
     "COMPARISON_CAPTIONS",
     "COMPARISON_PANEL_ORDER",
     "FOOTER_HEIGHT",
