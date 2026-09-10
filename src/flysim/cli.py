@@ -428,6 +428,54 @@ def _command_stage2_reservations(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_stage2_stp_train(args: argparse.Namespace) -> int:
+    from flysim.stp_train import run_stp_train_discrimination
+
+    result = run_stp_train_discrimination(
+        contract_path=args.experiment,
+        fit_artifact_path=args.fit_artifact,
+        manifest_path=args.manifest,
+        staging_root=args.staging_root,
+        output_path=args.output,
+        allow_dirty_tree=args.allow_dirty_tree,
+    )
+    _print_json(
+        {
+            "result_id": result["result_id"],
+            "classification": result["subject_independence_classification"],
+            "unsealing": result["unsealing"],
+            "cohorts": {
+                label: {
+                    "variable": row["variable"],
+                    "animals_supplied": row["animals_supplied"],
+                    "all_nan_rows": row["all_nan_rows"],
+                    "pulses": row["pulses"],
+                    "finite_animals_at_first_pulse": row["finite_animals_per_pulse"][0],
+                    "trajectory_head": row["primary_normalised_trajectory"][:6],
+                    "steady_state_last_five": sum(
+                        row["primary_normalised_trajectory"][-5:]
+                    ) / 5.0,
+                    "largest_normalisation_difference": row[
+                        "largest_difference_between_the_two_normalisations"
+                    ],
+                }
+                for label, row in result["cohorts"].items()
+            },
+            "scores": {
+                label: row["summed_weighted_squared_error"]
+                for label, row in result["scores"].items()
+            },
+            "hypotheses": result["hypotheses"],
+            "verdict": result["verdict"],
+            "output": result["output"],
+            "sha256": result["sha256"],
+            "code_commit": result["code_commit"],
+            "evidence_grade": result["evidence_grade"],
+        }
+    )
+    return 0
+
+
 def _command_stage2_stp_holdout(args: argparse.Namespace) -> int:
     from flysim.stp_holdout import run_stp_developmental_holdout
 
@@ -2175,6 +2223,40 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_depression.add_argument("--output", type=Path, required=True)
     stage2_depression.add_argument("--allow-dirty-tree", action="store_true")
     stage2_depression.set_defaults(func=_command_stage2_depression_prediction)
+
+    stage2_stp_train = stage2_commands.add_parser(
+        "stp-train",
+        help="open the sealed wild-type train arrays once and score the frozen candidates",
+    )
+    stage2_stp_train.add_argument(
+        "--experiment",
+        type=Path,
+        default=project_root()
+        / "configs"
+        / "experiments"
+        / "stage2-stp-train-discrimination-v1.json",
+    )
+    stage2_stp_train.add_argument(
+        "--fit-artifact",
+        type=Path,
+        default=default_data_root()
+        / "evidence"
+        / "stage2"
+        / "stage2-stp-family-selection-v1.json",
+    )
+    stage2_stp_train.add_argument(
+        "--manifest",
+        type=Path,
+        default=default_data_root() / "evidence" / "stage2" / "stage2-reservations-v1.json",
+    )
+    stage2_stp_train.add_argument(
+        "--staging-root",
+        type=Path,
+        default=default_data_root() / "incoming" / "stage2-2026-09-09",
+    )
+    stage2_stp_train.add_argument("--output", type=Path, required=True)
+    stage2_stp_train.add_argument("--allow-dirty-tree", action="store_true")
+    stage2_stp_train.set_defaults(func=_command_stage2_stp_train)
 
     stage2_stp_holdout = stage2_commands.add_parser(
         "stp-holdout",
