@@ -29,8 +29,11 @@
         {
           "path": "rozenfeld2023-repo/Figure 3/Fig3E_and_F.mat",
           "kind": "matlab-v5",
-          "role": "per-animal evoked-EPSC amplitude across trains at 1, 10, 20 and 60 Hz, plus per-animal mean latency and latency jitter; the train arrays are the secondary external test and the latency arrays are reserved but are not a scored observable, because the registered model does not generate them",
-          "reserve_all": true
+          "role": "CORRECTED 2026-09-10. Per-pulse evoked-EPSC LATENCY in sample units for trains at 1, 10, 20 and 60 Hz, plus the per-animal mean latency and latency standard deviation in milliseconds that Figures 3E and 3F plot. Every one of the 24 arrays is a latency quantity. The file contains no amplitude series.",
+          "reserve_all": true,
+          "superseded_role": "per-animal evoked-EPSC amplitude across trains at 1, 10, 20 and 60 Hz, plus per-animal mean latency and latency jitter; the train arrays are the secondary external test and the latency arrays are reserved but are not a scored observable, because the registered model does not generate them",
+          "why_the_role_was_wrong": "The first clause was inferred from the variable names on 2026-09-09 -- all_flies_10Hz_control reads like an amplitude series -- and was never checked against the values or against the figure the file is named for. The row mean of each all_flies array is exactly 20 times the matching mean_rise_time array at 1, 10 and 20 Hz and exactly 5 times it at 60 Hz, with zero spread across all seventeen animals, which identifies them as the same quantity in sample units at 20 and 5 kHz.",
+          "scoreable": "No. No registered model generates a latency, which the superseded role already said of the arrays it correctly identified. The four control arrays were opened on 2026-09-10 under a contract that believed them to be amplitudes; they are spent and they were never scoreable."
         },
         {
           "path": "rozenfeld2023-repo/Figure 3/Fig3H.mat",
@@ -320,5 +323,6 @@
       }
     ],
     "what_still_has_to_be_done_by_hand": "Comparing the published animal counts. The digest audit catches reuse of the same stored bytes; it cannot catch two files holding the same animals recorded twice, or a legend that misdescribes a cohort. Every train array in Fig3E_and_F reports 18 animals at every frequency, which the digests confirm are 24 distinct arrays but which should still be reconciled against the paper's stated n before those arrays are scored."
-  }
+  },
+  "the_corpus_holds_no_orn_to_pn_train_amplitude_series": "There is no unspent wild-type ORN-to-PN amplitude holdout in this corpus, and there never was one. Rozenfeld and colleagues' repository offers, for this synapse: per-animal mean evoked amplitude at 1 Hz in Fig3B, Fig3G and Fig3I, of which Fig3B and Fig3I are bit-identical; paired-pulse ratios in Fig3D, Fig3H and Fig3J, of which Fig3D and Fig3J are bit-identical; miniature EPSC amplitude and frequency in Fig5B; and Bruchpilot puncta in Fig5D. No train amplitude series exists anywhere in it. So the resource recovery constant cannot be measured from this corpus by anyone, the plan to settle it with the trains was built on a mis-read header, and the candidates' pinned constant remains unmeasurable rather than merely unmeasured."
 }

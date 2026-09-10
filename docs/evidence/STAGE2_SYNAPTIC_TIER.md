@@ -666,3 +666,21 @@ predictions peak near 1.4 and decay. See ADR-2026-013's fourth amendment.
 Before that contract is written: run `duplicate_arrays` against those arrays, and compare
 the published animal counts. Every train array in the file reports 18 animals at every
 frequency, which is a pattern to check rather than assume.
+
+
+### 2026-09-10, later: the train experiment is void and the corpus is exhausted
+
+Preregistered, frozen, run, returned FAILED -- and void. `all_flies_<f>_control` holds
+per-pulse **latency** in sample units, not amplitude: each array's row mean is exactly 20x
+the matching `mean_rise_time` at 1/10/20 Hz and 5x at 60 Hz, zero spread over 17 animals.
+No candidate is refuted by it.
+
+It was visible before scoring: positive values where evoked currents are negative, a
+frequency-dependent first column where a from-rest pulse cannot be, and no depression at
+all across 112 pulses at 60 Hz. The unregistered check that would have caught it is that
+the first column must be frequency-independent.
+
+**There is no unspent wild-type ORN->PN amplitude holdout in this corpus.** No train
+amplitude series exists in the Rozenfeld repository at all, so the recovery constant cannot
+be measured from it by anyone. Advancing this tier needs a different dataset. The Stage 2
+gate stays at v4, 0 of 3; V0 Structural remains the only supported tier.

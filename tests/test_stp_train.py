@@ -117,6 +117,9 @@ def _environment(
     fit = tmp_path / "fit.json"
     fit.write_text(json.dumps({"fit_set": {}}), encoding="utf-8")
     contract["depends_on"] = {}
+    # The real contract records its values as opened, having been executed and voided on
+    # 2026-09-10. The fixture is a fresh copy of its rules, not a second look at it.
+    contract["values_opened"] = False
     contract["frozen_predictions"]["fit_artifact_sha256"] = sha256_file(fit)
     local = tmp_path / "contract.json"
     local.write_text(json.dumps(contract), encoding="utf-8")
@@ -140,6 +143,61 @@ def _run(paths: dict[str, Path]) -> dict[str, Any]:
         output_path=paths["output"],
         allow_dirty_tree=True,
     )
+
+
+def test_the_real_contract_records_the_run_as_executed_and_void() -> None:
+    """The arrays were latencies, so a model of amplitude was scored against the wrong thing."""
+    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+    assert contract["values_opened"] is True
+    record = contract["execution_record"]
+    assert record["verdict_in_the_artifact"] == "FAILED"
+    assert record["corrected_verdict"] == "VOID"
+    identification = record["identification"]
+    assert "LATENCY" in identification["what_the_arrays_actually_hold"]
+    assert "20.000000" in identification["what_the_arrays_actually_hold"]
+    assert "5.000000" in identification["what_the_arrays_actually_hold"]
+    # The check that was missing has to be named so the next contract carries one.
+    missing = identification["the_check_that_would_have_caught_it_and_was_not_registered"]
+    assert "frequency-independent" in missing
+    assert "internal consistency check" in missing
+    # And no candidate may be reported as refuted by it.
+    assert record["no_refitting"].startswith("Nothing was refitted")
+    void = record["consequence"]["the_verdict_is_void_not_a_refutation"]
+    assert "not a refutation of the candidates" in void
+    assert "scored against latency" in void
+
+
+def test_the_corpus_is_recorded_as_holding_no_train_amplitude_series() -> None:
+    """The position the void exposed: a different dataset is needed, not a different contract."""
+    reservations = json.loads(
+        (REPO / "configs/datasets/stage2-reservations-v1.json").read_text(encoding="utf-8")
+    )
+    statement = reservations["the_corpus_holds_no_orn_to_pn_train_amplitude_series"]
+    assert "No train amplitude series exists anywhere in it" in statement
+    assert "cannot be measured from this corpus" in statement
+    entry = next(
+        row
+        for dataset in reservations["datasets"]
+        for row in dataset.get("files", [])
+        if row["path"].endswith("Fig3E_and_F.mat")
+    )
+    assert entry["role"].startswith("CORRECTED 2026-09-10")
+    assert "LATENCY" in entry["role"]
+    assert "superseded_role" in entry
+    assert "amplitude" in entry["superseded_role"]
+    assert entry["scoreable"].startswith("No.")
+
+
+def test_the_registry_records_the_void_and_still_claims_no_tier() -> None:
+    registry = json.loads(
+        (REPO / "configs/neural/short-term-plasticity-v0.2.json").read_text(encoding="utf-8")
+    )
+    assert registry["the_train_experiment_was_void"]["verdict"] == "VOID"
+    assert registry["the_train_experiment_was_void"][
+        "no_candidate_is_refuted_or_supported_by_it"
+    ] is True
+    assert "No validation tier is awarded" in registry["validation_status"]
+    assert "unmeasurable from it" in registry["validation_status"]
 
 
 def test_the_margins_in_the_module_and_the_contract_agree() -> None:

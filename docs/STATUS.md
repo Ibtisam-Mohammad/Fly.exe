@@ -1114,3 +1114,40 @@ The one escape hatch, named in advance: postsynaptic saturation raises a measure
 saturating recordings would make the true presynaptic ratio lower and the violation
 smaller. `VAL-02` records it. Minimal stimulation makes it weak, but not zero, and it is
 the only route by which `p ≈ 0.79` survives.
+
+
+### Correction, same day: the trains are latencies and the corpus has no amplitude holdout
+
+The train discrimination experiment was preregistered, frozen, committed and run, and
+returned FAILED with every mechanistic model ~30x worse than a flat line. **Void.**
+`all_flies_<f>_control` holds **per-pulse evoked-EPSC latency in sample units**: the row
+mean of each array is exactly 20x the matching `mean_rise_time` at 1, 10 and 20 Hz and
+exactly 5x at 60 Hz, with zero spread across all 17 animals, those being the sampling rates
+in samples per millisecond. Converted, the latencies are 3.9 to 4.3 ms and rise with
+frequency, as the paper reports for Figure 3E.
+
+Visible in the opened data before any score was read: the values are positive while genuine
+evoked currents here are negative; the first column is frequency-dependent (68.7, 68.0,
+71.9, 18.1) when a pulse from rest cannot be; and there is no depression at all, 1.02 at
+pulse 112 of a 60 Hz train. The check that would have caught it -- the first column must be
+frequency-independent -- was not registered. It is one line and needs no external
+information.
+
+Origin: the 2026-09-09 intake, which called the file an amplitude series on the strength of
+its variable names. **Sixth instance of the session's pattern and chronologically the
+first**, propagated into the ADR, this document, the tier doc and three contracts. Every
+guard built after the previous failure ran and was clean -- duplicate arrays, manifest
+checksum, trajectory re-derivation -- and none could have caught it, because they check
+provenance and identity rather than whether the quantity is the quantity.
+
+Cost: four latency arrays, already recorded as never scoreable because no registered model
+generates a latency. The void run spent nothing spendable. Luck, recorded as luck.
+
+**The position this exposes.** There is no unspent wild-type ORN->PN amplitude holdout in
+this corpus and there never was one. The repository offers per-animal 1 Hz mean amplitudes
+(Fig3B = Fig3I bit-identical, unscoreable under ND-04), paired-pulse ratios (Fig3D = Fig3J
+bit-identical, D and H spent), latencies, minis and Bruchpilot puncta. **No train amplitude
+series exists anywhere in it.** So the recovery constant is unmeasurable from this corpus
+rather than merely unmeasured, and the plan to settle it with the trains was built on a
+mis-read header. Advancing the ORN->PN synaptic tier requires a different dataset, not a
+different contract.

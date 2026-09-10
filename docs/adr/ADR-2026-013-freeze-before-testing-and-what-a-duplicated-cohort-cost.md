@@ -472,3 +472,87 @@ being caught, and in both cases the wrong version was the one that made the proj
 position look better — here, by offering a tidy resolution to an inconvenient
 incompatibility. The rule has to extend past data checks to any claim about a model's
 behaviour: simulate it before writing it down.
+
+## Eighth amendment, 2026-09-10 — the trains are latencies, and the corpus has no amplitude holdout
+
+The train discrimination experiment was preregistered, frozen, committed and run. It
+returned FAILED, with all three mechanistic models scoring about a quarter of a million in
+summed weighted error against a flat line's 8,218. **That verdict is void, and no candidate
+is refuted by it.**
+
+`all_flies_<f>_control` in `Fig3E_and_F.mat` holds **per-pulse evoked-EPSC latency in
+sample units**, not amplitude. The row mean of each array is exactly the matching
+`mean_rise_time_<f>_control`:
+
+| frequency | row mean ÷ mean_rise_time | spread across 17 animals |
+|---|---|---|
+| 1 Hz | **20.000000** | 0 |
+| 10 Hz | **20.000000** | 0 |
+| 20 Hz | **20.000000** | 0 |
+| 60 Hz | **5.000000** | 0 |
+
+Those are the sampling rates in samples per millisecond. Converted, the first animal's
+latencies are 3.92, 4.08, 4.31 and 4.30 ms across the four frequencies — the right
+magnitude for a synaptic latency, and increasing with stimulation frequency exactly as the
+paper reports for Figure 3E. The file is named for Figures 3E and 3F, which are latency and
+jitter, and all 24 of its arrays are latency quantities.
+
+**It was visible in the opened data before any score was read.**
+
+1. The values are **positive**. Genuine evoked currents in this repository are negative —
+   `Fig3B`'s wild-type array has a mean of −36 pA.
+2. The first column is **frequency-dependent**: 68.7, 68.0, 71.9, 18.1. A pulse delivered
+   from rest cannot depend on the frequency of the train that follows it.
+3. There is **no depression anywhere** — 1.02 at pulse 112 of a 60 Hz train. No chemical
+   synapse does that, and this paper's own paired-pulse data show 0.93 by 300 ms.
+4. The non-finite entries are scattered and non-monotone, which is what undetected
+   responses look like and not what a decaying amplitude series looks like.
+
+**The check that would have caught it was not registered.** The first column must be
+frequency-independent. One line, no external information, and it falsifies the amplitude
+reading outright. The contract registered an animal-count reconciliation and did not
+register this. Every future observation model must state at least one internal consistency
+check the data can fail on their own terms.
+
+**Where it originated.** The intake and reservation manifest of 2026-09-09, which called
+the file "per-animal evoked-EPSC amplitude across trains at 1, 10, 20 and 60 Hz". Inferred
+from the variable names, never checked against the values or against the figure the file is
+named for. This is the **sixth** instance of the session's pattern and chronologically the
+**first** — it was written before all the others and propagated into this ADR, STATUS, the
+Stage 2 tier document, both holdout contracts and the train contract, every one of which
+called the trains the decisive next experiment.
+
+**Every guard built after the previous failure ran and was clean.** The duplicate-array
+check passed correctly, the manifest checksum matched, the frozen trajectories re-derived
+from their parameters. None of them could have caught this, because they all check
+provenance and identity rather than whether the quantity is the quantity. That is a gap in
+the guard set and it is now named.
+
+**What it cost: nothing spendable.** Four per-pulse latency arrays were opened. The
+reservation contract already recorded the latency arrays as reserved but never scoreable,
+because no registered model generates a latency. They could not have been a holdout for
+anything. That is luck rather than design and it is recorded as luck.
+
+### The real position this exposes
+
+**There is no unspent wild-type ORN→PN amplitude holdout in this corpus, and there never
+was one.** What Rozenfeld and colleagues' repository actually offers for this synapse:
+
+| observable | files | status |
+|---|---|---|
+| per-animal mean evoked amplitude at 1 Hz | Fig3B, Fig3G, Fig3I | Fig3B ≡ Fig3I bit-identical; ND-04 carries no absolute conductance scale to score any of them |
+| paired-pulse ratios | Fig3D, Fig3H, Fig3J | Fig3D ≡ Fig3J bit-identical; D and H both spent |
+| per-pulse latency and jitter | Fig3E_and_F | no registered model generates a latency |
+| miniature EPSCs | Fig5B | no quantal amplitude or spontaneous rate registered |
+| Bruchpilot puncta | Fig5D | needs its own contract; puncta and contacts are not the same unit |
+
+**No train amplitude series exists anywhere in it.** So the resource recovery constant
+cannot be measured from this corpus by anyone. The candidates' pinned constant is
+*unmeasurable* from the available data rather than merely unmeasured, and the plan to
+settle it with the trains — stated in this ADR's Consequences, in STATUS, in the tier
+document and in two contracts — was built on a mis-read header.
+
+**Advancing the ORN→PN synaptic tier now requires a different dataset, not a different
+contract.** That is the honest deliverable of this session's second half, and it is worth
+more than a fourth negative result would have been: it says where the work is, and it says
+it is not here.

@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "experiment_id": "stage2-stp-train-discrimination-v1",
   "title": "Score the frozen ORN-to-PN candidates once against the sealed wild-type trains, as a discrimination experiment",
-  "status": "PREREGISTERED. Every criterion and every predicted number below was written before any train array was opened.",
+  "status": "EXECUTED 2026-09-10 and VOIDED on the same day. The arrays it scored are per-pulse latencies in sample units, not evoked amplitudes, so a model of amplitude was scored against a quantity none of the candidates generates. The artifact's FAILED verdict does not stand and no candidate is refuted by it.",
   "provenance": "M/F",
   "preregistered_on": "2026-09-10",
-  "values_opened": false,
+  "values_opened": true,
   "assumption_ids": [
     "ND-06",
     "VAL-02"
@@ -1339,5 +1339,32 @@
   },
   "the_guard_that_must_run_first": "flysim.reservations.duplicate_arrays against every array already spent -- Fig3D's five wild-type paired-pulse arrays, Fig3H's five, and Fig3B's 1 Hz control. The scorer refuses to open a cohort that duplicates a spent one before a byte of payload is decoded. This has already been run and is clean; it runs again at scoring time because the clean result is only as current as the run that produced it.",
   "claim_boundary": "One scoring pass over four sealed wild-type train arrays against models frozen beforehand, in a cohort whose overlap with the fitting cohort is unknown and declared unknown. It opens four arrays and leaves the RNAi trains, the latency and jitter arrays, and the whole Takagi corpus sealed. It can award at most a V1-limited tier and it cannot resolve the release-probability incompatibility.",
-  "last_reviewed": "2026-09-10"
+  "last_reviewed": "2026-09-10",
+  "execution_record": {
+    "executed_on": "2026-09-10",
+    "artifact": "evidence/stage2/stage2-stp-train-discrimination-v1.json",
+    "artifact_sha256": "34675719b536bdbfcf654577b03a32a1a09e16e0babcd8a27de9b8617f5f44bc",
+    "verdict_in_the_artifact": "FAILED",
+    "corrected_verdict": "VOID",
+    "identification": {
+      "what_the_arrays_actually_hold": "Per-pulse evoked-EPSC LATENCY, in sample units. The row mean of each all_flies_<f>_control array equals that file's mean_rise_time_<f>_control exactly -- ratio 20.000000 with zero spread across all seventeen animals at 1, 10 and 20 Hz, and 5.000000 with zero spread at 60 Hz, which are the sampling rates in samples per millisecond. Converted, the per-animal latencies are 3.9, 4.1, 4.3 and 4.3 ms for the first animal across the four frequencies, which is both the right magnitude for a synaptic latency and the increase with stimulation frequency the paper reports for Figure 3E.",
+      "so_the_file_contains_no_amplitude_train_series_at_all": "All 24 arrays in Fig3E_and_F.mat are latency quantities: per-pulse latency in samples, per-animal mean latency in milliseconds, per-animal latency standard deviation in milliseconds. The file is named for Figures 3E and 3F, which are latency and jitter, and that is all it holds.",
+      "how_it_was_visible_in_the_opened_data_before_any_score_was_read": [
+        "The values are POSITIVE. Genuine evoked currents in this repository are negative: Fig3B's wild-type array has a mean of -36 pA.",
+        "The first column is frequency-dependent -- 68.7, 68.0, 71.9 and 18.1 -- and a first pulse delivered from rest cannot depend on the frequency of the train that follows it.",
+        "There is no depression anywhere. At 60 Hz the normalised value is 1.02 at pulse 112. No chemical synapse does that, and the same paper's own paired-pulse data show depression to 0.93 by 300 ms.",
+        "The non-finite entries are scattered and non-monotone across the train, which is what a failure to detect a response looks like and not what a decaying amplitude series looks like."
+      ],
+      "the_check_that_would_have_caught_it_and_was_not_registered": "The first column must be frequency-independent, because it is the response to a pulse delivered from rest in every train. That is one line, it needs no external information, and it falsifies the amplitude reading outright. The contract registered an animal-count reconciliation and did not register this. Every future observation model must state at least one internal consistency check that the data can fail on their own terms.",
+      "where_the_error_originated": "The intake and the reservation manifest of 2026-09-09, which described the file as 'per-animal evoked-EPSC amplitude across trains at 1, 10, 20 and 60 Hz, plus per-animal mean latency and latency jitter'. The first clause was inferred from the variable names -- all_flies_10Hz_control reads like an amplitude series -- and was never checked against the values or against the figure the file is named for. It is the earliest instance of this session's pattern and the one that propagated furthest: into ADR-2026-013, STATUS, the Stage 2 tier document, both holdout contracts and the train contract, every one of which called the trains the decisive next experiment."
+    },
+    "consequence": {
+      "the_verdict_is_void_not_a_refutation": "The artifact records FAILED with all three mechanistic models scoring around a quarter of a million against a flat line's 8,218. That is not a refutation of the candidates. It is what happens when a model of amplitude is scored against latency. The artifact is immutable and stands as written; this record supersedes its verdict, and any citation of one must cite the other.",
+      "what_it_cost": "Four per-pulse latency arrays were opened. The reservation contract already recorded the latency arrays as reserved but never scoreable, because no registered model generates a latency, so they could not have served as a holdout for anything. The void run therefore spent nothing that was ever spendable. That is luck rather than design and it is recorded as luck.",
+      "the_real_position_this_exposes": "There is no unspent wild-type ORN-to-PN amplitude holdout in this corpus, and there never was one. Rozenfeld and colleagues' repository offers, for this synapse: per-animal mean evoked amplitude at 1 Hz in Fig3B, Fig3G and Fig3I, of which Fig3B and Fig3I are bit-identical; paired-pulse ratios in Fig3D, Fig3H and Fig3J, of which Fig3D and Fig3J are bit-identical; miniature EPSC amplitude and frequency in Fig5B; and Bruchpilot puncta in Fig5D. No train amplitude series exists anywhere in it. So the resource recovery constant cannot be measured from this corpus by anyone, the plan to settle it with the trains was built on a mis-read header, and the candidates' pinned constant remains unmeasurable rather than merely unmeasured.",
+      "what_is_actually_left_to_do_with_this_dataset": "For the ORN-to-PN amplitude dynamics: nothing unspent. The remaining unopened wild-type arrays are Fig3G's day-0 1 Hz mean amplitude, which ND-04 carries no absolute conductance scale to score; Fig5B's minis, for which no quantal amplitude or spontaneous rate is registered; and Fig5D's Bruchpilot counts, which need their own contract because light-microscopy puncta and electron-microscopy contacts are not the same unit. The RNAi cohorts remain, and they test a perturbation no registered model has a parameter for. Advancing the synaptic tier now requires a different dataset, not a different contract."
+    },
+    "the_guards_that_did_work": "The duplicate-array guard ran and was clean, correctly: these arrays are not copies of anything spent. The manifest checksum matched. The frozen trajectories re-derived from their parameters. Every guard built after the last failure did its job, and none of them could have caught this, because they all check provenance and identity rather than whether the quantity is the quantity.",
+    "no_refitting": "Nothing was refitted. No candidate is refuted and none is supported by this run."
+  }
 }

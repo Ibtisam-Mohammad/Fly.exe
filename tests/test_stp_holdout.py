@@ -576,14 +576,15 @@ def test_the_release_probability_incompatibility_is_recorded_with_its_escape_hat
     assert "heterogeneity" in block["which_is_most_likely_wrong_and_why_it_matters"]
 
 
-def test_the_train_contract_is_preregistered_and_names_only_control_arrays() -> None:
-    """The last unspent wild-type holdout: its criteria are closed before it is opened."""
+def test_the_train_contract_named_only_control_arrays_and_was_executed_once() -> None:
+    """Opened on 2026-09-10 and voided: the arrays turned out to be latencies."""
     contract = json.loads(
         (REPO / "configs/experiments/stage2-stp-train-discrimination-v1.json").read_text(
             encoding="utf-8"
         )
     )
-    assert contract["values_opened"] is False
+    assert contract["values_opened"] is True
+    assert contract["execution_record"]["corrected_verdict"] == "VOID"
     variables = contract["the_data"]["variables"]
     assert len(variables) == 4
     assert all(name.endswith("_control") for name in variables)
