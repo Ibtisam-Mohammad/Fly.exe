@@ -20,6 +20,10 @@ from flysim.errors import CausalityError, ConfigurationError
 
 TRACK_A_GENN_MODEL_VERSION = "4"
 DEGREE_BUCKET_UPPER_BOUNDS = (64, 128, 256, 512, 1024, 2048, 4096, 8192)
+#: How many distinct input id tuples to remember. A run normally alternates between a
+#: handful of channel combinations, so this is generous; it is bounded so that a caller
+#: varying its id set every interval cannot grow the cache without limit.
+_INPUT_INDEX_CACHE_LIMIT = 64
 
 HETEROGENEOUS_NEURON_PARAMETER_NAMES = (
     "MembraneDecay",
@@ -240,6 +244,7 @@ class TrackAGeNNEngine:
         self._flat_offsets: np.ndarray | None = None
         self._flat_index_by_dense: np.ndarray | None = None
         self._pool_flat_index: dict[str, np.ndarray] = {}
+        self._input_dense_index: dict[tuple[str, tuple[Any, ...]], np.ndarray] = {}
         self._last_frame_counts: np.ndarray | None = None
         self._last_counts: dict[int, float] = {}
         self._last_pool_counts: dict[str, np.ndarray] = {}
@@ -639,6 +644,7 @@ class TrackAGeNNEngine:
             + local_by_dense.astype(np.int64)
         )
         self._pool_flat_index.clear()
+        self._input_dense_index.clear()
         self._last_frame_counts = None
         self._t_us = 0
         self._last_counts.clear()
@@ -656,15 +662,33 @@ class TrackAGeNNEngine:
         assert self._group_by_dense is not None and self._local_by_dense is not None
         for variable in self._input_rates:
             variable.view.fill(0.0)
-        for identifier, value in zip(frame.ids, frame.values, strict=True):
-            if not isinstance(identifier, int):
+        if frame.ids:
+            if any(not isinstance(identifier, int) for identifier in frame.ids):
                 raise ConfigurationError("Track A GeNN input IDs must be numeric body IDs")
-            if not np.isfinite(value) or value < 0.0:
+            values = np.asarray(frame.values, dtype=np.float64)
+            if not np.all(np.isfinite(values)) or np.any(values < 0.0):
                 raise ConfigurationError("Track A input rates must be finite and nonnegative")
-            dense_index = graph.dense_index(identifier)
-            group_index = int(self._group_by_dense[dense_index])
-            local_index = int(self._local_by_dense[dense_index])
-            self._input_rates[group_index].view[local_index] = value
+            # A multi-sensory bus pushes thousands of ids every coupling interval, and the
+            # scalar loop this replaces cost about 29 ms per 15912-id frame against a 15 ms
+            # interval -- the injection alone was slower than the biology it stood in for.
+            # The dense-index map is cached on the id tuple, mirroring read_outputs.
+            cache_key = ("__push_inputs__", frame.ids)
+            dense = self._input_dense_index.get(cache_key)
+            if dense is None:
+                dense = np.fromiter(
+                    (graph.dense_index(int(identifier)) for identifier in frame.ids),
+                    dtype=np.int64,
+                    count=len(frame.ids),
+                )
+                if len(self._input_dense_index) >= _INPUT_INDEX_CACHE_LIMIT:
+                    self._input_dense_index.clear()
+                self._input_dense_index[cache_key] = dense
+            groups = self._group_by_dense[dense]
+            locals_ = self._local_by_dense[dense]
+            for group_index, variable in enumerate(self._input_rates):
+                selected = groups == group_index
+                if selected.any():
+                    variable.view[locals_[selected]] = values[selected]
         for variable in self._input_rates:
             variable.push_to_device()
 
