@@ -132,8 +132,23 @@ class SensoryBus:
 
     # ------------------------------------------------------------------ encode
 
-    def encode(self, t_us: int, sensors: SensorFrame) -> NeuralInputFrame:
-        """Transduce, delay, and merge. The only path from the world into the network."""
+    def encode(
+        self,
+        t_us: int,
+        sensors: SensorFrame,
+        *,
+        extra_rates: dict[int, float] | None = None,
+    ) -> NeuralInputFrame:
+        """Transduce, delay, and merge. The only path from the world into the network.
+
+        ``extra_rates`` carries an encoder the bus does not own, and exists for exactly one
+        case: vision. Photoreceptors have zero live outgoing edges, so vision enters at the
+        lamina, and the lamina is driven by DEMO-01's frozen retinotopic encoder rather than
+        by a saturating transducer on a world scalar. Reusing that encoder unchanged is the
+        point -- it is the only sensory entry in this project that has passed a causal
+        contract -- so its rates are merged here rather than reimplemented. Ids must be
+        inside the frozen union and disjoint from every bound channel, and both are checked.
+        """
         if t_us < 0:
             raise CausalityError("Cannot encode before t=0")
         if t_us <= self._t_us:
@@ -173,6 +188,28 @@ class SensoryBus:
             ids.extend(int(body) for body in self._index[name])
             values.extend([rate] * self._index[name].size)
 
+        extra_count = 0
+        if extra_rates:
+            claimed = set(ids)
+            union = set(self.atlas.entry_union)
+            for body, rate in extra_rates.items():
+                identifier = int(body)
+                if identifier in claimed:
+                    raise ConfigurationError(
+                        f"Body {identifier} is driven both by a bound channel and by an "
+                        "external encoder, and a frame may not carry it twice."
+                    )
+                if identifier not in union:
+                    raise ConfigurationError(
+                        f"External encoder drives body {identifier}, which is outside the "
+                        "frozen entry union, so it would need a new kernel."
+                    )
+                if rate <= 0.0:
+                    continue
+                ids.append(identifier)
+                values.append(float(rate))
+                extra_count += 1
+
         active = [name for name, rate in rate_by_channel.items() if rate > 0.0]
         return NeuralInputFrame(
             t_us=t_us,
@@ -195,6 +232,7 @@ class SensoryBus:
                 # By definition the count of neurons whose refractory period is bypassed
                 # this interval. A stimulus-absent control must report zero.
                 "entry_bodies_with_nonzero_rate": len(ids),
+                "external_encoder_bodies": extra_count,
                 "entry_union_bodies": len(self.atlas.entry_union),
                 "entry_union_sha256": self.atlas.entry_union_sha256,
                 "delay_quantised_to_us": self.coupling_us,

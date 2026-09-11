@@ -63,6 +63,9 @@ LEGS: tuple[str, ...] = ("lf", "lm", "lh", "rf", "rm", "rh")
 #: both TTMn and PSI as somaNeuromere T2. So a jump extends the middle legs.
 JUMP_LEGS: tuple[str, ...] = ("lm", "rm")
 FRONT_LEGS: tuple[str, ...] = ("lf", "rf")
+#: The legs the release puts taste bristles on, by entry nerve: ProLN 8 on the front pair
+#: and MetaLN 62 on the hind pair. None on the middle legs, so none are sampled there.
+TASTE_LEGS: tuple[str, ...] = ("lf", "rf", "lh", "rh")
 
 BEHAVIOURS: tuple[str, ...] = ("grooming", "feeding", "escape")
 
@@ -414,7 +417,7 @@ class BehaviourBody:
         return {leg: float(bool(flags[index])) for index, leg in enumerate(LEGS)}
 
     def _tarsal_sucrose(self, contact: dict[str, float]) -> dict[str, float]:
-        """Concentration at a front tarsus, gated on real contact with the patch.
+        """Concentration at a taste-bearing tarsus, gated on real contact with the patch.
 
         The gate is physics: the tarsus has to be both on the ground and inside the patch.
         Only the concentration is declared, which is strictly stronger than a
@@ -423,7 +426,7 @@ class BehaviourBody:
         positions = self._simulation.get_body_positions(self._fly_name)
         order = self._fly.get_bodysegs_order()
         out: dict[str, float] = {}
-        for leg in FRONT_LEGS:
+        for leg in TASTE_LEGS:
             segment = type(self._fly).BODY_SEGMENT_CLASS(f"{leg}_tarsus5")
             try:
                 index = order.index(segment)
@@ -476,7 +479,7 @@ class BehaviourBody:
             )
         for leg in LEGS:
             add(SENSOR_LEG_CONTACT.format(leg=leg), contact[leg], "boolean", "real")
-        for leg in FRONT_LEGS:
+        for leg in TASTE_LEGS:
             add(
                 SENSOR_TARSAL_SUCROSE.format(leg=leg),
                 sucrose[leg], "normalized", "declared",
@@ -961,6 +964,69 @@ class BehaviourBody:
                 "so wing motion produces no force. All height is leg extension."
             ),
         }
+
+    def metrics(self) -> dict[str, Any]:
+        """Body quantities the acceptance criteria score, all read from the physics.
+
+        Every one is *achieved* rather than commanded. A criterion scored on a command is
+        satisfied by issuing the command, which is not the same as the body moving: a
+        position servo working against a passive hinge can be told to extend and not go
+        anywhere.
+        """
+        angles = self._simulation.get_joint_angles(self._fly_name)
+
+        def angle(name: str) -> float:
+            match = [d for d in self._joint_order if d.name == name]
+            return float(angles[self._joint_order.index(match[0])]) if match else 0.0
+
+        proboscis = abs(angle("c_head-c_rostrum-pitch")) + abs(
+            angle("c_rostrum-c_haustellum-pitch")
+        )
+        excursion = 0.0
+        if self._source_to_actuator:
+            deviations = [
+                abs(
+                    angle(self._actuated_dofs[index].name)
+                    - float(self._groom_hold_targets[index])
+                )
+                for index in self._source_to_actuator.values()
+            ]
+            excursion = float(np.mean(deviations)) if deviations else 0.0
+        return {
+            "proboscis_rad": proboscis,
+            "groom_excursion_rad": excursion,
+            "tarsus_arista_mm": self._tarsus_arista_distance_mm(),
+            "thorax_z_mm": self.pose()[2],
+        }
+
+    def _tarsus_arista_distance_mm(self) -> float:
+        """Closest approach between either front tarsus tip and either arista tip.
+
+        This is what distinguishes a leg that reaches the antenna from a leg that waves.
+        A replayed trajectory will move the joints whatever happens, so the criterion has
+        to ask about the geometry rather than about the angles.
+        """
+        order = self._fly.get_bodysegs_order()
+        positions = self._simulation.get_body_positions(self._fly_name)
+
+        def point(name: str) -> np.ndarray | None:
+            segment = type(self._fly).BODY_SEGMENT_CLASS(name)
+            try:
+                return np.asarray(positions[order.index(segment)], dtype=np.float64)
+            except ValueError:
+                return None
+
+        best = math.inf
+        for leg in FRONT_LEGS:
+            tarsus = point(f"{leg}_tarsus5")
+            if tarsus is None:
+                continue
+            for side in ("l", "r"):
+                arista = point(f"{side}_arista")
+                if arista is None:
+                    continue
+                best = min(best, float(np.linalg.norm(tarsus - arista)))
+        return best
 
     def describe(self) -> dict[str, Any]:
         return {
