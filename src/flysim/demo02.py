@@ -273,7 +273,13 @@ class _Decoder:
             self.events.append({"t_us": t_us, "state": self.state.value})
         if self.state is BehaviourState.WATCHING:
             self._held_us = self._held_us + coupling_us if above else 0
-            if self._held_us >= self.parameters.initiation_hold_us:
+            # ``above`` is required as well as the hold. Without it an initiation_hold_us
+            # of 0 makes the comparison vacuously true and the decoder commands the
+            # behaviour with no input at all. That is not hypothetical: the first escape
+            # matrix produced byte-identical exact and readout-ablated runs -- same
+            # displacement, same 1.736 mm rise, same 4,170,500 us airborne -- because the
+            # fly jumped for reasons that had nothing to do with the giant fibre.
+            if above and self._held_us >= self.parameters.initiation_hold_us:
                 self.state = BehaviourState.ACTING
                 self._started_us = t_us
                 self.events.append({"t_us": t_us, "state": self.state.value})

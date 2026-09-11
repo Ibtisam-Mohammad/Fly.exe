@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -90,6 +91,60 @@ TRANSDUCERS = {
     ),
     "tarsal-taste": SaturatingTransducer(max_rate_hz=110.0, half_saturation=0.25),
 }
+
+
+@dataclass(frozen=True, slots=True)
+class ApproachingObject:
+    """An object on a script the brain cannot influence.
+
+    Escape is open loop on purpose. The encoder's looming term is angular SIZE, not
+    expansion rate, so on a walking fly the approach would be self-generated and both the
+    stimulus-absent and readout-ablated controls would fail to expose it: the fly really
+    would have caused its own stimulus. So the object moves and the fly does not.
+    """
+
+    radius_mm: float = 2.5
+    start_distance_mm: float = 30.0
+    final_distance_mm: float = 4.0
+    approach_start_us: int = 1_500_000
+    approach_end_us: int = 3_500_000
+    bearing_deg: float = 35.0
+
+    def distance_at(self, t_us: int, *, static: bool) -> float:
+        if static:
+            # The matched-size control: the same angular size from t=0, no expansion.
+            return self.final_distance_mm
+        if t_us <= self.approach_start_us:
+            return self.start_distance_mm
+        if t_us >= self.approach_end_us:
+            return self.final_distance_mm
+        span = self.approach_end_us - self.approach_start_us
+        fraction = (t_us - self.approach_start_us) / span
+        return self.start_distance_mm + fraction * (
+            self.final_distance_mm - self.start_distance_mm
+        )
+
+    def position(
+        self, t_us: int, *, x_mm: float, y_mm: float, heading_rad: float, static: bool
+    ) -> tuple[float, float]:
+        distance = self.distance_at(t_us, static=static)
+        angle = heading_rad + math.radians(self.bearing_deg)
+        return x_mm + distance * math.cos(angle), y_mm + distance * math.sin(angle)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "radius_mm": self.radius_mm,
+            "start_distance_mm": self.start_distance_mm,
+            "final_distance_mm": self.final_distance_mm,
+            "approach_start_us": self.approach_start_us,
+            "approach_end_us": self.approach_end_us,
+            "bearing_deg": self.bearing_deg,
+            "provenance": "E",
+            "the_brain_cannot_influence_this": (
+                "The locomotor drives are held identically zero for the whole run, so the "
+                "object's approach is a script and not a consequence of the fly's motion."
+            ),
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,6 +347,33 @@ def run_behaviour(
     engine.initialize(graph, engine_parameters, seed)
     build_seconds = time.perf_counter() - build_started
 
+    # Vision enters at the lamina through DEMO-01's frozen encoder, unchanged. It is the
+    # only sensory entry in this project that has passed a causal contract, and the
+    # photoreceptors upstream of it carry zero live edges.
+    visual_encoder = None
+    cue_object: ApproachingObject | None = None
+    if behaviour == "escape":
+        from flysim.demo01_visual import (
+            RetinaMap,
+            RetinotopicVisualEncoder,
+            VisualCue,
+            VisualEncodingParameters,
+        )
+        from flysim.demo01_visual_probe import resolve_visual_populations
+
+        retina = parameters.get("retina_map")
+        if not retina:
+            raise ConfigurationError(
+                "Escape needs DEMO-01's frozen retina map; refusing to invent one."
+            )
+        visual_encoder = RetinotopicVisualEncoder(
+            resolve_visual_populations(annotations_path, graph),
+            VisualEncodingParameters.from_mapping(parameters),
+            RetinaMap.from_mapping(retina),
+            stimulus_present=variant not in {"stimulus-absent", "controller-only"},
+        )
+        cue_object = ApproachingObject()
+
     bindings = _bindings(atlas, behaviour, variant=variant)
     bus = SensoryBus(atlas=atlas, bindings=bindings, coupling_us=coupling_us)
     readout = FilteredDescendingReadout(
@@ -344,7 +426,22 @@ def run_behaviour(
             applied = pending
             body.apply_actuators(applied)
             sensors = body.sample_sensors()
-            frame_in = bus.encode(t_us, sensors)
+            extra: dict[int, float] | None = None
+            scene: dict[str, Any] = {}
+            if visual_encoder is not None and cue_object is not None:
+                px, py, _, heading = body.pose()
+                cue_x, cue_y = cue_object.position(
+                    t_us,
+                    x_mm=px,
+                    y_mm=py,
+                    heading_rad=heading,
+                    static=variant == "matched-size-static",
+                )
+                cue = VisualCue(x_mm=cue_x, y_mm=cue_y, radius_mm=cue_object.radius_mm)
+                extra, scene = visual_encoder.rates_for(
+                    cue, x_mm=px, y_mm=py, heading_rad=heading
+                )
+            frame_in = bus.encode(t_us, sensors, extra_rates=extra)
             engine.push_inputs(frame_in)
             engine.step_until(t_us + coupling_us)
             raw = engine.read_outputs(readout_ids, coupling_us)
@@ -362,6 +459,7 @@ def run_behaviour(
                              "heading_rad": heading},
                     "sensors": dict(zip(sensors.ids, sensors.values, strict=True)),
                     "channel_rate_hz": frame_in.metadata["channel_rate_hz"],
+                    "scene": scene,
                     "entry_bodies_driven": frame_in.metadata[
                         "entry_bodies_with_nonzero_rate"
                     ],
@@ -412,6 +510,7 @@ def run_behaviour(
             "build_key": identity,
             "populations": populations.as_dict(),
             "sensory_bus": bus.describe(),
+            "approaching_object": cue_object.as_dict() if cue_object else None,
             "body": body.describe(),
             "station_keeping": body.station_keeping(),
             "takeoff": body.takeoff(),

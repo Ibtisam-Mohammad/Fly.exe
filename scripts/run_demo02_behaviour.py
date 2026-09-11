@@ -82,6 +82,13 @@ def main() -> int:
     parser.add_argument("--duration-us", type=int, default=None)
     parser.add_argument("--allow-dirty-tree", action="store_true")
     parser.add_argument("--progress", action="store_true")
+    parser.add_argument(
+        "--score-only", action="store_true",
+        help="Skip running and apply the frozen contract to whatever is already recorded. "
+             "Variants run in separate processes because CUDA does not release device "
+             "memory between engines in one process, and the third build in a process "
+             "fails with out of memory.",
+    )
     args = parser.parse_args()
 
     root: Path = args.root
@@ -117,7 +124,7 @@ def main() -> int:
     decoder = DecoderParameters.from_mapping(DECODERS[behaviour])
 
     results = {}
-    for variant in variants:
+    for variant in [] if args.score_only else variants:
         directory = root / f"runs/demo02-{behaviour}/{variant}"
         print(f"\n=== {behaviour} / {variant} ===", flush=True)
         result = run_behaviour(
