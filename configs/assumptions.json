@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.8",
+  "assumption_set_id": "foundation-v0.9",
   "records": [
     {
       "id": "DATA-01",
@@ -330,7 +330,15 @@
       "value": {
         "global_v1": "omitted",
         "curated_pairs": "future-extension",
-        "omission_sensitivity_required": true
+        "omission_sensitivity_required": true,
+        "curation_candidates": [
+          {
+            "pair": "DNp01 to TTMn, and DNp01 to PSI",
+            "why": "the giant fibre synapse is substantially electrical in the real animal, and chemical contacts alone are 1.492 percent of TTMn's total input",
+            "status": "BLOCKED: source not yet verified in this repository",
+            "may_not_be_replaced_by": "raising a gain until the jump happens"
+          }
+        ]
       },
       "units": "categorical policy",
       "provenance": "P/E",
@@ -341,7 +349,7 @@
       "status": "accepted",
       "validation": "gap-junction omission sensitivity and paired recordings",
       "owner": "neural",
-      "last_reviewed": "2026-09-05"
+      "last_reviewed": "2026-09-11"
     },
     {
       "id": "ND-09",
@@ -467,44 +475,63 @@
         "groom_removal_per_s": 1.8,
         "contamination_trigger": 0.5,
         "contamination_release": 0.15,
-        "food_contact_radius_mm": 1.0
+        "food_contact_radius_mm": 1.0,
+        "antennal_deflection_is_real_physics": true,
+        "antennal_deflection_source": "l_pedicel/r_pedicel qpos, radians",
+        "dust_scalar_on_critical_path": false
       },
       "units": "normalized load per second and mm",
       "provenance": "E",
       "applies_to": "reference world/body sensors",
-      "source": "local engineering scaffold",
-      "biological_mismatch": "No bristle mechanics or particle adhesion model.",
+      "source": "local engineering scaffold; ADR-2026-016",
+      "biological_mismatch": "No bristle mechanics or particle adhesion model. Antennal deflection is now taken from body physics rather than an invented dust field, so the grooming stimulus has units and a side; the dust scalar remains only as a retired Track A scaffold.",
       "uncertainty": "unfitted",
       "status": "accepted",
       "validation": "replacement by body-registered receptor models",
       "owner": "sensory",
-      "last_reviewed": "2026-09-08"
+      "last_reviewed": "2026-09-11"
     },
     {
       "id": "SENS-05",
-      "name": "deferred sensory modalities",
+      "name": "sensory modality scope, per modality",
       "value": {
-        "deferred": [
-          "taste",
-          "audition",
-          "wind",
-          "gravity",
-          "haltere",
-          "thermo-hygro",
+        "enabled_with_real_world_quantity": [
+          "taste-tarsal-contact",
+          "wind_gravity-orientation",
+          "haltere-angular-velocity",
+          "chordotonal-joint-angle",
+          "campaniform-load",
+          "hair_plate-joint-limit",
+          "bristle-contact",
+          "antennal-deflection"
+        ],
+        "enabled_with_declared_world_field": [
+          "sucrose-concentration",
+          "odour-plume",
+          "wind-speed",
+          "audition"
+        ],
+        "absent_no_world_quantity_exists": [
+          "thermo",
+          "hygro",
           "nociception"
         ],
-        "generic_substitution_allowed": false
+        "generic_substitution_allowed": false,
+        "deferred": [
+          "nociception"
+        ]
       },
       "units": "categorical scope",
       "provenance": "P/E",
       "applies_to": "v1 sensory scope",
-      "source": "AGENTS.md section 6",
-      "biological_mismatch": "Deferred modalities are absent rather than represented by generic channels.",
-      "uncertainty": "Each modality requires its own evidence and milestone.",
+      "source": "AGENTS.md section 6; ADR-2026-016",
+      "biological_mismatch": "Enabled modalities are transduced by declared functions, not measured receptor physiology. Absent modalities are absent rather than represented by a generic channel: MuJoCo carries no temperature, humidity or nociceptive field, so there is nothing to transduce.",
+      "uncertainty": "Every enabled modality's transducer is unfitted. The absent ones are bounded by the world model rather than by the connectome: their populations resolve and carry live outgoing edges.",
       "status": "accepted",
-      "validation": "modality-specific subsystem milestones",
+      "validation": "modality-specific subsystem milestones; per-channel live-edge gate in evidence/demo02/sensory-live-edges.json",
       "owner": "sensory",
-      "last_reviewed": "2026-09-05"
+      "last_reviewed": "2026-09-11",
+      "why_absent_is_not_a_route_score": "Thermo scores 0.82x and hygro 0.99x a matched null, and that is NOT the reason they are absent. DEMO-01's own validated lamina entry scores 0.44x at the 0th percentile, so a low score rules nothing out. The reason is that no world quantity exists."
     },
     {
       "id": "BODY-01",
@@ -519,7 +546,10 @@
         "dust_x_mm": 2.5,
         "dust_y_mm": 0.0,
         "dust_radius_mm": 1.0,
-        "dust_entry_clearance_mm": 0.25
+        "dust_entry_clearance_mm": 0.25,
+        "actuated_dof_set_is_declared_per_experiment": true,
+        "station_keeping_gains_are_never_inherited_across_dof_sets": true,
+        "why_gains_are_not_inherited": "DEMO-01's 0.12 integral gain, its 2.294 mm residual standing drift and the +11.5 degree drift bearing that chose its cue placement are properties of a 42-actuator plant. Adding actuators voids all three, so each experiment re-measures no-brain drift before freezing any threshold that depends on it."
       },
       "units": "mm and radians",
       "provenance": "P/E",
@@ -530,14 +560,21 @@
       "status": "accepted",
       "validation": "FlyGym execution, deterministic state transitions, contact traces, and controller-only comparison",
       "owner": "body",
-      "last_reviewed": "2026-09-08"
+      "last_reviewed": "2026-09-11"
     },
     {
       "id": "BODY-02",
       "name": "provisional contact and adhesion",
       "value": {
         "contact_model": "published-body-backend",
-        "adhesion": "bounded-stance-dependent-effective-model"
+        "adhesion": "bounded-stance-dependent-effective-model",
+        "adhesion_may_be_conditioned_on_replayed_limb_kinematics": true,
+        "frozen": [
+          "adhesion_gain_40.0",
+          "contact_stiffness",
+          "forcerange_pm65",
+          "floor_damping"
+        ]
       },
       "units": "backend force and contact units",
       "provenance": "P/F/E",
@@ -548,7 +585,7 @@
       "status": "proposed",
       "validation": "ground-reaction force, slip, attachment, and detachment data",
       "owner": "body",
-      "last_reviewed": "2026-09-05"
+      "last_reviewed": "2026-09-11"
     },
     {
       "id": "MOTOR-01",
@@ -616,18 +653,27 @@
         "baseline_window_us": 100000,
         "readout_window_us": 100000,
         "groom_max_net_displacement_mm": 2.5,
-        "groom_blend_in_us": 200000
+        "groom_blend_in_us": 200000,
+        "command_ids": [
+          "actuator:forward-drive",
+          "actuator:yaw-drive",
+          "actuator:grooming-intensity",
+          "actuator:proboscis-extension",
+          "actuator:jump-extension",
+          "actuator:wing-depression"
+        ],
+        "why_two_takeoff_commands": "The anatomy has two effectors on two paths: DNp01 to TTMn directly, and DNp01 to PSI to DLMn. One combined command would hide which produced the motion and make the zero-lift statement unverifiable from the trace."
       },
       "units": "mixed; keys include units. forward and yaw decoder outputs are dimensionless normalized drives in [0,1] and [-1,1]",
       "provenance": "E",
       "applies_to": "Track A reference and full-graph actuator controllers",
-      "source": "Eon-inspired but independently implemented scaffold",
+      "source": "Eon-inspired but independently implemented scaffold; ADR-2026-016",
       "biological_mismatch": "Descending readouts control kinematics and grooming pose rather than the complete VNC/muscle hierarchy. The decoder emits normalized descending drives, not physical velocities: max_forward_mm_s and max_yaw_rad_s are the kinematic point body's full-scale conversion and the FlyGym locomotor controller's normalization constant, never a commanded or achieved speed.",
       "uncertainty": "controller gains require sensitivity sweeps; the grooming blend-in interval is an actuator scaffold that suppresses the onset impulse of replaying a tethered-fly trajectory on a free-standing body",
       "status": "accepted",
       "validation": "controller-only and neural-ablation controls",
       "owner": "motor",
-      "last_reviewed": "2026-09-08"
+      "last_reviewed": "2026-09-11"
     },
     {
       "id": "MOTOR-04",
@@ -820,6 +866,94 @@
       "validation": "simultaneous electrophysiology and imaging in the same neurons, which is the only thing that measures this transform rather than assuming it. Not available in the registered corpus.",
       "owner": "neural",
       "last_reviewed": "2026-09-10"
+    },
+    {
+      "status": "accepted",
+      "owner": "motor",
+      "last_reviewed": "2026-09-11",
+      "source": "ADR-2026-016",
+      "id": "MOTOR-05",
+      "name": "stance-conditioned station keeping",
+      "units": "controller gains",
+      "provenance": "E",
+      "applies_to": "station keeping during a grooming bout",
+      "value": {
+        "attempt": 2,
+        "protocol": "configs/experiments/motor-05-validation-protocol-v1.json",
+        "spent_seeds": [
+          "20260910"
+        ],
+        "defect_fixed": "During a bout COMMAND_GROOM forces the standing branch, so station keeping writes all six FTi pitch actuators and the grooming replay then overwrites the two front ones. Two of six control channels were computed and discarded while the integral accumulated their full error."
+      },
+      "biological_mismatch": "A PI controller on joint targets is not a fly holding still.",
+      "uncertainty": "unfitted; the four-leg plant curve has never been measured",
+      "validation": "commit-reveal validation draw under the registered MOTOR-05 protocol"
+    },
+    {
+      "status": "accepted",
+      "owner": "motor",
+      "last_reviewed": "2026-09-11",
+      "source": "ADR-2026-016",
+      "id": "MOTOR-06",
+      "name": "graded behaviour command binding",
+      "units": "normalized drive",
+      "provenance": "E",
+      "applies_to": "grooming and proboscis command bindings",
+      "value": {
+        "groom_blend_scales_with_intensity": true,
+        "proboscis_extension_is_graded": true
+      },
+      "biological_mismatch": "A blend weight on a replayed trajectory is not a motor command.",
+      "uncertainty": "unfitted",
+      "validation": "dose-response criteria in the behaviour contracts",
+      "why_this_record_exists": "Cited as an assumption_id in committed contracts and previously undefined."
+    },
+    {
+      "status": "accepted",
+      "owner": "demo",
+      "last_reviewed": "2026-09-11",
+      "source": "ADR-2026-016",
+      "id": "DEMO-02",
+      "name": "behaviour demonstration scenarios",
+      "units": "categorical scope",
+      "provenance": "E",
+      "applies_to": "grooming, feeding and escape demonstrations",
+      "value": {
+        "behaviours": [
+          "antennal-grooming",
+          "proboscis-extension",
+          "escape-takeoff"
+        ],
+        "separate_contracts": true,
+        "tier_awarded": "none",
+        "feeding_is_a_pose_not_ingestion": true,
+        "takeoff_has_zero_aerodynamic_force": true
+      },
+      "biological_mismatch": "Engineering demonstrations on a female body prior carrying a male CNS.",
+      "uncertainty": "Each behaviour's decoder is an E scaffold.",
+      "validation": "per-behaviour preregistered acceptance contracts",
+      "why_this_record_exists": "Cited as an assumption_id in committed contracts and previously undefined."
+    },
+    {
+      "status": "accepted",
+      "owner": "sensory",
+      "last_reviewed": "2026-09-11",
+      "source": "ADR-2026-016",
+      "id": "DEMO-03",
+      "name": "declared sensory encoder scaffold",
+      "units": "Hz per normalized world quantity",
+      "provenance": "P/E",
+      "applies_to": "every sensory channel encoder",
+      "value": {
+        "transducer_family": "saturating, declared per channel",
+        "baseline_rate_hz": 0.0,
+        "why_baseline_is_zero": "A nonzero InputRateHz forces RefracTime to zero in the LIF reset code, which raises the firing ceiling from about 455 Hz to 10000 Hz on every entry neuron at once, including modalities that are switched off.",
+        "delay_quantised_to_coupling_interval_us": 15000
+      },
+      "biological_mismatch": "No measured receptor transduction function for any channel.",
+      "uncertainty": "unfitted; delay resolution is one coupling interval",
+      "validation": "per-channel live-edge gate, and the stimulus-absent control of each behaviour contract",
+      "why_this_record_exists": "Cited as an assumption_id in committed contracts and previously undefined."
     }
   ],
   "revision_history": [
@@ -828,6 +962,12 @@
       "to": "foundation-v0.8",
       "on": "2026-09-10",
       "why": "ND-03's recorded validation-set size was wrong by a factor of about seventeen and its composition was not recorded at all. VAL-03 was added as a named but unwritten precondition of the restricted stage-3 contract."
+    },
+    {
+      "from": "foundation-v0.8",
+      "to": "foundation-v0.9",
+      "on": "2026-09-11",
+      "why": "ADR-2026-016. SENS-05 stopped reading 'deferred' for senses the code now drives and was rewritten per modality, with thermo and hygro recorded as absent because no world quantity exists rather than because their route scores are low. SENS-01's organ and side requirement became satisfiable from entryNerve and rootSide and is met for the first time. MOTOR-03 gained two takeoff commands, kept deliberately separate so each effector's contribution stays measurable. BODY-01 records that station-keeping gains are never inherited across actuated DOF sets, because DEMO-01's calibration is a property of its 42-actuator plant. ND-07 gained one curation candidate, blocked until its source is verified here. MOTOR-05, MOTOR-06, DEMO-02 and DEMO-03 were added; the last three were cited as assumption_ids in committed contracts and returned zero hits in this file."
     }
   ]
 }

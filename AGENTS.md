@@ -395,7 +395,7 @@ These are current starting decisions, not claims that the biology is solved.
 | `ND-04` | Synaptic strength | `synapse_count × type_pair_scale`, optionally adjusted for location/input resistance. | `M/F` | Unitary PSP/EPSC, perturbation and functional-imaging data. |
 | `ND-05` | Kinetics and delay | Receptor-family kernels; path-length-aware conduction plus release latency. Unknowns receive explicit ranges. | `P/F` | Paired physiology and timing-sensitive circuit responses. |
 | `ND-06` | Release and STP | Static deterministic transmission only for the cheapest baseline; add class-specific stochastic release/STP where evidence exists. | `P/F/E` | Failure, paired-pulse, sustained-response and recovery measurements. |
-| `ND-07` | Electrical synapses | Omit globally at first, curate established pairs, and run omission sensitivity. | `P/E` | Paired recordings, innexin evidence and circuit perturbations. |
+| `ND-07` | Electrical synapses | Omit globally at first, curate established pairs, and run omission sensitivity. One curation candidate is named: the giant fibre onto `TTMn` and `PSI`, **blocked** until its source is verified in this repository, and never to be replaced by raising a gain. | `P/E` | Paired recordings, innexin evidence and circuit perturbations. |
 | `ND-08` | Baseline and noise | Fit type/region/state-conditioned tonic drive; separate structural, membrane, vesicle and observation noise. | `F/E` | Resting and behaving activity with a measurement model. |
 | `ND-09` | Morphology | Whole-CNS point/reduced models first; retain skeleton/site data and upgrade behavior-critical cells to compartments. | `M/F/E` | Compartmental physiology and subcellular response timing. |
 | `TRACKA-01` | Eon-like baseline | Run the complete traced aggregate graph with the named Shiu-style, central-relay, intent-drive and controller scaffolds recorded in `foundation-v0.5`. | `M/P/E` | Track A controls only; replace with Stage 2 dynamics and Track B sensory/motor pathways before scientific claims. |
@@ -405,15 +405,19 @@ These are current starting decisions, not claims that the biology is solved.
 | `SENS-01` | Sensor registry | Every sensory ID maps to organ, side, body coordinates, receptive axis/field, transducer, delay, source and confidence. | `M/P/F` | Anatomical registration and receptor recordings. |
 | `SENS-02` | Vision | Start with luminance/motion, measured eye geometry where available, photoreceptor noise/adaptation, and FlyVis-like type priors. | `P/F` | Photoreceptor, L1–L5 and T4/T5 responses plus optic-flow behavior. |
 | `SENS-03` | Olfaction | Small named odor panel; receptor-specific saturating/adaptive filters; independent left/right plume samples. | `P/F/E` | ORN/PN dose-response, timing and plume-navigation data. |
-| `SENS-04` | Proprioception/touch | Generate claw/hook/club, load, joint-limit and bristle signals from body physics with delays/noise. | `P/F` | Passive/active tuning, reflex, ablation and perturbation data. |
-| `SENS-05` | Deferred modalities | Taste, audition, wind, gravity, haltere, thermo/hygro and nociception remain explicit extension modules, not fake generic channels. | `P/E` | Modality-specific subsystem milestones. |
+| `SENS-04` | Proprioception/touch | Generate claw/hook/club, load, joint-limit and bristle signals from body physics with delays/noise. Antennal deflection is read from `l_pedicel`/`r_pedicel` `qpos`, so the grooming stimulus has units and a side; the dust/contamination scalar leaves the critical path. | `P/F` | Passive/active tuning, reflex, ablation and perturbation data. |
+| `SENS-05` | Modality scope, per modality | Every labelled sense is a named channel carrying an organ and a side, classified `real` (a MuJoCo referent), `declared` (an invented field, named as one) or `absent`. Taste is no longer deferred: it is a side-resolved leg-taste-bristle module. Thermo, hygro and nociception are **absent because no world quantity exists to transduce** — not because their route scores are low. `generic_substitution_allowed: false` is binding, so `SENSOR_SUCROSE` is retired as a decoder input. | `P/E` | Modality-specific milestones; the per-channel live-edge gate. |
 | `MOTOR-01` | Motor identity | Create versioned MaleCNS ID→MANC type→nerve/side/segment→muscle mappings; enable high-confidence targets first. | `M/P` | Anatomy, backfills, activation/silencing and muscle recordings. |
 | `MOTOR-02` | NMJ/muscle | Provisional causal delay + saturating activation filter, with slow/intermediate/fast unit priors. | `P/F/E` | Spike→EMG/calcium/force, saturation, fatigue and recovery. |
-| `MOTOR-03` | Actuator bridge | Initially decode motor populations to FlyGym-compatible commands, but keep this visibly marked as a non-biological bridge. | `E` | Incremental replacement by validated muscle–tendon units. |
-| `BODY-01` | Body | Use FlyGym/NeuroMechFly as the initial walking substrate; retain published female-body mismatch in metadata. | `P/E` | Male morphometry, mass, joint and kinematic data. |
-| `BODY-02` | Contact/adhesion | Published contact plus bounded stance-dependent adhesion as a provisional effective model. | `P/F/E` | Ground-reaction forces, slip, attachment and detachment data. |
+| `MOTOR-03` | Actuator bridge | Initially decode motor populations to FlyGym-compatible commands, but keep this visibly marked as a non-biological bridge. Six commands: forward, yaw, grooming intensity, proboscis extension, jump extension and wing depression. The last two stay separate so each effector's contribution to a takeoff remains measurable from the trace. | `E` | Incremental replacement by validated muscle–tendon units. |
+| `BODY-01` | Body | Use FlyGym/NeuroMechFly as the initial walking substrate; retain published female-body mismatch in metadata. The actuated DOF set is declared **per experiment**, and station-keeping gains are re-derived per set and never inherited: DEMO-01's integral gain, its 2.294 mm residual drift and the +11.5° drift bearing that chose its cue placement are properties of a 42-actuator plant. | `P/E` | Male morphometry, mass, joint and kinematic data. |
+| `BODY-02` | Contact/adhesion | Published contact plus bounded stance-dependent adhesion as a provisional effective model. Adhesion may be conditioned on replayed limb kinematics; adhesion gain, contact stiffness, force limits and floor damping remain frozen. | `P/F/E` | Ground-reaction forces, slip, attachment and detachment data. |
 | `NUM-01` | Timing | Multi-rate causal integration with explicit sensory/motor delay queues; never expose future or zero-delay simulator state. | `P/F/E` | Timestep-halving convergence and latency sweeps. |
 | `VAL-01` | Uncertainty | Run parameter/model ensembles and retain train/validation separation. | `E` | Robust predictions across model families and held-out animals/tasks. |
+| `MOTOR-05` | Station keeping | Stance-conditioned channel selection during a grooming bout, attempt 2. Fixes a defect where two of six control channels were computed and discarded while the integral accumulated their error. | `E` | The registered MOTOR-05 commit-reveal validation draw. |
+| `MOTOR-06` | Graded commands | Grooming blend and proboscis extension scale with the decoded drive rather than latching on. | `E` | The dose-response criteria in the behaviour contracts. |
+| `DEMO-02` | Behaviour scenarios | Antennal grooming, proboscis extension and escape takeoff, as three separate preregistered demonstrations. Feeding is a pose, not ingestion; takeoff carries zero aerodynamic force. Awards no tier. | `E` | Per-behaviour acceptance contracts. |
+| `DEMO-03` | Sensory encoder | One saturating transducer per channel, baseline rate zero, delay quantised to the 15 ms coupling interval. | `P/E` | The live-edge gate and each contract's stimulus-absent control. |
 
 ## 7. V1 scope and non-goals
 
@@ -424,6 +428,7 @@ These are current starting decisions, not claims that the biology is solved.
 - Flat-ground walking, rest, turning and perturbation recovery.
 - Luminance/motion vision.
 - Leg proprioception and touch.
+- Antennal grooming from a mechanical antennal stimulus; a proboscis-extension pose from leg taste contact; a ballistic escape takeoff from a visual object.
 - A deliberately small, chemically named odor set after basic walking closes successfully.
 - Fixed internal state and fixed long-term synaptic weights.
 - A provisional, explicit motor-population→body-actuator bridge.
@@ -434,7 +439,7 @@ These are current starting decisions, not claims that the biology is solved.
 - Claims of consciousness, subjective experience, a digital twin, or complete fly emulation.
 - Recovering the donor's memories or physiological state.
 - Full-color/polarization vision, complete olfaction or all peripheral modalities.
-- Free flight, courtship, aggression, song, feeding, gut physiology, sleep/circadian cycles, development or ageing.
+- Free flight, courtship, aggression, song, gut physiology, ingestion, pharyngeal pumping, any feeding claim beyond a proboscis-extension pose, sleep/circadian cycles, development or ageing. A ballistic takeoff with zero aerodynamic force is not flight and does not move free flight into scope: this body has no `density`, no `viscosity` and no fluid geoms, so wing motion generates no lift.
 - Whole-body muscle fidelity.
 - Unrestricted brain-wide STDP or generic reinforcement learning presented as fly learning.
 - Replacing missing biology with an opaque policy and then attributing behavior to the connectome.
@@ -700,6 +705,7 @@ Once accepted, update the relevant table row and append a short entry below. Nev
 | 2026-09-08 | Accept ADR-2026-007, retire the reserved Nanami PN trace as a scoring source, and lock the in vivo cellular pack. | The stimulus levels recorded as the in vivo protocol are the dimensionless in-silico model input, the real amplitudes are never published, and the trace's somatic spikes fall below the detection prominence, so the planned sealed evaluation cannot be run at all. |
 | 2026-09-08 | Accept ADR-2026-008, make the Stage 2 exit gate executable and record that one of four legs passes. | Three legs could be evaluated from locked data; doing so turned two open assertions into measured results, failed the uEPSC kernel on a preregistered decay limit, and exposed a one-step GeNN spike-time defect that a compensating error had hidden. |
 | 2026-09-08 | Accept ADR-2026-009, the independent Stage 2 review: withdraw the ND-06 scale-conflict hypothesis, correct the uEPSC and synaptic-structure interpretations, issue v2 contracts with diagnostics and caveats, and verify the heterogeneous GeNN kernel. | Every checksum and implementation held, but four interpretations were wrong in kind and three measurement rules embedded assumptions that moved registered values by 3.4 mV and 15 ms; recording them now stops Stage 3 from inheriting them. |
+| 2026-09-11 | Accept ADR-2026-016: resolve every labelled sense into an organ-and-side channel, and build antennal grooming, a proboscis-extension pose and a zero-aerodynamic escape takeoff on the three strongest. | A degree-matched-null survey put grooming at 106x, the giant fibre at 82.9x monosynaptically and labellar taste at 48.6x, and a live-edge gate then showed every entry population those need is 99 to 100 percent live while the photoreceptors are 0 percent. The register was still reading "deferred" for senses the code was about to drive, and had never supplied the organ and side SENS-01 requires. |
 
 ## 15. Unresolved project-level choices
 

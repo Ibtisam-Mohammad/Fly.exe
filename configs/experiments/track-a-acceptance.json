@@ -2,7 +2,7 @@
   "schema_version": "2.0",
   "experiment_id": "track-a-eon-malecns-acceptance-v3",
   "scenario_id": "eon-malecns-v0.2",
-  "assumption_set": "foundation-v0.8",
+  "assumption_set": "foundation-v0.9",
   "preregistered_on": "2026-09-08",
   "supersedes": ["track-a-eon-malecns-acceptance-v2", "track-a-eon-malecns-acceptance-v1"],
   "supersession_reason": "The v1 and v2 matrices shared the food positions (8,-1), (8,0) and (8,1). Because the v1 sucrose-input-ablation control failed and the feeding gate was then changed, those positions were no longer held out for v2. The v3 positions below have never been used by any Track A run, and none of them is the arena default in BODY-01.",

@@ -1,7 +1,7 @@
 # ADR-2026-016: Every labelled sense, and the three behaviours that can be built on them
 
 Date: 2026-09-11
-Status: **PROPOSED. Awaiting project-owner approval. No code depends on it yet.**
+Status: accepted 2026-09-11. Assumption set `foundation-v0.8` → `foundation-v0.9`.
 Extends ADR-2026-014 and ADR-2026-015, whose numbers are unchanged.
 
 ```yaml
@@ -63,7 +63,7 @@ validation_effect: >-
   before any threshold depending on them is frozen. Any change to station-keeping is
   MOTOR-05 attempt 2 and runs under the already-registered commit-reveal protocol in
   configs/experiments/motor-05-validation-protocol-v1.json.
-approved_by: PENDING
+approved_by: project-owner, delegated 2026-09-11 ("take the best decisions along the way yourself")
 ```
 
 ## Context
