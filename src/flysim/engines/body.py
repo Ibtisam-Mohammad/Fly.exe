@@ -22,7 +22,21 @@ COMMAND_FORWARD = "actuator:forward-drive"
 COMMAND_YAW = "actuator:yaw-drive"
 COMMAND_GROOM = "actuator:grooming-intensity"
 COMMAND_PROBOSCIS = "actuator:proboscis-extension"
+
+#: The escape effectors, added by ADR-2026-016. They are deliberately two commands rather
+#: than one `actuator:takeoff`: the anatomy has two effectors on two paths, DNp01 onto TTMn
+#: directly and DNp01 through PSI onto DLMn, so one combined command would hide which
+#: produced the motion and make "the wings generated no lift" unverifiable from the trace.
+COMMAND_JUMP = "actuator:jump-extension"
+COMMAND_WING_DEPRESSION = "actuator:wing-depression"
+
+#: The original four, unchanged. Five producers build `values` tuples positionally against
+#: this, and DEMO-01's and Track A's recordings were made with it, so it stays four wide.
 COMMAND_IDS = (COMMAND_FORWARD, COMMAND_YAW, COMMAND_GROOM, COMMAND_PROBOSCIS)
+
+#: The full vocabulary a behaviour body accepts. A frame carrying only the first four is
+#: still legal: every consumer reads by identifier with a default of zero.
+BEHAVIOUR_COMMAND_IDS = (*COMMAND_IDS, COMMAND_JUMP, COMMAND_WING_DEPRESSION)
 
 
 @dataclass(frozen=True, slots=True)
