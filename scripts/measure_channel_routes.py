@@ -23,6 +23,30 @@ whether a narrower entry would have been better.
 The null, the flow definition and the best-hop rule are imported from the schema-2.0 script
 rather than copied, so the two surveys cannot drift apart.
 
+**Two things a first version of this script got wrong, recorded because they change how the
+numbers must be read.**
+
+It reported a "gain from splitting" as the best channel's null ratio over the modality's,
+and the top of that table was every 1- and 2-body channel in the atlas, at ratios up to
+275,000. The mechanism: a one-body null draws random one-body sets, most of which reach a
+26-cell target with no flow at all after three hops, so the null median collapses to about
+1e-12 and the ratio explodes. In the worst case the channel's own flow was 47 times
+*smaller* than the modality's while its ratio was 60,000 times larger. **A ratio to this
+null is not comparable across population sizes**, and 1,322 of 7,296 hop entries have a null
+median of exactly zero. Ratios are therefore marked unreportable below
+``--min-null-bodies``, and that guard is structural rather than chosen from the answers: it
+is the size below which the null has no usable median, not the size below which the results
+became inconvenient.
+
+Then, measured by flow instead, splitting "helped" in 100 percent of comparisons with a
+minimum of exactly 1.00 -- which is arithmetic, not a finding. Flow is the mean per-neuron
+reach, the modality's flow is the mean over its members, and the maximum over subsets of a
+set is always at least its mean. So there is no version of "does splitting help" that a
+maximum can answer. What is reported instead is **dispersion**: how far a modality's best
+channel stands above its median channel, which says whether that sense separates by organ
+and side or is homogeneous across them. And **laterality**, the left-to-right flow ratio at
+one organ, which is a genuine asymmetry and not a maximum over anything.
+
 Structural, and carrying the same caveat that governs every reading of it: DEMO-01's own
 validated entry scores 0.44 times this null at the 0th percentile. A low score here cannot
 rule a route out. Only a high score is informative.
@@ -118,6 +142,12 @@ def main() -> int:
         "--min-bodies", type=int, default=1,
         help="Skip channels smaller than this. Default 1, i.e. skip nothing.",
     )
+    parser.add_argument(
+        "--min-null-bodies", type=int, default=20,
+        help="Below this source size a ratio to the matched null is marked unreportable, "
+             "because the null's median collapses toward zero and the ratio stops "
+             "measuring route strength. Flow is still reported at every size.",
+    )
     args = parser.parse_args()
 
     from scipy.sparse import csr_matrix
@@ -212,6 +242,9 @@ def main() -> int:
                 hops,
                 key=lambda h: h["ratio_to_null"] if np.isfinite(h["ratio_to_null"]) else -1.0,
             )
+            reportable = (
+                members.size >= args.min_null_bodies and best["null_median"] > 0.0
+            )
             rows.append({
                 "source": source_name,
                 "source_kind": kind,
@@ -222,15 +255,34 @@ def main() -> int:
                 "direct_contact_share": direct_share,
                 "hops": hops,
                 "best_hop": best["hop"],
+                "best_flow": best["flow"],
                 "best_ratio_to_null": best["ratio_to_null"],
                 "best_percentile": best["percentile_in_null"],
+                "null_ratio_reportable": bool(reportable),
+                "why_not_reportable": (
+                    ""
+                    if reportable
+                    else (
+                        f"source has {members.size} bodies, below the declared "
+                        f"{args.min_null_bodies}, so the matched null has no usable median"
+                        if members.size < args.min_null_bodies
+                        else "the matched null's median at this hop is exactly zero"
+                    )
+                ),
             })
 
     def finite(value: float) -> float:
         return value if np.isfinite(value) else 1e18
 
-    # Does splitting a modality by organ and side beat the modality as a whole?
-    comparison: list[dict[str, Any]] = []
+    def flow_at(row: dict[str, Any], hop: int) -> float:
+        return float(next(h for h in row["hops"] if h["hop"] == hop)["flow"])
+
+    # How far does a modality's best channel stand above its median channel? This says
+    # whether the sense separates by organ and side, or is homogeneous across them. It is
+    # deliberately NOT "best channel over the modality": the modality's flow is the mean
+    # over its members and a maximum over subsets always beats a mean, so that comparison
+    # can only ever come out above one and answers nothing.
+    dispersion: list[dict[str, Any]] = []
     for modality in atlas.modality_bodies:
         for target_name in targets:
             lump = next(
@@ -250,42 +302,101 @@ def main() -> int:
             ]
             if len(parts) < 2:
                 continue
-            best_part = max(parts, key=lambda r: finite(r["best_ratio_to_null"]))
-            comparison.append({
+            hop = int(lump["best_hop"])
+            flows = sorted(((flow_at(row, hop), row) for row in parts), reverse=True)
+            values = [value for value, _ in flows]
+            median = float(np.median(values))
+            top_flow, top_row = flows[0]
+            dispersion.append({
                 "modality": modality,
                 "target": target_name,
-                "modality_ratio": lump["best_ratio_to_null"],
-                "best_channel": best_part["source"],
-                "best_channel_ratio": best_part["best_ratio_to_null"],
-                "gain_from_splitting": (
-                    finite(best_part["best_ratio_to_null"]) / lump["best_ratio_to_null"]
-                    if lump["best_ratio_to_null"] > 0 else float("inf")
-                ),
+                "hop": hop,
                 "channels_compared": len(parts),
+                "modality_flow": flow_at(lump, hop),
+                "best_channel": top_row["source"],
+                "best_channel_bodies": top_row["source_bodies"],
+                "best_channel_flow": top_flow,
+                "median_channel_flow": median,
+                "min_channel_flow": float(values[-1]),
+                "best_over_median": (top_flow / median) if median > 0 else float("inf"),
+                "best_channel_null_ratio_reportable": top_row["null_ratio_reportable"],
+                "best_channel_ratio_to_null": top_row["best_ratio_to_null"],
             })
-    comparison.sort(key=lambda c: -finite(c["gain_from_splitting"]))
+    dispersion.sort(key=lambda c: -finite(c["best_over_median"]))
+
+    # Left against right at one organ. Not a maximum over anything, so this one is a real
+    # asymmetry: a route that is genuinely lateralised should show it here.
+    laterality: list[dict[str, Any]] = []
+    for key in atlas.channel_keys:
+        if key.side != "L":
+            continue
+        mirror = f"{key.modality}:{key.organ}:R"
+        for target_name in targets:
+            left = next(
+                (r for r in rows if r["source"] == f"channel:{key}" and r["target"] == target_name),
+                None,
+            )
+            right = next(
+                (
+                    r for r in rows
+                    if r["source"] == f"channel:{mirror}" and r["target"] == target_name
+                ),
+                None,
+            )
+            if left is None or right is None:
+                continue
+            hop = int(max(left["best_hop"], right["best_hop"]))
+            left_flow, right_flow = flow_at(left, hop), flow_at(right, hop)
+            if left_flow <= 0 and right_flow <= 0:
+                continue
+            total = left_flow + right_flow
+            laterality.append({
+                "modality": key.modality,
+                "organ": key.organ,
+                "target": target_name,
+                "hop": hop,
+                "left_bodies": left["source_bodies"],
+                "right_bodies": right["source_bodies"],
+                "left_flow": left_flow,
+                "right_flow": right_flow,
+                "index": (left_flow - right_flow) / total if total > 0 else 0.0,
+            })
+    laterality.sort(key=lambda entry: -abs(entry["index"]))
 
     rows.sort(key=lambda r: -finite(r["best_ratio_to_null"]))
     header = (
         f"{'source':44s} {'target':20s} {'src':>5s} {'edges':>7s} {'hop':>4s} "
         f"{'x null':>9s} {'pct':>6s}"
     )
-    print("\ntop 40 routes\n" + header)
+    reportable = [row for row in rows if row["null_ratio_reportable"]]
+    print(f"\ntop 40 routes whose null ratio is reportable "
+          f"({len(reportable)} of {len(rows)})\n" + header)
     print("-" * len(header))
-    for row in rows[:40]:
+    for row in reportable[:40]:
         print(
             f"{row['source']:44s} {row['target']:20s} {row['source_bodies']:5d} "
             f"{row['direct_edges']:7d} {row['best_hop']:4d} "
             f"{row['best_ratio_to_null']:9.1f} {row['best_percentile']:5.1f}%"
         )
 
-    print("\nwhere splitting by organ and side helps most")
-    print(f"{'modality':26s} {'target':20s} {'lump':>8s} {'best part':>10s} {'gain':>7s}")
-    for entry in comparison[:20]:
+    print("\nwhere a sense separates most by organ and side (best channel over median "
+          "channel, at the modality's best hop)")
+    print(f"{'modality':24s} {'target':20s} {'ch':>4s} {'best channel':32s} "
+          f"{'n':>5s} {'best/med':>9s}")
+    for entry in dispersion[:20]:
         print(
-            f"{entry['modality']:26s} {entry['target']:20s} "
-            f"{entry['modality_ratio']:8.1f} {entry['best_channel_ratio']:10.1f} "
-            f"{entry['gain_from_splitting']:7.2f}x"
+            f"{entry['modality']:24s} {entry['target']:20s} "
+            f"{entry['channels_compared']:4d} "
+            f"{entry['best_channel'].replace('channel:', ''):32s} "
+            f"{entry['best_channel_bodies']:5d} {entry['best_over_median']:8.2f}x"
+        )
+
+    print("\nstrongest left/right asymmetries (index = (L-R)/(L+R), at a shared hop)")
+    print(f"{'modality':24s} {'organ':12s} {'target':20s} {'L':>5s} {'R':>5s} {'index':>7s}")
+    for entry in laterality[:20]:
+        print(
+            f"{entry['modality']:24s} {entry['organ']:12s} {entry['target']:20s} "
+            f"{entry['left_bodies']:5d} {entry['right_bodies']:5d} {entry['index']:+7.2f}"
         )
 
     payload = {
@@ -314,6 +425,24 @@ def main() -> int:
             ),
             "scoring": "Each route is scored at the hop where it stands highest.",
             "blind_to": "sign, dynamics, delay, and whether the network uses the path",
+            "null_ratio_size_limit": (
+                f"A ratio to this null is not comparable across population sizes. Below "
+                f"{args.min_null_bodies} source bodies the null's median collapses toward "
+                "zero for distant targets and the ratio stops measuring route strength, so "
+                "those rows carry null_ratio_reportable false and a reason. A first "
+                "version of this script did not do that, and its headline table was every "
+                "one- and two-body channel in the atlas at ratios up to 275000, one of "
+                "which had a flow 47 times smaller than the modality it was beating."
+            ),
+            "why_dispersion_not_gain": (
+                "Flow is the mean per-neuron reach and a modality's flow is the mean over "
+                "its members, so the maximum over its channels is always at least the "
+                "modality's own value. 'Does splitting help' measured that way comes out "
+                "above one every time, with a minimum of exactly 1.00, which is arithmetic "
+                "and not a result. Dispersion compares a modality's best channel against "
+                "its median channel instead, which says whether the sense separates by "
+                "organ and side or is homogeneous across them."
+            ),
         },
         "instrument_limit": (
             "DEMO-01's validated lamina entry scores about 0.44 times this null at the "
@@ -330,7 +459,8 @@ def main() -> int:
         "targets": {name: {"description": TARGETS[name][0], "bodies": int(ids.size)}
                     for name, ids in sorted(targets.items())},
         "routes": rows,
-        "splitting_comparison": comparison,
+        "organ_side_dispersion": dispersion,
+        "laterality": laterality,
         "claim_boundary": (
             "Structural only. A high ratio says the released wiring connects these "
             "populations far more than a size- and degree-matched random set would. It "
