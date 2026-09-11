@@ -1,0 +1,357 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "malecns-sensory-atlas-v1",
+  "title": "Every sense the MaleCNS v1.0 release labels, as an ordered partition",
+  "provenance": "M",
+  "status": "Annotation partition. Structural only; it records what the release labels, never what any population does.",
+  "last_reviewed": "2026-09-11",
+  "why_a_partition_and_not_filters": [
+    "Selectors overlap in the real data. Subclass 'pharyngeal sensillum' spans class gustatory (48) and class mechanosensory (39); subclass 'haltere' spans proprioceptive (201) and unknown_sensory (4); subclass 'abdomen' spans three classes. A set of independent filters would claim the same body twice.",
+    "flysim.contracts.SignalFrame rejects duplicate ids, so a double-claimed body is a hard failure at the moment of injection rather than at the moment of authoring.",
+    "So every in-graph sensory body is assigned to exactly one channel by a priority ladder, first match wins, and the residue is named rather than dropped."
+  ],
+  "sensory_superclasses": [
+    "cb_sensory",
+    "vnc_sensory",
+    "ol_sensory",
+    "sensory_ascending",
+    "sensory_descending",
+    "cb_sensory_tbc",
+    "vnc_sensory_tbc",
+    "sensory_ascending_tbc"
+  ],
+  "side_column": "rootSide",
+  "why_rootSide": "somaSide is null for sensory neurons because their somata are peripheral and outside the imaged volume. rootSide is populated for 17482 of 17937 and carries the entry side. Bodies with neither are assigned side 'unknown' rather than discarded, so the ledger closes.",
+  "organ_column": "entryNerve",
+  "nerve_to_organ": {
+    "AN": "antenna",
+    "MxLbN": "proboscis",
+    "PhN": "pharynx",
+    "aPhN": "pharynx",
+    "ProLN": "leg-front",
+    "MesoLN": "leg-middle",
+    "MetaLN": "leg-hind",
+    "DMetaN": "haltere",
+    "ADMN": "wing",
+    "PDMN": "notum",
+    "PrN": "neck",
+    "ProCN": "prothorax",
+    "DProN": "prothorax",
+    "VProN": "prothorax",
+    "ProAN": "prothorax",
+    "ON": "occiput",
+    "AbN1": "abdomen",
+    "AbN2": "abdomen",
+    "AbN3": "abdomen",
+    "AbNT": "abdomen",
+    "AbN4": "abdomen"
+  },
+  "why_nerve_is_the_organ": "entryNerve is a released annotation naming the nerve a sensory axon enters the CNS through, which is a fact about peripheral anatomy that the connectome does retain. With rootSide it supplies the organ and side that SENS-01 requires of every sensory population, and nothing in the codebase currently uses it.",
+  "surrogate_entries": [
+    {
+      "id": "lamina-surrogate",
+      "modality": "visual-lamina",
+      "organ_override": "optic-lobe",
+      "combine": "any",
+      "queries": [{ "field": "type", "operator": "regex", "value": "^(L1|L2|L5)$" }],
+      "split_by": ["rootSide"],
+      "why": "Photoreceptors carry zero live outgoing edges: all 66533 are zeroed by the frozen sign policy because fly photoreceptors are histaminergic and histamine is absent from the transmitter model. Vision therefore enters one synapse downstream at the lamina monopolar cells, which are ol_intrinsic rather than sensory. They must sit inside the frozen entry union, or enabling vision forces a kernel rebuild.",
+      "excluded_types": "L3 and L4 are excluded for missing released column coordinates, unchanged from DEMO-01."
+    }
+  ],
+  "channels": [
+    {
+      "modality": "visual",
+      "priority": 10,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "visual" }],
+      "organ_override": "optic-lobe",
+      "split_by": ["rootSide"],
+      "expected_bodies": 4107,
+      "kind": "real",
+      "note": "Photoreceptors and other visual afferents. Drive enters at the lamina surrogate, not here; this channel exists so that the partition is total."
+    },
+    {
+      "modality": "olfactory",
+      "priority": 10,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "olfactory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 2639,
+      "kind": "declared",
+      "note": "2635 of 2639 carry a glomerulus identity in the type column (ORN_DA1, ORN_VA1d and so on), so odour is addressable per glomerulus. The measured route to the steering pair scores 0.20x a matched null at the 0th percentile, so no behaviour is built on it."
+    },
+    {
+      "modality": "antennal-jo-f-grooming",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "grooming" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 65,
+      "kind": "real",
+      "note": "Johnston's organ subtype F. It responds to antennal deflection, which is l_pedicel and r_pedicel qpos: real physics, no invented field. 106x a matched null to the declared grooming descending readout."
+    },
+    {
+      "modality": "auditory-jo",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "auditory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 114,
+      "kind": "declared",
+      "note": "Johnston's organ auditory subtypes. MuJoCo has no sound field, so this channel has no real referent."
+    },
+    {
+      "modality": "wind-gravity",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "wind_gravity" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 475,
+      "kind": "real",
+      "note": "Gravity is real: the thorax quaternion gives orientation in the world. Wind is declared, because MuJoCo carries no fluid for this body."
+    },
+    {
+      "modality": "haltere",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "haltere" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 205,
+      "kind": "real",
+      "note": "Body angular velocity from qvel[3:6]. 18.5x a matched null to the wing steering motor neurons."
+    },
+    {
+      "modality": "labellar-taste",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "labellar bristle" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 163,
+      "kind": "declared",
+      "note": "48.6x a matched null to MN9 over four hops with zero direct edges: the strongest feeding route measured. It cannot be driven, because NeuroMechFly has no labellum on which to place a stimulus."
+    },
+    {
+      "modality": "taste-peg",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "taste peg" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 60,
+      "kind": "declared"
+    },
+    {
+      "modality": "tarsal-taste",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "taste bristle" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 70,
+      "kind": "declared",
+      "note": "Taste bristles sit on the legs (MetaLN 62, ProLN 8), so tarsal taste resolves per leg. The tarsal contact is real physics; only the sucrose concentration is declared."
+    },
+    {
+      "modality": "pharyngeal",
+      "priority": 20,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "pharyngeal sensillum" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 87,
+      "kind": "declared",
+      "note": "Spans class gustatory (48) and class mechanosensory (39), which is exactly why the ladder places subclass before class."
+    },
+    {
+      "modality": "chordotonal",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "chordotonal organ" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 425,
+      "kind": "real",
+      "note": "Joint angle and joint velocity, from qpos and qvel."
+    },
+    {
+      "modality": "campaniform",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "campaniform sensilla" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 426,
+      "kind": "real",
+      "note": "Cuticular load, from contact force."
+    },
+    {
+      "modality": "hair-plate",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "hair plate" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 113,
+      "kind": "real",
+      "note": "Joint limit detection, from qpos against the declared joint range."
+    },
+    {
+      "modality": "leg-bristle",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "leg bristle" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 768,
+      "kind": "real"
+    },
+    {
+      "modality": "wing-bristle",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "wing bristle" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 385,
+      "kind": "real"
+    },
+    {
+      "modality": "body-bristle",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "mechanosensory bristle" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 2206,
+      "kind": "real",
+      "note": "The largest single channel. An always-on contact drive that DEMO-01 never had, which is why every behaviour must run a channel-ablation control."
+    },
+    {
+      "modality": "notum",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "notum" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 230,
+      "kind": "real"
+    },
+    {
+      "modality": "wing-other",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "wing" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 46,
+      "kind": "real"
+    },
+    {
+      "modality": "abdomen",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "abdomen" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 1143,
+      "kind": "real"
+    },
+    {
+      "modality": "leg-other",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "leg" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 867,
+      "kind": "real"
+    },
+    {
+      "modality": "neck",
+      "priority": 30,
+      "combine": "all",
+      "queries": [{ "field": "subclass", "operator": "exact", "value": "neck" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 2,
+      "kind": "real"
+    },
+    {
+      "modality": "thermosensory",
+      "priority": 40,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "thermosensory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 25,
+      "kind": "absent",
+      "absent_reason": "MuJoCo carries no temperature field, so there is no world quantity to transduce. Inventing one would be the fake generic channel SENS-05 forbids. The route also scores 0.82x a matched null on 25 bodies, though that alone would not be grounds: the same instrument scores DEMO-01's own validated entry at 0.44x."
+    },
+    {
+      "modality": "hygrosensory",
+      "priority": 40,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "hygrosensory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 66,
+      "kind": "absent",
+      "absent_reason": "MuJoCo carries no humidity field. Same reasoning as thermosensory; the route scores 0.99x."
+    },
+    {
+      "modality": "chemosensory-other",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "chemosensory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 1,
+      "kind": "declared"
+    },
+    {
+      "modality": "gustatory-other",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "gustatory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 4,
+      "kind": "declared"
+    },
+    {
+      "modality": "mechano-proprio-other",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "mechanosensory_proprioceptive" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 1,
+      "kind": "real"
+    },
+    {
+      "modality": "mechano-tactile-other",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "mechanosensory_tactile" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 0,
+      "kind": "real",
+      "note": "Fully claimed by the subclass rungs above. Retained so that the ladder reads as a complete sweep of the class column rather than a selective one."
+    },
+    {
+      "modality": "mechano-other",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "mechanosensory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 1040,
+      "kind": "real",
+      "note": "Mostly MxLbN (917): proboscis mechanoreception."
+    },
+    {
+      "modality": "mechano-tbc",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "mechanosensory_tbc" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 11,
+      "kind": "real"
+    },
+    {
+      "modality": "unknown-sensory",
+      "priority": 50,
+      "combine": "all",
+      "queries": [{ "field": "class", "operator": "exact", "value": "unknown_sensory" }],
+      "split_by": ["entryNerve", "rootSide"],
+      "expected_bodies": 112,
+      "kind": "declared",
+      "note": "Labelled sensory by superclass but with no resolved modality. Carried as its own channel and never enabled, because driving it would assert a sense the release declines to name."
+    }
+  ],
+  "expected_total_in_graph": 15912,
+  "expected_unassigned": 56,
+  "unassigned_note": "56 in-graph bodies carry a sensory superclass but neither a class nor a subclass. They are named in the resolved artifact and excluded from every channel; they are not silently dropped.",
+  "claim_boundary": "This file records which released labels a body carries. It does not say what any of these neurons respond to, with what tuning, sign or delay, and a channel resolving here is not evidence that the sense works."
+}
