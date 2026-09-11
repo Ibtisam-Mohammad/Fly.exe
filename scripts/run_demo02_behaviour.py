@@ -104,6 +104,12 @@ def main() -> int:
     )
     parameters = {**visual_contract["fixed_parameters"], **selected}
     parameters["unresolved_sign_policy"] = visual_contract["unresolved_sign_policy"]
+    # The readout filter lives in its own block in the visual contract, and its value and
+    # its reasoning are reused unchanged: at a 15 ms interval one spike is 66.7 Hz, so an
+    # unfiltered count is a 0-1-2 counter.
+    parameters["readout_filter_tau_ms"] = visual_contract["readout"][
+        "readout_filter_tau_ms"
+    ]
 
     body_parameters = BehaviourBodyParameters.from_mapping(
         {**SCENARIOS[behaviour], "station_keeping_settle_us": 2_000_000}
