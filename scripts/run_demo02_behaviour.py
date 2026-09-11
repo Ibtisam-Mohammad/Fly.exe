@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO / "src"))
 from flysim.behaviour_body import BehaviourBodyParameters  # noqa: E402
 from flysim.config import load_json  # noqa: E402
 from flysim.demo02 import BEHAVIOURS, DecoderParameters  # noqa: E402
+from flysim.demo02_acceptance import evaluate, read_variant  # noqa: E402
 from flysim.demo02_embodied import run_behaviour  # noqa: E402
 
 TRAJECTORY = "derived/auxiliary/ozdil-2026-antennal-grooming/track-a-grooming-trajectory.npz"
@@ -171,10 +172,35 @@ def main() -> int:
             "reached_acting": outcome["reached_acting"],
         }
 
-    index = root / f"runs/demo02-{behaviour}/variants.json"
-    index.parent.mkdir(parents=True, exist_ok=True)
-    index.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"\nindex: {index}")
+    if results:
+        index = root / f"runs/demo02-{behaviour}/variants.json"
+        index.parent.mkdir(parents=True, exist_ok=True)
+        index.write_text(
+            json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(f"\nindex: {index}")
+
+    # Apply the frozen contract in the same clean-tree window that produced the runs, so
+    # the verdict cannot be computed against a tree that has moved since.
+    recorded = {
+        name: read_variant(root / f"runs/demo02-{behaviour}/{name}")
+        for name in variants
+        if (root / f"runs/demo02-{behaviour}/{name}/summary.json").exists()
+    }
+    verdict = evaluate(behaviour=behaviour, contract=contract, variants=recorded)
+    print(f"\n--- {contract['experiment_id']} ---")
+    for name, outcome in verdict["criteria"].items():
+        print(f"  [{outcome['status'].upper():10s}] {name}")
+        print(f"               {outcome['detail']}")
+    print(f"\nVERDICT: {verdict['verdict']}")
+    print(f"tier:    {verdict['tier']}")
+    out = root / f"evidence/demo02/{behaviour}-acceptance.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(verdict, indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
+    print(f"acceptance: {out}")
     return 0
 
 
