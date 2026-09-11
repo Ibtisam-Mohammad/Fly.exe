@@ -94,7 +94,7 @@ def main() -> int:
 
     # DEMO-01's frozen operating point, read and not varied.
     operating = load_json(root / "evidence/demo01/demo01-visual-operating-point-v1.json")
-    selected = operating.get("search", {}).get("selected")
+    selected = operating.get("selected")
     if not selected:
         raise SystemExit(
             "The frozen DEMO-01 operating point has no selected point; refusing to invent one."
