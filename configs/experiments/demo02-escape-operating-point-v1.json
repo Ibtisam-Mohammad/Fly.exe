@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-escape-operating-point-v1",
+  "title": "A neural-only operating point for the giant-fibre escape route",
+  "status": "PREREGISTERED. Committed before the search that it scores.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-11",
+  "values_opened": false,
+  "assumption_ids": ["DEMO-03", "SENS-01", "SENS-02", "ND-07", "ND-10", "VAL-01"],
+
+  "why_this_exists": "DEMO-02 closed negative: at DEMO-01's frozen operating point the two-cell giant fibre fired zero times to a looming object, while the DNp02/03/04/06 companion pool fired 78 spikes at 15.9 Hz with a 78-to-1 side preference. That is not evidence the route cannot carry. It is evidence that an operating point selected by a registered search for a DIFFERENT readout does not transfer, which is the same thing DEMO-01 itself observed about its shuffled variant. DEMO-01 needed 108 candidates to find 31 that worked for its route. Zero were searched for this one. This contract searches it.",
+
+  "the_specific_reason_the_range_moves": "DEMO-01 searched lamina_max_rate_hz over [200, 300, 400] and selected 400 -- the maximum of its own grid. A search that selects a boundary value has told you the range was too narrow, and extending it is the correct response rather than a concession. Every other searched parameter here brackets the DEMO-01 selection on both sides.",
+
+  "what_is_searched_and_what_is_fixed": {
+    "searched": ["lamina_max_rate_hz", "synaptic_mv_per_contact", "inhibitory_weight_gain"],
+    "fixed_at_the_demo01_selection": {
+      "lamina_on_off_balance": 1.0,
+      "adaptation_increment_mv": 0.0
+    },
+    "why_those_two_are_fixed": "DEMO-01 searched both ends of each and selected these values, so neither is a boundary selection and neither has a reason to move. adaptation_increment_mv is additionally a kernel parameter: varying it forces a full CUDA recompile per value, where the three searched parameters are weight-and-encoder only and share one compiled kernel.",
+    "everything_else": "Identical to demo01-visual-operating-point-v1 fixed_parameters, including the frozen retina map, the ND-10 unresolved-sign policy, the 150 ms readout filter and the 15 ms coupling interval."
+  },
+
+  "searched_grid": {
+    "lamina_max_rate_hz": [400.0, 600.0, 800.0, 1000.0],
+    "synaptic_mv_per_contact": [0.4, 0.5, 0.6],
+    "inhibitory_weight_gain": [1.0, 1.5, 2.0]
+  },
+  "grid_size": 36,
+
+  "a_pilot_informed_this_grid": {
+    "disclosed": true,
+    "candidates": 16,
+    "what_it_measured": "Giant-fibre spike counts in a baseline / loom / recovery epoch sequence, with no body and no decoder, over synaptic_mv_per_contact in [0.5, 0.8, 1.2, 1.8], inhibitory_weight_gain in [1.5, 1.0] and lamina_max_rate_hz in [400, 800].",
+    "what_it_found": "lamina_max_rate_hz is the dominant lever and synaptic gain is not. At 400 Hz the giant fibre fired 0 to 4 times in every combination; at 800 Hz it fired 16 to 147 times. Raising synaptic_mv_per_contact to 0.8 and above put 1 to 3 spikes into the BASELINE epoch and lifted resting network activity from 178 to as much as 21,132 active neurons per interval, which is the runaway regime rather than a working one.",
+    "how_it_shaped_the_grid": "lamina_max_rate_hz extends upward from the DEMO-01 boundary selection to 1000. synaptic_mv_per_contact is bracketed narrowly around the DEMO-01 selection of 0.5 and deliberately does NOT extend to the 0.8-and-above range the pilot showed is unstable. inhibitory_weight_gain brackets the DEMO-01 selection of 1.5 on both sides.",
+    "the_pilot_is_not_evidence": "It ran on the same graph and the same stimulus that this search will use, so it cannot also be a test of it. It is disclosed so that the grid is not mistaken for an a priori choice."
+  },
+
+  "coupling_us": 15000,
+  "epochs": {
+    "baseline_us": 750000,
+    "loom_left_us": 1500000,
+    "loom_right_us": 1500000,
+    "recovery_us": 750000,
+    "settle_fraction": 0.4,
+    "note": "4.5 s of biological time per candidate. The first 40 per cent of each epoch is discarded as transient and the remainder scored. The settle fraction, the discard rule and the left/right structure are DEMO-01's, unchanged."
+  },
+
+  "stimulus": {
+    "cue_radius_mm": 2.5,
+    "cue_distance_mm": 4.0,
+    "cue_bearing_deg": 35.0,
+    "what_this_is": "A held object at the final geometry of the DEMO-02 escape approach: 38.7 degrees of angular radius, which is what the embodied run's encoder reported at its closest point. The fly does not move and the object does not move within an epoch, so the network sees the same input statistics the embodied run produces, with no closed loop.",
+    "what_this_is_not": "A looming stimulus. The frozen encoder's term is angular SIZE, not expansion rate, so this search cannot and does not test loom selectivity. That question belongs to the matched-size-static control in demo02-escape-v1 and is not answered here."
+  },
+
+  "readout": {
+    "decoded": ["giant-fibre-left", "giant-fibre-right"],
+    "types": ["DNp01"],
+    "bodies": 2,
+    "scored_in_spikes_not_rates": "One cell per side cannot average away the spike quantum: at a 15 ms interval one spike is 66.7 Hz. Every criterion below is stated in raw spike counts over the scored intervals of an epoch, which is the only honest unit for an all-or-none two-cell readout.",
+    "monitor_pools_recorded_but_not_decoded": ["descending", "vnc_motor", "vnc_intrinsic", "optic_lobe"]
+  },
+
+  "neural_criteria": {
+    "baseline_max_giant_fibre_spikes": 0,
+    "baseline_max_descending_hz": 5.0,
+    "saturation_max_fraction": 0.25,
+    "min_loom_giant_fibre_spikes": 20,
+    "min_selectivity_swing": 0.2,
+    "max_recovery_fraction": 0.5,
+    "min_active_fraction": 0.02,
+    "max_active_fraction": 0.9,
+    "statements": {
+      "N1_silent_and_stable_at_rest": "Zero giant-fibre spikes in the scored baseline epoch; the descending pool's mean rate at most 5 Hz at rest; and the descending pool's mean rate at most a quarter of the 454.5 Hz refractory ceiling during the loom epochs. Zero rather than a small number because the readout is two cells and the criterion it protects is E3, which asks whether the stimulus was required.",
+      "N2_responds_to_the_object": "The better of the two sides produces at least 20 raw giant-fibre spikes in the scored loom epoch. 20 is DEMO-01's C5 floor, carried over unchanged: its odour predecessor produced selectivity indices of exactly plus and minus 1.000 from one spike against zero, and this makes that degenerate outcome unreachable rather than hoping a threshold catches it.",
+      "N3_side_selectivity_reverses": "The left-right selectivity index must change sign between a left object and a right object, and the swing between the two indices must be at least 0.2. Identical arithmetic and identical threshold to DEMO-01's C3. Sign reversal rather than magnitude, because a fixed anatomical asymmetry satisfies a one-sided threshold while carrying no information about which side the object is on. This route is a strong test of it: LC4 and LPLC2 onto DNp01 carry zero cross-side edges in the release.",
+      "N4_recovers_to_silence": "After the object is removed, the giant-fibre spike rate falls to within half of the object-evoked increment above baseline. DEMO-01's C4 arithmetic, unchanged.",
+      "N5_the_network_is_alive_and_not_saturated": "Between 2 and 90 per cent of the descending pool fires at least once per interval while the object is present. This is what stops a dead network passing N1 by being dead."
+    },
+    "the_bar_did_not_move_where_it_could_travel": "The 5 Hz resting ceiling, the 0.25 saturation fraction, the 20-spike floor, the 0.2 selectivity swing, the 0.5 recovery fraction and the 2-to-90 per cent activity band are DEMO-01's numbers, unchanged. What changed is the readout being counted in spikes rather than rates, which is forced by it being two cells, and the baseline giant-fibre count being zero rather than a rate ceiling, which is strictly tighter."
+  },
+
+  "selection_rule": "Among candidates meeting all five criteria, the one with the largest selectivity swing. Declared before the run. Selection happens only inside the passing set, so a failed criterion cannot be traded for a better number elsewhere. Ties break toward the lowest lamina_max_rate_hz, then the lowest synaptic_mv_per_contact, so the least extreme point wins.",
+
+  "what_this_run_can_establish": "Whether any point on the registered P/E grid makes the exact full graph carry a large lateralised visual object from the retinotopic lamina, through the optic lobe, to selective and recoverable spiking in the two-cell giant fibre, under the transmitter-only LIF. Nothing more.",
+  "what_it_cannot_establish": "Anything biological. The winning parameters are not measurements. It cannot establish loom selectivity, which needs expansion rate the encoder does not compute. It cannot establish that a fly takes off, which is demo02-escape-v1's question and is scored by criteria this search may not see.",
+  "if_nothing_passes": "That is the result and it is reported as a concrete neural-operating-point failure for this route, strengthening rather than weakening the DEMO-02 negative. It would mean the giant fibre cannot be driven selectively from the lamina at any searched gain, which points at ND-10's transmitter-only signs or at ND-07's omitted electrical synapses rather than at the connectome.",
+
+  "this_search_may_not_see_the_behaviour_contract": "demo02-escape-v1 and its criteria E1 to E7 are frozen and are not read, referenced or scored by anything here. If a point passes, the escape matrix is re-run against those criteria exactly as they stand. If it then fails, the failure is recorded and the criteria are not revisited.",
+  "no_criterion_may_be_restated": "The five criteria, their thresholds, the grid, the epochs, the stimulus geometry, the retina map and the filter constant are closed as of this commit.",
+  "every_candidate_is_recorded": "Passing or failing, every searched point and its criterion values are written to the artifact. A search that reports only its winner is not a search.",
+
+  "claim_boundary": "Engineering calibration. Finding an operating point awards no tier, validates no mechanism, and changes nothing about V0 Structural or the Stage 2 exit gate.",
+  "last_reviewed": "2026-09-11"
+}
