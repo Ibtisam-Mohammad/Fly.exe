@@ -60,6 +60,11 @@ ESCAPE_READOUT_SPECS = (
 LEFT = "giant-fibre-left"
 RIGHT = "giant-fibre-right"
 
+#: The monitor pool N1 and N5 are measured against. Spelled exactly as
+#: ``VISUAL_MONITOR_POOLS`` spells it; see the fail-loud check below for why that
+#: matters more than it looks.
+DESCENDING_POOL = "descending-all"
+
 #: The refractory ceiling implied by the frozen 2.2 ms refractory period, used by the
 #: saturation criterion. DEMO-01's number, unchanged.
 REFRACTORY_CEILING_HZ = 454.5
@@ -218,9 +223,19 @@ def probe_escape_operating_point(
                     for name in (LEFT, RIGHT):
                         for body in populations.readout[name]:
                             spikes[name] += int(counts.get(body, 0))
-                    descending = activity.get("descending", {})
-                    descending_hz.append(float(descending.get("mean_rate_hz", 0.0)))
-                    active_fraction.append(float(descending.get("active_fraction", 0.0)))
+                    # Fail loud. A missing pool name silently defaulting to 0.0 made N5
+                    # unpassable and N1 trivially passable for all 36 candidates of the
+                    # first search run, because the pool is "descending-all" and this
+                    # read "descending". A criterion that cannot be measured must stop
+                    # the run, not score zero.
+                    if DESCENDING_POOL not in activity:
+                        raise ConfigurationError(
+                            f"Monitor pool {DESCENDING_POOL!r} is not recorded; available: "
+                            f"{sorted(activity)}. N1 and N5 cannot be measured without it."
+                        )
+                    descending = activity[DESCENDING_POOL]
+                    descending_hz.append(float(descending["mean_rate_hz"]))
+                    active_fraction.append(float(descending["active_fraction"]))
             duration_s = scored * coupling_us / 1_000_000.0
             measured[epoch.name] = {
                 "scored_intervals": scored,
