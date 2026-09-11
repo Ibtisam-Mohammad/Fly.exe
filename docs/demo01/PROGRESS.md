@@ -20,6 +20,7 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 | S3 | Engineering acceptance contract frozen, identical-seed control matrix run | **CLOSED**: first placement INVALID, lateral placement passes all five |
 | S4 | Video: brain view + body view + traces + control comparison | **CLOSED**: eight per-variant videos and two comparisons rendered |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
+| D2 | DEMO-02: every labelled sense resolved, three behaviours attempted | **CLOSED NEGATIVE** 2026-09-11: 12 runs, all three NO DEMONSTRATION |
 
 ## S0 findings (measured 2026-09-10, read-only, exact graph)
 
@@ -393,3 +394,26 @@ it under 45 percent of frame height in every shot.
 **What did not change.** Any threshold, any parameter, any simulation code path that could
 alter a trajectory. The four variants were re-run at the new commit and the frozen contract
 re-applied; the reproduction result is in the evidence record.
+
+
+## D2 outcome (2026-09-11)
+
+Full record: `docs/evidence/DEMO02_THREE_BEHAVIOURS.md`. ADR: `ADR-2026-016`.
+
+    grooming  NO DEMONSTRATION   G1 fail
+    feeding   NO DEMONSTRATION   F1 fail
+    escape    NO DEMONSTRATION   E1 fail
+
+Twelve runs at `7b292e3a`, clean worktree. No criterion was restated and the operating point
+was not tuned; both would have converted a frozen contract into a fitted result. The rule at
+the top of this ledger held under a result that wanted it not to.
+
+What the three negatives are not: uniform. The grooming readout stayed at zero spikes while
+30.2 percent of its input contacts were active. The feeding readout that *did* respond is
+`MN9`, the pharyngeal pump, which is the route the survey scored highest and the one the ADR
+had already refused to build a behaviour on because this body has no pharynx. The escape
+companion pool fired at 15.9 Hz with a 78-to-1 side preference while the two-cell giant fibre
+never crossed threshold.
+
+Declared next step, unstarted: a registered operating-point search for these routes scored on
+neural criteria only, with the three behavioural contracts left frozen exactly as they stand.

@@ -232,3 +232,37 @@ becomes unverifiable from the trace and the `wing-only` control cannot be run.
 
 **Switch to FlyBody for real aerodynamics.** Rejected: an un-checksummed S3 mesh download,
 against the dataset-locking rule that every other input in this project obeys.
+
+
+## Outcome, recorded 2026-09-11
+
+The decision was executed in full and the answer is negative on all three counts. Twelve runs
+at commit `7b292e3a`, clean worktree, scored against the contracts frozen one commit before
+the runner that could score them existed.
+
+    grooming  NO DEMONSTRATION   G1 fail
+    feeding   NO DEMONSTRATION   F1 fail
+    escape    NO DEMONSTRATION   E1 fail
+
+The full record is `docs/evidence/DEMO02_THREE_BEHAVIOURS.md`. Three findings belong here
+because they bear on the decision rather than on the result.
+
+**The premise held.** Every labelled sense now resolves to an organ and a side, the live-edge
+gate works and reproduces the photoreceptor case exactly, and the closed loop runs. Nothing in
+the reasoning that chose these three behaviours has been invalidated by the outcome.
+
+**The structural survey was vindicated where it could not be used.** `MN9` -- the pharyngeal
+pump, the target of the strongest feeding route at 48.6x a matched null, and the one this ADR
+explicitly declined to build a behaviour on because the body has no labellum and no pharynx --
+is the feeding readout that actually responded. The proboscis extensors substituted in its
+place produced nothing. The rejected alternative was the correct one about the connectome and
+the wrong one about the body, exactly as the alternatives section said.
+
+**The shuffle control is not sound.** `escape/shuffled-connectome` runs at 14,025 active
+neurons per interval against the intact 2,948 and fires the giant fibre 242 times where the
+real connectome fires it zero times. A degree-preserving target permutation destabilises this
+network rather than neutralising it, so `G7` and `E7` cannot be read as topology gates.
+ADR-2026-014 uses the same permutation for the DEMO-01 topology control and inherits the
+problem.
+
+No assumption record changes as a result. `foundation-v0.9` stands.

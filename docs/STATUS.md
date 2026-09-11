@@ -1406,3 +1406,34 @@ is that the body's behaviour depends on the simulated neural readout on the exac
 graph, and that the exact connectivity rather than a network of its size is responsible at
 this operating point. What may never be claimed is that this is what a fly does, that any
 parameter here is a measurement, or that any mechanism is validated.
+
+
+## DEMO-02: every labelled sense, three behaviours, three negatives (2026-09-11)
+
+`ADR-2026-016` accepted; assumption set `foundation-v0.8` -> `foundation-v0.9`, 41 records.
+Full record in `docs/evidence/DEMO02_THREE_BEHAVIOURS.md`.
+
+Built and working: a sensory atlas resolving 15,856 of 15,912 in-graph sensory bodies into
+122 organ-and-side channels across 30 modalities, which is the first time `SENS-01`'s
+organ-and-side requirement has been met by anything here; a per-channel live-edge gate that
+reproduces the dead-photoreceptor case exactly; a one-frame-per-interval sensory bus; and a
+behaviour body that actuates a declared joint set per experiment with a digest in every
+recording.
+
+Result: twelve runs at `7b292e3a` with a clean worktree, and all three behaviours
+**NO DEMONSTRATION**. No readout reached threshold at DEMO-01's frozen operating point.
+
+The operating point was deliberately not tuned to rescue this. It came from the registered
+DEMO-01 search, scored on neural criteria before any behaviour existed, and adjusting it
+after seeing a behavioural outcome would convert all three frozen contracts into fitted
+results. A registered neural-criteria search for these routes is the declared next step and
+has not been run.
+
+Two findings that outlive the negatives. `MN9`, the pharyngeal pump, is the feeding readout
+that responded -- it is the route the survey scored highest and the one that cannot be used,
+because this body has no labellum to stimulate and no pharynx to pump. And the
+degree-preserving shuffle does not neutralise the network: `escape/shuffled-connectome` runs
+at 14,025 active neurons per interval against the intact 2,948 and fires the giant fibre 242
+times where the real connectome fires it zero times. That is the same instability the DEMO-01
+shuffle showed and hedged for, now measured in spikes; the qualifier "at this operating point"
+in the DEMO-01 topology claim is carrying more weight than it looks.

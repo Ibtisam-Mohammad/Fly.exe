@@ -124,8 +124,20 @@ not. Reporting that as a failed topology gate would be misleading. What the numb
 says is that this shuffle destabilises the network rather than neutralising it, and a control
 that changes the operating regime cannot isolate the contribution of topology.
 
-**This applies to DEMO-01 as well**, which uses the same permutation as its topology control.
-Anything DEMO-01 concluded from its shuffled variant should be re-examined against this.
+**DEMO-01 saw this first and said so.** `docs/STATUS.md` records that its own shuffled
+variant walked 32.20 mm and ended further from the cue than it started, and reads it as "the
+operating point selected for the exact graph does not transfer to a random rewiring of it:
+the same synaptic scale that gives the exact network a 0.000 Hz baseline makes the shuffled
+one drive locomotion continuously." That is the same effect, hedged correctly at the time.
+These runs corroborate it with spike counts rather than trajectories, and extend it to a
+second route.
+
+What remains live is the DEMO-01 sentence "the exact connectivity rather than a network of
+its size is responsible **at this operating point**". The qualifier is doing real work, and
+the numbers here say how much: a shuffle that multiplies population activity by 4.8 has not
+held the operating point fixed, so it cannot separate topology from excitability. The claim
+is not refuted, but the control it rests on is weaker than a degree-preserving shuffle
+sounds.
 
 ## Two defects in the contracts, disclosed rather than repaired
 
