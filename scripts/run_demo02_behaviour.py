@@ -127,6 +127,27 @@ def main() -> int:
     # and those cells run without a refractory period throughout.
     parameters["retina_map"] = visual_contract["retina_map"]
 
+    # Escape, and escape only, uses the operating point its own registered search selected.
+    # That search scored neural criteria alone -- silent at rest, responds to the object,
+    # side-selectivity reverses, recovers, network alive and unsaturated -- and could not
+    # see demo02-escape-v1 or any body quantity. DEMO-01's point is kept for every other
+    # behaviour, unchanged, because nothing has been searched for them.
+    if behaviour == "escape":
+        search = load_json(
+            root / "evidence/demo02/escape-operating-point-v1.json"
+        )
+        chosen = search.get("selected")
+        if not chosen:
+            raise SystemExit(
+                "The escape operating-point search selected nothing; refusing to invent "
+                "a point. Run scripts/search_demo02_escape_operating_point.py first."
+            )
+        parameters.update(chosen)
+        parameters["operating_point_source"] = search["experiment_id"]
+        parameters["operating_point_result_id"] = search["result_id"]
+        print(f"escape operating point (frozen by search): {json.dumps(chosen)}",
+              flush=True)
+
     body_parameters = BehaviourBodyParameters.from_mapping(
         {**SCENARIOS[behaviour], "station_keeping_settle_us": 2_000_000}
     )
