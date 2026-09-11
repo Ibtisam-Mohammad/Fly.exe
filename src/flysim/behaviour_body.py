@@ -161,10 +161,20 @@ class BehaviourBodyParameters:
     sucrose_concentration: float = 1.0
 
     # The antennal stimulus: a scripted mechanical deflection, one side at a time.
+    # The magnitude was measured, not assumed. Torque applied to the funiculus against
+    # peak absolute deflection of the pedicel-funiculus joint group:
+    #
+    #     torque | 1e-4     1e-3     1e-2     5e-2     1e-1     5e-1
+    #     rad    | 0.00012  0.00021  0.00139  0.00682  0.01395  0.06955
+    #
+    # 0.5 puts the deflection at about 0.07 rad, or four degrees, which sits inside the
+    # transducer's declared range rather than under its 0.02 rad threshold. Four degrees
+    # of antennal displacement is a plausible order for a grooming-eliciting stimulus,
+    # but nothing here is calibrated against a measurement and the value is E.
     antennal_stimulus_side: str = "L"
     antennal_stimulus_onset_us: int = 1_500_000
     antennal_stimulus_duration_us: int = 3_000_000
-    antennal_stimulus_torque: float = 6.0e-5
+    antennal_stimulus_torque: float = 0.5
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> BehaviourBodyParameters:
@@ -359,6 +369,7 @@ class BehaviourBody:
         )
         self._groom_started_us: int | None = None
         self._jump_started_us: int | None = None
+        self._stimulus_body_id = self._resolve_stimulus_body()
         self._t_us = 0
         self._renderer: Any | None = None
         self._trajectory_log: list[tuple[int, float, float, float]] = []
@@ -388,16 +399,26 @@ class BehaviourBody:
     # -- world quantities --------------------------------------------------------
 
     def _read_pedicel_angles(self) -> dict[str, float]:
+        """Funiculus rotation relative to the pedicel, summed over its three axes.
+
+        This is where Johnston's organ sits, and reading it here rather than at the
+        pedicel is not a detail. The pedicel is servo-actuated in the grooming body -- the
+        published trajectory drives it -- so a position controller with kp 45 holds it
+        against any external torque, and a first version of this measured 0.00007 rad of
+        deflection for a stimulus that should have been unmissable. The funiculus joints
+        are unactuated free hinges, so a torque there moves them against their passive
+        spring alone, and the same stimulus produces about seven times the deflection.
+        """
         angles = self._simulation.get_joint_angles(self._fly_name)
         out: dict[str, float] = {}
         for side in ("l", "r"):
-            total = 0.0
-            for axis in ("pitch", "yaw"):
-                name = f"c_head-{side}_pedicel-{axis}"
+            for axis in ("pitch", "roll", "yaw"):
+                name = f"{side}_pedicel-{side}_funiculus-{axis}"
                 match = [d for d in self._joint_order if d.name == name]
                 if match:
-                    total += float(angles[self._joint_order.index(match[0])])
-            out[side] = total
+                    out[f"{side}:{axis}"] = float(
+                        angles[self._joint_order.index(match[0])]
+                    )
         return out
 
     def _antennal_deflection(self) -> dict[str, float]:
@@ -407,9 +428,17 @@ class BehaviourBody:
         hinge in this model, so the grooming stimulus needs no invented dust field.
         """
         now = self._read_pedicel_angles()
-        return {
-            side: abs(now[side] - self._pedicel_neutral[side]) for side in ("l", "r")
-        }
+        # Absolute deviation per axis, then summed. Summing the signed angles first lets
+        # a pitch and a roll of opposite sign cancel, which understated a real 0.070 rad
+        # deflection as 0.023 rad.
+        out: dict[str, float] = {}
+        for side in ("l", "r"):
+            out[side] = sum(
+                abs(value - self._pedicel_neutral.get(key, 0.0))
+                for key, value in now.items()
+                if key.startswith(f"{side}:")
+            )
+        return out
 
     def _leg_contact(self) -> dict[str, float]:
         found, *_ = self._simulation.get_ground_contact_info(self._fly_name)
@@ -848,20 +877,34 @@ class BehaviourBody:
         onset = parameters.antennal_stimulus_onset_us
         if not onset <= self._t_us < onset + parameters.antennal_stimulus_duration_us:
             return False
-        side = parameters.antennal_stimulus_side.lower()
-        order = self._fly.get_bodysegs_order()
-        segment = type(self._fly).BODY_SEGMENT_CLASS(f"{side}_funiculus")
-        try:
-            index = order.index(segment)
-        except ValueError:
+        if self._stimulus_body_id is None:
             return False
-        data = self._simulation.mj_data
-        model = self._simulation.mj_model
-        body_id = model.body(f"{self._fly_name}/{segment.name}").id if hasattr(
-            model, "body"
-        ) else index
-        data.xfrc_applied[body_id, 3] = parameters.antennal_stimulus_torque
+        # Index 4 is the second torque component: xfrc_applied is three of force then
+        # three of torque.
+        self._simulation.mj_data.xfrc_applied[self._stimulus_body_id, 4] = (
+            parameters.antennal_stimulus_torque
+        )
         return True
+
+    def _resolve_stimulus_body(self) -> int | None:
+        """The MuJoCo body the scripted torque acts on, resolved once and fail-loud.
+
+        A silent miss here looks exactly like a stimulus that produced no response, which
+        is the most expensive kind of bug in this pipeline: it would have been reported as
+        a negative result about the route.
+        """
+        side = self.parameters.antennal_stimulus_side.lower()
+        if side not in {"l", "r"}:
+            return None
+        model = self._simulation.mj_model
+        wanted = f"{side}_funiculus"
+        for index in range(model.nbody):
+            if model.body(index).name.endswith(wanted):
+                return index
+        raise ConfigurationError(
+            f"No MuJoCo body ends with {wanted!r}, so the antennal stimulus would be "
+            "applied nowhere and the run would report a silent network as a negative."
+        )
 
     def _clear_antennal_stimulus(self) -> None:
         self._simulation.mj_data.xfrc_applied[:, :] = 0.0
