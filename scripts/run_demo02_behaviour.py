@@ -24,7 +24,6 @@ sys.path.insert(0, str(REPO / "src"))
 from flysim.behaviour_body import BehaviourBodyParameters  # noqa: E402
 from flysim.config import load_json  # noqa: E402
 from flysim.demo02 import BEHAVIOURS, DecoderParameters  # noqa: E402
-from flysim.demo02_acceptance import evaluate, read_variant  # noqa: E402
 from flysim.demo02_embodied import run_behaviour  # noqa: E402
 
 TRAJECTORY = "derived/auxiliary/ozdil-2026-antennal-grooming/track-a-grooming-trajectory.npz"
