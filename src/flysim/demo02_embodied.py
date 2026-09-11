@@ -26,6 +26,7 @@ following ADR-2026-015.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from dataclasses import dataclass, replace
@@ -270,13 +271,23 @@ def run_behaviour(
     engine_parameters["functional_edge_signs"] = signs
     engine_parameters["entry_body_ids"] = atlas.entry_union
 
+    # The build key covers the parameters AND the graph's actual wiring. Keying it on the
+    # variant *name* instead would be both too coarse and too fine: readout-ablated zeroes
+    # a readout after the brain has computed it and does not touch the network, so it must
+    # share a kernel with the exact run, while shuffled-connectome permutes the targets and
+    # must not. DEMO-01's runner keyed on neither and let two different topologies carry the
+    # same model identity into their artifacts.
+    wiring = hashlib.sha256(
+        np.asarray(graph.target_indices, dtype=np.int64).tobytes()
+    ).hexdigest()[:12]
     identity = sha256_json({
-        k: v for k, v in engine_parameters.items()
-        if k not in {"functional_edge_signs", "entry_body_ids"}
+        **{
+            k: v for k, v in engine_parameters.items()
+            if k not in {"functional_edge_signs", "entry_body_ids"}
+        },
+        "wiring": wiring,
     })[:12]
-    # The variant is part of the build path AND of the engine identity, so the shuffled
-    # control cannot share a compiled model with the exact run.
-    engine = TrackAGeNNEngine(build_root / f"{identity}-{variant}", variant=variant)
+    engine = TrackAGeNNEngine(build_root / identity, variant="exact")
     build_started = time.perf_counter()
     engine.initialize(graph, engine_parameters, seed)
     build_seconds = time.perf_counter() - build_started
@@ -397,6 +408,8 @@ def run_behaviour(
                 "shuffle": shuffle,
             },
             "model_identity": engine.checkpoint().get("model_identity"),
+            "wiring_sha256_12": wiring,
+            "build_key": identity,
             "populations": populations.as_dict(),
             "sensory_bus": bus.describe(),
             "body": body.describe(),
