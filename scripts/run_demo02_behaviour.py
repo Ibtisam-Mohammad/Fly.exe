@@ -117,6 +117,14 @@ def main() -> int:
     parameters["readout_filter_tau_ms"] = visual_contract["readout"][
         "readout_filter_tau_ms"
     ]
+    # Escape reuses DEMO-01's frozen retinotopic encoder unchanged, so it needs that
+    # contract's frozen retina map too. Note what comes with it: lamina_baseline_rate_hz
+    # is 1.0 there, so the 5342 lamina cells carry a baseline even in the stimulus-absent
+    # control. That is DEMO-01's own registered behaviour ("everything identical,
+    # including the lamina baseline drive") and it is inherited rather than quietly
+    # changed -- but it means the bus's zero-baseline property does not hold for escape,
+    # and those cells run without a refractory period throughout.
+    parameters["retina_map"] = visual_contract["retina_map"]
 
     body_parameters = BehaviourBodyParameters.from_mapping(
         {**SCENARIOS[behaviour], "station_keeping_settle_us": 2_000_000}
