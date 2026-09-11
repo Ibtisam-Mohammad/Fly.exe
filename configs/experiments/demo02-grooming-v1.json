@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-grooming-v1",
+  "title": "Antennal grooming from a mechanical antennal stimulus, on the full graph",
+  "status": "PREREGISTERED. Committed before the control matrix runs.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-11",
+  "values_opened": false,
+  "assumption_ids": [
+    "DEMO-02",
+    "DEMO-03",
+    "SENS-01",
+    "SENS-04",
+    "SENS-05",
+    "MOTOR-03",
+    "MOTOR-05",
+    "MOTOR-06",
+    "BODY-01",
+    "BODY-02",
+    "ND-07",
+    "ND-10"
+  ],
+  "why_this_exists": "The grooming subclass reaches the descending readout Track A declared at 106 times a size- and out-contact-matched null, at the 100th percentile, which is the strongest route measured anywhere in this project. Its entry is Johnston's organ subtype F, which responds to antennal displacement -- a real hinge in this model -- so this is the one behaviour here that needs no invented world field at all. Track A attempted the same behaviour and failed its displacement cap 0 of 30, with a scalar dust field read directly into the arbiter's transition rule.",
+  "what_is_being_judged": "Whether a mechanical deflection of one antenna, transduced onto 65 labelled afferents, drives a six-cell descending readout strongly enough for a decoder that sees nothing else to command a grooming bout, and whether the body survives it.",
+  "entry": {
+    "channels": [
+      "antennal-jo-f-grooming:antenna:L",
+      "antennal-jo-f-grooming:antenna:R"
+    ],
+    "bodies": 65,
+    "world_quantity": "l_pedicel/r_pedicel qpos deviation, radians. Real physics.",
+    "live_edge_fraction": 1.0
+  },
+  "readout": {
+    "decoded": [
+      "groom-dn-left",
+      "groom-dn-right"
+    ],
+    "bodies": 6,
+    "types": [
+      "DNg62",
+      "DNge078",
+      "DNg21"
+    ],
+    "why_this_is_fragile": "Six cells is below the spike quantum DEMO-01 diagnosed: one spike in a 15 ms interval is 66.7 Hz, and the predecessor odour search produced a selectivity of exactly plus or minus 1.000 from one spike against zero. C5 therefore carries over unchanged."
+  },
+  "fixed_parameters": {
+    "duration_us": 12000000,
+    "coupling_us": 15000,
+    "seed": 1,
+    "antennal_stimulus_onset_us": 1500000,
+    "antennal_stimulus_duration_us": 3000000
+  },
+  "acceptance_criteria": {
+    "G1_the_bout_is_a_reach_and_not_a_wave": {
+      "statement": "In the exact run the mean absolute deviation of the 21 replayed joints from the hold pose must reach at least half the source trajectory's own RMS excursion, AND the closest approach between a front tarsus tip and an arista tip must fall to at most half its non-grooming baseline.",
+      "min_excursion_fraction_of_source_rms": 0.5,
+      "source_rms_excursion_rad": 0.3091,
+      "min_excursion_rad": 0.1546,
+      "max_closest_approach_fraction_of_baseline": 0.5,
+      "measured_non_grooming_baseline_mm": 1.318,
+      "why": "Both halves are derived from quantities that are not the outcome: the first from the checksum-locked source file, the second from the same body's own standing geometry. A fly that does nothing scores 0.05 rad of excursion and leaves the distance at its baseline, so the degenerate pass is unreachable.",
+      "what_was_measured_before_freezing_this": "With the replay driven at full intensity the closest approach is 0.4637 mm and the peak excursion 0.5274 rad. An earlier draft of this criterion asked for an absolute 0.30 mm approach, which this body cannot reach: the published trajectory comes from a tethered fly whose forelegs bear no load, and on a free-standing body it reaches toward the antenna without touching it. That is disclosed here rather than discovered later, and it is why the criterion is relative to a measured baseline instead."
+    },
+    "G2_the_readout_causes_it": {
+      "statement": "The readout-ablated variant must never reach ACTING, and its peak joint excursion must be at most one tenth of the exact run's.",
+      "max_ablated_excursion_fraction": 0.1,
+      "ablated_must_not_act": true,
+      "why": "This is the criterion Track A's predecessor failed. If the body still grooms when the readout is silenced, the grooming was never neural."
+    },
+    "G3_the_stimulus_is_required": {
+      "statement": "With no antennal deflection the decoder must never reach ACTING.",
+      "why": "Distinguishes a stimulus-driven bout from a network that grooms anyway."
+    },
+    "G4_the_readout_is_side_selective": {
+      "statement": "The selectivity index (left minus right over their sum) on the six-cell readout must change sign between a left-only and a right-only deflection, with a total swing of at least 0.2. Scored only if the decoded readout produced at least 20 raw spikes in the scored epoch.",
+      "min_selectivity_swing": 0.2,
+      "min_readout_spikes_per_epoch": 20,
+      "why": "Byte-identical to DEMO-01's C3 and C5. The bar does not move. A sign reversal rather than a magnitude, because a fixed anatomical asymmetry passes a one-sided threshold while carrying no information about the stimulus.",
+      "this_is_a_claim_about_the_readout_and_not_the_behaviour": "The replayed trajectory is bilaterally fixed and encodes no side, so the fly cannot groom the correct antenna and this criterion does not say it does. The wiring would not support such a claim either: eleven direct edges in total, the largest bundle running contralateral."
+    },
+    "G5_the_replay_is_not_what_moves_the_fly": {
+      "statement": "The exact run's bout displacement minus the paired suppressed-replay run's displacement, at identical seed, pose, adhesion pattern and bout window, must be at most 2.5 mm.",
+      "max_replay_attributable_displacement_mm": 2.5,
+      "why": "Track A's B1 criterion verbatim. It was preregistered and adopted there and is reused rather than restated."
+    },
+    "G6_the_fly_does_not_travel_during_a_bout": {
+      "statement": "Net displacement over the bout must be at most 2.5 mm.",
+      "max_bout_displacement_mm": 2.5,
+      "why": "G5 alone is degenerate: a fly that runs 20 mm in both arms has a differential of zero. Both are required and both are reported. 2.5 mm is about one body length and is Track A's registered value, unchanged."
+    },
+    "G7_topology_claim_gate": {
+      "statement": "A claim that MaleCNS topology matters requires the shuffled-connectome variant either never to reach ACTING, or to peak at most half the exact run's decoded readout rate.",
+      "max_shuffled_fraction_of_exact_peak": 0.5,
+      "this_criterion_is_optional_to_pass": true,
+      "why_optional": "G1 to G4 license the causal-embodiment claim. G7 licenses a strictly stronger claim about topology. Failing it narrows the claim rather than invalidating the demonstration, and the bound must then be stated."
+    }
+  },
+  "control_variants": [
+    "exact",
+    "readout-ablated",
+    "stimulus-absent",
+    "shuffled-connectome",
+    "entry-swapped",
+    "suppress-groom-replay",
+    "controller-only",
+    "zero-tonic-drive"
+  ],
+  "control_criteria": {
+    "entry-swapped": "The head-bristle tactile population drives the same readout at a matched total input rate. Registered BEFORE the run so that choosing between entries after seeing outcomes is not possible. Both results are published: the grooming subclass supplies 11 edges and 0.16 percent of the readout's input contacts, the tactile class 0 direct edges, so the JO route is specific and absolutely weak and both facts are true.",
+    "controller-only": "A fixed grooming command with no graph attached. Establishes the body's bout envelope, so the neural run can be said to have caused something.",
+    "zero-tonic-drive": "AGENTS.md section 10 requires it."
+  },
+  "claim_ladder": {
+    "if_G1_fails": "NO DEMONSTRATION. No video may be presented.",
+    "if_G1_passes_and_G2_or_G3_fails": "INVALID AS A CAUSAL CLAIM. The movement happened and was not caused by the network or not caused by the stimulus. No video may be presented as a brain grooming a body.",
+    "if_G1_to_G4_pass_and_G5_or_G6_fails": "CAUSAL BUT NOT POSTURALLY VALID. The readout drove the bout and the body did not hold still while it happened. The bout may be shown only beside the displacement number.",
+    "if_G1_to_G6_pass_and_G7_fails": "FULL-GRAPH CAUSAL GROOMING. Topology-specificity is withheld and must be stated as withheld.",
+    "if_G1_to_G7_pass": "FULL-GRAPH CAUSAL GROOMING, TOPOLOGY-SPECIFIC.",
+    "may_never_claim": "That the fly grooms the correct antenna; that the movement is the network's rather than a replayed recording's; that any parameter here is measured; that the tarsus touches the antenna, because the measured closest approach is 0.4637 mm and it does not."
+  },
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. This is engineering acceptance, not evidence, and no criterion here validates a mechanism.",
+    "A female NeuroMechFly body prior is driven by a male CNS graph.",
+    "Leg movement comes from a published engineered central pattern generator. No part of the simulated ventral cord contributes to it.",
+    "Every sensory transducer is a declared saturating curve. No fly produced any of these numbers.",
+    "Sensory delay is quantised to the 15 ms coupling interval, so conduction delays that differ by less than one interval are indistinguishable.",
+    "Baseline sensory rate is zero, so there is no spontaneous afferent activity. A nonzero baseline would remove the refractory period of every entry neuron in the kernel.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero, which is a named regression control and not a physiological model.",
+    "Electrical synapses are omitted globally (ND-07).",
+    "The route survey that chose these populations is structural, blind to sign and dynamics, and has a demonstrated false negative: DEMO-01's own validated lamina entry scores 0.44 times the matched null at the 0th percentile. A low score rules nothing out, and no survey number appears in any criterion here.",
+    "DEMO-01's verdict is not inherited. Its station-keeping gain, its 2.294 mm residual drift and the +11.5 degree drift bearing that chose its cue placement belong to a 42-actuator plant, and every body here actuates a different set.",
+    "The grooming movement is a replayed published trajectory from a tethered fly. The network decides whether and how strongly to groom. It does not produce the movement, and the video must say so on every frame.",
+    "The tarsus does not contact the antenna. Closest measured approach is 0.4637 mm.",
+    "Six decoded cells, at a 15 ms interval where one spike is 66.7 Hz."
+  ],
+  "no_criterion_may_be_restated": "G1 to G7, their thresholds, the duration, the seed and the control set are closed as of this commit. If the demonstration fails one, the failure is recorded and the claim is narrowed. The criterion is not rewritten.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. Nothing here validates a grooming mechanism.",
+  "last_reviewed": "2026-09-11"
+}

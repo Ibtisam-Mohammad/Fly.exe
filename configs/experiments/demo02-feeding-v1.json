@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-feeding-v1",
+  "title": "A proboscis-extension pose from leg taste contact, on the full graph",
+  "status": "PREREGISTERED. Committed before the control matrix runs.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-11",
+  "values_opened": false,
+  "assumption_ids": [
+    "DEMO-02",
+    "DEMO-03",
+    "SENS-01",
+    "SENS-05",
+    "MOTOR-03",
+    "MOTOR-06",
+    "BODY-01",
+    "ND-07",
+    "ND-10"
+  ],
+  "why_this_exists": "This is the thinnest of the three and the contract leads with that. The strongest feeding route measured is labellar bristle to MN9, at 48.6 times a matched null over four hops with zero direct edges -- and it cannot be built, because NeuroMechFly has no labellum on which to place a stimulus. So the entry is the leg taste bristles instead, which have real contact physics, and the readout is the proboscis motor neurons rather than MN9.",
+  "what_is_being_judged": "Whether tarsal contact with a sucrose patch, transduced onto 70 labelled taste afferents, drives twelve proboscis motor neurons strongly enough for a decoder that sees nothing else to command an extension the body actually achieves.",
+  "entry": {
+    "channels": [
+      "tarsal-taste:leg-front:L",
+      "tarsal-taste:leg-front:R",
+      "tarsal-taste:leg-hind:L",
+      "tarsal-taste:leg-hind:R"
+    ],
+    "bodies": 70,
+    "world_quantity": "Sucrose concentration at a taste-bearing tarsus. The contact gate is real physics: the tarsus must be both on the ground and inside the patch. Only the concentration is declared. This is strictly stronger than Track A's sucrose channel, which was a distance threshold and did not require touching anything.",
+    "why_all_four_legs": "The release puts taste bristles on the front legs (ProLN, 8) and hind legs (MetaLN, 62) and none on the middle legs. A front-leg-only entry would drive 8 of the 70 bodies the sense has."
+  },
+  "readout": {
+    "decoded": [
+      "proboscis-mn"
+    ],
+    "bodies": 12,
+    "types": [
+      "MN10",
+      "MN11D",
+      "MN11V",
+      "MN12D"
+    ],
+    "recorded_and_never_decoded": [
+      "pump-mn9"
+    ],
+    "why_not_mn9": "MN9 is the pharyngeal pump. It does not extend the proboscis, so decoding it to a rostrum command would fabricate function rather than magnitude. It is recorded so that its activity is visible, and the artifact must state that the pump motor neuron fires with nothing to pump: this body has no labellum, no labrum and no pharynx."
+  },
+  "fixed_parameters": {
+    "duration_us": 9000000,
+    "coupling_us": 15000,
+    "seed": 1,
+    "sucrose_concentrations": [
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ]
+  },
+  "acceptance_criteria": {
+    "F1_the_extension_is_achieved_and_not_merely_commanded": {
+      "statement": "The achieved summed rostrum and haustellum pitch, read from qpos rather than from the command, must reach at least 0.70 rad and hold it for at least 200 ms.",
+      "min_achieved_rad": 0.7,
+      "min_sustained_us": 200000,
+      "why": "0.70 rad is half the 1.4 rad the two registered extensions sum to, so it cannot be reached by a command that the servo does not execute. The duration means a single-step transient cannot satisfy it. Both numbers were set before the body was measured; the measured achieved maximum is 1.1449 rad."
+    },
+    "F2_the_readout_causes_it": {
+      "statement": "The readout-ablated variant must never extend, and its peak achieved angle must stay at or below 0.05 rad.",
+      "max_ablated_achieved_rad": 0.05,
+      "why": "0.05 rad is the passive-hinge noise floor. The measured no-command baseline is 0.0015 rad."
+    },
+    "F3_the_stimulus_is_required": {
+      "statement": "With no sucrose patch the decoder must never extend.",
+      "why": "Separates a taste-driven extension from one the network produces anyway."
+    },
+    "F4_it_is_taste_and_not_touch": {
+      "statement": "In the contact-without-sucrose variant, with an identical patch geometry and identical friction but the taste channel held silent, the decoder must never extend.",
+      "why": "Without F4, F3 is passed by any mechanosensory contact transient, and the demonstration would be about stepping on something rather than tasting it. This is the criterion that makes it non-trivial."
+    },
+    "F5_the_extension_tracks_the_concentration": {
+      "statement": "Across the four registered concentrations the peak achieved extension must be monotone non-decreasing with a Spearman rank correlation of at least 0.8.",
+      "min_spearman": 0.8,
+      "why": "At n equals four, 0.8 admits exactly one adjacent inversion. 1.0 would be unfalsifiable by noise and 0.6 would admit two."
+    },
+    "F6_topology_claim_gate": {
+      "statement": "A topology claim requires the shuffled-connectome variant either never to extend or to peak at most half the exact run's decoded readout rate.",
+      "max_shuffled_fraction_of_exact_peak": 0.5,
+      "this_criterion_is_optional_to_pass": true,
+      "why_optional": "Same structure as the grooming gate."
+    }
+  },
+  "control_variants": [
+    "exact",
+    "readout-ablated",
+    "stimulus-absent",
+    "contact-without-sucrose",
+    "shuffled-connectome",
+    "controller-only",
+    "zero-tonic-drive"
+  ],
+  "control_criteria": {
+    "contact-without-sucrose": "Identical patch, identical friction, taste channel silent. The one control that separates taste from touch."
+  },
+  "claim_ladder": {
+    "if_F1_fails": "NO DEMONSTRATION.",
+    "if_F1_passes_and_F2_or_F3_fails": "INVALID AS A CAUSAL CLAIM.",
+    "if_F4_fails": "NOT A TASTE DEMONSTRATION. The extension followed contact rather than sugar, and must be described as a contact response.",
+    "if_F1_to_F4_pass_and_F5_fails": "CAUSAL BUT NOT GRADED. The extension is caused by the taste channel and does not track its strength.",
+    "if_F1_to_F5_pass_and_F6_fails": "FULL-GRAPH CAUSAL PROBOSCIS EXTENSION, topology-specificity withheld.",
+    "if_F1_to_F6_pass": "FULL-GRAPH CAUSAL PROBOSCIS EXTENSION, TOPOLOGY-SPECIFIC.",
+    "may_never_claim": "Ingestion. That anything was eaten, tasted at the mouth, or pumped. That MN9 did anything downstream. That this is the proboscis extension reflex, which is defined by labellar contact, where this is tarsal. That the amplitude corresponds to any measured fly."
+  },
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. This is engineering acceptance, not evidence, and no criterion here validates a mechanism.",
+    "A female NeuroMechFly body prior is driven by a male CNS graph.",
+    "Leg movement comes from a published engineered central pattern generator. No part of the simulated ventral cord contributes to it.",
+    "Every sensory transducer is a declared saturating curve. No fly produced any of these numbers.",
+    "Sensory delay is quantised to the 15 ms coupling interval, so conduction delays that differ by less than one interval are indistinguishable.",
+    "Baseline sensory rate is zero, so there is no spontaneous afferent activity. A nonzero baseline would remove the refractory period of every entry neuron in the kernel.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero, which is a named regression control and not a physiological model.",
+    "Electrical synapses are omitted globally (ND-07).",
+    "The route survey that chose these populations is structural, blind to sign and dynamics, and has a demonstrated false negative: DEMO-01's own validated lamina entry scores 0.44 times the matched null at the 0th percentile. A low score rules nothing out, and no survey number appears in any criterion here.",
+    "DEMO-01's verdict is not inherited. Its station-keeping gain, its 2.294 mm residual drift and the +11.5 degree drift bearing that chose its cue placement belong to a 42-actuator plant, and every body here actuates a different set.",
+    "There is no labellum, no labrum and no pharynx in this body, so there is no ingestion and nothing to taste with at the mouth.",
+    "The anatomically correct route, labellar bristle to MN9 at 48.6 times the null, is the one that was NOT built, and the reason is the missing mouth part.",
+    "MN9 is recorded and never decoded.",
+    "The sucrose concentration is an invented number. Only its contact gate is real."
+  ],
+  "no_criterion_may_be_restated": "F1 to F6, their thresholds, the duration, the seed, the concentration set and the control set are closed as of this commit.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. This is a pose, and the contract says so in every section.",
+  "last_reviewed": "2026-09-11"
+}

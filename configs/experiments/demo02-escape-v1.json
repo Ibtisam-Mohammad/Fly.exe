@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-escape-v1",
+  "title": "A ballistic escape takeoff from a visual object, with zero aerodynamic force",
+  "status": "PREREGISTERED. Committed before the control matrix runs.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-11",
+  "values_opened": false,
+  "assumption_ids": [
+    "DEMO-02",
+    "DEMO-03",
+    "SENS-01",
+    "SENS-02",
+    "MOTOR-03",
+    "BODY-01",
+    "BODY-02",
+    "ND-07",
+    "ND-10"
+  ],
+  "why_this_exists": "LC4 and LPLC2 together supply 30.6 percent of DNp01's total input contacts monosynaptically, at 82.9 and 72.5 times a matched null, and the route is perfectly ipsilateral: zero cross-side edges in either loom type. The motor chain closes as the anatomy predicts without being told to -- DNp01 onto TTMn directly, and DNp01 through PSI onto DLMn with no direct DNp01-to-DLMn edge at all -- and both TTMn and PSI are annotated somaNeuromere T2, so the jump acts on the middle legs.",
+  "what_is_being_judged": "Whether an approaching object, entering at the lamina and computed through 99,128 optic lobe neurons, makes a two-cell giant fibre spike in a registered window, and whether that spike is followed within 30 ms by the fly leaving the ground.",
+  "entry": {
+    "surrogate": "lamina-surrogate",
+    "types": [
+      "L1",
+      "L2",
+      "L5"
+    ],
+    "bodies": 5342,
+    "encoder": "DEMO-01's frozen RetinotopicVisualEncoder, unchanged, with its frozen retina map and its L3/L4 exclusion. It is the only sensory entry in this project that has passed a causal contract.",
+    "why_not_lc4_directly": "ADR-2026-014 already rejected entering at LC4 on the instruction to use all the data. LC4 and LPLC2 rates are recorded as monitor pools instead, so the optic lobe computes them.",
+    "why_not_the_photoreceptors": "All 66,533 photoreceptor output edges are zeroed by the frozen sign policy, because fly photoreceptors are histaminergic and histamine is absent from the transmitter model. The live-edge gate measures the visual channel at 0.0 percent live and refuses it."
+  },
+  "readout": {
+    "decoded": [
+      "giant-fibre-left",
+      "giant-fibre-right"
+    ],
+    "bodies": 2,
+    "decode_rule": "A spike count in one coupling interval, not a filtered rate. Two cells cannot average away the spike quantum, but the giant fibre is genuinely all-or-none, so a count is the honest decode and a rate would be a lie about precision.",
+    "companion_that_must_also_move": [
+      "dn-loom-left",
+      "dn-loom-right"
+    ],
+    "why_a_companion": "Eight cells whose filtered rate must also clear a threshold in the same interval, so that one stochastic spike from a two-cell population cannot launch the fly on its own.",
+    "recorded_and_never_decoded": [
+      "jump-mn-ttmn",
+      "psi"
+    ]
+  },
+  "fixed_parameters": {
+    "duration_us": 6000000,
+    "coupling_us": 15000,
+    "seed": 1,
+    "locomotor_drive_is_identically_zero": true
+  },
+  "this_is_open_loop_and_that_is_a_downgrade": "The encoder's looming term is angular SIZE, not expansion rate: it computes theta over theta plus 15 degrees. In DEMO-01 the cue grows because the fly walks toward it. An escape demonstration on a walking fly would therefore be self-generated, and both the stimulus-absent and readout-ablated controls would fail to expose it, because the fly really would have caused its own stimulus. So the object moves on a registered script the brain cannot influence and the locomotor drives are held identically zero. That makes this an open-loop stimulus-response experiment rather than a closed loop, which is a step down from DEMO-01 and is declared rather than hidden.",
+  "loom_selectivity_is_not_tested": "loom_half_angle_deg is a frozen registered parameter inside a recorded experiment and is not edited here. The encoder responds to angular size, so this contract cannot distinguish an approaching object from a large stationary one. The matched-size-static variant exists to find out which it is.",
+  "acceptance_criteria": {
+    "E1_the_fly_leaves_the_ground": {
+      "statement": "All six tarsi must lose ground contact simultaneously for at least 20 ms, AND the thorax must rise at least 1.0 mm above its standing height.",
+      "min_airborne_us": 20000,
+      "min_z_rise_mm": 1.0,
+      "why": "The measured standing contact-chatter floor is 5.0 to 5.5 ms, so 20 ms is about four times the noise. 20 ms is also 40 physics steps at the 500 us step. Standing thorax height is 1.046 mm, so a 1.0 mm rise is roughly doubled clearance and unambiguously airborne. A fly that does nothing has six tarsi down and an unchanged height, so the degenerate pass is unreachable."
+    },
+    "E2_the_brain_caused_it": {
+      "statement": "The readout-ablated variant must produce no simultaneous six-tarsus release and a thorax rise of at most 0.15 mm.",
+      "max_ablated_z_rise_mm": 0.15,
+      "why": "The measured no-command standing z excursion is 0.204 to 0.211 mm."
+    },
+    "E3_the_stimulus_was_required": {
+      "statement": "With no object the fly must not take off.",
+      "max_absent_z_rise_mm": 0.15
+    },
+    "E4_approach_or_merely_size": {
+      "statement": "In the matched-size-static variant, an identical object placed from t=0 at the approach trajectory's final distance -- the same angular size at the trigger instant, with zero expansion rate -- must not produce a takeoff.",
+      "this_is_a_claim_ladder_branch_and_not_a_pass_or_fail": true,
+      "if_it_fires_only_in_the_moving_case": "The expansion claim is earned and the word loom may be used.",
+      "if_it_fires_in_both": "The word loom is struck from every artifact and the claim narrows to: a visual object of sufficient angular size drives the giant fibre."
+    },
+    "E5_the_timing_is_stimulus_locked": {
+      "statement": "The first giant-fibre spike must be followed by the first tarsus release within 30 ms, and must itself fall inside the registered approach window.",
+      "max_spike_to_release_us": 30000,
+      "why": "The sensorimotor delay is one coupling interval by construction, so two intervals bounds the decoder hold. This is the criterion that stops 'the fly jumped at some point and DNp01 also fired at some point'."
+    },
+    "E6_it_is_an_escape_and_not_a_walk": {
+      "statement": "The locomotor drives must be identically zero across the run, asserted from the recorded command trace rather than from the code, and horizontal thorax displacement over the airborne window must be at most 2.0 mm.",
+      "max_horizontal_displacement_mm": 2.0,
+      "why": "Its purpose is to catch a walk, not to bound a hop. At the body's 12 mm/s walking speed, 20 ms of travel is 0.24 mm, so 2.0 mm is deliberately loose and should not be read as tight."
+    },
+    "E7_topology_claim_gate": {
+      "statement": "A topology claim requires the shuffled-connectome variant not to take off, or the giant fibre not to spike.",
+      "this_criterion_is_optional_to_pass": true,
+      "why_optional": "Same structure as the other gates.",
+      "report_honestly_that_this_is_the_easiest_criterion_here": "A shuffle almost certainly destroys a 30.6 percent monosynaptic input share, so E7 passing is close to automatic and must not be presented as the strong result. E2, E3, E4 and E5 carry this demonstration."
+    }
+  },
+  "a_criterion_that_may_not_be_used_alone": "'The fly leaves the ground'. With adhesion released and a servo ramp on two joints, this body leaves the ground for almost any parameterisation: the controller-only envelope reaches 148 ms of airborne time with no network attached at all.",
+  "control_variants": [
+    "exact",
+    "readout-ablated",
+    "stimulus-absent",
+    "matched-size-static",
+    "shuffled-connectome",
+    "command-replay",
+    "controller-only",
+    "jump-only",
+    "wing-only",
+    "zero-tonic-drive"
+  ],
+  "control_criteria": {
+    "wing-only": "PREDICTED BEFORE THE RUN: wing depression alone produces a thorax rise of approximately 0.0 mm. This model sets no density and no viscosity and carries no fluid geoms, and add_fly re-applies the fly's globals over the world's, so wing motion generates no force. If wing-only produces lift, this model has fluid forces nobody registered, and that is a finding rather than a success.",
+    "jump-only": "Leg extension with the wings held. Expected to produce the takeoff.",
+    "command-replay": "The exact run's recorded command trace replayed with no graph attached. AGENTS.md section 10 requires it."
+  },
+  "claim_ladder": {
+    "if_E1_fails": "NO DEMONSTRATION.",
+    "if_E1_passes_and_E2_or_E3_fails": "INVALID AS A CAUSAL CLAIM.",
+    "if_E5_fails": "NOT STIMULUS LOCKED. A takeoff and a spike both occurred and their timing does not connect them.",
+    "if_E1_to_E3_and_E5_E6_pass_and_E4_fires_in_both": "FULL-GRAPH CAUSAL TAKEOFF TO A VISUAL OBJECT. The word loom is struck.",
+    "if_E1_to_E6_pass_and_E7_fails": "FULL-GRAPH CAUSAL ESCAPE TAKEOFF, topology-specificity withheld.",
+    "if_E1_to_E7_pass": "FULL-GRAPH CAUSAL ESCAPE TAKEOFF, TOPOLOGY-SPECIFIC.",
+    "may_never_claim": "Flight. Lift. That any aerodynamic force was computed, because none was. That the wings contributed height. That a muscle was modelled: the tergotrochanteral muscle is a single high-power twitch muscle and this is a position servo ramp on two joints. That loom selectivity was tested, unless E4 fired only in the moving case."
+  },
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. This is engineering acceptance, not evidence, and no criterion here validates a mechanism.",
+    "A female NeuroMechFly body prior is driven by a male CNS graph.",
+    "Leg movement comes from a published engineered central pattern generator. No part of the simulated ventral cord contributes to it.",
+    "Every sensory transducer is a declared saturating curve. No fly produced any of these numbers.",
+    "Sensory delay is quantised to the 15 ms coupling interval, so conduction delays that differ by less than one interval are indistinguishable.",
+    "Baseline sensory rate is zero, so there is no spontaneous afferent activity. A nonzero baseline would remove the refractory period of every entry neuron in the kernel.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero, which is a named regression control and not a physiological model.",
+    "Electrical synapses are omitted globally (ND-07).",
+    "The route survey that chose these populations is structural, blind to sign and dynamics, and has a demonstrated false negative: DEMO-01's own validated lamina entry scores 0.44 times the matched null at the 0th percentile. A low score rules nothing out, and no survey number appears in any criterion here.",
+    "DEMO-01's verdict is not inherited. Its station-keeping gain, its 2.294 mm residual drift and the +11.5 degree drift bearing that chose its cue placement belong to a 42-actuator plant, and every body here actuates a different set.",
+    "NO AERODYNAMICS. This model sets no density, no viscosity and carries no fluid geoms. Wing motion generates exactly zero force and every millimetre of height comes from leg extension against the floor. The fruitfly.xml that does carry density 0.00128 and wing-fluid ellipsoids belongs to FlyBody, a different model requiring an un-checksummed mesh download, and is not used here.",
+    "It is a hop, not flight. No wingbeat, no stabilisation, no landing. The airborne arc is a MuJoCo ballistic property.",
+    "The jump is a position ramp at a tuned operating point: the envelope is strongly non-monotone in extension, and 1.8 rad produces less height than 1.0 rad.",
+    "The giant fibre's synapse onto TTMn is substantially electrical in the real animal and electrical synapses are omitted, so the 1.492 percent chemical input share is all this model has.",
+    "Two decoded cells.",
+    "Open loop: the locomotor drives are held at zero and the object moves on a script."
+  ],
+  "no_criterion_may_be_restated": "E1 to E7, their thresholds, the duration, the seed and the control set are closed as of this commit.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. A takeoff is not flight and this contract never says otherwise.",
+  "last_reviewed": "2026-09-11"
+}
