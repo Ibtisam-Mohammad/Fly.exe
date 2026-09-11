@@ -20,6 +20,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from flysim.demo02 import DECODED as DECODED_BY_BEHAVIOUR
+
 NOT_SCORED = "not_scored"
 PASS = "pass"
 FAIL = "fail"
@@ -106,6 +108,50 @@ def _sustained_us(rows: list[dict[str, Any]], key: str, threshold: float) -> int
         else:
             current = 0
     return best
+
+
+
+LEG_CONTACT_PREFIX = "world:leg-contact:"
+
+
+def _all_legs_released(row: dict[str, Any]) -> bool:
+    """True when no tarsus is touching, read from the recorded world quantities."""
+    contacts = [
+        float(value)
+        for name, value in row.get("sensors", {}).items()
+        if name.startswith(LEG_CONTACT_PREFIX)
+    ]
+    return bool(contacts) and not any(contacts)
+
+
+def _first_decoded_spike_us(variant: dict[str, Any], behaviour: str) -> int | None:
+    for row in variant["rows"]:
+        counts = row.get("readout_raw_counts", {})
+        if sum(int(counts.get(name, 0)) for name in DECODED_BY_BEHAVIOUR[behaviour]) > 0:
+            return int(row["t_us"])
+    return None
+
+
+def _first_release_after_us(variant: dict[str, Any], after_us: int) -> int | None:
+    """The first interval with every tarsus off the ground at or after a time.
+
+    Deliberately not the recording's ``first_all_legs_released_us``, which is the first
+    release of the whole run and lands at 17,500 us: that is the settling chatter measured
+    at 5.0 to 5.5 ms, not a takeoff, and scoring E5 against it would compare a spike to a
+    bounce that happened seconds earlier.
+    """
+    for row in variant["rows"]:
+        if int(row["t_us"]) >= after_us and _all_legs_released(row):
+            return int(row["t_us"])
+    return None
+
+
+def _airborne_displacement_mm(variant: dict[str, Any]) -> float:
+    airborne = [row for row in variant["rows"] if _all_legs_released(row)]
+    if len(airborne) < 2:
+        return 0.0
+    first, last = airborne[0]["pose"], airborne[-1]["pose"]
+    return math.hypot(last["x_mm"] - first["x_mm"], last["y_mm"] - first["y_mm"])
 
 
 def evaluate(
@@ -234,6 +280,104 @@ def evaluate(
             detail += f"; excursion {achieved:.4f} rad against {allowed:.4f}"
             extra["peak_excursion_rad"] = achieved
         results[name] = _criterion(PASS if ok else FAIL, detail, **extra)
+
+    # --- escape-only criteria: E4 the loom branch, E5 timing, E6 not a walk --------
+    if behaviour == "escape":
+        static = variants.get("matched-size-static")
+        if static is None:
+            results["E4_approach_or_merely_size"] = _criterion(
+                NOT_SCORED, "variants not recorded: matched-size-static"
+            )
+        else:
+            fired_static = static["reached_acting"]
+            fired_exact = exact["reached_acting"]
+            # A declared branch, not a pass or a fail: the contract wrote both outcomes
+            # before the run and this only reports which one happened.
+            if fired_exact and not fired_static:
+                detail = (
+                    "fired only in the moving case; the expansion claim is earned and "
+                    "the word loom may be used"
+                )
+                status = PASS
+            elif fired_exact and fired_static:
+                detail = (
+                    "fired in BOTH the moving and the matched-size-static case, so the "
+                    "word loom is struck from every artifact and the claim narrows to: a "
+                    "visual object of sufficient angular size drives the giant fibre. The "
+                    "encoder computes angular size and not expansion rate, so this is the "
+                    "outcome the contract predicted."
+                )
+                status = FAIL
+            else:
+                detail = "the exact run did not fire, so this branch does not apply"
+                status = NOT_SCORED
+            results["E4_approach_or_merely_size"] = _criterion(
+                status, detail,
+                exact_fired=fired_exact, static_fired=fired_static,
+                static_onset_us=static["onset_us"], exact_onset_us=exact["onset_us"],
+                this_is_a_branch_not_a_gate=True,
+            )
+
+        spec5 = criteria["E5_the_timing_is_stimulus_locked"]
+        limit_us = int(spec5["max_spike_to_release_us"])
+        # The criterion has two clauses and both are scored. The second -- "and must
+        # itself fall inside the registered approach window" -- is not decoration. Without
+        # it this reported PASS on a giant-fibre spike at 90,000 us, which is inside the
+        # decoder's quiescent period and long before the object starts approaching, paired
+        # with a "release" 30 ms later that is the 5.0 to 5.5 ms settling chatter. A
+        # criterion that asks whether a takeoff is stimulus-locked was being satisfied by
+        # two pieces of startup noise.
+        approach = (exact["summary"].get("approaching_object") or {})
+        window = (
+            int(approach.get("approach_start_us", 0)),
+            int(approach.get("approach_end_us", 0)),
+        )
+        spike_us = _first_decoded_spike_us(exact, behaviour)
+        release_us = (
+            _first_release_after_us(exact, spike_us) if spike_us is not None else None
+        )
+        in_window = (
+            spike_us is not None and window[1] > window[0]
+            and window[0] <= spike_us <= window[1]
+        )
+        gap = (
+            release_us - spike_us
+            if spike_us is not None and release_us is not None
+            else None
+        )
+        within = gap is not None and gap <= limit_us
+        results["E5_the_timing_is_stimulus_locked"] = _criterion(
+            PASS if (in_window and within) else FAIL,
+            (
+                f"first giant-fibre spike at {spike_us} us, approach window "
+                f"{window[0]}-{window[1]} us, in window: {in_window}; first release after "
+                f"it {release_us} us, gap {gap} us against a limit of {limit_us}"
+            ),
+            first_spike_us=spike_us,
+            first_release_us=release_us,
+            gap_us=gap,
+            approach_window_us=list(window),
+            spike_inside_approach_window=in_window,
+            gap_within_limit=within,
+        )
+
+        spec6 = criteria["E6_it_is_an_escape_and_not_a_walk"]
+        max_mm = float(spec6["max_horizontal_displacement_mm"])
+        drives = [
+            (float(row["command"].get("actuator:forward-drive", 0.0)),
+             float(row["command"].get("actuator:yaw-drive", 0.0)))
+            for row in exact["rows"]
+        ]
+        locomotor_zero = all(f == 0.0 and y == 0.0 for f, y in drives)
+        travelled = _airborne_displacement_mm(exact)
+        results["E6_it_is_an_escape_and_not_a_walk"] = _criterion(
+            PASS if locomotor_zero and travelled <= max_mm else FAIL,
+            f"locomotor drives identically zero across {len(drives)} intervals: "
+            f"{locomotor_zero}; horizontal travel over the airborne window "
+            f"{travelled:.3f} mm against {max_mm}",
+            locomotor_drives_identically_zero=locomotor_zero,
+            airborne_horizontal_mm=travelled,
+        )
 
     # --- the topology gate, shared in shape --------------------------------------
     gate_name = {

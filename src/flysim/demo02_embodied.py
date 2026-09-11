@@ -49,7 +49,11 @@ from flysim.demo02 import (
     ablate_readout_frame,
     entry_channels,
 )
-from flysim.engines.body import BEHAVIOUR_COMMAND_IDS
+from flysim.engines.body import (
+    BEHAVIOUR_COMMAND_IDS,
+    COMMAND_JUMP,
+    COMMAND_WING_DEPRESSION,
+)
 from flysim.engines.genn import TrackAGeNNEngine
 from flysim.errors import ConfigurationError
 from flysim.polarity import UnresolvedSignPolicy, build_shiu_regression_signs
@@ -425,6 +429,27 @@ def run_behaviour(
         for step in range(intervals):
             t_us = step * coupling_us
             applied = pending
+            # The two effector controls the escape contract names. They gate the command
+            # on its way to the body and touch nothing upstream, so the network, the
+            # stimulus and the decoder are identical to the exact run and the only
+            # difference is which effector is allowed to move.
+            if variant in {"jump-only", "wing-only"}:
+                silenced = (
+                    COMMAND_WING_DEPRESSION if variant == "jump-only" else COMMAND_JUMP
+                )
+                applied = ActuatorCommandFrame(
+                    t_us=applied.t_us,
+                    ids=applied.ids,
+                    values=tuple(
+                        0.0 if name == silenced else value
+                        for name, value in zip(applied.ids, applied.values, strict=True)
+                    ),
+                    units=applied.units,
+                    signal_type=applied.signal_type,
+                    provenance=applied.provenance,
+                    assumption_ids=applied.assumption_ids,
+                    metadata={**applied.metadata, "silenced_command": silenced},
+                )
             body.apply_actuators(applied)
             sensors = body.sample_sensors()
             extra: dict[int, float] | None = None
