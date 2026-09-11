@@ -46,6 +46,7 @@ from flysim.demo02 import (
     DECODERS,
     DecoderParameters,
     Demo02Populations,
+    ablate_readout_frame,
     entry_channels,
 )
 from flysim.engines.body import BEHAVIOUR_COMMAND_IDS
@@ -445,7 +446,11 @@ def run_behaviour(
             engine.push_inputs(frame_in)
             engine.step_until(t_us + coupling_us)
             raw = engine.read_outputs(readout_ids, coupling_us)
-            neural = readout.read(raw)
+            neural = ablate_readout_frame(
+                readout.read(raw),
+                frozenset(DECODED[behaviour]) if variant == "readout-ablated"
+                else frozenset(),
+            )
             pending = controller.decode(neural)
             if onset_us is None and controller.state.value == "ACTING":
                 onset_us = pending.t_us

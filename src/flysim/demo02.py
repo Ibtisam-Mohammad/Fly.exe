@@ -393,6 +393,55 @@ DECODERS = {
 # --------------------------------------------------------------------------------- entry
 
 
+def ablate_readout_frame(
+    frame: NeuralOutputFrame, ablated: frozenset[str]
+) -> NeuralOutputFrame:
+    """Zero BOTH the filtered rate and the raw spike count of an ablated population.
+
+    `FilteredDescendingReadout` zeroes only the filtered values, which is correct for
+    DEMO-01 because its decoder reads those values. The escape decoder reads
+    ``raw_population_spike_counts`` instead, because a two-cell all-or-none readout cannot
+    be represented as a rate -- and those counts were passing through the ablation
+    untouched. The readout-ablated escape run came back byte-identical to the exact run:
+    same 1.562 mm rise, same 3,510,000 us onset, same 2,216,000 us airborne. That is a
+    control reporting that silencing the readout changed nothing, while in fact the
+    readout it silenced was not the one being read.
+
+    Fixed here rather than in `demo01.py`, which is the recorded code of a passed
+    experiment and whose C5 criterion scores those same raw counts.
+    """
+    if not ablated:
+        return frame
+    counts = dict(frame.metadata.get("raw_population_spike_counts", {}))
+    for name in ablated:
+        if name in counts:
+            counts[name] = 0
+    rates = dict(frame.metadata.get("raw_population_rates_hz", {}))
+    for name in ablated:
+        if name in rates:
+            rates[name] = 0.0
+    metadata = {
+        **frame.metadata,
+        "raw_population_spike_counts": counts,
+        "ablation_reached_raw_counts": sorted(ablated),
+    }
+    if rates:
+        metadata["raw_population_rates_hz"] = rates
+    return NeuralOutputFrame(
+        t_us=frame.t_us,
+        ids=frame.ids,
+        values=tuple(
+            0.0 if name in ablated else value
+            for name, value in zip(frame.ids, frame.values, strict=True)
+        ),
+        units=frame.units,
+        signal_type=frame.signal_type,
+        provenance=frame.provenance,
+        assumption_ids=frame.assumption_ids,
+        metadata=metadata,
+    )
+
+
 def entry_channels(behaviour: str) -> tuple[ChannelKey, ...]:
     """Which sensory channels each behaviour drives. Declared, and measured first.
 
