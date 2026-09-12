@@ -50,6 +50,9 @@ After recording, a visual-only revision can reuse the immutable trace, spike, an
 flysim showcase cinematic --root /srv/flybrain-data --source-directory PRESENTATION_DIR
 ```
 
+The source and renderer commits are recorded independently, and both recording and rendering
+refuse a dirty worktree.
+
 This performs one clean-commit hero rerun while recording sparse full-graph spike counts and the
 complete MuJoCo pose at each coupling boundary. Rendering happens afterward. The rerun must
 reproduce the accepted hero transition signature exactly or the command refuses to render.

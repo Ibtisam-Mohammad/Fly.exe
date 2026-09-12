@@ -411,6 +411,7 @@ def render_cinematic_source(
     """Render a presentation recording. No simulator state is advanced here."""
     if fps <= 0:
         raise ConfigurationError("Cinematic FPS must be positive")
+    clean = require_clean_worktree("The Eon cinematic render")
     try:
         import imageio.v2 as imageio
         from PIL import Image, ImageDraw
@@ -555,7 +556,14 @@ def render_cinematic_source(
                 cue_present=True,
                 t_s=t_s,
             )
-            body_frame = replay.render(poses.at(cursor), framing, cue_visible=True)
+            body_frame = replay.render(
+                poses.at(cursor),
+                framing,
+                cue_visible=True,
+                cue_rgba=(0.95, 0.45, 0.08, 0.14),
+                cue_core_radius_mm=float(manifest["display_truth"]["food_object_radius_mm"]),
+                cue_core_rgba=(0.90, 0.08, 0.04, 1.0),
+            )
             canvas = Image.new("RGB", (FRAME_WIDTH, FRAME_HEIGHT), BACKGROUND)
             canvas.paste(Image.fromarray(brain), (0, HEADER_HEIGHT))
             canvas.paste(Image.fromarray(body_frame), (BRAIN_WIDTH, HEADER_HEIGHT))
@@ -591,7 +599,7 @@ def render_cinematic_source(
             )
             draw.text(
                 (BRAIN_WIDTH + 18, HEADER_HEIGHT + 38),
-                "translucent sphere = engineered 1.0 mm sucrose trigger zone",
+                "amber halo = 1.0 mm trigger | red core = displayed food",
                 font=fonts["small"],
                 fill=WARN,
             )
@@ -720,6 +728,8 @@ def render_cinematic_source(
     render_manifest = {
         "schema_version": "1.0",
         "presentation_id": manifest["presentation_id"],
+        "renderer_code_commit": clean["commit"],
+        "renderer_git_dirty": False,
         "source_manifest_sha256": _sha256_file(directory / "presentation-manifest.json"),
         "video": output.name,
         "video_sha256": _sha256_file(output),

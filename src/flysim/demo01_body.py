@@ -83,6 +83,7 @@ def add_cue_geom(
     y_mm: float,
     height_mm: float,
     radius_mm: float,
+    rgba: tuple[float, float, float, float] = CUE_RGBA,
 ) -> bool:
     """Append the cue to a viewer scene. Returns False if the scene is full.
 
@@ -98,7 +99,7 @@ def add_cue_geom(
         size=np.array([radius_mm, radius_mm, radius_mm], dtype=np.float64),
         pos=np.array([x_mm, y_mm, height_mm], dtype=np.float64),
         mat=np.eye(3, dtype=np.float64).reshape(9),
-        rgba=np.array(CUE_RGBA, dtype=np.float32),
+        rgba=np.array(rgba, dtype=np.float32),
     )
     geom.category = mujoco.mjtCatBit.mjCAT_DECOR
     scene.ngeom += 1
@@ -575,7 +576,15 @@ class Demo01VisualBody:
             )
         return self._renderer
 
-    def _draw(self, framing: Any, *, cue_visible: bool) -> np.ndarray:
+    def _draw(
+        self,
+        framing: Any,
+        *,
+        cue_visible: bool,
+        cue_rgba: tuple[float, float, float, float] = CUE_RGBA,
+        cue_core_radius_mm: float | None = None,
+        cue_core_rgba: tuple[float, float, float, float] = (0.90, 0.10, 0.05, 1.0),
+    ) -> np.ndarray:
         mujoco = self._mujoco
         renderer = self._ensure_renderer()
         camera = mujoco.MjvCamera()
@@ -593,7 +602,18 @@ class Demo01VisualBody:
                 y_mm=self.parameters.cue_y_mm,
                 height_mm=self.parameters.cue_height_mm,
                 radius_mm=self.parameters.cue_radius_mm,
+                rgba=cue_rgba,
             )
+            if cue_core_radius_mm is not None:
+                add_cue_geom(
+                    mujoco,
+                    renderer.scene,
+                    x_mm=self.parameters.cue_x_mm,
+                    y_mm=self.parameters.cue_y_mm,
+                    height_mm=cue_core_radius_mm,
+                    radius_mm=cue_core_radius_mm,
+                    rgba=cue_core_rgba,
+                )
         return np.asarray(renderer.render())
 
     def render_frame(self, framing: Any, *, cue_visible: bool = True) -> np.ndarray:
@@ -606,7 +626,14 @@ class Demo01VisualBody:
         return self._draw(framing, cue_visible=cue_visible)
 
     def render_replay_frame(
-        self, qpos: np.ndarray, *, framing: Any, cue_visible: bool = True
+        self,
+        qpos: np.ndarray,
+        *,
+        framing: Any,
+        cue_visible: bool = True,
+        cue_rgba: tuple[float, float, float, float] = CUE_RGBA,
+        cue_core_radius_mm: float | None = None,
+        cue_core_rgba: tuple[float, float, float, float] = (0.90, 0.10, 0.05, 1.0),
     ) -> np.ndarray:
         """Draw a recorded state. Only legal on a body that has never been stepped.
 
@@ -631,7 +658,13 @@ class Demo01VisualBody:
         data.qpos[:] = state
         data.qvel[:] = 0.0
         self._mujoco.mj_forward(self._simulation.mj_model, data)
-        return self._draw(framing, cue_visible=cue_visible)
+        return self._draw(
+            framing,
+            cue_visible=cue_visible,
+            cue_rgba=cue_rgba,
+            cue_core_radius_mm=cue_core_radius_mm,
+            cue_core_rgba=cue_core_rgba,
+        )
 
     def close(self) -> None:
         if self._renderer is not None:

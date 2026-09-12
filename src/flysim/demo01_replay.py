@@ -497,11 +497,24 @@ class BodyReplay:
         model.vis.headlight.specular[:] = HEADLIGHT_SPECULAR
 
     def render(
-        self, qpos: np.ndarray, framing: CameraFraming, *, cue_visible: bool
+        self,
+        qpos: np.ndarray,
+        framing: CameraFraming,
+        *,
+        cue_visible: bool,
+        cue_rgba: tuple[float, float, float, float] | None = None,
+        cue_core_radius_mm: float | None = None,
+        cue_core_rgba: tuple[float, float, float, float] = (0.90, 0.10, 0.05, 1.0),
     ) -> np.ndarray:
-        return self._body.render_replay_frame(
-            qpos, framing=framing, cue_visible=cue_visible
-        )
+        kwargs: dict[str, Any] = {
+            "framing": framing,
+            "cue_visible": cue_visible,
+            "cue_core_radius_mm": cue_core_radius_mm,
+            "cue_core_rgba": cue_core_rgba,
+        }
+        if cue_rgba is not None:
+            kwargs["cue_rgba"] = cue_rgba
+        return self._body.render_replay_frame(qpos, **kwargs)
 
     def close(self) -> None:
         self._body.close()
