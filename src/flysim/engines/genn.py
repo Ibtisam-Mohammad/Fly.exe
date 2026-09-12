@@ -243,7 +243,10 @@ class TrackAGeNNEngine:
         self._sparse_layout: dict[str, Any] = {}
         self._flat_offsets: np.ndarray | None = None
         self._flat_index_by_dense: np.ndarray | None = None
-        self._pool_flat_index: dict[str, np.ndarray] = {}
+        # Monitor pools key on their name; readout sets key on their ids.
+        self._pool_flat_index: dict[
+            str | tuple[str, tuple[int, ...]], np.ndarray
+        ] = {}
         self._input_dense_index: dict[tuple[str, tuple[Any, ...]], np.ndarray] = {}
         self._last_frame_counts: np.ndarray | None = None
         self._last_counts: dict[int, float] = {}
@@ -711,7 +714,12 @@ class TrackAGeNNEngine:
             raise ConfigurationError("Track A GeNN output IDs must be numeric body IDs")
         assert self._group_by_dense is not None and self._local_by_dense is not None
         body_ids = [int(identifier) for identifier in ids]
-        key = f"__read_outputs__{len(body_ids)}"
+        # Keyed on the ids themselves, not on how many there are. Two different readout
+        # sets of equal length -- three behaviours whose pools happen to sum alike, or a
+        # monitor pool and a readout pool -- collided on the count and the second silently
+        # reused the first one's flat index, returning one population's spikes under
+        # another population's name.
+        key = ("__read_outputs__", tuple(body_ids))
         index = self._pool_flat_index.get(key)
         if index is None:
             index = self._flat_index(body_ids)

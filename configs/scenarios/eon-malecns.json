@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "scenario_id": "eon-malecns-v0.2",
   "track": "A",
-  "assumption_set": "foundation-v0.9",
+  "assumption_set": "foundation-v0.10",
   "required_assumptions": [
     "DATA-01",
     "DATA-03",

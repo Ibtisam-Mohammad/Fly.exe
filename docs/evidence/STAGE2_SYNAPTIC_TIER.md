@@ -715,7 +715,7 @@ The recovery constant is 7096 ms, fitted rather than pinned, interior to its box
 parameter the paired-pulse observable could not see and that made every earlier candidate
 collapse in a train.
 
-**V1-limited**, on the paired-pulse and 1 Hz train observables only. It says nothing above
+**No tier.** The observables are V2 Synaptic ones, the paired-pulse and 1 Hz train, only. It says nothing above
 1 Hz, where the primary predicts 0.195 against a measured 0.60; nothing about another
 laboratory, glomerulus or synapse class; nothing about edge sign; and it does not resolve
 the release-probability incompatibility. The two frozen models are not separated by it.
@@ -750,5 +750,5 @@ the day-0 paired-pulse cohort of the same size having been opened before the fre
 against 0.195 for a measured 0.60.
 
 **The corpus has run out.** 66 of 66 files now accounted for; no unspent wild-type
-ORN-to-PN train remains and none exists above 1 Hz. `V1-limited` stands unchanged, and
+ORN-to-PN train remains and none exists above 1 Hz. No tier is awarded, and
 Stage 2 stays at v4, 0 of 3.

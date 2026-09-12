@@ -699,7 +699,7 @@ on J2 alone.
 fitted to a paired-pulse curve and a 1 Hz train in one cohort and frozen with every
 predicted number written down and checksum-pinned beforehand, predicts an unseen cohort's
 32-pulse train trajectory inside its measurement error at every scorable pulse, ten times
-better than the rule it replaces. **V1-limited**, scoped to the ORN-to-uniglomerular-PN
+better than the rule it replaces. **No tier.** The observable is a V2 Synaptic one, scoped to the ORN-to-uniglomerular-PN
 paired-pulse and 1 Hz train observables, in one laboratory, across an unstated glomerular
 mixture labelled by `GH146-QF`.
 
@@ -727,7 +727,7 @@ mixture labelled by `GH146-QF`.
 kinetics and circuit, and this is none of them: it is a plasticity module, and the gate's
 synaptic leg requires unitary waveforms this repository does not ship. V0 Structural
 remains the only supported *stage* tier; what changes is that one registered dynamics
-module now carries a V1-limited validation of its own, which is the first in this project.
+module now carries one passed out-of-sample consistency test of its own, which is the first in this project and which awards no tier.
 
 ## Twelfth amendment, 2026-09-10 - the audit of the pass, and the corpus running out
 
@@ -918,5 +918,5 @@ probability and nothing else" is an assumption ND-06 does not currently carry.
 
 **The Stage 2 gate is unchanged at v4, 0 of 3, and V0 Structural remains the only supported
 stage tier.** The audit confirms both. What the audit changed is the size of the claim, not
-the tier: `V1-limited` still stands, and now says explicitly that its criteria are cleared
+the tier: there is none, and the record now says explicitly that its criteria are cleared
 by a model-free baseline.

@@ -22,10 +22,11 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 from flysim.behaviour_body import BehaviourBodyParameters  # noqa: E402
-from flysim.config import load_json  # noqa: E402
+from flysim.config import load_json, sha256_json  # noqa: E402
 from flysim.demo02 import BEHAVIOURS, DecoderParameters  # noqa: E402
 from flysim.demo02_acceptance import evaluate, read_variant  # noqa: E402
 from flysim.demo02_embodied import run_behaviour  # noqa: E402
+from flysim.runs import git_metadata  # noqa: E402
 
 TRAJECTORY = "derived/auxiliary/ozdil-2026-antennal-grooming/track-a-grooming-trajectory.npz"
 
@@ -58,9 +59,11 @@ DECODERS: dict[str, dict[str, object]] = {
         "action_us": 3_000_000,
     },
     "feeding": {
+        # MN9 is two cells, so this decodes a spike count like escape does and not a rate.
         "quiescent_us": 1_500_000,
-        "threshold_hz": 0.6,
-        "half_rate_hz": 6.0,
+        "threshold_hz": 0.0,
+        "spike_threshold": 1,
+        "half_spikes": 3.0,
         "initiation_hold_us": 150_000,
         "action_us": 2_000_000,
     },
@@ -90,8 +93,9 @@ def main() -> int:
     parser.add_argument("--allow-dirty-tree", action="store_true")
     parser.add_argument("--progress", action="store_true")
     parser.add_argument(
-        "--contract-version", default="v1", choices=("v1", "v2", "legs-v1"),
-        help="v2 runs the contract's registered seed set into per-seed run directories "
+        "--contract-version", default="v1",
+        help="Names configs/experiments/demo02-<behaviour>-<version>.json. Anything but "
+             "v1 runs the contract's registered seed set into per-seed run directories "
              "and requires every seed to pass.",
     )
     parser.add_argument(
@@ -112,20 +116,36 @@ def main() -> int:
     behaviour: str = args.behaviour
     version = args.contract_version
     contract_path = REPO / f"configs/experiments/demo02-{behaviour}-{version}.json"
+    if not contract_path.exists():
+        raise SystemExit(f"No contract at {contract_path}.")
     contract = load_json(contract_path)
     variants = args.variants or list(contract["control_variants"])
     duration_us = args.duration_us or int(contract["fixed_parameters"]["duration_us"])
-    # v1 carries one seed in fixed_parameters; v2 carries a seed set and every seed
-    # must pass. Runs go into per-seed directories so a seed can never overwrite another.
-    seeds = contract.get("seeds") or [int(contract["fixed_parameters"]["seed"])]
+    # v1 carries one seed in fixed_parameters; later contracts carry a seed set and every
+    # seed must pass. Two separate things were conflated here and both were wrong.
+    #
+    # `contract_seeds` is what the contract declares and it decides the artifact NAMES.
+    # `run_seeds` is what this invocation executes. Previously one variable did both, so
+    # `--seed 2` shrank the set to one element and the acceptance artifact was written to
+    # the UNSUFFIXED path -- the name reserved for a single-seed contract -- and each seed
+    # in turn overwrote the last. The surviving file carried no seed field, so which seed
+    # it described could not be recovered from it.
+    #
+    # And the loop below ran `seeds[0]` only. A three-seed contract loaded three seeds,
+    # executed one, and reported a verdict that read as though it covered all three.
+    contract_seeds = [
+        int(value)
+        for value in (contract.get("seeds") or [contract["fixed_parameters"]["seed"]])
+    ]
     if args.seed is not None:
-        if args.seed not in seeds:
+        if args.seed not in contract_seeds:
             raise SystemExit(
-                f"Seed {args.seed} is not in the contract's registered set {seeds}. "
-                "The seed set is frozen."
+                f"Seed {args.seed} is not in the contract's registered set "
+                f"{contract_seeds}. The seed set is frozen."
             )
-        seeds = [args.seed]
-    seed = int(seeds[0])
+        run_seeds = [int(args.seed)]
+    else:
+        run_seeds = list(contract_seeds)
     suffix = "" if version == "v1" else f"-{version}"
 
     # DEMO-01's frozen operating point, read and not varied.
@@ -185,6 +205,51 @@ def main() -> int:
         decoder_spec["command_wings"] = False
     decoder = DecoderParameters.from_mapping(decoder_spec)
 
+    verdicts: dict[int, str] = {}
+    for seed in run_seeds:
+        verdicts[seed] = _one_seed(
+            args=args, root=root, behaviour=behaviour, version=version, suffix=suffix,
+            contract=contract, contract_path=contract_path, contract_seeds=contract_seeds,
+            seed=seed, variants=variants, duration_us=duration_us,
+            parameters=parameters, body_parameters=body_parameters, decoder=decoder,
+        )
+
+    if len(run_seeds) > 1:
+        print("\n=== every seed ===")
+        for seed, name in sorted(verdicts.items()):
+            print(f"  seed {seed}: {name}")
+        combined = root / "evidence/demo02" / (
+            f"{contract['experiment_id']}-acceptance-allseeds.json"
+        )
+        combined.write_text(
+            json.dumps(
+                {
+                    "experiment_id": contract["experiment_id"],
+                    "seeds_declared": contract_seeds,
+                    "seeds_run": run_seeds,
+                    "verdict_by_seed": {str(k): v for k, v in sorted(verdicts.items())},
+                    "every_seed_agrees": len(set(verdicts.values())) == 1,
+                    "the_contract_requires_every_seed_to_pass": True,
+                    "per_seed_artifacts": [
+                        f"{contract['experiment_id']}-acceptance-seed{s}.json"
+                        for s in run_seeds
+                    ],
+                },
+                indent=2, sort_keys=True,
+            ) + "\n",
+            encoding="utf-8",
+        )
+        print(f"combined: {combined}")
+    return 0
+
+
+def _one_seed(
+    *, args, root, behaviour: str, version: str, suffix: str, contract, contract_path,
+    contract_seeds, seed: int, variants, duration_us: int, parameters,
+    body_parameters, decoder,
+) -> str:
+    """Run and score one seed. Every artifact it writes carries that seed in its name."""
+    print(f"\n############ seed {seed} ############", flush=True)
     results = {}
     for variant in [] if args.score_only else variants:
         directory = (
@@ -256,8 +321,10 @@ def main() -> int:
     # legs-v1 silently overwrote the recorded v1 verdict -- twice -- with a different
     # experiment's result under v1's name.
     stem = str(contract["experiment_id"])
+    # The suffix follows what the CONTRACT declares, not how many seeds this invocation
+    # happens to run. `--seed 2` on a three-seed contract must still write seed 2's file.
     out = root / "evidence/demo02" / (
-        f"{stem}-acceptance.json" if len(seeds) == 1
+        f"{stem}-acceptance.json" if len(contract_seeds) == 1
         else f"{stem}-acceptance-seed{seed}.json"
     )
     if out.exists():
@@ -268,12 +335,31 @@ def main() -> int:
                 "to overwrite one experiment's recorded verdict with another's."
             )
     out.parent.mkdir(parents=True, exist_ok=True)
+    # An acceptance artifact used to carry none of this. It named the variants it scored
+    # and nothing about which code, which seed or which contract produced them.
+    verdict = {
+        **verdict,
+        "seed": seed,
+        "seeds_declared_by_the_contract": contract_seeds,
+        "contract_path": str(contract_path.relative_to(REPO)),
+        "contract_sha256": sha256_json(contract),
+        "scored_by_commit": git_metadata()["commit"],
+        "scored_from_dirty_worktree": git_metadata()["dirty"],
+        "run_directories": {
+            name: str(_run_dir(root, behaviour, suffix, version, seed, name))
+            for name in variants
+        },
+    }
     out.write_text(
         json.dumps(verdict, indent=2, sort_keys=True, default=str) + "\n",
         encoding="utf-8",
     )
     print(f"acceptance: {out}")
-    return 0
+    if not verdict.get("provenance", {}).get("chain_is_sound", True):
+        print("  EVIDENCE CHAIN FAULTS:")
+        for fault in verdict["provenance"]["chain_faults"]:
+            print(f"    - {fault}")
+    return str(verdict["verdict"])
 
 
 if __name__ == "__main__":

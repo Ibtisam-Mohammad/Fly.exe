@@ -2277,7 +2277,12 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_exit.add_argument(
         "--experiment",
         type=Path,
-        default=project_root() / "configs" / "experiments" / "stage2-exit-gate.json",
+        # v4 is canonical (ADR-2026-011). The default was the unversioned file, whose
+        # experiment_id is stage2-exit-gate-v1, so the public command reported a different
+        # project status from AGENTS.md and from every recorded artifact.
+        default=(
+            project_root() / "configs" / "experiments" / "stage2-exit-gate-v4.json"
+        ),
     )
     stage2_exit.add_argument("--output", type=Path, required=True)
     stage2_exit.set_defaults(func=_command_stage2_exit_gate)

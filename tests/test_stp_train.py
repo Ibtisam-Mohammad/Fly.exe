@@ -429,8 +429,13 @@ def test_the_pass_carries_its_limits_and_does_not_overclaim() -> None:
         )
     )
     record = contract["execution_record"]
-    assert record["the_tier_it_earns"]["tier"] == "V1-limited"
-    assert record["the_tier_it_earns"]["it_is_not_V2"]
+    # No tier. V1-limited was never a member of flysim.evidence.ValidationTier,
+    # and the block that claimed it also argued "it is not V2" from circuit
+    # scale, when AGENTS.md defines V2 Synaptic by observable class and names
+    # short-term plasticity in it.
+    assert record["the_tier_it_earns"]["tier"] is None
+    assert "V2 Synaptic" in record["the_tier_it_earns"]["which_tier_this_would_fall_under"]
+    assert "it_is_not_V2" not in record["the_tier_it_earns"]
     limits = " ".join(record["what_it_does_not_establish"])
     for phrase in (
         "another laboratory",
@@ -453,7 +458,8 @@ def test_the_v0_3_registry_records_the_tier_and_the_open_problems() -> None:
     registry = json.loads(
         (REPO / "configs/neural/short-term-plasticity-v0.3.json").read_text(encoding="utf-8")
     )
-    assert registry["tier"] == "V1-limited"
+    assert registry["tier"] is None
+    assert registry["tier_record"]["tier"] is None
     assert registry["validation"]["verdict"] == "PASSED"
     # What changed from the refuted predecessors has to be stated mechanistically.
     assert "7096 ms" in registry["supersedes"]["what_changed"]
@@ -548,7 +554,7 @@ def test_neither_frozen_rule_is_promoted() -> None:
     note = registry["neither_rule_is_promoted"]
     assert "No consumer of this file may treat the primary as preferred" in note
     assert "0.532" in note and "0.195" in note
-    assert registry["tier"] == "V1-limited", "the audit narrowed the claim, not the tier"
+    assert registry["tier"] is None, "there was never a tier for the audit to narrow"
     assert "model-free baseline" in registry["tier_after_audit"]
 
 

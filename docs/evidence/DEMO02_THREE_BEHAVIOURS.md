@@ -62,10 +62,35 @@ point.
 
 ### Feeding: the strongest route works, and it is the one that cannot be used
 
+> **Corrected 2026-09-12 (ADR-2026-018): the readout labels below are reversed.**
+> `MN9` is not the pharyngeal pump. McKellar and colleagues (eLife 2020;9:e54978) list the
+> eight positioning muscles as 1, 2D, 2V, 3, 4, 6, 7 and **9** and the eight pharyngeal ones
+> as 5, 8, **10, 11D, 11V, 12D**, 12V and 13, state that muscle 9 protracts the rostrum and
+> that its motor neuron elicits proboscis extension, and name each motor neuron after its
+> muscle. Schwarz and colleagues 2017 independently put muscle groups 5, 10, 11 and 12 on the
+> pump. So this experiment decoded the **pump** and recorded the **extensor**.
+>
+> The sentences below are kept as written because the measurement is right and only the
+> labels are wrong, and because reading them with the labels swapped is the clearest possible
+> statement of what happened: the population that responded was the correct readout, and the
+> contract refused to decode it. `MOTOR-07` now registers the mapping with its source and
+> with the `exitNerve` check that could have refuted it. `demo02-feeding-v2` supersedes the
+> contract.
+
+
+
 This is the sharpest result of the three.
 
-`MN9`, the pharyngeal pump, **responds**: 10 spikes, peak 4.53 Hz. The twelve proboscis motor
-neurons that the contract decodes produce nothing.
+`MN9` -- labelled the pharyngeal pump here, and in fact the rostrum protractor --
+**responds**: 10 spikes, peak 4.53 Hz. The twelve motor neurons the contract decodes as
+proboscis extensors, and which are in fact the pharyngeal pump, produce nothing. Not in the
+exact run, not in any variant, across all 600 intervals.
+
+Two consequences that were not visible while the labels were wrong. The `readout-ablated`
+control was **vacuous**: ablation zeroes only the decoded populations, so it silenced a pool
+that was already silent and `F2` passed by measuring nothing. And `MN9`'s 10 spikes fall to
+**0** in `stimulus-absent` and to **0** in `shuffled-connectome`, which is the signature of a
+stimulus-gated, topology-gated route -- recorded here under the name of a pump.
 
 `MN9` is exactly where the route survey pointed -- labellar bristle to MN9 at 48.6 times a
 matched null over four hops with zero direct edges. The contract declared, before the run,
@@ -339,5 +364,8 @@ unrepresentable rather than merely avoided -- the renderer raises if a caption c
 
 Grooming and feeding are unchanged and their negatives stand, because **no search has been
 run for either**. By the argument above that makes them untested rather than refuted, and
-`MN9` responding while the decoded proboscis motor neurons stay silent remains the sharpest
-single result in this experiment.
+`MN9` responding while the decoded pool stays silent remains the sharpest single result in
+this experiment -- and as of 2026-09-12 it is sharper still, because `MN9` is the correct
+extension readout and the decoded pool was the pharyngeal pump. Feeding is not a route-level
+negative. It is a contract that decoded the wrong population, and its replacement has not
+been run.

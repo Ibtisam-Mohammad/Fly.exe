@@ -77,9 +77,6 @@ class NumpyLIFEngine:
             raise ConfigurationError("LIF timesteps must be positive")
         self._graph = graph
         self._t_us = 0
-        self._voltage = np.full(
-            graph.neuron_count, self._parameters.resting_mv, dtype=np.float32
-        )
         self._external_drive = np.zeros(graph.neuron_count, dtype=np.float32)
         self._refractory_until = np.zeros(graph.neuron_count, dtype=np.int64)
         self._edge_weights = (
@@ -88,6 +85,13 @@ class NumpyLIFEngine:
             * self._parameters.synaptic_mv_per_contact
         )
         self._bind_cell_parameters(graph, parameters)
+        # After binding, not before. A heterogeneous graph supplies a per-neuron
+        # resting_mv array, and initialising from the scalar first started every
+        # such neuron at the wrong potential and let it relax toward its own resting
+        # value over the first few time constants. That is an unregistered transient at
+        # the head of every heterogeneous run, and it silently vanishes from a
+        # homogeneous one, which is why the parity fixtures never caught it.
+        self._voltage = self._resting.astype(np.float32, copy=True)
         self._spikes = np.zeros(graph.neuron_count, dtype=np.bool_)
         self._spike_history.clear()
         self._queue.clear()

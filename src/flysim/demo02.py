@@ -11,11 +11,24 @@ a substituted entry population. Bundling them would let the strongest launder th
 and its behaviour turned out to be the sensor term. The signature is asserted in
 `tests/test_sensory_bus.py`, not merely intended.
 
-Two substitutions in feeding are forced by the body and are declared rather than hidden.
-`MN9` is the pharyngeal pump, not a proboscis extensor, so decoding it to a rostrum command
-would fabricate function rather than magnitude: it is recorded and never decoded. And the
-strongest feeding route measured -- labellar bristle to MN9 at 48.6 times a matched null --
-cannot be driven at all, because NeuroMechFly has no labellum on which to place a stimulus.
+Feeding's readout was reversed until 2026-09-12 and is corrected here. `MN9` was recorded
+as the pharyngeal pump and `MN10`/`MN11`/`MN12` decoded as proboscis extensors. McKellar and
+colleagues (eLife 2020;9:e54978) list the eight positioning muscles as 1, 2D, 2V, 3, 4, 6, 7
+and **9** and the eight pharyngeal muscles as 5, 8, **10, 11D, 11V, 12D**, 12V and 13; state
+that muscle 9 is a protractor of the rostrum whose motor neuron elicits proboscis extension;
+and name motor neurons after the muscle they innervate. Schwarz and colleagues (2017)
+independently put muscle groups 5, 10, 11 and 12 on the pharyngeal pump. So the decoded
+population was the pump and the recorded one was the extensor, exactly inverted.
+
+The release agrees, and could have contradicted this. `exitNerve` puts `MN9` in the
+pharyngeal nerve, which looks like pump evidence and is not: McKellar's Table 1 puts mn9's
+axon in that same nerve while its muscle positions the rostrum. The nerve does not partition
+the two functions and the muscle list does.
+
+The remaining substitution is unchanged and declared: the strongest feeding route measured,
+labellar bristle to `MN9` at 48.6 times a matched null, cannot be driven at all, because
+NeuroMechFly has no labellum on which to place a stimulus. The entry is the leg taste
+bristles instead.
 """
 
 from __future__ import annotations
@@ -59,15 +72,27 @@ GROOM_READOUT_SPECS = (
     ),
 )
 
-#: Feeding. The proboscis extensors, which is not where the strongest route goes.
+#: Feeding. Corrected 2026-09-12; see the module docstring for the sources and for the
+#: release check that could have refuted it. Two cells is below the spike quantum, so this
+#: readout is decoded as a count and never as a rate.
 FEED_READOUT_SPECS = (
     PopulationSpec(
-        "proboscis-mn", "MN10", None, "somaSide", "proboscis extensor motor neurons",
+        "rostrum-mn9", "MN9", None, "somaSide",
+        "the rostrum protractor: muscle 9 positions the rostrum and its motor neuron "
+        "elicits proboscis extension",
+    ),
+    PopulationSpec(
+        "pharyngeal-pump-mn", "MN10", None, "somaSide",
+        "the pharyngeal pump. RECORDED AND NEVER DECODED: there is nothing to pump, "
+        "because this body has no labellum, no labrum and no pharynx.",
         additional_types=("MN11D", "MN11V", "MN12D"),
     ),
     PopulationSpec(
-        "pump-mn9", "MN9", None, "somaSide",
-        "the pharyngeal pump. RECORDED AND NEVER DECODED: there is nothing to pump.",
+        "haustellum-candidates", "MN2Da", None, "somaSide",
+        "RECORDED AND NEVER DECODED: the sources conflict on which motor neuron extends "
+        "the haustellum -- McKellar names mn4, Schwarz names MN2 -- and this project does "
+        "not resolve a conflict between two sources by choosing the convenient one.",
+        additional_types=("MN2Db", "MN2V", "MN4a", "MN4b"),
     ),
 )
 
@@ -98,7 +123,7 @@ READOUT_SPECS: dict[str, tuple[PopulationSpec, ...]] = {
 #: What each behaviour actually decodes. Everything else in its readout is recorded.
 DECODED: dict[str, tuple[str, ...]] = {
     "grooming": ("groom-dn-left", "groom-dn-right"),
-    "feeding": ("proboscis-mn",),
+    "feeding": ("rostrum-mn9",),
     "escape": ("giant-fibre-left", "giant-fibre-right"),
 }
 
@@ -241,6 +266,10 @@ class DecoderParameters:
     #: Escape only. False withholds actuator:wing-depression entirely (ADR-2026-017).
     #: Defaults True so demo02-escape-v1 and v2 decode exactly as they were recorded.
     command_wings: bool = True
+    #: Feeding only: the spike count at which the graded extension reaches half scale.
+    #: Two MN9 cells can emit at most about thirteen spikes in a 15 ms interval at the
+    #: refractory ceiling, so three is a mid-scale value and not a near-saturating one.
+    half_spikes: float = 3.0
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> DecoderParameters:
@@ -250,6 +279,8 @@ class DecoderParameters:
             raise ConfigurationError("Decoder rates must be sensible")
         if values.spike_threshold < 1:
             raise ConfigurationError("A spike threshold below one is not an event")
+        if values.half_spikes <= 0:
+            raise ConfigurationError("A half-scale spike count must be positive")
         return values
 
     def as_dict(self) -> dict[str, Any]:
@@ -338,16 +369,29 @@ class GroomDecoder(_Decoder):
 
 @dataclass
 class ProboscisDecoder(_Decoder):
-    """Graded extension from the proboscis motor neurons. MN9 is never read here."""
+    """Graded extension from the rostrum protractor's spike count.
+
+    `MN9` is two cells. A filtered rate from two cells at a 15 ms interval renders one
+    spike as 33.3 Hz, which is the quantum DEMO-01 diagnosed and the escape decoder answers
+    by counting rather than averaging. This counts for the same reason.
+
+    The pharyngeal pump and the haustellum candidates are resolved, recorded and never
+    read here. The body's two-joint extension pose is an engineered scaffold that this one
+    drive triggers and grades; no claim is made that `MN9` drives the haustellum.
+    """
 
     coupling_us: int = 15_000
 
     def decode(self, neural: NeuralOutputFrame) -> ActuatorCommandFrame:
-        drive = neural.value_for("proboscis-mn", 0.0)
-        acting = self._advance(neural.t_us, drive >= self.parameters.threshold_hz,
-                               self.coupling_us)
+        counts = neural.metadata.get("raw_population_spike_counts", {})
+        spikes = int(counts.get("rostrum-mn9", 0))
+        acting = self._advance(
+            neural.t_us, spikes >= self.parameters.spike_threshold, self.coupling_us
+        )
         extension = (
-            drive / (drive + self.parameters.half_rate_hz) if acting and drive > 0 else 0.0
+            spikes / (spikes + self.parameters.half_spikes)
+            if acting and spikes > 0
+            else 0.0
         )
         return self._frame(neural.t_us, {COMMAND_PROBOSCIS: extension} if acting else {})
 

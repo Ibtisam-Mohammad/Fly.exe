@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-feeding-v2",
+  "title": "A proboscis-extension pose from leg taste contact, with the motor mapping corrected",
+  "status": "PREREGISTERED. Committed before the control matrix runs.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-12",
+  "values_opened": false,
+  "adr": "ADR-2026-018",
+  "seeds": [1, 2, 3],
+  "assumption_ids": [
+    "DEMO-02", "DEMO-03", "SENS-01", "SENS-05", "MOTOR-03", "MOTOR-06",
+    "MOTOR-07", "BODY-01", "ND-07", "ND-10"
+  ],
+
+  "supersedes": {
+    "experiment_id": "demo02-feeding-v1",
+    "what_was_wrong": "Its readout assignment was biologically reversed. v1 decoded MN10, MN11D, MN11V and MN12D as proboscis extensors and recorded MN9 as the pharyngeal pump. McKellar and colleagues list the eight positioning muscles as 1, 2D, 2V, 3, 4, 6, 7 and 9 and the eight pharyngeal muscles as 5, 8, 10, 11D, 11V, 12D, 12V and 13, state that muscle 9 is a protractor of the rostrum whose motor neuron elicits proboscis extension, and name each motor neuron after its muscle. Schwarz and colleagues independently assign muscle groups 5, 10, 11 and 12 to the pharyngeal pump. So v1 decoded the pump and recorded the extensor.",
+    "how_it_was_caught": "An external review on 2026-09-12. ADR-2026-016 had already flagged the mapping as UNVERIFIED-IN-REPO and the readout was chosen on it anyway, which is the defect this supersession exists to record.",
+    "what_is_NOT_withdrawn": "The v1 verdict of NO DEMONSTRATION stands exactly as recorded, and demo02-feeding-v1.json is not edited, so its blob hash and the experiment_sha256 stamped into every v1 run summary still agree. What is withdrawn is the INTERPRETATION: the v1 F1 failure was reported as a route-level feeding negative, and it was a statement about a population that is not the extensor.",
+    "what_v1_actually_measured_and_is_kept": "In the v1 exact run the decoded pool produced ZERO raw spikes across all 600 intervals, in every variant. MN9 produced 10 spikes in the exact run, 10 in readout-ablated -- because ablation zeroes only the decoded populations and MN9 was not one -- 0 in stimulus-absent and 0 in shuffled-connectome. Those four numbers are the reason this contract exists rather than a note in an errata file.",
+    "and_the_honest_reading_of_them": "10 spikes in 9 seconds from two cells is about 1.1 Hz. It is far below what this decoder needs and it is NOT a demonstration of anything. What it establishes is only that the correct readout is reachable from this entry at all, that its activity disappears without the stimulus, and that it disappears under a degree-preserving shuffle. Whether it can be driven to threshold is what demo02-feeding-operating-point-v1 asks, and this contract may not be run until that search has answered."
+  },
+
+  "why_this_exists": "The strongest feeding route measured is labellar bristle to MN9, at 48.6 times a matched null over four hops with zero direct edges -- and it cannot be built, because NeuroMechFly has no labellum on which to place a stimulus. So the entry is the leg taste bristles instead, which have real contact physics, and the readout is now the rostrum protractor that the sources actually name.",
+  "what_is_being_judged": "Whether tarsal contact with a sucrose patch, transduced onto 70 labelled taste afferents, drives the two rostrum-protractor motor neurons strongly enough for a decoder that sees nothing else to command an extension the body actually achieves.",
+
+  "the_release_check_that_could_have_refuted_the_correction": "MaleCNS records exitNerve for motor neurons. MN9 exits by the pharyngeal nerve, which reads as pump evidence and is not: the McKellar Table 1 entry puts the mn9 axon in that same nerve while its muscle positions the rostrum. MN1, MN2Da, MN2Db, MN2V, MN4a, MN4b, MN6, MN7 and MN13 exit by the maxillary-labial nerve and MN3L, MN3M, MN5, MN9, MN10, MN11D, MN11V and MN12D by the pharyngeal nerve, so the nerve does not partition positioning from pumping and the muscle list does. This check was run before the correction was applied and it could have contradicted it.",
+
+  "entry": {
+    "channels": [
+      "tarsal-taste:leg-front:L", "tarsal-taste:leg-front:R",
+      "tarsal-taste:leg-hind:L", "tarsal-taste:leg-hind:R"
+    ],
+    "bodies": 70,
+    "unchanged_from_v1": true,
+    "world_quantity": "Sucrose concentration at a taste-bearing tarsus. The contact gate is real physics: the tarsus must be both on the ground and inside the patch. Only the concentration is declared.",
+    "why_all_four_legs": "The release puts taste bristles on the front legs (ProLN, 8) and hind legs (MetaLN, 62) and none on the middle legs."
+  },
+
+  "readout": {
+    "decoded": ["rostrum-mn9"],
+    "bodies": 2,
+    "types": ["MN9"],
+    "why_it_is_decoded_as_a_count_and_not_a_rate": "Two cells at a 15 ms interval render one spike as 33.3 Hz. That is the quantum DEMO-01 diagnosed, where a selectivity index of exactly plus or minus 1.000 came from one spike against zero. The escape readout has the same problem and answers it by counting spikes in a window; this readout does the same. No filtered rate from MN9 is scored anywhere in this contract.",
+    "recorded_and_never_decoded": {
+      "pharyngeal-pump-mn": {
+        "types": ["MN10", "MN11D", "MN11V", "MN12D"],
+        "bodies": 12,
+        "why": "The pharyngeal pump. It is recorded so its activity is visible, and any artifact must state that a pump motor neuron firing has nothing to pump: this body has no labellum, no labrum and no pharynx. In v1 this pool was decoded, and it produced zero spikes in every variant."
+      },
+      "haustellum-candidates": {
+        "types": ["MN2Da", "MN2Db", "MN2V", "MN4a", "MN4b"],
+        "bodies": 12,
+        "why": "The two sources conflict on which motor neuron extends the haustellum: McKellar names mn4 and Schwarz names MN2. This project does not resolve a conflict between two sources by choosing the convenient one, so both candidate families are recorded and neither is decoded."
+      }
+    }
+  },
+
+  "the_two_joint_pose_is_a_scaffold_and_is_declared_as_one": "COMMAND_PROBOSCIS drives c_head-c_rostrum-pitch to 0.6 rad and c_rostrum-c_haustellum-pitch to 0.8 rad. Only the rostrum component corresponds to the decoded motor neuron. The haustellum component is an engineered pose scaffold triggered and graded by that one drive, exactly as leg movement comes from an engineered pattern generator, and NO claim is made that MN9 drives the haustellum. The F1 threshold of 0.70 rad is therefore a threshold on a scaffolded pose and not on a predicted joint trajectory.",
+
+  "fixed_parameters": {
+    "duration_us": 9000000,
+    "coupling_us": 15000,
+    "seed": 1,
+    "sucrose_concentrations": [0.25, 0.5, 0.75, 1.0]
+  },
+
+  "this_contract_is_not_runnable_yet_and_that_is_deliberate": {
+    "why": "Feeding has never had an operating-point search. v1 ran at the DEMO-01 visual point, which was selected for a lamina entry and a descending readout and has no bearing on a taste entry and a motor readout. The escape search showed what that is worth: eleven of thirty-six points drove its readout cleanly and the responsible parameter was one DEMO-01 had selected at the boundary of its own grid.",
+    "the_blocking_precondition": "A registered neural-only operating-point search for the tarsal-taste to MN9 route, blind to this contract and to F1 through F7, selecting a point on a declared grid. No such search exists as of this commit and none is registered. Until one is written, committed and run, this contract is NOT executed.",
+    "why_that_is_not_a_formality": "At the v1 operating point MN9 produced 10 spikes in 9 seconds, about 1.1 Hz across two cells. The decoder requires its threshold to hold for ten consecutive intervals, which 10 spikes scattered over 600 intervals cannot do. Running this contract at that point would produce a predictable F1 failure and would record it as a feeding negative for the second time on the second wrong basis.",
+    "if_the_search_selects_nothing": "That is the result, it is reported as a concrete neural-operating-point failure for this route, and this contract stays unrun."
+  },
+
+  "acceptance_criteria": {
+    "F1_the_extension_is_achieved_and_not_merely_commanded": {
+      "statement": "The achieved summed rostrum and haustellum pitch, read from qpos rather than from the command, must reach at least 0.70 rad and hold it for at least 200 ms.",
+      "min_achieved_rad": 0.7,
+      "min_sustained_us": 200000,
+      "why": "0.70 rad is half the 1.4 rad the two registered extensions sum to, so it cannot be reached by a command that the servo does not execute. The duration means a single-step transient cannot satisfy it. Both numbers were set before the body was measured; the measured achieved maximum is 1.1449 rad.",
+      "this_is_the_v1_F1_verbatim_and_that_is_deliberate": "The threshold, the duration and the reasoning are carried over character for character. The v1 F1 failed, and a failed criterion may never be restated in a weakened form. It is restated UNCHANGED because the defect being repaired is which population was decoded, not how high the bar was."
+    },
+    "F2_the_readout_causes_it": {
+      "statement": "The readout-ablated variant must never extend, and its peak achieved angle must stay at or below 0.05 rad.",
+      "max_ablated_achieved_rad": 0.05,
+      "why": "0.05 rad is the passive-hinge noise floor. The measured no-command baseline is 0.0015 rad.",
+      "note_that_this_control_was_vacuous_in_v1": "Ablation zeroes the decoded populations. In v1 the decoded pool was already silent in every variant, so readout-ablated was equivalent to exact and F2 passed by measuring nothing. Under this contract MN9 is the decoded population and the control has content for the first time."
+    },
+    "F3_the_stimulus_is_required": {
+      "statement": "With no sucrose patch the decoder must never extend.",
+      "why": "Separates a taste-driven extension from one the network produces anyway."
+    },
+    "F4_it_is_taste_and_not_touch": {
+      "statement": "In the contact-without-sucrose variant, with an identical patch geometry and identical friction but the taste channel held silent, the decoder must never extend.",
+      "why": "Without F4, F3 is passed by any mechanosensory contact transient, and the demonstration would be about stepping on something rather than tasting it. This is the criterion that makes it non-trivial.",
+      "it_was_never_scored_in_v1": "Recorded as NOT SCORED because the variant was not run. It is required here."
+    },
+    "F5_the_extension_tracks_the_concentration": {
+      "statement": "Across the four registered concentrations the peak achieved extension must be monotone non-decreasing with a Spearman rank correlation of at least 0.8.",
+      "min_spearman": 0.8,
+      "why": "At n equals four, 0.8 admits exactly one adjacent inversion. 1.0 would be unfalsifiable by noise and 0.6 would admit two.",
+      "gated_by_F7": true
+    },
+    "F6_the_pump_is_recorded_and_was_not_decoded": {
+      "statement": "Every recorded trace must carry raw spike counts for pharyngeal-pump-mn and haustellum-candidates alongside rostrum-mn9, and the decoded population named in the run summary must be rostrum-mn9 and nothing else.",
+      "why": "The central v1 defect was decoding one population while describing it as another. This criterion makes the mapping itself falsifiable from the artifact rather than resting on a docstring.",
+      "this_criterion_is_optional_to_pass": false
+    },
+    "F7_the_spike_count_is_large_enough_to_rank": {
+      "statement": "Each scored concentration epoch must contain at least 20 raw decoded spikes from rostrum-mn9. If it does not, F5 is recorded as NOT SCORED and never as a pass or a fail.",
+      "min_raw_spikes_per_epoch": 20,
+      "why": "This is the DEMO-01 C5 floor, per epoch, stated in the form it was actually written in: each cue epoch scored intervals must contain at least 20 raw spikes across the two decoded readout populations. The grooming search weakened this to the better side and admitted a selectivity index of plus 1.000 computed from one spike against zero. A rank correlation over four concentrations is exactly as fragile.",
+      "what_it_does_not_gate": "F1. If the readout does not fire, the body does not extend, and that is a genuine failure of the demonstration rather than an unscoreable measurement. F7 gates only the criterion whose arithmetic becomes meaningless at small counts."
+    }
+  },
+
+  "there_is_no_topology_gate_in_this_contract": "v1 carried a topology gate and it passed, because the shuffled run produced zero spikes from a pool that produced zero spikes in every variant including the exact one. That pass measured nothing. Beyond that, SHUFFLE_CONTROL_REGIME_MATCHED.md shows the naive shuffle moves the network to a different excitability regime -- 56.05 Hz of descending drive against 9.32 Hz on the escape route -- so passing or failing such a gate licenses nothing about topology. The shuffled-connectome variant is still run and still recorded, as an observation and not as a gate, exactly as demo02-escape-legs-v1 does.",
+
+  "control_variants": [
+    "exact", "readout-ablated", "stimulus-absent", "contact-without-sucrose",
+    "shuffled-connectome", "command-replay", "zero-tonic-drive"
+  ],
+  "required_controls": [
+    "exact", "readout-ablated", "stimulus-absent", "contact-without-sucrose"
+  ],
+  "control_criteria": {
+    "contact-without-sucrose": "Identical patch, identical friction, taste channel silent. The one control that separates taste from touch.",
+    "shuffled-connectome": "Recorded as an observation about the shuffle, not as a topology gate.",
+    "command-replay": "AGENTS.md section 10. The recorded commands of the exact run driven into the body with the graph playing no part.",
+    "controller-only": "NOT LISTED. Unimplemented, and the runner refuses it rather than silently executing the exact run with the stimulus muted."
+  },
+
+  "claim_ladder": {
+    "if_F1_fails": "NO DEMONSTRATION.",
+    "if_F1_passes_and_F2_or_F3_fails": "INVALID AS A CAUSAL CLAIM.",
+    "if_F4_fails": "NOT A TASTE DEMONSTRATION. The extension followed contact rather than sugar, and must be described as a contact response.",
+    "if_F1_to_F4_and_F6_pass_and_F5_fails": "CAUSAL BUT NOT GRADED. The extension is caused by the taste channel and does not track its strength.",
+    "if_F1_to_F4_and_F6_pass_and_F5_is_NOT_SCORED": "CAUSAL, GRADING NOT ESTABLISHED. The spike count was too low to rank and the contract says so rather than reporting a correlation computed on single spikes.",
+    "if_F1_to_F7_pass": "FULL-GRAPH CAUSAL PROBOSCIS EXTENSION FROM TARSAL TASTE, on three seeds. Topology-specificity is NOT claimed and cannot be: this contract has no topology gate.",
+    "may_never_claim": "Ingestion. That anything was eaten, tasted at the mouth, or pumped. That the pharyngeal pump did anything downstream. That any haustellum motor neuron was identified. That this is the proboscis extension reflex, which is defined by labellar contact, where this is tarsal. That the amplitude corresponds to any measured fly."
+  },
+
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. This is engineering acceptance, not evidence, and no criterion here validates a mechanism.",
+    "The readout assignment in v1 was reversed and this contract exists to correct it. Any reader comparing the two must know that the v1 feeding negative was a statement about the pharyngeal pump.",
+    "The decoded readout is TWO cells. Every quantity scored from it is a raw spike count and none is a rate.",
+    "The haustellum component of the commanded pose is an engineered scaffold. No motor neuron for it is identified, because the sources conflict.",
+    "A female NeuroMechFly body prior is driven by a male CNS graph.",
+    "Leg movement comes from a published engineered central pattern generator. No part of the simulated ventral cord contributes to it.",
+    "Every sensory transducer is a declared saturating curve. No fly produced any of these numbers.",
+    "Sensory delay is quantised to the 15 ms coupling interval, so conduction delays that differ by less than one interval are indistinguishable.",
+    "Baseline sensory rate is zero, so there is no spontaneous afferent activity.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero, which is a named regression control and not a physiological model.",
+    "Electrical synapses are omitted globally (ND-07).",
+    "The route survey that chose these populations is structural, blind to sign and dynamics, and has a demonstrated false negative: the validated DEMO-01 lamina entry scores 0.44 times the matched null at the 0th percentile. A low score rules nothing out, and no survey number appears in any criterion here.",
+    "The DEMO-01 verdict is not inherited. Its station-keeping gain, its 2.294 mm residual drift and the +11.5 degree drift bearing that chose its cue placement belong to a 42-actuator plant, and every body here actuates a different set.",
+    "There is no labellum, no labrum and no pharynx in this body, so there is no ingestion and nothing to taste with at the mouth.",
+    "The anatomically correct route, labellar bristle to MN9 at 48.6 times the null, is the one that was NOT built, and the reason is the missing mouth part.",
+    "The sucrose concentration is an invented number. Only its contact gate is real."
+  ],
+
+  "no_criterion_may_be_restated": "F1 to F7, their thresholds, the duration, the seed set, the concentration set and the required control set are closed as of this commit.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. This is a pose, and the contract says so in every section.",
+  "last_reviewed": "2026-09-12"
+}

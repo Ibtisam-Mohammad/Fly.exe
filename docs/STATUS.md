@@ -1,6 +1,10 @@
 # Implementation status
 
-Status date: 2026-09-09
+Status date: 2026-09-12
+
+> The header said 2026-09-09 while entries below it were dated 2026-09-12. Anyone
+> reading the top of this file to decide whether it was current was told it was three
+> days stale when it was not.
 
 ## Implemented
 
@@ -1227,7 +1231,7 @@ set's 50.43) - the first in this project, added because latency arrays were scor
 amplitudes this morning - and a degeneracy check confirming the refuted null lands inside
 at only 0.581, so J1 discriminates rather than passing everything.
 
-**Tier: V1-limited**, scoped to ORN-to-uniglomerular-PN paired-pulse and 1 Hz train
+**Tier: none.** The observable is a V2 Synaptic one, scoped to ORN-to-uniglomerular-PN paired-pulse and 1 Hz train
 observables, one laboratory, an unstated glomerular mixture.
 
 **What it does not establish.** Nothing above 1 Hz - the primary predicts 0.195 at 7 Hz
@@ -1467,6 +1471,59 @@ than expansion rate.
 
 Grooming and feeding stand as recorded, and by the same argument are **untested rather than
 refuted**: no search has been run for either.
+
+## 2026-09-12 (second entry): an external review, and eleven repairs
+
+An external review read the repository at `3aff09d`. Twenty three of its twenty six specific
+claims were confirmed against the code, the recorded artifacts and the primary sources; three
+were overstated in detail and correct in substance. None of its three critical findings was
+wrong. `ADR-2026-018` records all of it, including what the review got wrong and what it
+missed.
+
+**The feeding readout was reversed.** `MN9` is the rostrum protractor whose motor neuron
+elicits proboscis extension; `MN10` to `MN12` are the pharyngeal pump. DEMO-02 decoded the
+pump and recorded the extensor. In the recorded matrix the decoded pool produced **zero**
+spikes in every variant while `MN9` produced 10 in exact, 0 without the stimulus and 0 under
+the shuffle. `MOTOR-07` registers the corrected mapping with its source and with the
+`exitNerve` check that could have refuted it. `demo02-feeding-v2` supersedes v1 and declares
+itself unrunnable until this route has an operating-point search, which it does not.
+
+**No multi-seed DEMO-02 claim was ever supported.** The runner loaded the seed set and
+executed `seeds[0]`, and `--seed N` selected the artifact path reserved for single-seed
+contracts, so each seed overwrote the last. The statement that the contracts were evaluated
+on three seeds is withdrawn. The runner now loops every seed, every verdict carries its seed,
+commit, contract hash and per-variant provenance, and a new `EVIDENCE CHAIN BROKEN` verdict
+fires when a matrix spans commits or seeds or is missing a required control.
+
+**`A5` is suspended and `TOPOLOGY-SPECIFIC` is withdrawn from DEMO-01.**
+`SHUFFLE_CONTROL_REGIME_MATCHED.md` had already shown the control confounded and declined to
+withdraw the claim. That was the wrong call: a recorded verdict stays on the record, a live
+claim does not survive its instrument. `A1` to `A4` stand and so does FULL-GRAPH CAUSAL
+EMBODIMENT.
+
+**`V1-limited` and `V2-restricted` were never tiers** and are removed from the registry, four
+contracts, three documents and four tests. The short-term-plasticity module carries no tier;
+it is a frozen phenomenological candidate, implemented in none of the three engines.
+
+**The Stage 3 antennal-lobe contract was unscorable** on two counts: it deleted `LN`-to-`PN`
+edges and called that GABA blockade while omitting presynaptic inhibition at ORN terminals
+entirely, and it scored an input-output exponent under blockade when the only blockade file
+in the corpus is a pulse series. `stage3-antennal-lobe-restricted-v2` adds the `LN`-to-`ORN`
+arm, scores adaptation under blockade and the exponent on the dose-response files, and adds a
+fifth precondition. Nothing was opened; nothing is spent.
+
+**Six further defects, each fail-open.** Command replay ran one 15 ms interval behind the run
+it replayed. Trace rows mixed start-of-interval sensors with end-of-interval body state under
+one stamp. Acceptance could score a stale summary against a truncated trace. `entry-swapped`
+and `suppress-groom-replay` were silent no-ops that executed the exact run under a control's
+name. The registered `NUM-01` sensory delay was bound at zero. `read_outputs` cached its index
+on the id **count**, the NumPy LIF started every neuron at the global resting potential before
+binding per-neuron values, and MuJoCo's silent repair of non-finite accelerations was never
+rejected.
+
+**Tier unchanged: V0 Structural.** Stage 2 stays `v4` at 0 of 3. Stage 3 stays sealed. Two of
+these repairs remove a claim the project had been making.
+
 
 ## 2026-09-12: verification, two searches, and a narrowed topology claim
 

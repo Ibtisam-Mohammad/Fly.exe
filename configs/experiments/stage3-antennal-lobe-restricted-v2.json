@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "stage3-antennal-lobe-restricted-v2",
+  "title": "A restricted antennal-lobe activity-prediction contract, with its intervention matched to the mechanism and its hypotheses matched to the files that exist",
+  "status": "PREPARED AND SEALED. Nothing in the Takagi corpus may be opened under this contract.",
+  "provenance": "P",
+  "preregistered_on": "2026-09-12",
+  "values_opened": false,
+  "adr": "ADR-2026-018",
+  "seal": "SEALED. See blocking_preconditions. The seal lifts only when every precondition below is satisfied and this contract is amended to record how, in a commit made before any value is read.",
+  "assumption_ids": ["ND-03", "ND-06", "ND-10", "VAL-01", "VAL-03"],
+
+  "supersedes": {
+    "experiment_id": "stage3-antennal-lobe-restricted-v1",
+    "why": "Two independent faults, either of which alone makes it unscorable. Both were found by an external review on 2026-09-12 and both are confirmed against the intake manifest and the primary source. Nothing was opened under v1 and nothing is spent, so this is an ordering correction and not a loss.",
+    "fault_1_the_intervention_does_not_match_the_mechanism": "v1's circuit carries ORN to PN, ORN to LN, LN to PN and LN to LN edges, and its S2 deletes the LN-to-PN edges and calls that the model's counterpart of GABA-A and GABA-B blockade. Adult antennal-lobe gain control is substantially PRESYNAPTIC inhibition at ORN axon terminals, which in a connectome appears as LN-to-ORN edges -- and v1's edge list has none. So v1's blockade deletes one arm of a two-arm mechanism and predicts the consequence of the whole. Olsen and Wilson 2008 is the source, and v1's own precondition P2 records that it has never been read into the parameter corpus, so the omission was not a judgement call.",
+    "fault_2_the_observable_does_not_match_the_data": "v1's S1 and S2 both score a power-law exponent fitted to an input-output curve, and S2 scores that exponent UNDER BLOCKADE. The intake manifest lists the blockade file as 'dataframe_VM5d PN_PTX+CGP54626 (Figure 6a)', a PULSE series in one glomerulus, and lists the dose-response curves as six separate files with no blockade condition -- which v1 then SEALS, in its own what_gets_spent block. There is no measured input-output curve under blockade anywhere in the corpus, so v1's primary discriminating hypothesis had no source array behind it.",
+    "what_is_kept_from_v1": "Its restriction to the four imaged glomeruli; its five fixes to the design before it; its insistence that the band come from elsewhere than the dataset under test; its ND-10 sign control; its S3 fallback; and its statement that this contract's only present function is to fix criteria before the data can be reached."
+  },
+
+  "the_circuit": {
+    "glomeruli": ["VM5d", "DM2", "DM4", "VA2"],
+    "why_these_four": "They are the four Takagi and colleagues imaged with matched OSN and PN responses. The restriction is theirs, not a choice made to suit the model.",
+    "neurons": "the olfactory receptor neurons of those four glomeruli, their uniglomerular projection neurons, and every GABAergic multiglomerular local neuron with synapses in two or more of the four",
+    "edges": [
+      "ORN to PN",
+      "ORN to LN",
+      "LN to PN",
+      "LN to LN",
+      "LN to ORN -- ADDED IN v2, and it is the point of v2"
+    ],
+    "why_LN_to_ORN_is_not_optional": "It is the connectome's representation of presynaptic inhibition at the ORN terminal. Olsen and Wilson show that adult antennal-lobe gain control is substantially presynaptic, so a circuit without these edges is missing an arm of the mechanism it claims to test and a blockade without them is a partial blockade. If the release turns out to carry few or no LN-to-ORN edges in this subcircuit, that is a finding about the release and it is recorded as one -- it is NOT a reason to fall back to v1's edge list.",
+    "what_is_left_out_and_why": "Every other glomerulus, which means the local neurons carry only part of their real input; the lateral horn and mushroom body, which receive PN output and do not feed back into the lobe at this scale; and the multiglomerular projection neurons, which ND-06's plasticity rule is not scoped to. Each omission makes the local-neuron drive an underestimate, so every predicted inhibitory effect is a lower bound and must be scored as one."
+  },
+
+  "polarity_is_carried_as_an_alternative_and_not_asserted": {
+    "why": "ND-10 records that edge sign is a function of the transmitter and the postsynaptic receptor, and that partner-resolved receptor localisation does not exist at connectome scale. The MaleCNS receptorType annotation carries 752 non-null entries, all gustatory. So the sign of every edge in this circuit is formally unresolved, including the ones the whole gain-control story rests on.",
+    "consequence_for_this_contract": "The circuit is run under the transmitter-only sign rule, which ND-10 registers as a named regression control rather than the physiological default. Every hypothesis below must hold under that control, and the artifact must state that it is the control and not a resolved sign. If a hypothesis holds only under one of several sign alternatives, that is recorded as a conditional result and awards nothing.",
+    "the_honest_summary": "This circuit's most confident sign assignment is that the GABAergic local neurons inhibit their targets, and even that is transmitter-based inference rather than partner-resolved measurement."
+  },
+
+  "hypotheses": [
+    {
+      "id": "S1",
+      "name": "the projection-neuron dose-response curve compresses its own glomerulus's receptor-neuron drive",
+      "primary": true,
+      "observable": "matched OSN and PN dose-response curves in the same glomerulus",
+      "source_files": [
+        "Source Data/calcium imaging/dataframe_VM5d OSN_dose-response (SuppFig 8a)",
+        "dataframe_VM5d PN_dose-response (SuppFig 8b)",
+        "dataframe_DM2 OSN_dose-response (8c)",
+        "dataframe_DM2 PN_dose-response (8d)",
+        "DM4 (SuppFig 11c-d)",
+        "VA2 (SuppFig 11a-b)"
+      ],
+      "statement": "Driving the restricted circuit with each glomerulus's measured OSN dose-response and reading out that glomerulus's PN response through VAL-03, the predicted PN-against-OSN relation is compressive, and its exponent when fitted as a power law lies inside a band fixed from published measurements rather than from Takagi and colleagues.",
+      "why_it_changed_from_v1": "v1 aimed this at the PULSE files, which vary time and not concentration, so there was no input axis to fit an input-output exponent along. The dose-response files are the ones that carry a concentration axis, and v1 sealed them. They are opened here because they are the files the hypothesis is actually about.",
+      "the_band_comes_from_elsewhere_on_purpose": "Olsen and Wilson's and Bhandawat and colleagues' measurements of the antennal-lobe input-output transformation are the source of the band. Taking it from the dataset under test would make S1 a fit. The exact numerical band must be extracted into the parameter corpus and written into this contract in the amendment that lifts the seal, and it must be extracted before any Takagi value is opened.",
+      "degenerate_outcome_check": "Compression can be produced by VAL-03 alone. S1 passes only if the predicted exponent lies inside the band across the whole registered VAL-03 sensitivity sweep, and it is recorded as NOT SCORED if the sweep's range of exponents is wider than the band itself, because then the observation model rather than the circuit is doing the work."
+    },
+    {
+      "id": "S2",
+      "name": "blocking GABA receptors reduces pulse-to-pulse adaptation",
+      "primary": true,
+      "observable": "the ratio of the PN response to a late pulse against the first pulse, in a train, with and without blockers",
+      "source_files": [
+        "dataframe_VM5d PN_pulses (Figure 5j)",
+        "dataframe_VM5d PN_PTX+CGP54626 (Figure 6a)",
+        "dataframe_VM5d OSN_pulses (Figure 5i), as the model's input"
+      ],
+      "statement": "With every LN-to-PN AND LN-to-ORN edge removed from the circuit, which is the model's counterpart of picrotoxin plus CGP54626, the predicted pulse-to-pulse adaptation ratio moves toward one -- less adaptation -- by at least the amount recorded in the amendment, and the predicted DIRECTION of change matches the measured direction.",
+      "why_it_changed_from_v1": "This is the observable the blockade file actually holds. v1 scored an exponent under blockade and no such measurement exists in the corpus. The paper's own result is about adaptation: pathways with increased sensory pooling show REDUCED PN adaptation, attributed to weakened lateral inhibition. Predicting the direction of an adaptation change under a blocker is a real test of a wired, signed inhibitory network and it is scorable from the files that were staged.",
+      "the_intervention_is_now_the_whole_mechanism": "Deleting LN-to-PN alone models postsynaptic inhibition only. Picrotoxin and CGP54626 block GABA-A and GABA-B receptors wherever they sit, including on ORN terminals, so the model's counterpart must delete LN-to-ORN as well. Scoring the LN-to-PN-only deletion in parallel is required and is reported as a DIAGNOSTIC decomposition, never as the hypothesis.",
+      "why_it_is_the_stronger_test": "S1 alone can be passed by any compressive mechanism, including the indicator. S2 is a causal manipulation with a predicted direction, applied to the circuit elements the connectome supplies and the observation model does not.",
+      "the_lower_bound_disclosure": "The restricted circuit omits the local neurons' input from the other forty-six glomeruli, so its lateral inhibition is an underestimate and its predicted change is a lower bound. S2 is therefore a one-sided test: predicting less change than measured is consistent with the omission, predicting more is not.",
+      "degenerate_outcome_check": "If removing every LN-to-PN and LN-to-ORN edge changes the predicted adaptation ratio by less than the measurement's own error, the restricted circuit has no lateral inhibition worth testing and S2 is recorded as NOT SCORED with that as the reason. A direction-only test is also refused if the intact model's own predicted adaptation is within measurement error of one, because a circuit that does not adapt cannot adapt less."
+    },
+    {
+      "id": "S3",
+      "name": "unilateral antennal ablation, against the measured contact asymmetry",
+      "primary": false,
+      "source_files": ["dataframe_VM5d PN_pulses_antenna ablation (Figure 6c)"],
+      "statement": "The bilateral structural test measured a 1.56-fold ipsilateral excess in ORN-to-PN contacts at p = 2.7e-31. Under unilateral antennal ablation the restricted circuit predicts a reduction in PN drive whose ratio between the ablated and intact sides follows that asymmetry, within a limit fixed in the amendment.",
+      "explicit_fallback_declared_now": "If the imaging files do not separate ipsilateral from contralateral drive, S3 is recorded as NOT SCORED and the reason given is the file structure. That determination must be made from the archive's file listing and the authors' analysis code, which are readable metadata, and it must be recorded before any imaging value is opened, so that the fallback cannot be invoked selectively later.",
+      "why_it_is_secondary": "It connects a structural measurement the project actually made to a physiological consequence, which is valuable, but it depends on the ablation being complete and on the contralateral projection having the same per-contact strength as the ipsilateral one. Kazama and Wilson measured equal ipsilateral and contralateral unitary EPSCs at p > 0.54, which supports that assumption without establishing it here."
+    }
+  ],
+
+  "blocking_preconditions": [
+    {
+      "id": "P1",
+      "requirement": "An ORN-to-PN synaptic transmission module that has passed a preregistered holdout, registered as ND-06 v0.2 or later with its passing artifact named.",
+      "met": false,
+      "status_on_2026-09-12": "Not met, and the ground moved under this precondition on 2026-09-12. The candidate, male-cns-orn-pn-stp-v0.3, passed one out-of-sample consistency test and was recorded as earning a 'V1-limited' tier. V1-limited was never a member of the formal V0-to-V8 ladder and has been removed repository-wide under ADR-2026-018. The module now carries NO tier, its own audit shows a zero-parameter cohort mean clears the same criteria, its observations are correlated with an effective dimensionality near 5 rather than 31, it misses the external 7 Hz check by roughly threefold, and it is implemented in NONE of the three simulation engines. A module no engine can execute cannot supply this circuit's dynamics."
+    },
+    {
+      "id": "P2",
+      "requirement": "An LN-to-PN AND LN-to-ORN transmission model with registered parameters and a stated provenance class.",
+      "met": false,
+      "status_on_2026-09-12": "Nothing registered for either. This is the larger gap and v2 widens it on purpose: v1 needed one inhibitory synapse class and v2 needs two, because a presynaptic terminal is not a dendrite and there is no reason to assume one set of parameters covers both. Olsen and Wilson 2008 and Wilson and Laurent 2005 are the obvious sources and neither has been read into the parameter corpus."
+    },
+    {
+      "id": "P3",
+      "requirement": "VAL-03, the calcium observation model, with its sensitivity sweep specified.",
+      "met": false,
+      "status_on_2026-09-12": "VAL-03 is registered in the assumption set. Its sweep is not specified to the standard S1 needs: it must state the indicator, its Hill exponent and saturation, its rise and decay kinetics, and the sweep over each; and it must state plainly that a compressive indicator transform can produce the saturating input-output curve S1 tests for even from a perfectly linear circuit. Without that sweep S1 is not a test of the circuit. S2 needs less from it, because a direction-of-change test survives a monotone transform, and that asymmetry is why S2 and not S1 is the load-bearing hypothesis."
+    },
+    {
+      "id": "P4",
+      "requirement": "The species assignment of every calcium-imaging file, from the archive readme and the authors' analysis code.",
+      "met": false,
+      "status_on_2026-09-12": "Not attempted. The paper compares D. melanogaster and D. sechellia and the calcium-imaging filenames do not carry the species. It requires no value to be opened and it is the cheapest of the five."
+    },
+    {
+      "id": "P5",
+      "requirement": "A count of LN-to-ORN edges and contacts within the restricted circuit, measured on MaleCNS v1.0 at the registered confidence threshold and recorded before any Takagi value is opened.",
+      "met": false,
+      "status_on_2026-09-12": "Not measured. New in v2. If the count is negligible, S2's intervention collapses back to v1's and the contract must say so BEFORE it is scored, not afterwards, because discovering it afterwards would let a partial blockade be reported as a whole one. This measurement uses only the locked connectome and opens nothing."
+    }
+  ],
+
+  "what_gets_spent": {
+    "the_osn_arrays": "S1 uses the measured OSN dose-response as the model's input and S2 uses the measured OSN pulse response as its input, which opens both and spends them. They can never afterwards serve as a holdout for anything, including a receptor-tuning model. That is a real and irreversible cost and it is accepted here in exchange for removing the odour-encoding problem from the contract entirely.",
+    "the_pn_dose_response_arrays": "The holdout for S1. Opened once, scored once. v1 sealed these; v2 spends them, because they are the only files carrying the axis S1 needs.",
+    "the_pn_pulse_arrays": "The baseline for S2. Opened once.",
+    "the_blockade_condition": "The holdout for S2. Opened once, scored once.",
+    "the_ablation_condition": "Opened for S3 only if S3 is scorable; otherwise left sealed.",
+    "the_nicotinic_blockade": "Left sealed. It would test the ORN-to-PN sign directly, which is an ND-10 question and deserves its own contract rather than being folded into this one.",
+    "the_behaviour_files": "Left sealed and out of scope: tethered flight and wind tunnel are not activity predictions from a connectome.",
+    "the_sechellia_files": "Left sealed. This project has a melanogaster connectome and no D. sechellia connectome, so its files can never be a target here."
+  },
+
+  "what_a_pass_would_and_would_not_establish": {
+    "would": "That a connectome-constrained circuit model, given a measured input, predicts a measured output in a four-glomerulus subcircuit under one causal manipulation applied to both arms of the mechanism. That is the project's first circuit-level activity prediction. It awards NO TIER by itself: any tier is awarded by an evidence bundle, would be V3 Circuit at the earliest, and would name the four glomeruli, the observation model and the sign control.",
+    "would_not": "Anything about the other forty-six glomeruli, about odour identity, about temporal dynamics beyond whatever VAL-03's kinetics resolve, about the mushroom body or lateral horn, or about edge sign, which stays unresolved under ND-10 whatever this contract returns. It would not license a whole-brain claim of any kind, and it would not license anything about D. sechellia.",
+    "and_if_it_fails": "The failure would be attributable, which is the point of restricting it: five preconditions, two intervention arms and one sign control are named, so a failure can be traced to the dynamics module, the observation model, the sign rule, the omitted lateral input or the presynaptic arm rather than to the enterprise."
+  },
+
+  "no_criterion_may_be_restated": "S1 to S3, the circuit's edge list, the source files named against each hypothesis, the five preconditions and the spend ledger are closed as of this commit. The numerical bands are not yet fixed and must be written into the amendment that lifts the seal, from sources outside the Takagi corpus, before any value is opened.",
+  "claim_boundary": "A prepared and sealed contract. It scores nothing, opens nothing, awards no tier, and its only present function is to fix the criteria before the data can be reached and to state exactly which five things must exist first.",
+  "last_reviewed": "2026-09-12"
+}

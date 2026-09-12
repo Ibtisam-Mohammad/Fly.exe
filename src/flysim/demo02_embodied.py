@@ -211,6 +211,15 @@ def compiled_kernel_fingerprint(build_root: Path, identity: str) -> dict[str, An
             "note": "no librunner.so found under the build key"}
 
 
+def _sha256_file(path: Path) -> str:
+    """The recorded bytes of a file, so a later reader can prove it is the same file."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 class Recorder:
     """Streams one row per coupling interval, plus poses and spikes."""
 
@@ -277,7 +286,7 @@ class Recorder:
 
 
 def _bindings(
-    atlas: SensoryAtlas, behaviour: str, *, variant: str
+    atlas: SensoryAtlas, behaviour: str, *, variant: str, sensory_delay_us: int = 0
 ) -> tuple[ChannelBinding, ...]:
     channels = entry_channels(behaviour)
     silent = variant in {"stimulus-absent", "controller-only", "command-replay"}
@@ -293,7 +302,7 @@ def _bindings(
                 key=key,
                 sensor_id=sensor,
                 transducer=TRANSDUCERS[key.modality],
-                delay_us=0,
+                delay_us=sensory_delay_us,
                 enabled=not silent,
                 kind=atlas.modality_kind.get(key.modality, "real"),
                 why=f"{behaviour} entry",
@@ -334,6 +343,20 @@ def run_behaviour(
     coupling_us = int(contract["fixed_parameters"]["coupling_us"])
     if duration_us % coupling_us:
         raise ConfigurationError("The duration must be a whole number of intervals")
+    # NUM-01 registers a 2000 us sensory delay realised as ceil(2000/coupling)*coupling,
+    # and DEMO-02 bound every channel at zero, so the loop realised a motor delay only
+    # while the summary reported `sensorimotor_delay_us` as though both legs were there.
+    # The delay is now a contract-declared quantity. Contracts that predate this and say
+    # "the declared sensorimotor delay is one interval" carry no key, keep zero, and stay
+    # true; new contracts declare what they want and the summary records what was realised
+    # on both legs separately, so the two can never silently disagree again.
+    sensory_delay_us = int(contract["fixed_parameters"].get("sensory_delay_us", 0))
+    if sensory_delay_us % coupling_us:
+        raise ConfigurationError(
+            f"A {sensory_delay_us} us sensory delay is not a whole number of "
+            f"{coupling_us} us coupling intervals. NUM-01 quantises it to "
+            "ceil(registered / coupling) * coupling; declare the realised value."
+        )
 
     graph = SparseConnectome.load(graph_path)
     graph.validate()
@@ -413,7 +436,9 @@ def run_behaviour(
         )
         cue_object = ApproachingObject()
 
-    bindings = _bindings(atlas, behaviour, variant=variant)
+    bindings = _bindings(
+        atlas, behaviour, variant=variant, sensory_delay_us=sensory_delay_us
+    )
     bus = SensoryBus(atlas=atlas, bindings=bindings, coupling_us=coupling_us)
     readout = FilteredDescendingReadout(
         populations=populations,  # type: ignore[arg-type]
@@ -430,6 +455,7 @@ def run_behaviour(
     body = BehaviourBody(
         parameters=replace(
             body_parameters,
+            suppress_groom_replay=variant == "suppress-groom-replay",
             antennal_stimulus_side=(
                 "none" if stimulus_off or behaviour != "grooming"
                 else body_parameters.antennal_stimulus_side
@@ -466,6 +492,16 @@ def run_behaviour(
             "code would silently execute it as the exact run with the stimulus silenced, "
             "which is a different experiment wearing this one's name."
         )
+    if variant == "entry-swapped":
+        raise ConfigurationError(
+            "entry-swapped is named in demo02-grooming-v1 and is not implemented. It must "
+            "drive the same readout from the head-bristle tactile population at a MATCHED "
+            "total input rate, and matching that rate is a measurement nobody has made. "
+            "Until then this variant was not refused and not implemented either: it sat "
+            "in the variant list with no branch anywhere, so running it executed the "
+            "exact run under a control's name and would have recorded a control that "
+            "never happened."
+        )
 
     recorder = Recorder(output_directory, neuron_count=graph.neuron_count)
     readout_ids = populations.readout_body_ids
@@ -487,6 +523,31 @@ def run_behaviour(
         for step in range(intervals):
             t_us = step * coupling_us
             applied = pending
+            if replayed_commands is not None:
+                # Row k of the exact run's trace is the command the exact run APPLIED at
+                # step k. Routing it through `pending` applied it at step k+1, so the
+                # replay ran one 15 ms interval behind the run it was replaying and the
+                # control silently tested a shifted command sequence. Measured on the
+                # recorded escape pair: the first nonzero command is row 234 in exact and
+                # row 235 in the replay.
+                recorded = replayed_commands[min(step, len(replayed_commands) - 1)]
+                applied = ActuatorCommandFrame(
+                    t_us=t_us,
+                    ids=BEHAVIOUR_COMMAND_IDS,
+                    values=tuple(
+                        recorded.get(name, 0.0) for name in BEHAVIOUR_COMMAND_IDS
+                    ),
+                    units=applied.units,
+                    signal_type=applied.signal_type,
+                    provenance="E",
+                    assumption_ids=applied.assumption_ids,
+                    metadata={
+                        "state": "REPLAY",
+                        "replayed_from": str(output_directory.parent / "exact"),
+                        "replayed_row": min(step, len(replayed_commands) - 1),
+                        "the_graph_did_not_drive_this": True,
+                    },
+                )
             # The two effector controls the escape contract names. They gate the command
             # on its way to the body and touch nothing upstream, so the network, the
             # stimulus and the decoder are identical to the exact run and the only
@@ -534,26 +595,10 @@ def run_behaviour(
                 frozenset(DECODED[behaviour]) if variant == "readout-ablated"
                 else frozenset(),
             )
+            # The graph runs and its decode is recorded whatever the variant. Under
+            # command-replay it is simply never applied: `applied` was overwritten from
+            # the recorded trace at the top of this interval.
             pending = controller.decode(neural)
-            if replayed_commands is not None:
-                # The graph ran and its output is recorded, but it does not reach the body.
-                recorded = replayed_commands[min(step, len(replayed_commands) - 1)]
-                pending = ActuatorCommandFrame(
-                    t_us=pending.t_us,
-                    ids=BEHAVIOUR_COMMAND_IDS,
-                    values=tuple(
-                        recorded.get(name, 0.0) for name in BEHAVIOUR_COMMAND_IDS
-                    ),
-                    units=pending.units,
-                    signal_type=pending.signal_type,
-                    provenance="E",
-                    assumption_ids=pending.assumption_ids,
-                    metadata={
-                        "state": "REPLAY",
-                        "replayed_from": str(output_directory.parent / "exact"),
-                        "the_graph_did_not_drive_this": True,
-                    },
-                )
             if onset_us is None and controller.state.value == "ACTING":
                 onset_us = pending.t_us
             body.step_until(t_us + coupling_us)
@@ -561,7 +606,17 @@ def run_behaviour(
             metrics = body.metrics()
             recorder.add_interval(
                 {
+                    # One row spans one coupling interval and its parts are sampled at
+                    # different ends of it. `t_us` is the row's close and every criterion
+                    # in demo02_acceptance reads that; the three fields beside it say
+                    # which quantity belongs to which instant, so a latency scored off
+                    # this row can never silently compare a start-of-interval sensor
+                    # against an end-of-interval body state.
                     "t_us": t_us + coupling_us,
+                    "t_start_us": t_us,
+                    "t_sensors_us": t_us,
+                    "t_neural_us": t_us + coupling_us,
+                    "t_body_us": t_us + coupling_us,
                     "pose": {"x_mm": x_mm, "y_mm": y_mm, "z_mm": z_mm,
                              "heading_rad": heading},
                     "sensors": dict(zip(sensors.ids, sensors.values, strict=True)),
@@ -623,12 +678,37 @@ def run_behaviour(
             "station_keeping": body.station_keeping(),
             "takeoff": body.takeoff(),
             "coupling_us": coupling_us,
-            "sensorimotor_delay_us": coupling_us,
+            "delays": {
+                "realised_sensory_delay_us": sensory_delay_us,
+                "realised_motor_delay_us": coupling_us,
+                "realised_sensorimotor_delay_us": sensory_delay_us + coupling_us,
+                "num01_registered_sensory_delay_us": 2000,
+                "num01_registered_motor_delay_us": 2000,
+                "num01_effective_sensory_delay_us": 15000,
+                "num01_effective_motor_delay_us": 15000,
+                "deviates_from_num01": sensory_delay_us != 15000,
+                "why_the_motor_leg_is_one_interval": (
+                    "a command decoded at the close of interval k is applied at the "
+                    "start of interval k+1, which is one coupling interval by "
+                    "construction and is not configurable"
+                ),
+                "why_this_block_replaced_a_single_number": (
+                    "the summary previously reported sensorimotor_delay_us as one "
+                    "coupling interval without saying which leg supplied it, while "
+                    "NUM-01 registers both legs; the two disagreed and nothing said so"
+                ),
+            },
             "duration_us": duration_us,
             "intervals": intervals,
             "build_seconds": build_seconds,
             "simulation_seconds": simulation_seconds,
             "recording": recording,
+            # The trace is truncated when the recorder opens and the summary is written
+            # only on success, so a crashed run leaves a short trace beside an old
+            # summary. These two let the evaluator refuse that pair instead of scoring
+            # a stale verdict against a partial recording.
+            "trace_rows": len(recorder.rows),
+            "trace_sha256": _sha256_file(output_directory / "trace.jsonl"),
             "outcome": {
                 "displacement_mm": displacement,
                 "onset_us": onset_us,

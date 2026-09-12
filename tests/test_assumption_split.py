@@ -27,7 +27,7 @@ def records() -> dict[str, dict[str, Any]]:
 
 def test_the_set_identifier_moved_with_the_split() -> None:
     payload = json.loads(REGISTRY.read_text(encoding="utf-8"))
-    assert payload["assumption_set_id"] == "foundation-v0.9"
+    assert payload["assumption_set_id"] == "foundation-v0.10"
 
 
 def test_nd03_is_transmitter_identity_and_disclaims_edge_sign(
@@ -96,7 +96,7 @@ def test_the_live_scenario_requires_both_halves() -> None:
     scenario = json.loads(
         (REPO / "configs" / "scenarios" / "eon-malecns.json").read_text(encoding="utf-8")
     )
-    assert scenario["assumption_set"] == "foundation-v0.9"
+    assert scenario["assumption_set"] == "foundation-v0.10"
     required = scenario["required_assumptions"]
     assert "ND-03" in required
     assert "ND-10" in required

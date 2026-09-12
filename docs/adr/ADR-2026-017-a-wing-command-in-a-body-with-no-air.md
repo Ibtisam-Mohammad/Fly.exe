@@ -1,7 +1,7 @@
 # ADR-2026-017: A wing command in a body with no air
 
 Date: 2026-09-12
-Status: PROPOSED
+Status: accepted 2026-09-12. It was left PROPOSED for a day while `run_demo02_behaviour.py` already read `contract.adr == "ADR-2026-017"` and withheld the wing command on the strength of it, so a proposed decision was governing what the code did. Accepted under ADR-2026-018.
 
 ```yaml
 decision_id: ADR-2026-017

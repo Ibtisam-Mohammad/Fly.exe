@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "experiment_id": "stage2-stp-joint-holdout-v1",
   "title": "Score the jointly-fitted ORN-to-PN models once against the sealed day-0 1 Hz train",
-  "status": "EXECUTED 2026-09-10. PASSED: J1 at 31 of 31 pulses and J2 at a ratio of 0.096 against a limit of 0.5. The project's first passed dynamical validation, worth a V1-limited tier on the ORN-to-PN paired-pulse and 1 Hz train observables.",
+  "status": "EXECUTED 2026-09-10. PASSED: J1 at 31 of 31 pulses and J2 at a ratio of 0.096 against a limit of 0.5. The project's first passed dynamical validation, worth no tier; the observables are V2 Synaptic ones, the ORN-to-PN paired-pulse and 1 Hz train.",
   "provenance": "M/F",
   "preregistered_on": "2026-09-10",
   "values_opened": true,
@@ -317,14 +317,14 @@
   },
   "acceptance": {
     "verdict_rule": "PASS if and only if J1 and J2 both pass. J3 and J4 are reported and do not enter the verdict.",
-    "what_a_pass_would_establish": "That a short-term-plasticity model for the ORN-to-PN synapse, fitted to a paired-pulse curve and a train in one cohort and frozen with every predicted number written down beforehand, predicts an unseen cohort's train trajectory to within its measurement error and does so far better than the refuted rule it replaces. That would be this project's first passed dynamical validation, and it is worth a V1-limited tier on the ORN-to-PN train observable in one laboratory, carrying the day-0 developmental caveat.",
+    "what_a_pass_would_establish": "That a short-term-plasticity model for the ORN-to-PN synapse, fitted to a paired-pulse curve and a train in one cohort and frozen with every predicted number written down beforehand, predicts an unseen cohort's train trajectory to within its measurement error and does so far better than the refuted rule it replaces. That would be this project's first passed dynamical validation, and it is worth no tier; the observable is a V2 Synaptic one, the ORN-to-PN train in one laboratory, carrying the day-0 developmental caveat.",
     "what_a_pass_would_not_establish": "Not V2. Nothing about another laboratory, glomerulus or synapse class, nothing about latencies or absolute amplitudes, nothing about any perturbation, and nothing about edge sign, which stays unresolved under ND-10. It would not resolve the release-probability incompatibility: the primary's effective first-pulse utilisation is 0.084 against a measured 0.79, and the recorded structural bound says no single-pool family can reconcile those.",
     "what_a_failure_would_establish": "That a model fitted to both observables in one cohort still does not generalise to another cohort of the same observable, which would close the paired-pulse-plus-train route and leave only perturbation data or a different preparation.",
     "no_refitting": "No parameter may be changed on this outcome and no successor may cite this test as evidence for its values.",
     "no_criterion_may_be_restated": "J1's threshold, J2's margin, the normalisation, the missing-data rule, the internal consistency check and both degenerate-outcome checks are closed as of this commit.",
     "scored_once": "Fig3G's wild-type array is opened once."
   },
-  "claim_boundary": "One scoring pass over one sealed wild-type train array against models frozen beforehand, in a day-0 cohort whose maturity relative to the day-2-to-4 fit set is not established. It opens one array and can award at most a V1-limited tier.",
+  "claim_boundary": "One scoring pass over one sealed wild-type train array against models frozen beforehand, in a day-0 cohort whose maturity relative to the day-2-to-4 fit set is not established. It opens one array and awards no tier.",
   "last_reviewed": "2026-09-10",
   "execution_record": {
     "executed_on": "2026-09-10",
@@ -350,9 +350,11 @@
     },
     "what_this_establishes": "That a short-term-plasticity model for the ORN-to-PN synapse, fitted to a paired-pulse curve and a 1 Hz train in one cohort and frozen with every predicted number written down and checksum-pinned beforehand, predicts an unseen cohort's 32-pulse train trajectory inside its measurement error at every scorable pulse, and does so ten times better than the refuted rule it replaces. It is the project's first passed dynamical validation.",
     "the_tier_it_earns": {
-      "tier": "V1-limited",
-      "scope": "the ORN-to-uniglomerular-PN paired-pulse and 1 Hz train observables, in one laboratory, in Drosophila melanogaster, across an unstated mixture of glomeruli labelled by GH146-QF",
-      "it_is_not_V2": "nothing here is a circuit-level activity prediction"
+      "tier": null,
+      "why_no_tier": "V1-limited was not a tier. The formal ladder is V0 to V8 in flysim.evidence.ValidationTier and has no such member, and no evidence bundle awards one.",
+      "which_tier_this_would_fall_under": "V2 Synaptic. AGENTS.md defines it as sign, unitary amplitude, kinetics, failure and SHORT-TERM PLASTICITY for mapped pairs. The line this block used to carry -- 'it is not V2, nothing here is a circuit-level activity prediction' -- misread that table, which defines V2 by observable class and not by circuit scale.",
+      "scope_if_it_ever_earned_one": "the ORN-to-uniglomerular-PN paired-pulse and 1 Hz train observables, in one laboratory, in Drosophila melanogaster, across an unstated mixture of glomeruli labelled by GH146-QF",
+      "the_highest_supported_stage_tier_is_unchanged": "V0 Structural."
     },
     "what_it_does_not_establish": [
       "Anything about another laboratory, another glomerulus or another synapse class. The recordings pool an unstated glomerular mixture through a driver labelling about 60 per cent of projection neurons.",

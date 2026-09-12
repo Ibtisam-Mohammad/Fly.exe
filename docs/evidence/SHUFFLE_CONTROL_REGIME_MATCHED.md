@@ -65,11 +65,17 @@ selectivity, at matched activity.
 
 ## Consequences for what is already recorded
 
-`DEMO-01`'s `A5` passed and its claim is FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC.
+`DEMO-01`'s `A5` passed and its claim was FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC.
 That gate used the naive shuffle at the intact gain, so it compared a 9 Hz network against a
-56 Hz one. Its verdict is not withdrawn here -- it is a frozen recorded result and this is a
-different experiment on a different route -- but the word "topology-specific" in it rests on a
-control that this document shows is confounded. Anyone citing it should cite this alongside.
+56 Hz one.
+
+**Corrected on 2026-09-12: `A5` is suspended and the word "topology-specific" is withdrawn.**
+This section previously declined to withdraw it, on the grounds that the verdict is a frozen
+recorded result and this is a different experiment on a different route. Both of those facts
+are true and neither is a reason to keep a live claim standing on a control that has been
+shown to be confounded. A recorded verdict stays on the record; a claim citing it does not
+stay in force once its instrument fails. `A1` to `A4` are untouched and the causal-embodiment
+verdict stands. See the banner at the head of `DEMO01_FULL_GRAPH_EMBODIMENT.md`.
 
 `DEMO-02`'s `E7` was already reported as uninterpretable rather than failed, and
 `demo02-escape-legs-v1` has no topology gate at all. Both remain correct.

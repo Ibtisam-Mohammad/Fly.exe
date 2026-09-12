@@ -48,7 +48,7 @@ dense = {int(b): graph.dense_index(int(b)) for b in graph.body_ids}
 
 groups: dict[str, list[int]] = {}
 for behaviour, names in (("grooming", ("groom-dn-left", "groom-dn-right")),
-                         ("feeding", ("proboscis-mn",)),
+                         ("feeding", ("rostrum-mn9",)),
                          ("escape", ("giant-fibre-left", "giant-fibre-right"))):
     pops = Demo02Populations.resolve(
         ann, graph, behaviour=behaviour, entry_body_ids=atlas.entry_union

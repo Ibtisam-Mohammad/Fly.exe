@@ -611,7 +611,10 @@ def test_the_train_contract_records_unknown_overlap_with_consequences_declared()
     # The asymmetry is the whole point: a failure means more than a pass under this class.
     assert "FAILURE is stronger" in recorded
     assert "PASS is weaker" in recorded
-    assert "V1-limited" in recorded
+    # The classification used to cap a pass at "V1-limited", which was never a
+    # member of the formal ladder. It now caps it at nothing at all.
+    assert "awards no tier" in recorded
+    assert "V1-limited" not in recorded
     assert audit["no_value_was_opened_to_establish_any_of_this"] is True
 
 

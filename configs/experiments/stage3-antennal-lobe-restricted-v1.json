@@ -7,7 +7,12 @@
   "preregistered_on": "2026-09-10",
   "values_opened": false,
   "seal": "SEALED. See blocking_preconditions. The seal lifts only when every precondition below is satisfied and this contract is amended to record how, in a commit made before any value is read.",
-  "assumption_ids": ["ND-03", "ND-10", "ND-06", "VAL-03"],
+  "assumption_ids": [
+    "ND-03",
+    "ND-10",
+    "ND-06",
+    "VAL-03"
+  ],
   "why_this_exists": {
     "the_thing_the_project_is_for": "Predicting neural activity from a connectome. Everything else the project has done is either structure, which the connectome gives directly, or single-synapse dynamics, which is a means to this end. This is the first contract that states the end in a form small enough to be executed and sharp enough to be wrong.",
     "why_it_is_restricted": "The full antennal lobe has fifty glomeruli, several classes of local neuron and no validated dynamics anywhere in the project. A contract at that scale would be unfalsifiable in practice. This one is restricted to the four glomeruli Takagi and colleagues imaged, to their uniglomerular projection neurons and to the GABAergic multiglomerular local neurons connecting them, and to three hypotheses.",
@@ -21,7 +26,12 @@
     "item_5_the_antenna_ablation": "S3 scores it against the 1.56-fold ipsilateral contact asymmetry measured in the bilateral test, with an explicit fallback: if the imaging files do not separate ipsilateral from contralateral drive, S3 is recorded as NOT SCORED and the reason is the file structure rather than the outcome. That fallback is declared now so it cannot be invoked selectively later."
   },
   "the_circuit": {
-    "glomeruli": ["VM5d", "DM2", "DM4", "VA2"],
+    "glomeruli": [
+      "VM5d",
+      "DM2",
+      "DM4",
+      "VA2"
+    ],
     "why_these_four": "They are the four Takagi and colleagues imaged with matched OSN and PN responses. The restriction is theirs, not a choice made to suit the model.",
     "neurons": "the olfactory receptor neurons of those four glomeruli, their uniglomerular projection neurons, and every GABAergic multiglomerular local neuron with synapses in two or more of the four",
     "edges": "ORN to PN, ORN to LN, LN to PN and LN to LN within that neuron set, taken from MaleCNS v1.0 at the registered confidence threshold",
@@ -42,7 +52,7 @@
       "id": "P1",
       "requirement": "An ORN-to-PN synaptic transmission module that has passed a preregistered holdout, registered as ND-06 v0.2 or later with its passing artifact named.",
       "met": false,
-      "status_on_2026-09-10": "Under test. stage2-stp-developmental-holdout-v1 scores frozen candidates against the sealed day-1 and day-0 wild-type cohorts. A pass there would be a V1-limited tier on the paired-pulse observable only, which satisfies this precondition in letter and only barely in spirit: a paired-pulse pass says nothing about the train-frequency range an odour response occupies. The amendment that lifts this seal must say which."
+      "status_on_2026-09-10": "Under test. stage2-stp-developmental-holdout-v1 scores frozen candidates against the sealed day-1 and day-0 wild-type cohorts. A pass there awards no tier -- it speaks to the V2 Synaptic paired-pulse observable only -- which satisfies this precondition in letter and only barely in spirit: a paired-pulse pass says nothing about the train-frequency range an odour response occupies. The amendment that lifts this seal must say which."
     },
     {
       "id": "P2",
@@ -100,7 +110,7 @@
     "the_nicotinic_blockade": "Left sealed. It would test the ORN-to-PN sign directly, which is an ND-10 question and deserves its own contract rather than being folded into this one."
   },
   "what_a_pass_would_and_would_not_establish": {
-    "would": "That a connectome-constrained circuit model, given a measured input, predicts a measured output in a four-glomerulus subcircuit under one causal manipulation. That is the project's first circuit-level activity prediction and it would be worth a V2-restricted tier naming the four glomeruli, the observation model and the sign control.",
+    "would": "That a connectome-constrained circuit model, given a measured input, predicts a measured output in a four-glomerulus subcircuit under one causal manipulation. That is the project's first circuit-level activity prediction. It awards NO TIER by itself: V2-restricted, as this line previously read, was never a member of the formal V0-to-V8 ladder. Any tier would be awarded by an evidence bundle, would be V3 Circuit at the earliest, and would name the four glomeruli, the observation model and the sign control.",
     "would_not": "Anything about the other forty-six glomeruli, about odour identity, about temporal dynamics beyond whatever VAL-03's kinetics resolve, about the mushroom body or lateral horn, or about edge sign, which stays unresolved under ND-10 whatever this contract returns. It would not license a whole-brain claim of any kind.",
     "and_if_it_fails": "The failure would be attributable, which is the point of restricting it: three preconditions and one sign control are named, so a failure can be traced to the dynamics module, the observation model, the sign rule or the omitted lateral input rather than to the enterprise."
   },

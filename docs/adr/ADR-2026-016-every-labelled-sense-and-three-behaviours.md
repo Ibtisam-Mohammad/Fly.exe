@@ -251,10 +251,20 @@ because they bear on the decision rather than on the result.
 gate works and reproduces the photoreceptor case exactly, and the closed loop runs. Nothing in
 the reasoning that chose these three behaviours has been invalidated by the outcome.
 
-**The structural survey was vindicated where it could not be used.** `MN9` -- the pharyngeal
-pump, the target of the strongest feeding route at 48.6x a matched null, and the one this ADR
-explicitly declined to build a behaviour on because the body has no labellum and no pharynx --
-is the feeding readout that actually responded. The proboscis extensors substituted in its
+> **Corrected 2026-09-12 by ADR-2026-018.** Everything this ADR says about `MN9` being the
+> pharyngeal pump is wrong, and this ADR is where the error entered. Its own
+> `UNVERIFIED-IN-REPO` list records the mapping as "cited for the feeding readout choice and
+> not yet checked against a source here" -- and the readout was chosen on it anyway. Muscle 9
+> protracts the rostrum and its motor neuron elicits proboscis extension; muscles 5, 8, 10,
+> 11D, 11V, 12D, 12V and 13 are the pharyngeal set. Writing down a doubt and then building on
+> the doubted claim in the same document is worse than not noticing, and it is why `MOTOR-07`
+> now exists as a registered record with a source and a falsifiable release check.
+
+**The structural survey was vindicated where it could not be used.** `MN9` -- labelled the
+pharyngeal pump here and in fact the rostrum protractor, the target of the strongest feeding
+route at 48.6x a matched null, and the one this ADR explicitly declined to build a behaviour
+on because the body has no labellum and no pharynx -- is the feeding readout that actually
+responded. The proboscis extensors substituted in its
 place produced nothing. The rejected alternative was the correct one about the connectome and
 the wrong one about the body, exactly as the alternatives section said.
 

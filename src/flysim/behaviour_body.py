@@ -123,6 +123,11 @@ class BehaviourBodyParameters:
     groom_blend_in_us: int = 200_000
 
     # Feeding, Track A's registered extensions.
+    #: The `suppress-groom-replay` control. The grooming command is still decoded and the
+    #: decoder still enters ACTING; the published trajectory simply never reaches the
+    #: actuators. That is what makes it a paired control for bout displacement rather than
+    #: a second copy of the exact run, which is what it silently was until 2026-09-12.
+    suppress_groom_replay: bool = False
     feed_rostrum_extension_rad: float = 0.6
     feed_haustellum_extension_rad: float = 0.8
 
@@ -786,6 +791,8 @@ class BehaviourBody:
         """Replay the published trajectory, scaled by the decoded intensity."""
         if self._groom_started_us is None or not self._source_to_actuator:
             return frozenset()
+        if self.parameters.suppress_groom_replay:
+            return frozenset()
         intensity = min(1.0, max(0.0, self._command[COMMAND_GROOM]))
         elapsed_us = self._t_us - self._groom_started_us
         source_time = self._trajectory["time_s"]
@@ -972,6 +979,7 @@ class BehaviourBody:
             self._apply_physics_action()
             self._simulation.step()
             self._t_us += self.parameters.physics_dt_us
+            self._reject_nonfinite_physics()
             contact = self._leg_contact()
             airborne = not any(value > 0.0 for value in contact.values())
             if airborne:
@@ -989,6 +997,30 @@ class BehaviourBody:
             self._peak_thorax_z_mm = max(self._peak_thorax_z_mm, self.pose()[2])
         x_mm, y_mm, _, heading = self.pose()
         self._trajectory_log.append((self._t_us, x_mm, y_mm, heading))
+
+    def _reject_nonfinite_physics(self) -> None:
+        """Fail closed on a diverged integrator instead of recording what MuJoCo salvaged.
+
+        MuJoCo does not stop when an acceleration goes non-finite. It prints
+        ``WARNING: Nan, Inf or huge value in QACC`` to ``MUJOCO_LOG.TXT``, resets the
+        offending state and keeps going, so the simulation continues from a state no
+        equation of motion produced. Nothing downstream could tell: the trace records
+        finite poses, the summary records a clean commit, and every provenance guard in
+        this project passes, because they check identity and never whether the numbers
+        came from physics. One such warning is in this repository at 0.0545 s of some run
+        and nobody can now say which run, because nothing rejected it at the time.
+        """
+        data = self._simulation.mj_data
+        for name in ("qpos", "qvel", "qacc"):
+            array = np.asarray(getattr(data, name))
+            if not np.all(np.isfinite(array)):
+                bad = int(np.count_nonzero(~np.isfinite(array)))
+                index = int(np.argmax(~np.isfinite(array)))
+                raise CausalityError(
+                    f"The physics diverged at t={self._t_us} us: {bad} non-finite "
+                    f"value(s) in {name}, first at index {index}. MuJoCo would have "
+                    "reset this state and continued; this run is discarded instead."
+                )
 
     # -- readout -----------------------------------------------------------------
 

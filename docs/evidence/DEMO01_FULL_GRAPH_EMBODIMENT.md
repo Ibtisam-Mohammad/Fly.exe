@@ -337,7 +337,30 @@ Four variants, identical seed, 20 s each, from a clean tree at commit `a826dbb`.
 | A4 turn is cue-locked | PASS | -1.149 Hz and -38.37 deg share a sign | same sign |
 | A5 topology gate | PASS | shuffle diverges 20.107 mm | >= 3.0 mm |
 
-**Verdict: FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC.**
+> **A5 is suspended as of 2026-09-12, and with it the words TOPOLOGY-SPECIFIC.**
+> Everything below stands as recorded. What changed is not a number here but what the
+> shuffle control was later shown to be worth. `SHUFFLE_CONTROL_REGIME_MATCHED.md` measured
+> that a degree-preserving target shuffle does not preserve the operating regime: on the
+> escape route it runs the descending pool at 56.05 Hz against the intact 9.32 Hz, a
+> six-fold difference, and here it diverges 20.107 mm largely because it is a far more
+> excitable network. A5 compared a 9 Hz network against a 56 Hz one and asked whether the
+> behaviour differed. It did, and that licenses nothing about topology.
+>
+> Brought to matched activity -- shuffled gain 0.15, giving 0.97 times the intact
+> descending rate -- a random rewiring drives the same readout **just as hard** (104 and 78
+> spikes against 120 and 163) and reproduces **none** of its lateralisation (swing -0.098
+> against +2.000). So the suspended claim is specifically *the exact connectivity rather
+> than merely a network of its size and degree distribution is responsible*, which is
+> false at matched regime for the route that was tested.
+>
+> **A1 to A4 are unaffected and the causal-embodiment verdict stands.** The loop closed the
+> gap, the two causal controls did not, and the drift prediction held to 0.01 mm. Only the
+> topology qualifier is withdrawn, because only it depended on the confounded control.
+> This document was left carrying TOPOLOGY-SPECIFIC for a day after its own control was
+> shown unsound, which was a choice and the wrong one.
+
+**Verdict as recorded on 2026-09-11: FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC.**
+**Verdict as it stands on 2026-09-12: FULL-GRAPH CAUSAL EMBODIMENT.** A5 suspended.
 
 The intact loop closed 12.08 mm of a 14.02 mm gap. The two causal controls closed 0.135 mm
 and never once entered the locomoting state, a 93-fold ratio in approach.
@@ -360,8 +383,14 @@ sign-agreement fraction, reported and not scored, was 0.863.
 
 **May claim.** The body's behaviour depends on the simulated neural readout, computed on the
 exact released graph with all 165,122 neurons and all 25,563,197 edges built and executed,
-and it requires the stimulus. The exact connectivity, rather than merely a network of its
-size and degree distribution, is responsible at this operating point.
+and it requires the stimulus.
+
+**No longer claimed, suspended 2026-09-12.** That the exact connectivity, rather than merely
+a network of its size and degree distribution, is responsible at this operating point. The
+qualifier "at this operating point" was doing more work than it could bear: the shuffled
+network was not AT this operating point, it was at a six-fold more excitable one, and the
+control never tested what it was read as testing. See the banner above and
+`SHUFFLE_CONTROL_REGIME_MATCHED.md`.
 
 **May not claim, whatever the numbers say.** That this is what a fly does. That any
 parameter here is a measurement. That any mechanism is validated. That the tier has changed.
@@ -409,8 +438,10 @@ re-run from a clean tree at commit `e6e3588` and the frozen acceptance contract 
 | shuffled-connectome | 32.203305806 | +1.237121217 | 14.020681545 -> 43.103911657 | 1665000 | 0 |
 
 The largest absolute difference in any reported outcome is 0.000e+00, and all five criteria
-return the same verdicts, so the claim is unchanged: **FULL-GRAPH CAUSAL EMBODIMENT,
-TOPOLOGY-SPECIFIC**. The archived 2026-09-10 artifacts are kept at
+return the same verdicts, so the verification changed nothing: the claim recorded that day
+was **FULL-GRAPH CAUSAL EMBODIMENT, TOPOLOGY-SPECIFIC**, and it is **FULL-GRAPH CAUSAL
+EMBODIMENT** as of 2026-09-12 with A5 suspended for a reason that has nothing to do with
+this re-run. The archived 2026-09-10 artifacts are kept at
 `runs/archive/demo01-visual-lateral-2026-09-10/`.
 
 **Three things the first videos got wrong, none of which touched a number.**

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.9",
+  "assumption_set_id": "foundation-v0.10",
   "records": [
     {
       "id": "DATA-01",
@@ -142,7 +142,8 @@
       "status": "accepted",
       "validation": "timestep and latency convergence",
       "owner": "runtime",
-      "last_reviewed": "2026-09-08"
+      "last_reviewed": "2026-09-12",
+      "realisation_note_2026_09_12": "DEMO-02 bound every sensory channel at delay zero from its first run until 2026-09-12, so it realised the motor leg only -- one coupling interval, from decoding at the close of an interval and applying at the start of the next -- while its summary reported `sensorimotor_delay_us` as one interval without saying which leg that was. The sensory delay is now declared per contract as `fixed_parameters.sensory_delay_us`, must be a whole number of coupling intervals, and every run summary records realised_sensory_delay_us, realised_motor_delay_us and a deviates_from_num01 flag beside the registered values. Contracts frozen before this date carry no key, keep zero, and their own text -- 'the declared sensorimotor delay is one interval' -- stays true of the runs that scored them."
     },
     {
       "id": "ND-01",
@@ -910,6 +911,67 @@
     },
     {
       "status": "accepted",
+      "owner": "behaviour",
+      "last_reviewed": "2026-09-12",
+      "source": "McKellar and colleagues, eLife 2020;9:e54978, which partitions the sixteen proboscis muscles into eight positioning and eight pharyngeal, states that muscle 9 is a protractor of the rostrum whose motor neuron elicits proboscis extension, and fixes the naming convention. Schwarz and colleagues 2017 independently assign muscle groups 5, 10, 11 and 12 to pharyngeal pumping.",
+      "id": "MOTOR-07",
+      "name": "proboscis motor neuron identity",
+      "units": "cell type names as annotated in MaleCNS v1.0",
+      "provenance": "P",
+      "applies_to": "the DEMO-02 feeding readout and any decoder reading proboscis motor neurons",
+      "value": {
+        "rostrum_protractor_and_extension_readout": [
+          "MN9"
+        ],
+        "pharyngeal_pump": [
+          "MN5",
+          "MN10",
+          "MN11D",
+          "MN11V",
+          "MN12D"
+        ],
+        "haustellum_extensor": "UNRESOLVED",
+        "haustellum_candidates": [
+          "MN2Da",
+          "MN2Db",
+          "MN2V",
+          "MN4a",
+          "MN4b"
+        ],
+        "naming_convention": "a motor neuron is named after the muscle it innervates",
+        "positioning_muscles": [
+          "1",
+          "2D",
+          "2V",
+          "3",
+          "4",
+          "6",
+          "7",
+          "9"
+        ],
+        "pharyngeal_muscles": [
+          "5",
+          "8",
+          "10",
+          "11D",
+          "11V",
+          "12D",
+          "12V",
+          "13"
+        ]
+      },
+      "biological_mismatch": "The haustellum extensor is NOT resolved and is deliberately left so. McKellar names mn4 and Schwarz names MN2, and the two papers do not use the same motor neuron numbering: Schwarz writes that the motor neuron innervating muscle 9 is their MN1, while McKellar names it mn9. MaleCNS type names follow the muscle, which is McKellar's convention. Nothing in this project decodes a haustellum motor neuron and no artifact may name one.",
+      "uncertainty": {
+        "haustellum_extensor": [
+          "MN2Da/MN2Db/MN2V",
+          "MN4a/MN4b"
+        ]
+      },
+      "validation": "Checked against the locked release rather than asserted. MaleCNS records exitNerve for motor neurons: MN3L, MN3M, MN5, MN9, MN10, MN11D, MN11V and MN12D exit by the pharyngeal nerve and MN1, MN2Da, MN2Db, MN2V, MN4a, MN4b, MN6, MN7 and MN13 by the maxillary-labial nerve. This is a check the data could have failed and did not: MN9 exits by the PHARYNGEAL nerve, which reads as pump evidence, and McKellar's Table 1 puts the mn9 axon in that same nerve while its muscle positions the rostrum. So the nerve does not partition positioning from pumping and the muscle list does.",
+      "why_this_record_exists": "Because the mapping was wrong in code for a day and nothing in this repository could have caught it. ADR-2026-016 recorded it as UNVERIFIED-IN-REPO and the feeding readout was chosen on it anyway, inverted: the pharyngeal pump was decoded as the extensor and the extensor recorded as the pump. A registered record with a source and a falsifiable release check is the thing that was missing, so it is added here rather than left in a docstring."
+    },
+    {
+      "status": "accepted",
       "owner": "demo",
       "last_reviewed": "2026-09-11",
       "source": "ADR-2026-016",
@@ -968,6 +1030,12 @@
       "to": "foundation-v0.9",
       "on": "2026-09-11",
       "why": "ADR-2026-016. SENS-05 stopped reading 'deferred' for senses the code now drives and was rewritten per modality, with thermo and hygro recorded as absent because no world quantity exists rather than because their route scores are low. SENS-01's organ and side requirement became satisfiable from entryNerve and rootSide and is met for the first time. MOTOR-03 gained two takeoff commands, kept deliberately separate so each effector's contribution stays measurable. BODY-01 records that station-keeping gains are never inherited across actuated DOF sets, because DEMO-01's calibration is a property of its 42-actuator plant. ND-07 gained one curation candidate, blocked until its source is verified here. MOTOR-05, MOTOR-06, DEMO-02 and DEMO-03 were added; the last three were cited as assumption_ids in committed contracts and returned zero hits in this file."
+    },
+    {
+      "from": "foundation-v0.9",
+      "to": "foundation-v0.10",
+      "on": "2026-09-12",
+      "why": "ADR-2026-018, the external-review repair. MOTOR-07 is added because the proboscis motor mapping was reversed in code and no register entry existed to contradict it: MN9 is the rostrum protractor and MN10 to MN12 are the pharyngeal pump, and the haustellum extensor is recorded as UNRESOLVED because two sources name different cells. NUM-01 gains a realisation note: its 2000 us sensory delay was bound at zero throughout DEMO-02 while the run summary reported a single sensorimotor delay without saying which leg supplied it, so the sensory delay is now contract-declared and both legs are recorded separately in every summary."
     }
   ]
 }

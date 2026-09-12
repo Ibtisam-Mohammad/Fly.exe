@@ -20,4 +20,10 @@ jobs:
       - run: uv sync --frozen --extra data --extra render
       - run: uv run ruff check .
       - run: uv run mypy
-      - run: uv run pytest --cov=flysim --cov-report=term-missing
+      # A floor, so coverage cannot drift down unnoticed. It is set just under the
+      # 56.4 percent measured on 2026-09-12 rather than at an aspirational number:
+      # a floor nobody can meet gets deleted. The modules at zero are the ones that
+      # need a GPU, a body or both -- cli, demo01_embodied, demo02_embodied,
+      # demo02_acceptance, both probes and the renderers -- and CI has none of those,
+      # so raising this number means writing tests that run without them.
+      - run: uv run pytest --cov=flysim --cov-report=term-missing --cov-fail-under=56

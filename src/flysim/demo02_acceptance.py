@@ -15,13 +15,14 @@ is exactly plus or minus one, and that number is noise wearing a result's clothe
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from pathlib import Path
 from typing import Any
 
 from flysim.demo02 import DECODED as DECODED_BY_BEHAVIOUR
-from flysim.errors import ConfigurationError
+from flysim.errors import ConfigurationError, ValidationError
 
 NOT_SCORED = "not_scored"
 PASS = "pass"
@@ -34,13 +35,40 @@ VERDICT_CAUSAL_TOPOLOGY = "FULL-GRAPH CAUSAL BEHAVIOUR, TOPOLOGY-SPECIFIC"
 
 
 def read_variant(directory: Path) -> dict[str, Any]:
-    """Load one variant's recording. Raises rather than inventing a missing run."""
+    """Load one variant's recording, and refuse an incoherent one.
+
+    Runs write into a fixed directory. The recorder truncates ``trace.jsonl`` the moment
+    it opens and ``summary.json`` is replaced only after the run succeeds, so a run that
+    crashes or is killed leaves a short or empty trace beside the previous run's summary.
+    Nothing detected that pair: the evaluator read whichever rows were present and scored
+    them against a summary describing a different execution.
+    """
+    trace = directory / "trace.jsonl"
     summary = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
     rows = [
         json.loads(line)
-        for line in (directory / "trace.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in trace.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    expected = summary.get("intervals")
+    if isinstance(expected, int) and len(rows) != expected:
+        raise ValidationError(
+            f"{directory}: the summary describes {expected} intervals and the trace holds "
+            f"{len(rows)} rows. That is a summary from one execution beside a trace from "
+            "another; re-run the variant rather than scoring the pair."
+        )
+    recorded_digest = summary.get("trace_sha256")
+    if recorded_digest:
+        digest = hashlib.sha256()
+        with trace.open("rb") as handle:
+            for block in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(block)
+        if digest.hexdigest() != recorded_digest:
+            raise ValidationError(
+                f"{directory}: trace.jsonl hashes {digest.hexdigest()[:12]} and the "
+                f"summary records {str(recorded_digest)[:12]}. The trace has changed "
+                "since the run that wrote the summary."
+            )
     decoded = tuple(summary["populations"]["readout_sizes"])
     acting = [row for row in rows if row.get("command", {}).get("state") == "ACTING"]
     peak_readout = 0.0
@@ -252,6 +280,71 @@ def _attitude(variant: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _provenance(
+    contract: dict[str, Any], variants: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """What produced this verdict, per variant, and whether the matrix hangs together.
+
+    A verdict used to record only the names of the variants it scored. It did not record
+    which commit each was run at, which seed, whether the worktree was clean, or whether
+    the contract's required controls were present at all. A matrix assembled from four
+    commits over two days, missing two of the controls its own contract names, therefore
+    produced a verdict that looked exactly like a clean one.
+    """
+    per: dict[str, Any] = {}
+    for name, variant in sorted(variants.items()):
+        summary = variant["summary"]
+        per[name] = {
+            "code_commit": summary.get("code_commit"),
+            "worktree_dirty": summary.get("worktree_dirty"),
+            "seed": summary.get("seed"),
+            "experiment_id": summary.get("experiment_id"),
+            "experiment_sha256": summary.get("experiment_sha256"),
+            "build_key": summary.get("build_key"),
+            "wiring_sha256_12": summary.get("wiring_sha256_12"),
+            "compiled_kernel": (summary.get("compiled_kernel") or {}).get("sha256"),
+            "intervals": summary.get("intervals"),
+            "trace_sha256": summary.get("trace_sha256"),
+            "directory": variant.get("directory"),
+        }
+    commits = {v["code_commit"] for v in per.values() if v["code_commit"]}
+    seeds = {v["seed"] for v in per.values() if v["seed"] is not None}
+    hashes = {v["experiment_sha256"] for v in per.values() if v["experiment_sha256"]}
+    declared = list(contract.get("control_variants", []))
+    required = list(contract.get("required_controls", declared))
+    absent = [name for name in required if name not in variants]
+    faults: list[str] = []
+    if len(commits) > 1:
+        joined = ", ".join(sorted(c[:8] for c in commits))
+        faults.append(
+            f"the variants were run at {len(commits)} different commits ({joined}), so "
+            "they do not describe one version of the code"
+        )
+    if len(seeds) > 1:
+        faults.append(
+            f"the variants carry different seeds ({sorted(seeds)}), so they are not one "
+            "matrix"
+        )
+    if len(hashes) > 1:
+        faults.append("the variants were run against different versions of the contract")
+    if any(v["worktree_dirty"] for v in per.values()):
+        faults.append("at least one variant was run from a dirty worktree")
+    if absent:
+        faults.append(
+            "the contract requires controls that were not recorded: " + ", ".join(absent)
+        )
+    return {
+        "per_variant": per,
+        "required_controls": required,
+        "required_controls_missing": absent,
+        "declared_controls_missing": [n for n in declared if n not in variants],
+        "code_commits": sorted(commits),
+        "seeds": sorted(seeds),
+        "chain_faults": faults,
+        "chain_is_sound": not faults,
+    }
+
+
 def evaluate(
     *, behaviour: str, contract: dict[str, Any], variants: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
@@ -259,6 +352,7 @@ def evaluate(
     criteria = contract["acceptance_criteria"]
     exact = variants.get("exact")
     results: dict[str, dict[str, Any]] = {}
+    provenance = _provenance(contract, variants)
 
     def missing(*names: str) -> str | None:
         absent = [name for name in names if name not in variants]
@@ -276,6 +370,7 @@ def evaluate(
             "claim_boundary": contract["claim_boundary"],
             "tier": "V0 Structural, unchanged. This is engineering acceptance, not evidence.",
             "variants_recorded": sorted(variants),
+            "provenance": provenance,
             "why_no_verdict": (
                 "The exact run is not among the recorded variants, so there is nothing to "
                 "score the controls against."
@@ -628,6 +723,12 @@ def evaluate(
         verdict = VERDICT_NO_DEMONSTRATION
     elif results[ablated_name]["status"] == FAIL or results[absent_name]["status"] == FAIL:
         verdict = VERDICT_INVALID
+    elif not provenance["chain_is_sound"]:
+        # A matrix that does not describe one commit, one seed and one contract, with
+        # every required control present, cannot support a positive claim whatever its
+        # criteria say. This sits below the two failure branches and not above them
+        # because a broken chain does not rescue a run that already failed.
+        verdict = "EVIDENCE CHAIN BROKEN"
     elif failed_required or unscored_required:
         verdict = "INCOMPLETE"
     elif has_gate and results[gate_name]["status"] == PASS:
@@ -643,6 +744,7 @@ def evaluate(
         "failed_required": failed_required,
         "unscored_required": unscored_required,
         "variants_recorded": sorted(variants),
+        "provenance": provenance,
         "variants_the_contract_names": list(contract["control_variants"]),
         "claim_ladder": contract["claim_ladder"],
         "may_never_claim": contract["claim_ladder"]["may_never_claim"],

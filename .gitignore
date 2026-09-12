@@ -17,3 +17,7 @@ htmlcov/
 /artifacts/
 .env
 dataset-lock.json
+
+# MuJoCo writes this wherever it is run from. It is a diagnostic log, not a source
+# file, and one was committed by accident on 2026-09-12.
+MUJOCO_LOG.TXT
