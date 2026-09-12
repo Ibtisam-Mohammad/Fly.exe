@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from flysim.demo02 import DECODED as DECODED_BY_BEHAVIOUR
+from flysim.errors import ConfigurationError
 
 NOT_SCORED = "not_scored"
 PASS = "pass"
@@ -188,6 +189,23 @@ def _spike_window_fractions(
     return total, inside
 
 
+
+def _named(criteria: dict[str, Any], prefix: str) -> tuple[str, dict[str, Any]]:
+    """Find a criterion by its identifier prefix rather than its full name.
+
+    v2 renames E1 to carry its new uprightness clause in the name. Looking criteria up by
+    full string would make a contract unscoreable the moment its wording improves, and
+    would do it with a KeyError rather than a verdict.
+    """
+    for name, spec in criteria.items():
+        if name.startswith(prefix):
+            return name, spec
+    raise ConfigurationError(
+        f"No criterion beginning {prefix!r} in this contract; it has "
+        f"{sorted(criteria)}."
+    )
+
+
 def _attitude(variant: dict[str, Any]) -> dict[str, Any]:
     """Body roll over the run, so an inverted fly cannot be read as an airborne one.
 
@@ -280,7 +298,7 @@ def evaluate(
             reached_acting=exact["reached_acting"],
         )
     else:
-        spec = criteria["E1_the_fly_leaves_the_ground"]
+        e1_name, spec = _named(criteria, "E1")
         airborne = int(exact["takeoff"].get("longest_airborne_us", 0))
         rise = float(exact["takeoff"].get("z_rise_mm", 0.0))
         ok = airborne >= int(spec["min_airborne_us"]) and rise >= float(
@@ -295,12 +313,16 @@ def evaluate(
         note = ""
         if attitude.get("inverted_at_end"):
             note = (
-                f" -- WARNING: the body ends at {attitude['final_abs_roll_deg']:.1f} "
-                "degrees of roll, so it is inverted and the airborne count includes time "
-                "spent lying on its back. E1 is frozen and both of its clauses are "
-                "literally satisfied; this is disclosed, not rescored."
+                f" -- the body ends at {attitude['final_abs_roll_deg']:.1f} degrees of "
+                "roll, so it is inverted and the airborne count includes time spent lying "
+                "on its back."
+            ) + (
+                " This contract's roll clause catches it."
+                if roll_cap is not None
+                else " This contract has no roll clause, so both clauses are literally "
+                     "satisfied; disclosed, not rescored."
             )
-        results["E1_the_fly_leaves_the_ground"] = _criterion(
+        results[e1_name] = _criterion(
             PASS if ok else FAIL,
             (
                 f"airborne {airborne} us against {spec['min_airborne_us']}, "
