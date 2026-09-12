@@ -1467,3 +1467,35 @@ than expansion rate.
 
 Grooming and feeding stand as recorded, and by the same argument are **untested rather than
 refuted**: no search has been run for either.
+
+## 2026-09-12: verification, two searches, and a narrowed topology claim
+
+**DEMO-01 verified and unchanged.** Its build key omitted the seed and the wiring, so its
+topology control could have executed the exact graph and no artifact would have shown it. All
+four variants re-ran with the key corrected and kernel hashes recorded; all five criteria
+match and the claim stands. See `docs/demo01/PROGRESS.md` D4.
+
+**Escape: the route carries.** 11 of 36 operating points drive the giant fibre cleanly with
+perfect ipsilateral separation. The behaviour contracts still return NO DEMONSTRATION on three
+seeds, and the failures are informative rather than mysterious -- the fly hops 1.6 mm, is
+airborne 17 ms against a 20 ms threshold frozen before anyone measured the hop, and tumbles on
+one seed of three. `ADR-2026-017` withholds the wing command, which generates 0.219 mm against
+a 0.204-0.211 mm noise floor and inverts the fly.
+
+**Grooming: closed negative, and one of my own criteria was at fault.** The route can be driven
+at roughly ten times the escape entry rate and is not side-selective at any candidate. The one
+passing candidate is degenerate -- selectivity of +1.000 from one spike against zero -- and it
+passed because my `N2` weakened DEMO-01's `C5` while claiming to carry it unchanged. Under the
+real `C5`, zero of 36 pass. Full record in `docs/evidence/DEMO02_OPERATING_POINT_SEARCHES.md`.
+
+**The topology claim is narrowed, and this is the most consequential result.** The shuffle
+control compares a 9 Hz network against a 56 Hz one. Matched to the intact network's activity,
+a degree-preserving shuffle drives the giant fibre just as hard (104 and 78 spikes against 120
+and 163) and does **not** reproduce its lateralisation (swing -0.098 against +2.000). So the
+exact connectivity is not why the readout responds; it is why the response is side-selective.
+`A5` and `E7` measure responsiveness and should measure selectivity at matched regime. Full
+record in `docs/evidence/SHUFFLE_CONTROL_REGIME_MATCHED.md`.
+
+**ND-10 is not the cause of the grooming silence.** Only 1.5 per cent of that readout's input
+contacts are unsigned, below the 2.6 per cent network average. What differs is net excitatory
+contacts per cell: 474 against the giant fibre's 5,177 and the loom pool's 5,875.

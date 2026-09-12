@@ -21,6 +21,9 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 | S4 | Video: brain view + body view + traces + control comparison | **CLOSED**: eight per-variant videos and two comparisons rendered |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
 | D2 | DEMO-02: every labelled sense resolved, three behaviours attempted | **CLOSED NEGATIVE** 2026-09-11: 12 runs, all three NO DEMONSTRATION |
+| D4 | Verify DEMO-01 under corrected build keys | **PASSED** 2026-09-12: all five criteria unchanged, kernels now fingerprinted |
+| D5 | Grooming operating-point search | **CLOSED NEGATIVE** 2026-09-12: 1 of 36 passed and the pass is degenerate; 0 under DEMO-01's actual C5 |
+| D6 | Regime-matched shuffle control | **CLOSED** 2026-09-12: topology buys selectivity, not responsiveness |
 | D3 | Registered operating-point search for the escape route | **11 of 36 PASSED** 2026-09-12; behaviour contract still INVALID on 4 criteria, 3 of them specification defects |
 
 ## S0 findings (measured 2026-09-10, read-only, exact graph)
@@ -443,3 +446,29 @@ first spike that is one stray at 90,000 us, and `E1` is satisfied by an inverted
 
 Declared and unstarted: a v2 contract fixing those four specification defects, run across
 three seeds. Everything about escape so far is seed 1.
+
+## D4 to D6 (2026-09-12)
+
+**D4. DEMO-01 verified.** Its build key was `sha256_json(parameters)`, omitting the seed and
+the wiring, so `exact` and `shuffled-connectome` shared one build directory while executing
+different graphs. Re-ran all four variants with the key corrected and kernel hashes recorded:
+all five criteria match and the claim is unchanged. The three intact-wiring variants share
+kernel `1712a72807f8`; the shuffle now has its own, `e87a70ef74e0`.
+
+**D5. Grooming searched and closed negative.** The route can be driven -- 100+ readout spikes
+at a 2000 Hz entry rate -- and is not side-selective at any candidate. One of 36 passed as
+scored and that pass is void: its selectivity index is +1.000 from one spike against zero.
+The reason it got through is that my `N2` weakened DEMO-01's `C5` from "each cue epoch" to
+"the better side" while the contract text claimed it was carried over unchanged. Under the
+real `C5`, zero pass. The selected point is not used and the grooming behaviour contract is
+not re-run.
+
+**D6. The shuffle control is regime-matched and the topology claim is narrowed.** At matched
+descending activity a degree-preserving shuffle drives the giant fibre as hard as the real
+connectome and does not reproduce its lateralisation. "The exact connectivity is why the
+readout responds" is withdrawn. "The exact connectivity is why the response is side-selective"
+is earned and, for the first time, properly controlled.
+
+This ledger's rule held throughout. No frozen criterion was restated, and the two places that
+tempted it -- grooming's degenerate pass and escape-legs' three-millisecond airborne miss --
+are recorded as failures with their causes named.
