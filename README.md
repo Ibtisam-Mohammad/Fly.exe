@@ -21,22 +21,27 @@ uv run flysim render runs/<run-id>
 uv run pytest
 ```
 
-Build the compact, explicitly engineered Eon-class release matrix from one clean commit:
+Reproduce the historical v1 preview, or validate a corrected v2 bundle:
 
 ```text
 flysim showcase build --root /srv/flybrain-data
 flysim showcase cinematic --root /srv/flybrain-data
 # Visual-only rerender from an immutable presentation recording:
 flysim showcase cinematic --root /srv/flybrain-data --source-directory PRESENTATION_DIR
+flysim showcase render-v2 /path/to/eon-showcase-v2/draft-bundle.json --output /path/to/eon-showcase-v2/showcase.mp4
+flysim showcase validate-v2 /path/to/eon-showcase-v2/bundle.json
 ```
 
-This runs three full-graph seeds, four causal interface ablations, two non-gating graph
-diagnostics, and then renders the hero run offline. The cinematic command separately records
-the accepted hero's full-graph spikes and MuJoCo poses and produces a 1080p presentation without
-rendering inside the simulation loop. Neither command awards a scientific tier. See
-[the showcase release guide](docs/showcase/EON_SHOWCASE.md) for the exact claim boundary.
+The first two commands reproduce the v1 artifact, now retained as a limited preview. Review found
+that its navigation contains a direct world-gradient term and that its hero slides 8.477 mm during
+grooming against the recorded 2.5 mm cap. The corrected v2 validator accepts only separate causal
+navigation, grooming and feeding chapters, all required controls, three held-out visual targets,
+and a 60--90 second exact-versus-ablation cut. Neither version awards a scientific tier. See
+[the v2 operator handoff](docs/showcase/EON_SHOWCASE_V2.md) for the exact boundary and bundle
+format.
 
-[Watch or download the released 1080p cinematic](artifacts/showcase/eon-showcase-v1/cinematic-demo.mp4).
+[Watch the archived v1 1080p preview](artifacts/showcase/eon-showcase-v1/cinematic-demo.mp4). It is
+not the corrected final showcase.
 
 GeNN is a native source build rather than a registry package and is intentionally installed inside the WSL environment with `scripts/install_genn.sh`; it is recorded separately from the cross-platform Python lock.
 

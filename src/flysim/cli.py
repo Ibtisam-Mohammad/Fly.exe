@@ -64,6 +64,8 @@ from flysim.runs import (
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.showcase import build_showcase
 from flysim.showcase_cinematic import build_cinematic_showcase
+from flysim.showcase_v2 import evaluate_showcase_v2
+from flysim.showcase_v2_render import render_showcase_v2
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
@@ -1728,6 +1730,24 @@ def _command_showcase_cinematic(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_showcase_validate_v2(args: argparse.Namespace) -> int:
+    contract = json.loads(args.contract.read_text(encoding="utf-8"))
+    result = evaluate_showcase_v2(contract=contract, bundle_path=args.bundle)
+    _print_json(result)
+    return 0 if result["accepted_as_engineering_showcase"] else 2
+
+
+def _command_showcase_render_v2(args: argparse.Namespace) -> int:
+    result = render_showcase_v2(
+        contract_path=args.contract,
+        bundle_path=args.bundle,
+        output_path=args.output,
+        fps=args.fps,
+    )
+    _print_json(result)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="flysim")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -2263,6 +2283,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     cinematic.add_argument("--fps", type=int, default=30)
     cinematic.set_defaults(func=_command_showcase_cinematic)
+
+    showcase_v2 = showcase_commands.add_parser(
+        "validate-v2",
+        help="Fail-closed validation of the independent-component Eon showcase v2 bundle",
+    )
+    showcase_v2.add_argument("bundle", type=Path)
+    showcase_v2.add_argument(
+        "--contract",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "eon-showcase-v2.json",
+    )
+    showcase_v2.set_defaults(func=_command_showcase_validate_v2)
+
+    render_v2 = showcase_commands.add_parser(
+        "render-v2",
+        help="Render the 60-90 second v2 exact-versus-ablation cut after component gates pass",
+    )
+    render_v2.add_argument("bundle", type=Path)
+    render_v2.add_argument("--output", type=Path, required=True)
+    render_v2.add_argument("--fps", type=int, default=30)
+    render_v2.add_argument(
+        "--contract",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "eon-showcase-v2.json",
+    )
+    render_v2.set_defaults(func=_command_showcase_render_v2)
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)

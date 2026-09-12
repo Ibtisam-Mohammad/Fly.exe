@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.10",
+  "assumption_set_id": "foundation-v0.11",
   "records": [
     {
       "id": "DATA-01",
@@ -973,8 +973,8 @@
     {
       "status": "accepted",
       "owner": "demo",
-      "last_reviewed": "2026-09-11",
-      "source": "ADR-2026-016",
+      "last_reviewed": "2026-09-13",
+      "source": "ADR-2026-016; ADR-2026-020",
       "id": "DEMO-02",
       "name": "behaviour demonstration scenarios",
       "units": "categorical scope",
@@ -987,13 +987,18 @@
           "escape-takeoff"
         ],
         "separate_contracts": true,
+        "public_showcase_uses_separate_chapters": true,
+        "required_body_controls": [
+          "command-replay",
+          "controller-only-with-no-graph"
+        ],
         "tier_awarded": "none",
         "feeding_is_a_pose_not_ingestion": true,
         "takeoff_has_zero_aerodynamic_force": true
       },
       "biological_mismatch": "Engineering demonstrations on a female body prior carrying a male CNS.",
       "uncertainty": "Each behaviour's decoder is an E scaffold.",
-      "validation": "per-behaviour preregistered acceptance contracts",
+      "validation": "per-behaviour preregistered acceptance contracts plus the fail-closed eon-showcase-v2 bundle validator",
       "why_this_record_exists": "Cited as an assumption_id in committed contracts and previously undefined."
     },
     {
@@ -1036,6 +1041,12 @@
       "to": "foundation-v0.10",
       "on": "2026-09-12",
       "why": "ADR-2026-018, the external-review repair. MOTOR-07 is added because the proboscis motor mapping was reversed in code and no register entry existed to contradict it: MN9 is the rostrum protractor and MN10 to MN12 are the pharyngeal pump, and the haustellum extensor is recorded as UNRESOLVED because two sources name different cells. NUM-01 gains a realisation note: its 2000 us sensory delay was bound at zero throughout DEMO-02 while the run summary reported a single sensorimotor delay without saying which leg supplied it, so the sensory delay is now contract-declared and both legs are recorded separately in every summary."
+    },
+    {
+      "from": "foundation-v0.10",
+      "to": "foundation-v0.11",
+      "on": "2026-09-13",
+      "why": "ADR-2026-020 withdraws eon-showcase-v1 as the final public demo without changing its artifacts, requires separate behaviour chapters and graph-free body controls, and preregisters the v2 bundle gate plus a neural-only tarsal-taste to MN9 operating-point search."
     }
   ]
 }

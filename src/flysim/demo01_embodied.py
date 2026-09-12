@@ -72,6 +72,8 @@ CONTROL_VARIANTS = (
     "readout-ablated",
     "stimulus-absent",
     "shuffled-connectome",
+    "command-replay",
+    "controller-only",
 )
 
 
@@ -223,6 +225,196 @@ class Demo01Recorder:
         }
 
 
+def _body_control_command(
+    *, variant: str, t_us: int, quiescent_us: int, replay: list[dict[str, Any]] | None,
+    step: int,
+) -> ActuatorCommandFrame:
+    if variant == "command-replay":
+        if replay is None or not replay:
+            raise ConfigurationError("command-replay requires a non-empty exact trace")
+        recorded = replay[min(step, len(replay) - 1)]["command"]
+        forward = float(recorded["forward"])
+        yaw = float(recorded["yaw"])
+        state = str(recorded.get("state", "REPLAY"))
+    elif variant == "controller-only":
+        active = t_us >= quiescent_us
+        forward = 0.5 if active else 0.0
+        yaw = 0.0
+        state = "LOCOMOTING" if active else "QUIESCENT"
+    else:
+        raise ConfigurationError(f"Not a body-only DEMO-01 variant: {variant}")
+    return ActuatorCommandFrame(
+        t_us=t_us,
+        ids=COMMAND_IDS,
+        values=(forward, yaw, 0.0, 0.0),
+        units="normalized-drive [0,1], normalized-drive [-1,1], normalized, normalized",
+        signal_type=SignalType.ACTUATOR_COMMAND,
+        provenance="E",
+        assumption_ids=("MOTOR-06", "DEMO-03"),
+        metadata={
+            "decoder_state": state,
+            "graph_attached": False,
+            "control_variant": variant,
+            "sensor_terms_in_command": [],
+        },
+    )
+
+
+def _run_body_control(
+    *,
+    contract: dict[str, Any],
+    worktree: dict[str, Any],
+    output_directory: Path,
+    duration_us: int,
+    body_parameters: Demo01BodyParameters,
+    quiescent_us: int,
+    seed: int,
+    variant: str,
+    progress: bool,
+) -> EmbodiedResult:
+    """Run command replay or a fixed walking baseline with no neural graph attached."""
+    coupling_us = int(contract["coupling_us"])
+    replay: list[dict[str, Any]] | None = None
+    if variant == "command-replay":
+        source = output_directory.parent / "exact" / "trace.jsonl"
+        if not source.is_file():
+            raise ConfigurationError(
+                f"command-replay needs the exact recording at {source}; run exact first"
+            )
+        replay = [
+            json.loads(line)
+            for line in source.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    body = Demo01VisualBody(body_parameters, seed=seed)
+    recorder = Demo01Recorder(output_directory, neuron_count=0)
+    initial_x, initial_y, _, initial_heading = body.pose()
+    initial_distance = body.cue_distance_mm()
+    intervals = duration_us // coupling_us
+    onset_us: int | None = None
+    started = time.perf_counter()
+    try:
+        for step in range(intervals):
+            t_us = step * coupling_us
+            command = _body_control_command(
+                variant=variant,
+                t_us=t_us,
+                quiescent_us=quiescent_us,
+                replay=replay,
+                step=step,
+            )
+            if onset_us is None and command.metadata["decoder_state"] == "LOCOMOTING":
+                onset_us = t_us
+            body.apply_actuators(command)
+            body.step_until(t_us + coupling_us)
+            x_mm, y_mm, z_mm, heading = body.pose()
+            dx = body_parameters.cue_x_mm - x_mm
+            dy = body_parameters.cue_y_mm - y_mm
+            distance = float(np.hypot(dx, dy))
+            bearing = float(
+                np.degrees(np.arctan2(np.sin(np.arctan2(dy, dx) - heading),
+                                      np.cos(np.arctan2(dy, dx) - heading)))
+            )
+            recorder.add_interval(
+                {
+                    "t_us": t_us + coupling_us,
+                    "pose": {
+                        "x_mm": x_mm,
+                        "y_mm": y_mm,
+                        "z_mm": z_mm,
+                        "heading_rad": heading,
+                    },
+                    "cue": {
+                        "bearing_deg": bearing,
+                        "angular_radius_deg": float(
+                            np.degrees(np.arctan2(body_parameters.cue_radius_mm, distance))
+                        ),
+                        "loom_term": 0.0,
+                        "driven_lamina_bodies": 0,
+                        "distance_mm": distance,
+                        "present": True,
+                    },
+                    "readout_hz": {},
+                    "readout_raw_counts": {},
+                    "pool_mean_rate_hz": {},
+                    "pool_active_fraction": {},
+                    "command": {
+                        "forward": command.value_for(COMMAND_FORWARD, 0.0),
+                        "yaw": command.value_for(COMMAND_YAW, 0.0),
+                        "state": command.metadata["decoder_state"],
+                    },
+                    "command_decoded_this_interval": None,
+                },
+                np.zeros(0, dtype=np.int64),
+            )
+            recorder.add_pose(t_us + coupling_us, body.qpos())
+            if progress and step % 100 == 0:
+                print(f"  [{step:5d}/{intervals}] {variant} d={distance:6.2f} mm", flush=True)
+        elapsed = time.perf_counter() - started
+        final_x, final_y, _, final_heading = body.pose()
+        body_description = body.describe()
+    finally:
+        recording = recorder.close()
+        body.close()
+    displacement = float(np.hypot(final_x - initial_x, final_y - initial_y))
+    heading_change = float(
+        np.arctan2(
+            np.sin(final_heading - initial_heading), np.cos(final_heading - initial_heading)
+        )
+    )
+    final_distance = float(
+        np.hypot(final_x - body_parameters.cue_x_mm, final_y - body_parameters.cue_y_mm)
+    )
+    summary: dict[str, Any] = {
+        "schema_version": "1.0",
+        "variant": variant,
+        "provenance": "E body-only control",
+        "evidence_grade": worktree.get("dirty") is False,
+        "code_commit": worktree.get("commit"),
+        "worktree_dirty": worktree.get("dirty"),
+        "seed": seed,
+        "experiment_id": str(contract["experiment_id"]),
+        "experiment_sha256": sha256_json(contract),
+        "graph": {"attached": False, "neurons": 0, "edges": 0},
+        "body": body_description,
+        "coupling_us": coupling_us,
+        "duration_us": duration_us,
+        "intervals": intervals,
+        "build_seconds": 0.0,
+        "simulation_seconds": elapsed,
+        "recording": recording,
+        "outcome": {
+            "displacement_mm": displacement,
+            "net_heading_change_rad": heading_change,
+            "initial_cue_distance_mm": initial_distance,
+            "final_cue_distance_mm": final_distance,
+            "locomotion_onset_us": onset_us,
+            "decoder_events": [],
+        },
+        "control_truth": (
+            "Exact commands replayed into the body with no graph attached."
+            if variant == "command-replay"
+            else "Fixed straight-walk command with no graph, encoder or decoder attached."
+        ),
+        "claim_boundary": "Body control only; no neural or biological claim.",
+    }
+    (output_directory / "summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return EmbodiedResult(
+        variant=variant,
+        directory=output_directory,
+        intervals=intervals,
+        duration_us=duration_us,
+        displacement_mm=displacement,
+        net_heading_change_rad=heading_change,
+        final_distance_mm=final_distance,
+        initial_distance_mm=initial_distance,
+        locomotion_onset_us=onset_us,
+        summary=summary,
+    )
+
+
 def run_embodied(
     *,
     contract_path: Path,
@@ -256,6 +448,19 @@ def run_embodied(
         raise ConfigurationError("Duration must be a whole number of coupling intervals")
     if body_parameters.physics_dt_us and coupling_us % body_parameters.physics_dt_us:
         raise ConfigurationError("Coupling interval must be a whole number of physics steps")
+
+    if variant in {"command-replay", "controller-only"}:
+        return _run_body_control(
+            contract=contract,
+            worktree=worktree,
+            output_directory=output_directory,
+            duration_us=duration_us,
+            body_parameters=body_parameters,
+            quiescent_us=decoder.quiescent_us,
+            seed=seed,
+            variant=variant,
+            progress=progress,
+        )
 
     graph = SparseConnectome.load(graph_path)
     graph.validate()

@@ -1,0 +1,79 @@
+{
+  "schema_version": "2.0",
+  "experiment_id": "eon-showcase-v2",
+  "title": "Causal MaleCNS engineering showcase, assembled from independent behaviour contracts",
+  "status": "PREREGISTERED AND BLOCKED. The public cut may be built only after every gate below passes.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-13",
+  "assumption_ids": [
+    "TRACKA-01", "SENS-02", "SENS-05", "MOTOR-03", "MOTOR-05",
+    "MOTOR-06", "BODY-01", "BODY-02", "DEMO-02", "DEMO-03"
+  ],
+  "supersedes_for_public_release": "eon-showcase-v1",
+  "why_v1_is_not_the_final_demo": [
+    "Its navigation includes a raw world-gradient steering term and central olfactory relays, so it is not the causal DEMO-01 visual route.",
+    "Its exact hero records 8.477 mm of net displacement during grooming against its own 2.5 mm cap.",
+    "Its contamination and grooming ablations stop the serial state machine before any later behaviour, so they are sequence-dependency checks rather than independent behaviour controls.",
+    "It has one food position, no command-replay or controller-only comparison, and its cinematic is 13.6 seconds rather than the required explanatory comparison cut."
+  ],
+  "presentation_model": "Three separately executed causal chapters. Editing may connect them into one story, but the video must never imply that one run generated all three behaviours.",
+  "components": {
+    "navigation": {
+      "experiment_id": "demo01-acceptance-v1",
+      "route": "visual cue -> retinotopic lamina surrogate -> full graph -> descending readout -> decoder -> body",
+      "forbidden": [
+        "raw world-coordinate or cue-bearing input to the decoder",
+        "olfactory-gradient steering",
+        "DM1/DM4 relay injection",
+        "direct DNg97 intent drive"
+      ],
+      "targets": [
+        {"id": "heldout-left", "cue_x_mm": 11.4, "cue_y_mm": 7.8, "seed": 11},
+        {"id": "heldout-lateral", "cue_x_mm": 1.2, "cue_y_mm": 13.8, "seed": 12},
+        {"id": "heldout-right", "cue_x_mm": 10.8, "cue_y_mm": -8.6, "seed": 13}
+      ],
+      "required_criteria": ["A1", "A2", "A3", "A4"],
+      "max_final_target_distance_mm": 2.5,
+      "minimum_targets_passed": 3
+    },
+    "grooming": {
+      "experiment_id": "demo02-grooming-v1",
+      "required_verdict_prefix": "FULL-GRAPH CAUSAL GROOMING",
+      "required_criteria": ["G1", "G2", "G3", "G4", "G5", "G6"],
+      "max_bout_displacement_mm": 2.5,
+      "note": "A causal trigger is insufficient: the body must remain within the registered one-body-length cap."
+    },
+    "feeding": {
+      "experiment_id": "demo02-feeding-v2",
+      "blocking_precondition": "demo02-feeding-operating-point-v1 selects a point using neural-only criteria before any embodied feeding result is opened",
+      "required_verdict_prefix": "FULL-GRAPH CAUSAL PROBOSCIS EXTENSION FROM TARSAL TASTE",
+      "required_criteria": ["F1", "F2", "F3", "F4", "F6", "F7"],
+      "may_never_be_labelled": ["ingestion", "eating", "pharyngeal pumping"]
+    }
+  },
+  "required_controls_per_component": {
+    "causal": ["readout-ablated", "stimulus-absent"],
+    "body": ["command-replay", "controller-only"]
+  },
+  "video": {
+    "duration_s_min": 60.0,
+    "duration_s_max": 90.0,
+    "resolution": [1920, 1080],
+    "minimum_fps": 30,
+    "required_layout": "exact-versus-ablation",
+    "required_chapters": ["navigation", "grooming", "feeding", "limitations"],
+    "required_labels": [
+      "ENGINEERING SHOWCASE",
+      "V0 Structural; no new validation tier",
+      "separately executed behaviour chapters",
+      "full MaleCNS graph",
+      "female body prior",
+      "engineered locomotor and grooming controllers",
+      "feeding initiation only; no ingestion"
+    ]
+  },
+  "scientific_validation_tier_awarded": null,
+  "claim_if_every_gate_passes": "Three separately controlled full-graph engineering demonstrations: visual-target approach, antennal-grooming initiation with bounded body drift, and tarsal-taste-triggered feeding initiation.",
+  "claim_boundary": "Engineering presentation only. It awards no tier, validates no physiological mechanism, and is not one autonomous multi-behaviour run.",
+  "last_reviewed": "2026-09-13"
+}

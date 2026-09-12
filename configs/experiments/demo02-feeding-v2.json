@@ -119,7 +119,7 @@
 
   "control_variants": [
     "exact", "readout-ablated", "stimulus-absent", "contact-without-sucrose",
-    "shuffled-connectome", "command-replay", "zero-tonic-drive"
+    "shuffled-connectome", "command-replay", "controller-only", "zero-tonic-drive"
   ],
   "required_controls": [
     "exact", "readout-ablated", "stimulus-absent", "contact-without-sucrose"
@@ -128,7 +128,7 @@
     "contact-without-sucrose": "Identical patch, identical friction, taste channel silent. The one control that separates taste from touch.",
     "shuffled-connectome": "Recorded as an observation about the shuffle, not as a topology gate.",
     "command-replay": "AGENTS.md section 10. The recorded commands of the exact run driven into the body with the graph playing no part.",
-    "controller-only": "NOT LISTED. Unimplemented, and the runner refuses it rather than silently executing the exact run with the stimulus muted."
+    "controller-only": "A fixed proboscis-extension command drives the body with no graph, sensory encoder or neural decoder attached. It measures the achievable body envelope and carries no causal claim."
   },
 
   "claim_ladder": {

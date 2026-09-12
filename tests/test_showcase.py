@@ -25,6 +25,7 @@ def _run(
     states: list[str],
     completed: bool,
     commit: str = "a" * 40,
+    groom_displacement_mm: float = 1.0,
 ) -> Path:
     directory = root / name
     directory.mkdir()
@@ -60,7 +61,19 @@ def _run(
         },
     }
     (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-    (directory / "validation-report.json").write_text(json.dumps({"valid": True}), encoding="utf-8")
+    (directory / "validation-report.json").write_text(
+        json.dumps(
+            {
+                "valid": True,
+                "behavioral_criteria": {
+                    "groom_net_displacement_mm": groom_displacement_mm,
+                    "groom_net_displacement_limit_mm": 2.5,
+                    "groom_net_displacement_passed": groom_displacement_mm <= 2.5,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     return directory
 
 
@@ -135,6 +148,47 @@ def test_showcase_fails_closed_when_an_ablation_reaches_its_state(tmp_path: Path
 
     assert report["accepted_as_engineering_showcase"] is False
     assert "control mn9-readout-ablated did not block FEED_INITIATION" in report["failures"]
+
+
+def test_showcase_fails_closed_on_recorded_grooming_displacement(tmp_path: Path) -> None:
+    exact, controls, diagnostics = _matrix(tmp_path)
+    exact[1] = _run(
+        tmp_path,
+        "exact-1-drifting",
+        seed=1,
+        states=["GROOM", "SEEK_RESUME", "FEED_INITIATION", "COMPLETE"],
+        completed=True,
+        groom_displacement_mm=8.477,
+    )
+
+    report = evaluate_showcase(
+        contract=CONTRACT,
+        exact_directories=exact,
+        control_directories=controls,
+        diagnostic_directories=diagnostics,
+    )
+
+    assert report["accepted_as_engineering_showcase"] is False
+    assert any("grooming-displacement gate" in item for item in report["failures"])
+
+
+def test_showcase_labels_chain_coupled_controls_honestly(tmp_path: Path) -> None:
+    exact, controls, diagnostics = _matrix(tmp_path)
+    report = evaluate_showcase(
+        contract=CONTRACT,
+        exact_directories=exact,
+        control_directories=controls,
+        diagnostic_directories=diagnostics,
+    )
+
+    assert (
+        report["required_controls"]["contamination-input-ablated"]["control_class"]
+        == "sequence-dependency"
+    )
+    assert (
+        report["required_controls"]["sucrose-input-ablated"]["control_class"]
+        == "causal-interface-ablation"
+    )
 
 
 def test_showcase_cli_surface_is_stable() -> None:

@@ -1,12 +1,34 @@
 # Eon-class MaleCNS showcase
 
-Status: accepted as an engineering showcase on 2026-09-12
+Status: archived v1 limited preview; withdrawn as the final showcase on 2026-09-13
 
 Scientific tier: unchanged at V0 Structural
 
 Contract: `configs/experiments/eon-showcase-v1.json`
 
-## Purpose
+## 2026-09-13 correction
+
+An independent review found four material gaps that the frozen v1 acceptance omitted:
+
+- navigation partly bypasses the graph through the raw odour-gradient steering term;
+- the hero moves 8.477 mm during grooming against its recorded 2.5 mm cap;
+- two controls show dependency of a serial state chain, not independent behaviour causality; and
+- the release has one food position, lacks command-replay/controller-only comparisons, and is too
+  short to be the requested explanatory comparison.
+
+The source artifacts and checksums below remain unchanged. They are a reproducible historical
+result, not a final accepted showcase. ADR-2026-020 preregisters the successor before new outcomes
+are opened. Its stable validation command is:
+
+```text
+flysim showcase validate-v2 /path/to/eon-showcase-v2/bundle.json
+```
+
+That validator requires three separate causal chapters, three held-out visual targets, the 2.5 mm
+grooming cap, the corrected MN9 feeding route after a neural-only search, command replay,
+graph-free controller baselines, and a 60--90 second exact-versus-ablation video.
+
+## Historical v1 purpose
 
 This is the public demonstration lane, not a new scientific stage. It packages the existing
 full-graph Track A scenario as an Eon-class controller-mediated story:
@@ -24,7 +46,7 @@ sensory bridges, direct forward-intent drive, an odor-gradient steering term, a 
 grooming trajectory, and a joint-actuated feeding pose. Those bridges are the point at which
 this release is comparable to Eon's controller-mediated integration rather than to Track B.
 
-## Stable command
+## Historical v1 commands
 
 From the pinned WSL environment:
 
@@ -84,9 +106,9 @@ rendering cannot change transition times or body dynamics. The video names the g
 bridges, controller boundary and V0 tier, and it states that no VNC-to-muscle or ingestion claim
 is made.
 
-## Claim boundary
+## Historical v1 claim boundary
 
-Allowed:
+Allowed only when explicitly labelled as the archived v1 integration preview:
 
 > A full-MaleCNS, controller-mediated, closed-loop engineering demonstration using declared
 > central sensory bridges and body controllers.
@@ -131,6 +153,7 @@ The compact release files are tracked under `artifacts/showcase/eon-showcase-v1/
 - cinematic hero video: `97a3790ed0ab6ffb2eca3c3e49f5f6807bda67cf1b6f489ed575252792c268b7`;
 - cinematic source manifest: `4d2e5896fc2c0b74119196120570b7d94e951cc5f19be26b2a3ebc9724574e81`.
 
-This acceptance is only for the engineering release contract. The project's scientific tier
-remains V0 Structural, Stage 2 remains 0 of 3, and Track A's stricter displacement and throughput
-gates remain failed.
+The original frozen evaluator accepted this engineering release contract, but that acceptance is
+not the current public-release verdict because the evaluator omitted a recorded behavioural gate.
+The project's scientific tier remains V0 Structural, Stage 2 remains 0 of 3, and Track A's
+displacement and throughput gates remain failed.

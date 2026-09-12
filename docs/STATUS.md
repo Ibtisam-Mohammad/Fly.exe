@@ -1,6 +1,6 @@
 # Implementation status
 
-Status date: 2026-09-12
+Status date: 2026-09-13
 
 > The header said 2026-09-09 while entries below it were dated 2026-09-12. Anyone
 > reading the top of this file to decide whether it was current was told it was three
@@ -1533,6 +1533,14 @@ plant. See `docs/evidence/DEMO02_ESCAPE_LEGS_RERUN.md`.
 these repairs remove a claim the project had been making.
 
 ## 2026-09-12: Eon-class engineering release lane
+
+> **Correction, 2026-09-13:** v1 is retained as a reproducible limited preview but withdrawn as
+> the final showcase. Its evaluator omitted the run's recorded 2.5 mm grooming-displacement gate;
+> the hero measured 8.477 mm. Navigation contains the declared raw odour-gradient steering bypass,
+> two early ablations are serial-chain dependency checks, and the release lacks the required
+> command-replay/controller-only and multi-target comparison. ADR-2026-020 preregisters v2 as
+> three independent causal chapters. The v2 validator and neural-only feeding search are now
+> implemented; v2 remains blocked pending successful component runs. No tier changed.
 
 `eon-showcase-v1` is implemented as a separate engineering release boundary over the existing
 `eon-malecns-v0.2` path. Its compact matrix is three exact full-graph seeds, four causal interface

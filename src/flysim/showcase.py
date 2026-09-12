@@ -139,6 +139,24 @@ def evaluate_showcase(
                 if key not in {"manifest", "validation"}
             },
         }
+        # The v1 release contract omitted the already-registered Track A grooming
+        # displacement gate.  That omission let a run advertise success while its own
+        # validation report said the fly travelled more than a body length during the
+        # supposedly stationary bout.  A well-formed artifact is not necessarily an
+        # acceptable behaviour.  Fail closed on any explicitly recorded behavioural
+        # criterion instead of treating ``validation.valid`` as behavioural acceptance.
+        behavioural = exact_run["validation"].get("behavioral_criteria", {})
+        groom_passed = behavioural.get("groom_net_displacement_passed")
+        if groom_passed is False:
+            observed = behavioural.get("groom_net_displacement_mm")
+            limit = behavioural.get("groom_net_displacement_limit_mm")
+            failures.append(
+                f"exact seed {seed} exceeds its recorded grooming-displacement gate: "
+                f"{observed} mm against {limit} mm"
+            )
+            exact_results[str(seed)]["grooming_displacement_passed"] = False
+        elif groom_passed is True:
+            exact_results[str(seed)]["grooming_displacement_passed"] = True
     completed_seeds = sum(
         bool(value["completed"] and value["required_sequence_observed"])
         for value in exact_results.values()
@@ -163,6 +181,11 @@ def evaluate_showcase(
         passed = blocked not in control_run["event_targets"]
         control_results[name] = {
             "passed": passed,
+            "control_class": (
+                "sequence-dependency"
+                if name in {"contamination-input-ablated", "groom-readout-ablated"}
+                else "causal-interface-ablation"
+            ),
             "blocked_state": blocked,
             "event_targets": list(control_run["event_targets"]),
             "meaning": specification["meaning"],

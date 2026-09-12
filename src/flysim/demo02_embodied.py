@@ -51,7 +51,9 @@ from flysim.demo02 import (
 )
 from flysim.engines.body import (
     BEHAVIOUR_COMMAND_IDS,
+    COMMAND_GROOM,
     COMMAND_JUMP,
+    COMMAND_PROBOSCIS,
     COMMAND_WING_DEPRESSION,
 )
 from flysim.engines.genn import TrackAGeNNEngine
@@ -286,7 +288,12 @@ class Recorder:
 
 
 def _bindings(
-    atlas: SensoryAtlas, behaviour: str, *, variant: str, sensory_delay_us: int = 0
+    atlas: SensoryAtlas,
+    behaviour: str,
+    *,
+    variant: str,
+    parameters: dict[str, Any],
+    sensory_delay_us: int = 0,
 ) -> tuple[ChannelBinding, ...]:
     channels = entry_channels(behaviour)
     silent = variant in {"stimulus-absent", "controller-only", "command-replay"}
@@ -297,11 +304,27 @@ def _bindings(
         sensor = SENSOR_FOR_CHANNEL.get(str(key))
         if sensor is None:
             raise ConfigurationError(f"No world quantity declared for channel {key}")
+        transducer = TRANSDUCERS[key.modality]
+        if key.modality == "tarsal-taste" and "taste_max_rate_hz" in parameters:
+            transducer = SaturatingTransducer(
+                max_rate_hz=float(parameters["taste_max_rate_hz"]),
+                half_saturation=transducer.half_saturation,
+                threshold=transducer.threshold,
+            )
+        elif (
+            key.modality == "antennal-jo-f-grooming"
+            and "antennal_max_rate_hz" in parameters
+        ):
+            transducer = SaturatingTransducer(
+                max_rate_hz=float(parameters["antennal_max_rate_hz"]),
+                half_saturation=transducer.half_saturation,
+                threshold=transducer.threshold,
+            )
         bindings.append(
             ChannelBinding(
                 key=key,
                 sensor_id=sensor,
-                transducer=TRANSDUCERS[key.modality],
+                transducer=transducer,
                 delay_us=sensory_delay_us,
                 enabled=not silent,
                 kind=atlas.modality_kind.get(key.modality, "real"),
@@ -309,6 +332,167 @@ def _bindings(
             )
         )
     return tuple(bindings)
+
+
+def _controller_only_values(behaviour: str, active: bool) -> dict[str, float]:
+    """A fixed body command, deliberately independent of sensors and a graph."""
+    values = {name: 0.0 for name in BEHAVIOUR_COMMAND_IDS}
+    if not active:
+        return values
+    if behaviour == "grooming":
+        values[COMMAND_GROOM] = 1.0
+    elif behaviour == "feeding":
+        values[COMMAND_PROBOSCIS] = 1.0
+    elif behaviour == "escape":
+        values[COMMAND_JUMP] = 1.0
+        values[COMMAND_WING_DEPRESSION] = 1.0
+    else:  # guarded by run_behaviour, retained here as a fail-closed boundary
+        raise ConfigurationError(f"Unknown controller-only behaviour: {behaviour}")
+    return values
+
+
+def _run_controller_only(
+    *,
+    behaviour: str,
+    contract: dict[str, Any],
+    verification: dict[str, Any],
+    output_directory: Path,
+    body_parameters: BehaviourBodyParameters,
+    trajectory_path: Path | None,
+    decoder: DecoderParameters,
+    duration_us: int,
+    seed: int,
+    coupling_us: int,
+    progress: bool,
+) -> BehaviourResult:
+    """Record the body envelope under a fixed command with no graph or neural engine."""
+    body = BehaviourBody(
+        parameters=replace(
+            body_parameters,
+            antennal_stimulus_side="none",
+            sucrose_x_mm=1e6,
+        ),
+        behaviour=behaviour,
+        seed=seed,
+        trajectory_path=trajectory_path,
+    )
+    recorder = Recorder(output_directory, neuron_count=0)
+    intervals = duration_us // coupling_us
+    onset_us = decoder.quiescent_us
+    started = time.perf_counter()
+    try:
+        for step in range(intervals):
+            t_us = step * coupling_us
+            active = decoder.quiescent_us <= t_us < (
+                decoder.quiescent_us + decoder.action_us
+            )
+            values = _controller_only_values(behaviour, active)
+            command = ActuatorCommandFrame(
+                t_us=t_us,
+                ids=BEHAVIOUR_COMMAND_IDS,
+                values=tuple(values[name] for name in BEHAVIOUR_COMMAND_IDS),
+                units=", ".join("normalized" for _ in BEHAVIOUR_COMMAND_IDS),
+                signal_type=SignalType.ACTUATOR_COMMAND,
+                provenance="E",
+                assumption_ids=("MOTOR-03", "MOTOR-06", "DEMO-02"),
+                metadata={
+                    "state": "ACTING" if active else "QUIESCENT",
+                    "controller_only": True,
+                    "graph_attached": False,
+                },
+            )
+            body.apply_actuators(command)
+            sensors = body.sample_sensors()
+            body.step_until(t_us + coupling_us)
+            x_mm, y_mm, z_mm, heading = body.pose()
+            recorder.add_interval(
+                {
+                    "t_us": t_us + coupling_us,
+                    "t_start_us": t_us,
+                    "t_sensors_us": t_us,
+                    "t_neural_us": None,
+                    "t_body_us": t_us + coupling_us,
+                    "pose": {
+                        "x_mm": x_mm,
+                        "y_mm": y_mm,
+                        "z_mm": z_mm,
+                        "heading_rad": heading,
+                    },
+                    "sensors": dict(zip(sensors.ids, sensors.values, strict=True)),
+                    "channel_rate_hz": {},
+                    "scene": {},
+                    "entry_bodies_driven": 0,
+                    "readout_hz": {},
+                    "readout_raw_counts": {},
+                    "command": {**values, "state": command.metadata["state"]},
+                    "body": body.metrics(),
+                },
+                np.zeros(0, dtype=np.int64),
+            )
+            recorder.add_pose(t_us + coupling_us, body.qpos())
+            if progress and step % 50 == 0:
+                print(f"  {behaviour}/controller-only {step}/{intervals}", flush=True)
+        recording = recorder.close()
+        first = recorder.rows[0]["pose"] if recorder.rows else {"x_mm": 0.0, "y_mm": 0.0}
+        last = recorder.rows[-1]["pose"] if recorder.rows else first
+        displacement = float(
+            np.hypot(last["x_mm"] - first["x_mm"], last["y_mm"] - first["y_mm"])
+        )
+        summary = {
+            "behaviour": behaviour,
+            "variant": "controller-only",
+            "code_commit": verification["commit"],
+            "worktree_dirty": verification["dirty"],
+            "verification": verification.get("verification", {}),
+            "seed": seed,
+            "experiment_id": contract["experiment_id"],
+            "experiment_sha256": sha256_json(contract),
+            "decoder": decoder.as_dict(),
+            "graph": {"attached": False, "neurons": 0, "edges": 0},
+            "model_identity": None,
+            "populations": {},
+            "sensory_bus": {"attached": False},
+            "body": body.describe(),
+            "station_keeping": body.station_keeping(),
+            "takeoff": body.takeoff(),
+            "coupling_us": coupling_us,
+            "duration_us": duration_us,
+            "intervals": intervals,
+            "build_seconds": 0.0,
+            "simulation_seconds": time.perf_counter() - started,
+            "recording": recording,
+            "trace_rows": len(recorder.rows),
+            "trace_sha256": _sha256_file(output_directory / "trace.jsonl"),
+            "outcome": {
+                "displacement_mm": displacement,
+                "onset_us": onset_us,
+                "decoder_events": [
+                    {"t_us": onset_us, "state": "ACTING", "source": "fixed command"}
+                ],
+                "reached_acting": True,
+            },
+            "claim_boundary": contract["claim_boundary"],
+            "control_truth": (
+                "Fixed command to the body; no connectome, neural engine, sensory encoder "
+                "or neural decoder was attached."
+            ),
+        }
+        (output_directory / "summary.json").write_text(
+            json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n",
+            encoding="utf-8",
+        )
+        return BehaviourResult(
+            behaviour=behaviour,
+            variant="controller-only",
+            directory=output_directory,
+            intervals=intervals,
+            duration_us=duration_us,
+            displacement_mm=displacement,
+            onset_us=onset_us,
+            summary=summary,
+        )
+    finally:
+        body.close()
 
 
 def run_behaviour(
@@ -356,6 +540,21 @@ def run_behaviour(
             f"A {sensory_delay_us} us sensory delay is not a whole number of "
             f"{coupling_us} us coupling intervals. NUM-01 quantises it to "
             "ceil(registered / coupling) * coupling; declare the realised value."
+        )
+
+    if variant == "controller-only":
+        return _run_controller_only(
+            behaviour=behaviour,
+            contract=contract,
+            verification=verification,
+            output_directory=output_directory,
+            body_parameters=body_parameters,
+            trajectory_path=trajectory_path,
+            decoder=decoder,
+            duration_us=duration_us,
+            seed=seed,
+            coupling_us=coupling_us,
+            progress=progress,
         )
 
     graph = SparseConnectome.load(graph_path)
@@ -437,7 +636,11 @@ def run_behaviour(
         cue_object = ApproachingObject()
 
     bindings = _bindings(
-        atlas, behaviour, variant=variant, sensory_delay_us=sensory_delay_us
+        atlas,
+        behaviour,
+        variant=variant,
+        parameters=parameters,
+        sensory_delay_us=sensory_delay_us,
     )
     bus = SensoryBus(atlas=atlas, bindings=bindings, coupling_us=coupling_us)
     readout = FilteredDescendingReadout(
@@ -485,13 +688,6 @@ def run_behaviour(
              if k != "state"}
             for line in source.read_text(encoding="utf-8").splitlines() if line.strip()
         ]
-    if variant == "controller-only":
-        raise ConfigurationError(
-            "controller-only is named in the contracts and is not implemented. It must "
-            "drive a fixed command into the body with no graph attached, and the current "
-            "code would silently execute it as the exact run with the stimulus silenced, "
-            "which is a different experiment wearing this one's name."
-        )
     if variant == "entry-swapped":
         raise ConfigurationError(
             "entry-swapped is named in demo02-grooming-v1 and is not implemented. It must "

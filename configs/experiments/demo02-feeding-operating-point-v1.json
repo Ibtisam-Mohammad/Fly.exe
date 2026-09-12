@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-feeding-operating-point-v1",
+  "title": "Neural-only operating-point search for the tarsal-taste to MN9 route",
+  "status": "PREREGISTERED. Committed before the search that scores it.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-13",
+  "values_opened": false,
+  "assumption_ids": ["DEMO-03", "SENS-01", "SENS-05", "MOTOR-07", "ND-10", "VAL-01"],
+  "why_this_exists": "demo02-feeding-v2 correctly refuses to run at an operating point selected for a visual descending-neuron route. This search asks only whether the full graph can carry tarsal taste input to the two MN9 rostrum-protractor neurons. It cannot inspect a body, a joint, or any F criterion.",
+  "searched_grid": {
+    "taste_max_rate_hz": [200.0, 400.0, 800.0, 1200.0],
+    "synaptic_mv_per_contact": [0.5, 0.7, 0.9],
+    "inhibitory_weight_gain": [1.5, 1.75, 2.0]
+  },
+  "grid_size": 36,
+  "grid_rationale": "The registered 110 Hz taste transducer produced ten MN9 spikes in nine seconds at the unrelated visual operating point. The rate grid starts above that observation and spans sixfold; the synaptic and inhibitory ranges overlap the independently registered grooming and escape searches. All values are P/E calibration, not physiology.",
+  "fixed_parameters": {
+    "coupling_us": 15000,
+    "seed": 1,
+    "transducer_half_saturation": 0.25,
+    "transducer_threshold": 0.0,
+    "synaptic_delay_ms": 1.0,
+    "readout_filter_tau_ms": 150.0,
+    "adaptation_increment_mv": 0.0,
+    "lamina_on_off_balance": 1.0
+  },
+  "epochs": {
+    "baseline_us": 750000,
+    "concentration_us": 900000,
+    "concentrations": [0.25, 0.5, 0.75, 1.0],
+    "recovery_us": 750000,
+    "settle_fraction": 0.4
+  },
+  "entry": {
+    "channels": [
+      "tarsal-taste:leg-front:L", "tarsal-taste:leg-front:R",
+      "tarsal-taste:leg-hind:L", "tarsal-taste:leg-hind:R"
+    ],
+    "bodies": 70,
+    "scripted_world_quantity": "A declared sucrose concentration is placed on all four taste-bearing tarsi. Contact mechanics are intentionally absent because this is a neural-only search."
+  },
+  "readout": {
+    "decoded": ["rostrum-mn9"],
+    "types": ["MN9"],
+    "bodies": 2,
+    "scored_unit": "raw spikes over each scored epoch"
+  },
+  "neural_criteria": {
+    "N1_baseline_is_silent": {
+      "max_mn9_spikes": 0,
+      "max_motor_pool_hz": 5.0
+    },
+    "N2_the_route_responds": {
+      "min_mn9_spikes_at_max_concentration": 20
+    },
+    "N3_the_response_tracks_concentration": {
+      "min_spearman": 0.8,
+      "min_distinct_spike_counts": 3
+    },
+    "N4_the_route_recovers": {
+      "max_recovery_fraction": 0.5
+    },
+    "N5_the_network_is_alive_and_not_saturated": {
+      "min_motor_active_fraction": 0.001,
+      "max_motor_active_fraction": 0.9,
+      "saturation_max_fraction_of_refractory_ceiling": 0.25
+    }
+  },
+  "selection_rule": "Among candidates passing N1 through N5, maximize the MN9 spike-count range across concentration. Ties choose the lowest taste_max_rate_hz, then the lowest synaptic_mv_per_contact, then the highest inhibitory_weight_gain.",
+  "this_search_may_not_see_the_behaviour_contract": "No code in this search imports, reads or scores demo02-feeding-v2 or F1 through F7. If no candidate passes, that negative is recorded and the embodied feeding contract stays unrun.",
+  "no_criterion_may_be_restated": "The grid, epochs, criteria and selection rule are closed as of this commit.",
+  "claim_boundary": "Engineering calibration only. Selection awards no tier and validates neither taste physiology nor feeding.",
+  "last_reviewed": "2026-09-13"
+}

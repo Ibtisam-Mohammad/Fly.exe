@@ -2,13 +2,29 @@
 
 Date: 2026-09-12
 
-Verdict: accepted as an engineering showcase
+Historical frozen-contract verdict: accepted as an engineering showcase
+
+Current release status: withdrawn as the final showcase; archived limited preview
 
 Scientific tier awarded: none
 
 Execution commit: `efe5c0de0094cd81337c55deb036b08bc208320e`
 
-## Result
+## 2026-09-13 post-release correction
+
+The matrix and hashes below are unchanged, but the original evaluator omitted a behavioural gate
+already present in the run record. The hero reports 8.477 mm of net displacement during grooming
+against a 2.5 mm limit. It also uses raw odour-gradient steering and central relays rather than the
+DEMO-01 causal visual route. The contamination and grooming ablations are serial-sequence
+dependency checks: each produces no transitions, so neither independently isolates a completed
+grooming behaviour. The release contains no command-replay or graph-free controller-only
+comparison and uses one food position.
+
+For those reasons v1 is no longer the final public showcase. Its artifacts remain immutable and
+reproducible as a limited integration preview. ADR-2026-020 and `eon-showcase-v2.json` define the
+successor without revising this failed evidence.
+
+## Historical recorded result
 
 The frozen `eon-showcase-v1` matrix ran nine full-graph conditions from one clean commit:
 
@@ -64,7 +80,7 @@ the trigger as physical mouth or tarsal contact.
 
 ## Claim boundary
 
-Supported:
+Historically supported by the frozen v1 contract, and now restricted to an archived-preview label:
 
 > A full-MaleCNS, controller-mediated, closed-loop engineering demonstration using declared
 > central sensory bridges and body controllers.
