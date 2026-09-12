@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-escape-v2",
+  "title": "A ballistic escape takeoff from a visual object, second preregistration",
+  "status": "PREREGISTERED. Committed before any v2 run exists.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-12",
+  "values_opened": false,
+  "supersedes": "demo02-escape-v1",
+  "assumption_ids": ["DEMO-02", "DEMO-03", "SENS-01", "SENS-02", "MOTOR-03", "BODY-01",
+                     "BODY-02", "ND-07", "ND-10", "VAL-01"],
+
+  "the_v1_verdict_is_not_withdrawn": "demo02-escape-v1 returned INVALID AS A CAUSAL CLAIM and that verdict stands permanently, with its artifact and its recordings. This is not a rescoring of those runs and it may not be described as one. v1's criteria were frozen and four of them failed; three of those failures were defects in how I specified the criteria rather than properties of the network, and a defective instrument is replaced by building a new one and running it again, never by re-reading the old one until it agrees.",
+
+  "every_change_from_v1_and_the_defect_that_forced_it": {
+    "E1_adds_an_uprightness_clause": {
+      "v1": "All six tarsi lose ground contact for at least 20 ms AND the thorax rises at least 1.0 mm.",
+      "defect": "The airborne test everywhere in this pipeline is 'no tarsus touching', and a fly lying on its back satisfies it perfectly and permanently. The v1 exact run ends at 179.4 degrees of roll with its thorax BELOW standing height and reports 2,216,000 us airborne. Both v1 clauses are literally true of a fly that hopped once and then turned over. This is the degenerate outcome for the criterion, and checking new criteria against degenerate outcomes is a standing rule in this project that I did not apply.",
+      "v2": "Unchanged, plus: absolute body roll must stay below 90 degrees for the whole scored window. The airborne clock stops at inversion.",
+      "why_this_is_not_threshold_shopping": "It is strictly harder than v1. Nothing that passes v2's E1 would have failed v1's."
+    },
+    "E2_and_E3_thresholds_move_above_the_noise_floor": {
+      "v1": "The control's thorax rise must be at most 0.15 mm.",
+      "defect": "The justification text inside the v1 criterion states that the measured no-command standing excursion is 0.204 to 0.211 mm. The bar was set below the noise floor the same sentence quotes, so it is unpassable by any fly including a perfectly behaved control. Both v1 controls did exactly what controls should -- neither reached ACTING -- and both criteria failed them.",
+      "v2": "At most 0.35 mm, which is 1.66 times the top of the measured 0.204-0.211 mm standing band. The control must also not reach ACTING, unchanged from v1.",
+      "why_0.35": "The floor is a measurement, not a choice, and a threshold has to sit above it with margin. 0.35 is the smallest round number clearing the measured band by more than half its own width again. The exact run rises 1.562 mm, so the criterion still separates a takeoff from a standing fly by a factor of four."
+    },
+    "E5_anchors_on_the_window_and_gains_a_specificity_clause": {
+      "v1": "The first giant-fibre spike must be followed by the first tarsus release within 30 ms, and must itself fall inside the registered approach window.",
+      "defect": "Two. The anchor is 'the first giant-fibre spike' of the entire run, and a single stochastic spike at 90,000 us -- inside the decoder's own quiescent period, 3.4 seconds before the response -- is that spike. And the approach window closes at 3,500,000 us while the response begins at 3,510,000 us, exactly one coupling interval later, which the declared one-interval sensorimotor delay makes unavoidable rather than surprising.",
+      "v2": "Scored on the first giant-fibre spike INSIDE the scoring window, where the scoring window is the approach window extended by one coupling interval at its close. That spike must be followed by a six-tarsus release within 30 ms. AND at least 90 per cent of the run's giant-fibre spikes must fall inside that window.",
+      "why_the_specificity_clause_is_added": "Moving the anchor off 'the first spike' would otherwise let a network that fires constantly pass by having one well-timed spike among many. The 90 per cent clause is what makes the new anchor safe, and it is strictly additional. In v1 249 of 250 spikes, 99.6 per cent, already fell in the extended window.",
+      "why_extending_the_window_by_one_interval_is_not_a_favour": "The pipeline declares a one-coupling-interval sensorimotor delay everywhere. A response to a stimulus that peaks at the window's close cannot be observed before the following interval. v1 required an effect no earlier than its cause and no later than it either."
+    },
+    "E7_is_removed_and_replaced_by_a_recorded_observation": {
+      "v1": "A topology claim requires the shuffled connectome not to take off, or the giant fibre not to spike.",
+      "defect": "The degree-preserving target shuffle does not neutralise this network, it destabilises it. escape/shuffled runs at 14,025 active neurons per interval against the intact 2,948, a 4.8-fold increase, and fires the giant fibre 242 times where the real connectome fires it zero. A control that moves the network to a different excitability regime cannot isolate the contribution of topology, so passing or failing it licenses nothing.",
+      "v2": "No topology gate. The shuffled variant is still run and still recorded, as an observation about the shuffle rather than a criterion about the connectome. No v2 claim depends on it.",
+      "why_removing_a_criterion_is_allowed_here": "It only narrows what v2 can claim. v2 cannot make a topology claim at all, where v1 could in principle have earned one. Removing a gate that cannot be interpreted is not the same as removing one that is failing."
+    },
+    "E4_is_unchanged_and_already_resolved": {
+      "note": "v1's E4 was a declared branch, not a gate, and it resolved: the object fires the giant fibre in the matched-size-static case too. The word 'loom' is struck from every v2 artifact and the claim is narrowed to a visual object of sufficient angular size. The branch is carried into v2 unchanged and is expected to resolve the same way, because the encoder computes angular size and the encoder is frozen."
+    },
+    "E6_is_unchanged": {"note": "It passed in v1 and nothing about it is in question."}
+  },
+
+  "seeds": [1, 2, 3],
+  "why_three_seeds": "Every escape result so far is seed 1. Eleven of thirty-six operating points passing says the result is robust across parameters; it says nothing about robustness across seeds, and a two-cell all-or-none readout is exactly where seed variance would bite hardest. A criterion must hold on all three seeds to pass. This is strictly harder than v1, which ran one.",
+
+  "operating_point": {
+    "source": "demo02-escape-operating-point-v1",
+    "selected": {"lamina_max_rate_hz": 800.0, "synaptic_mv_per_contact": 0.4,
+                 "inhibitory_weight_gain": 1.0},
+    "frozen": true,
+    "not_re_searched_for_v2": "The search that selected it scored neural criteria alone and could not read demo02-escape-v1 or any body quantity. Re-searching it now, with v2's criteria known, would be the exact circularity the search was built to avoid."
+  },
+
+  "fixed_parameters": {
+    "duration_us": 6000000,
+    "coupling_us": 15000,
+    "locomotor_drive_is_identically_zero": true
+  },
+
+  "this_is_open_loop_and_that_is_a_downgrade": "Unchanged from v1. The encoder's term is angular size, not expansion rate, so an escape built on a walking fly would be self-generated and both the stimulus-absent and readout-ablated controls would fail to expose it. The object moves on a script and the locomotor drives are held at zero.",
+
+  "acceptance_criteria": {
+    "E1_the_fly_leaves_the_ground_and_stays_upright": {
+      "statement": "On every seed: all six tarsi lose ground contact simultaneously for at least 20 ms while the body is upright, the thorax rises at least 1.0 mm above its standing height, and absolute body roll stays below 90 degrees throughout the scored window.",
+      "min_airborne_us": 20000,
+      "min_z_rise_mm": 1.0,
+      "max_abs_roll_deg": 90.0,
+      "why": "The measured standing contact-chatter floor is 5.0 to 5.5 ms, so 20 ms is about four times the noise. Standing thorax height is 1.046 mm, so a 1.0 mm rise is roughly doubled clearance. The roll clause exists because without it a fly on its back satisfies the other two forever."
+    },
+    "E2_the_brain_caused_it": {
+      "statement": "On every seed the readout-ablated variant must not reach ACTING, and its thorax rise must be at most 0.35 mm.",
+      "max_ablated_z_rise_mm": 0.35,
+      "why": "0.35 mm clears the measured 0.204-0.211 mm no-command standing band with margin, and sits a factor of four below the exact run's rise."
+    },
+    "E3_the_stimulus_was_required": {
+      "statement": "On every seed, with no object, the fly must not reach ACTING and must rise at most 0.35 mm.",
+      "max_absent_z_rise_mm": 0.35
+    },
+    "E4_approach_or_merely_size": {
+      "statement": "In the matched-size-static variant, an identical object placed from t=0 at the approach trajectory's final distance must not produce a takeoff.",
+      "this_is_a_claim_ladder_branch_and_not_a_pass_or_fail": true,
+      "if_it_fires_only_in_the_moving_case": "The expansion claim is earned and the word loom may be used.",
+      "if_it_fires_in_both": "The word loom is struck from every artifact and the claim narrows to: a visual object of sufficient angular size drives the giant fibre. This is the expected outcome and v1 already produced it."
+    },
+    "E5_the_timing_is_stimulus_locked": {
+      "statement": "On every seed: the first giant-fibre spike inside the scoring window must be followed by a six-tarsus release within 30 ms, AND at least 90 per cent of the run's giant-fibre spikes must fall inside that window.",
+      "max_spike_to_release_us": 30000,
+      "min_fraction_of_spikes_in_window": 0.9,
+      "scoring_window": "the registered approach window, extended at its close by exactly one coupling interval (15,000 us), because the declared sensorimotor delay is one interval and a response to a stimulus peaking at the close cannot be observed before the next interval."
+    },
+    "E6_it_is_an_escape_and_not_a_walk": {
+      "statement": "On every seed the locomotor drives must be identically zero across the run, asserted from the recorded command trace, and horizontal thorax displacement over the airborne window must be at most 2.0 mm.",
+      "max_horizontal_displacement_mm": 2.0,
+      "why": "Its purpose is to catch a walk, not to bound a hop. At 12 mm/s, 20 ms of travel is 0.24 mm, so 2.0 mm is deliberately loose."
+    }
+  },
+
+  "a_criterion_that_may_not_be_used_alone": "'The fly leaves the ground'. With adhesion released and a servo ramp on two joints this body leaves the ground for almost any parameterisation: the controller-only envelope reaches 148 ms of airborne time with no network attached.",
+
+  "control_variants": ["exact", "readout-ablated", "stimulus-absent", "matched-size-static",
+                       "shuffled-connectome", "command-replay", "jump-only", "wing-only",
+                       "zero-tonic-drive"],
+  "control_criteria": {
+    "wing-only": "PREDICTION CARRIED FORWARD AND ALREADY CONFIRMED IN v1: wing depression alone produced 0.219 mm of rise against a 0.204-0.211 mm noise floor. This model sets no density, no viscosity and enables fluid on no geom, so wing motion generates no force.",
+    "jump-only": "Leg extension with the wings held. In v1 this was the CLEAN hop: 17.1 degrees of maximum roll, landing upright, against the exact run's 180. The wings generate no force and are what turn the fly over.",
+    "shuffled-connectome": "Recorded as an observation about the shuffle, not as a topology gate. See the E7 removal above.",
+    "controller-only": "NOT LISTED. It is unimplemented, and the runner refuses it rather than silently executing the exact run with the stimulus muted."
+  },
+
+  "claim_ladder": {
+    "if_E1_fails": "NO DEMONSTRATION.",
+    "if_E1_passes_and_E2_or_E3_fails": "INVALID AS A CAUSAL CLAIM.",
+    "if_E5_fails": "NOT STIMULUS LOCKED. A takeoff and a spike both occurred and their timing does not connect them.",
+    "if_E1_E2_E3_E5_E6_pass": "FULL-GRAPH CAUSAL BALLISTIC TAKEOFF TO A VISUAL OBJECT, on three seeds. Topology-specificity is NOT claimed and cannot be, because v2 has no topology gate.",
+    "may_never_claim": "Flight. Lift. That any aerodynamic force was computed, because none was. That the wings contributed height, because the wing-only control measured 0.219 mm against a 0.204-0.211 mm noise floor. That a muscle was modelled. That loom selectivity was tested, unless E4 fires only in the moving case. That MaleCNS topology is responsible, because the control that would license it is unsound."
+  },
+
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. This is engineering acceptance, not evidence.",
+    "A female NeuroMechFly body prior driven by a male CNS graph.",
+    "NO AERODYNAMICS. No density, no viscosity, fluid enabled on no geom. Every millimetre of height is leg extension against the floor. Air CAN be enabled at a measured 1.204e-6 g/mm^3 and deliberately is not, because it voids every threshold measured on this plant.",
+    "It is a hop, not flight. No wingbeat, no stabilisation, no landing.",
+    "The jump is a position ramp at a tuned operating point, strongly non-monotone in extension: 1.8 rad produces less height than 1.0 rad.",
+    "Two decoded cells. The giant fibre's synapse onto TTMn is substantially electrical in the real animal and electrical synapses are omitted (ND-07).",
+    "Open loop: the locomotor drives are held at zero and the object moves on a script.",
+    "The operating point is engineering calibration selected on neural criteria. It is not a measurement and no fly produced it.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero (ND-10).",
+    "The route survey that chose this population is structural, blind to sign and dynamics."
+  ],
+
+  "no_criterion_may_be_restated": "E1 to E6, their thresholds, the seed set, the duration, the operating point, the stimulus geometry and the control set are closed as of this commit. If v2 fails, the failure is recorded and there is no v3 that moves a number. The only defect that would justify another version is one in how a criterion is MEASURED, and that is a bug fix to the evaluator, reported as one.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. A takeoff is not flight and this contract never says otherwise.",
+  "last_reviewed": "2026-09-12"
+}
