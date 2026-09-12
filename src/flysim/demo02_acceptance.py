@@ -154,6 +154,36 @@ def _airborne_displacement_mm(variant: dict[str, Any]) -> float:
     return math.hypot(last["x_mm"] - first["x_mm"], last["y_mm"] - first["y_mm"])
 
 
+
+def _attitude(variant: dict[str, Any]) -> dict[str, Any]:
+    """Body roll over the run, so an inverted fly cannot be read as an airborne one.
+
+    The airborne test everywhere in this pipeline is "no tarsus touching", and a fly lying
+    on its back satisfies it perfectly. The exact escape run reports 2,216,000 us airborne
+    and ends at 179.4 degrees of roll with its thorax BELOW its standing height: it did
+    hop, and then it turned over, and the tarsi never came back down. This is recorded
+    beside E1 rather than folded into it, because E1 is frozen and says only "lose ground
+    contact" and "rise 1.0 mm", both of which are literally true here.
+    """
+    rolls = [
+        abs(math.degrees(float(row.get("sensors", {}).get(
+            "world:gravity-in-body-frame:roll", 0.0))))
+        for row in variant["rows"]
+    ]
+    if not rolls:
+        return {}
+    return {
+        "max_abs_roll_deg": max(rolls),
+        "final_abs_roll_deg": rolls[-1],
+        "inverted_at_end": rolls[-1] > 90.0,
+        "ever_inverted": max(rolls) > 90.0,
+        "why_this_is_recorded": (
+            "An inverted fly has no tarsus touching and is scored airborne by every "
+            "airborne test here, including E1's."
+        ),
+    }
+
+
 def evaluate(
     *, behaviour: str, contract: dict[str, Any], variants: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
@@ -223,15 +253,25 @@ def evaluate(
         ok = airborne >= int(spec["min_airborne_us"]) and rise >= float(
             spec["min_z_rise_mm"]
         )
+        attitude = _attitude(exact)
+        note = ""
+        if attitude.get("inverted_at_end"):
+            note = (
+                f" -- WARNING: the body ends at {attitude['final_abs_roll_deg']:.1f} "
+                "degrees of roll, so it is inverted and the airborne count includes time "
+                "spent lying on its back. E1 is frozen and both of its clauses are "
+                "literally satisfied; this is disclosed, not rescored."
+            )
         results["E1_the_fly_leaves_the_ground"] = _criterion(
             PASS if ok else FAIL,
             (
                 f"airborne {airborne} us against {spec['min_airborne_us']}, "
-                f"z rise {rise:.3f} mm against {spec['min_z_rise_mm']}"
+                f"z rise {rise:.3f} mm against {spec['min_z_rise_mm']}{note}"
             ),
             longest_airborne_us=airborne,
             z_rise_mm=rise,
             reached_acting=exact["reached_acting"],
+            body_attitude=attitude,
         )
 
     # --- the two causal criteria, shared in shape across all three ---------------
