@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-escape-legs-v1",
+  "title": "A leg-driven escape hop from a visual object, with the wing command withheld",
+  "status": "PREREGISTERED. Committed before any run of this experiment exists.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-12",
+  "values_opened": false,
+  "adr": "ADR-2026-017",
+  "this_is_a_new_experiment_not_a_third_version_of_the_old_one": "demo02-escape-v1 and demo02-escape-v2 both returned their verdicts and both stand permanently. v2's text says there is no v3 that moves a number, and this is not one: the DECODER BINDING changes, because commanding an effector whose physics is absent from the model was measured to invert the fly. Two criteria differ from v2 and both are corrections to specification defects that v2 itself exposed and that are documented before this run.",
+  "assumption_ids": ["DEMO-02", "DEMO-03", "SENS-01", "SENS-02", "MOTOR-03", "BODY-01",
+                     "BODY-02", "ND-07", "ND-10", "VAL-01"],
+
+  "what_changed_from_v2": {
+    "the_decoder_withholds_wing_depression": {
+      "measured": "wing-only rises 0.219 mm against a 0.204-0.211 mm standing noise floor, so the wings do nothing; jump+wings reaches 180 degrees of roll and ends inverted, jump-only reaches 17.1 and lands upright.",
+      "the_plant_is_unchanged": "The wing joints stay actuated, so the actuator-set digest is identical and every threshold measured on this plant carries over unexamined. wing-only remains runnable, so the zero-lift claim stays verifiable from a trace."
+    },
+    "E5_gap_limit_60000_to_75000_us": {
+      "v2": "30,000 us from the first in-window spike to the six-tarsus release.",
+      "defect": "Derived from nothing. The declared pipeline needs one coupling interval to decode, one more for the jump target to ramp (jump_ramp_us is 15,000), and further intervals for the servo to move the legs and the body to leave the ground. 30,000 us allows two intervals total, which is less than the declared mechanism takes before the fly can possibly move.",
+      "v3": "75,000 us = five coupling intervals: one to decode, one to ramp, two for the mechanical response, and one of margin.",
+      "disclosed": "v2 measured 60,000 us. The derived bound without margin is also 60,000 us, so this threshold would sit EXACTLY on the observed value with no margin at all, which is a bad threshold. The extra interval is the margin and it is declared here rather than discovered later. A reader should treat E5 as the weakest criterion in this contract for exactly this reason."
+    },
+    "E5_specificity_clause_inverted": {
+      "v2": "At least 90 per cent of the run's giant-fibre spikes must fall INSIDE the scoring window.",
+      "defect": "Measured 2 of 250, and the network was not misbehaving. The window closes 5 ms after the response begins while the object REMAINS at full angular size for the rest of the run, so the response correctly continues for seconds. The clause required the network to stop responding to a stimulus that was still present.",
+      "v3": "At most 5 per cent of the run's decoded spikes may occur BEFORE the scoring window opens.",
+      "why_this_is_the_right_test": "The thing the clause was meant to prevent is a constantly-firing network passing on one well-timed spike. What identifies that network is activity BEFORE the stimulus, not activity after it. v2 measured 1 spike of 250 before the window, which is 0.4 per cent."
+    }
+  },
+
+  "seeds": [1, 2, 3],
+  "why_three_seeds": "Carried from v2. A criterion must hold on all three.",
+
+  "operating_point": {
+    "source": "demo02-escape-operating-point-v1",
+    "selected": {"lamina_max_rate_hz": 800.0, "synaptic_mv_per_contact": 0.4,
+                 "inhibitory_weight_gain": 1.0},
+    "frozen": true,
+    "not_re_searched": "The search scored neural criteria alone and could not read any behaviour contract. Re-running it now, with this contract's criteria known, would be the circularity it was built to avoid."
+  },
+
+  "fixed_parameters": {
+    "duration_us": 6000000,
+    "coupling_us": 15000,
+    "locomotor_drive_is_identically_zero": true
+  },
+
+  "a_failure_predicted_before_the_run": "jump-only was measured airborne for 17,000 us and E1 requires 20,000 us. The 20,000 figure was derived from the measured 5.0-5.5 ms contact-chatter floor with roughly a four-fold margin, and frozen before anyone measured how long this body's leg-only hop lasts. This experiment is therefore expected to pass E1's roll clause and fail its airborne clause by three milliseconds. The prediction is recorded here so it cannot be presented afterwards as a surprise, and the threshold is NOT moving. A 1.6 mm hop clearing the ground for 17 ms is a real takeoff, and a criterion calibrated against noise rather than against the behaviour is the thing at fault -- but it is frozen and it is scored as written.",
+
+  "acceptance_criteria": {
+    "E1_the_fly_leaves_the_ground_and_stays_upright": {
+      "statement": "On every seed: all six tarsi lose ground contact simultaneously for at least 20 ms while upright, the thorax rises at least 1.0 mm above standing height, and absolute body roll stays below 90 degrees throughout.",
+      "min_airborne_us": 20000,
+      "min_z_rise_mm": 1.0,
+      "max_abs_roll_deg": 90.0,
+      "carried_from_v2_verbatim": true
+    },
+    "E2_the_brain_caused_it": {
+      "statement": "On every seed the readout-ablated variant must not reach ACTING, and its thorax rise must be at most 0.35 mm.",
+      "max_ablated_z_rise_mm": 0.35,
+      "carried_from_v2_verbatim": true
+    },
+    "E3_the_stimulus_was_required": {
+      "statement": "On every seed, with no object, the fly must not reach ACTING and must rise at most 0.35 mm.",
+      "max_absent_z_rise_mm": 0.35,
+      "carried_from_v2_verbatim": true
+    },
+    "E4_approach_or_merely_size": {
+      "statement": "In the matched-size-static variant, an identical object placed from t=0 at the approach's final distance must not produce a takeoff.",
+      "this_is_a_claim_ladder_branch_and_not_a_pass_or_fail": true,
+      "if_it_fires_in_both": "The word loom is struck and the claim narrows to a visual object of sufficient angular size. v1 and v2 both resolved this way and the encoder is frozen, so this is expected again.",
+      "carried_from_v2_verbatim": true
+    },
+    "E5_the_timing_is_stimulus_locked": {
+      "statement": "On every seed: the first decoded spike inside the scoring window must be followed by a six-tarsus release within 75 ms, AND at most 5 per cent of the run's decoded spikes may occur before the scoring window opens.",
+      "max_spike_to_release_us": 75000,
+      "max_fraction_of_spikes_before_window": 0.05,
+      "scoring_window": "the registered approach window, extended at its close by one coupling interval, because the declared sensorimotor delay is one interval."
+    },
+    "E6_it_is_an_escape_and_not_a_walk": {
+      "statement": "On every seed the locomotor drives must be identically zero across the run, asserted from the recorded command trace, and horizontal thorax displacement over the airborne window must be at most 2.0 mm.",
+      "max_horizontal_displacement_mm": 2.0,
+      "carried_from_v2_verbatim": true
+    },
+    "E8_the_wing_command_is_actually_withheld": {
+      "statement": "On every seed, actuator:wing-depression must be identically zero across the entire recorded command trace of the exact run.",
+      "why": "This contract's whole change is that the decoder stops emitting one command. Asserting it from the recording rather than from the code is the difference between a decision and an intention, and it costs one line."
+    }
+  },
+
+  "control_variants": ["exact", "readout-ablated", "stimulus-absent", "matched-size-static",
+                       "wing-only", "shuffled-connectome", "command-replay"],
+  "control_criteria": {
+    "wing-only": "Kept and still runnable, which is the point of not removing the command from the vocabulary. It drives wing depression with the jump withheld and is expected to produce approximately nothing: 0.219 mm against a 0.204-0.211 mm noise floor in v1.",
+    "shuffled-connectome": "Recorded as an observation about the shuffle, not as a topology gate. There is no topology gate in this contract.",
+    "controller-only": "NOT LISTED. Unimplemented, and the runner refuses it rather than silently executing the exact run with the stimulus muted."
+  },
+
+  "claim_ladder": {
+    "if_E1_fails": "NO DEMONSTRATION.",
+    "if_E1_passes_and_E2_or_E3_fails": "INVALID AS A CAUSAL CLAIM.",
+    "if_E5_fails": "NOT STIMULUS LOCKED.",
+    "if_E1_E2_E3_E5_E6_E8_pass": "FULL-GRAPH CAUSAL LEG-DRIVEN ESCAPE HOP TO A VISUAL OBJECT, on three seeds. Topology-specificity is NOT claimed and cannot be: this contract has no topology gate, because the shuffle control that would license one is unsound.",
+    "may_never_claim": "Flight. Lift. That any aerodynamic force was computed. That the wings contributed anything, since the decoder does not command them here and measured 0.219 mm when it did. That a muscle was modelled. That loom selectivity was tested unless E4 fires only in the moving case. That MaleCNS topology is responsible."
+  },
+
+  "declared_limitations_that_must_travel_with_any_claim": [
+    "The tier is V0 Structural and does not move. Engineering acceptance, not evidence.",
+    "A female NeuroMechFly body prior driven by a male CNS graph.",
+    "NO AERODYNAMICS. No density, no viscosity, fluid enabled on no geom. Every millimetre of height is leg extension against the floor. Air can be enabled at a measured 1.204e-6 g/mm^3 and deliberately is not, because it voids every threshold measured on this plant.",
+    "The wing command is withheld by the decoder BECAUSE the wings generate no force here and commanding them inverts the fly. That is a statement about this model, not about flies.",
+    "It is a hop, not flight. No wingbeat, no stabilisation, no landing.",
+    "The jump is a position ramp at a tuned operating point, strongly non-monotone in extension.",
+    "Two decoded cells. The giant fibre's synapse onto TTMn is substantially electrical in the real animal and electrical synapses are omitted (ND-07).",
+    "Open loop: the locomotor drives are held at zero and the object moves on a script.",
+    "Edge signs come from a transmitter-only regression with unresolved signs set to zero (ND-10)."
+  ],
+
+  "no_criterion_may_be_restated": "E1 to E8, their thresholds, the seed set, the duration, the operating point, the stimulus geometry and the control set are closed as of this commit. If this fails, the failure is recorded. The airborne threshold in particular is predicted to fail and is not moving.",
+  "every_variant_is_recorded": true,
+  "claim_boundary": "Structural and engineering only. A hop is not flight.",
+  "last_reviewed": "2026-09-12"
+}
