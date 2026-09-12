@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -120,6 +121,17 @@ def main() -> int:
         raise SystemExit(f"No contract at {contract_path}.")
     contract = load_json(contract_path)
     variants = args.variants or list(contract["control_variants"])
+    # Feeding v2 froze a four-concentration body criterion but its runner executed only
+    # the 1.0 exact condition.  Derive the three additional condition names from that
+    # already-frozen list; this makes the written F5/F7 gates executable without editing
+    # the opened contract or inventing a new concentration.
+    if args.variants is None and behaviour == "feeding":
+        for concentration in contract["fixed_parameters"].get(
+            "sucrose_concentrations", ()
+        ):
+            value = float(concentration)
+            if value != 1.0:
+                variants.append(f"concentration-{value:g}")
     duration_us = args.duration_us or int(contract["fixed_parameters"]["duration_us"])
     # v1 carries one seed in fixed_parameters; later contracts carry a seed set and every
     # seed must pass. Two separate things were conflated here and both were wrong.
@@ -273,6 +285,12 @@ def _one_seed(
             / (variant if version == "v1" else f"seed{seed}/{variant}")
         )
         print(f"\n=== {behaviour} / {variant} ===", flush=True)
+        variant_body_parameters = body_parameters
+        if behaviour == "feeding" and variant.startswith("concentration-"):
+            variant_body_parameters = replace(
+                body_parameters,
+                sucrose_concentration=float(variant.removeprefix("concentration-")),
+            )
         result = run_behaviour(
             behaviour=behaviour,
             variant=variant,
@@ -286,7 +304,7 @@ def _one_seed(
             ),
             build_root=root / f"build/demo02-{behaviour}",
             output_directory=directory,
-            body_parameters=body_parameters,
+            body_parameters=variant_body_parameters,
             trajectory_path=root / TRAJECTORY if behaviour == "grooming" else None,
             decoder=decoder,
             parameters=parameters,

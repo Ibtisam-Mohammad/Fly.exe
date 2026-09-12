@@ -146,6 +146,45 @@ def _sustained_us(rows: list[dict[str, Any]], key: str, threshold: float) -> int
     return best
 
 
+def _spearman(left_values: list[float], right_values: list[float]) -> float:
+    """Spearman correlation with average ranks, without a SciPy runtime dependency."""
+    if len(left_values) != len(right_values) or len(left_values) < 2:
+        raise ValidationError("Spearman comparison needs equal non-trivial sequences")
+
+    def ranks(values: list[float]) -> list[float]:
+        order = sorted(range(len(values)), key=values.__getitem__)
+        answer = [0.0] * len(values)
+        start = 0
+        while start < len(order):
+            end = start + 1
+            while end < len(order) and values[order[end]] == values[order[start]]:
+                end += 1
+            rank = (start + end - 1) / 2.0
+            for index in order[start:end]:
+                answer[index] = rank
+            start = end
+        return answer
+
+    left, right = ranks(left_values), ranks(right_values)
+    left_mean = sum(left) / len(left)
+    right_mean = sum(right) / len(right)
+    numerator = sum(
+        (x - left_mean) * (y - right_mean) for x, y in zip(left, right, strict=True)
+    )
+    left_ss = sum((x - left_mean) ** 2 for x in left)
+    right_ss = sum((y - right_mean) ** 2 for y in right)
+    denominator = math.sqrt(left_ss * right_ss)
+    return numerator / denominator if denominator else 0.0
+
+
+def _raw_spikes_after(variant: dict[str, Any], population: str, start_us: int) -> int:
+    return sum(
+        int(row.get("readout_raw_counts", {}).get(population, 0))
+        for row in variant["rows"]
+        if int(row["t_us"]) >= start_us
+    )
+
+
 
 LEG_CONTACT_PREFIX = "world:leg-contact:"
 
@@ -505,6 +544,146 @@ def evaluate(
             detail += f"; excursion {achieved:.4f} rad against {allowed:.4f}"
             extra["peak_excursion_rad"] = achieved
         results[name] = _criterion(PASS if ok else FAIL, detail, **extra)
+
+    # --- feeding-only controls and mapping checks -------------------------------
+    if behaviour == "feeding":
+        if "F4_it_is_taste_and_not_touch" in criteria:
+            contact = variants.get("contact-without-sucrose")
+            if contact is None:
+                results["F4_it_is_taste_and_not_touch"] = _criterion(
+                    NOT_SCORED, "variants not recorded: contact-without-sucrose"
+                )
+            else:
+                passive_limit = float(
+                    criteria["F2_the_readout_causes_it"].get(
+                        "max_ablated_achieved_rad", 0.05
+                    )
+                )
+                achieved = float(contact["peak_proboscis_rad"])
+                acted = bool(contact["reached_acting"])
+                results["F4_it_is_taste_and_not_touch"] = _criterion(
+                    PASS if not acted and achieved <= passive_limit else FAIL,
+                    (
+                        f"contact-without-sucrose reached ACTING: {acted}; achieved "
+                        f"{achieved:.4f} rad against the passive limit {passive_limit}"
+                    ),
+                    reached_acting=acted,
+                    peak_achieved_rad=achieved,
+                    passive_limit_rad=passive_limit,
+                )
+
+        if "F6_the_pump_is_recorded_and_was_not_decoded" in criteria:
+            expected_decoded = tuple(contract.get("readout", {}).get("decoded", ()))
+            recorded_only = tuple(
+                contract.get("readout", {})
+                .get("recorded_and_never_decoded", {})
+                .keys()
+            )
+            named = tuple(exact["summary"].get("decoded_population_names", ()))
+            neural_variants = [
+                value
+                for value in variants.values()
+                if value["summary"].get("graph", {}).get("attached", True)
+            ]
+            rows_complete = bool(neural_variants) and all(
+                all(
+                    set(row.get("readout_raw_counts", {})).issuperset(
+                        (*expected_decoded, *recorded_only)
+                    )
+                    for row in value["rows"]
+                )
+                for value in neural_variants
+            )
+            mapping_ok = named == expected_decoded and not set(named).intersection(
+                recorded_only
+            )
+            results["F6_the_pump_is_recorded_and_was_not_decoded"] = _criterion(
+                PASS if mapping_ok and rows_complete else FAIL,
+                (
+                    f"summary names decoded populations {list(named)} against "
+                    f"{list(expected_decoded)}; every neural trace records decoded plus "
+                    f"never-decoded pools: {rows_complete}"
+                ),
+                decoded_population_names=list(named),
+                expected_decoded_population_names=list(expected_decoded),
+                recorded_only_population_names=list(recorded_only),
+                neural_traces_complete=rows_complete,
+            )
+
+        concentrations = [
+            float(value)
+            for value in contract.get("fixed_parameters", {}).get(
+                "sucrose_concentrations", ()
+            )
+        ]
+        if concentrations and (
+            "F5_the_extension_tracks_the_concentration" in criteria
+            or "F7_the_spike_count_is_large_enough_to_rank" in criteria
+        ):
+            concentration_runs: list[dict[str, Any]] = []
+            missing_concentrations: list[float] = []
+            for concentration in concentrations:
+                key = "exact" if concentration == 1.0 else f"concentration-{concentration:g}"
+                condition = variants.get(key)
+                if condition is None:
+                    missing_concentrations.append(concentration)
+                else:
+                    concentration_runs.append(condition)
+            if missing_concentrations:
+                detail = (
+                    "concentration conditions not recorded: "
+                    + ", ".join(f"{value:g}" for value in missing_concentrations)
+                )
+                for name in (
+                    "F5_the_extension_tracks_the_concentration",
+                    "F7_the_spike_count_is_large_enough_to_rank",
+                ):
+                    if name in criteria:
+                        results[name] = _criterion(NOT_SCORED, detail)
+            else:
+                quiescent_us = int(exact["summary"].get("decoder", {}).get(
+                    "quiescent_us", 0
+                ))
+                spike_counts = [
+                    _raw_spikes_after(run, "rostrum-mn9", quiescent_us)
+                    for run in concentration_runs
+                ]
+                peaks = [float(run["peak_proboscis_rad"]) for run in concentration_runs]
+                floor = int(
+                    criteria["F7_the_spike_count_is_large_enough_to_rank"][
+                        "min_raw_spikes_per_epoch"
+                    ]
+                )
+                enough = all(value >= floor for value in spike_counts)
+                results["F7_the_spike_count_is_large_enough_to_rank"] = _criterion(
+                    PASS if enough else FAIL,
+                    f"post-quiescent MN9 spike counts {spike_counts} against floor {floor}",
+                    concentrations=concentrations,
+                    raw_spikes=spike_counts,
+                    minimum_raw_spikes=floor,
+                )
+                rho = _spearman(concentrations, peaks)
+                threshold = float(
+                    criteria["F5_the_extension_tracks_the_concentration"][
+                        "min_spearman"
+                    ]
+                )
+                if not enough:
+                    results["F5_the_extension_tracks_the_concentration"] = _criterion(
+                        NOT_SCORED,
+                        "F7 failed, so the frozen contract forbids scoring the rank",
+                        concentrations=concentrations,
+                        peak_achieved_rad=peaks,
+                        spearman=rho,
+                    )
+                else:
+                    results["F5_the_extension_tracks_the_concentration"] = _criterion(
+                        PASS if rho >= threshold else FAIL,
+                        f"peak achieved angles {peaks}; Spearman {rho:.3f} against {threshold}",
+                        concentrations=concentrations,
+                        peak_achieved_rad=peaks,
+                        spearman=rho,
+                    )
 
     # --- escape-only criteria: E4 the loom branch, E5 timing, E6 not a walk --------
     if behaviour == "escape":

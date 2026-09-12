@@ -75,6 +75,9 @@ VARIANTS = (
     "controller-only",
     "zero-tonic-drive",
     "contact-without-sucrose",
+    "concentration-0.25",
+    "concentration-0.5",
+    "concentration-0.75",
     "matched-size-static",
     "command-replay",
     "jump-only",
@@ -450,6 +453,7 @@ def _run_controller_only(
             "decoder": decoder.as_dict(),
             "graph": {"attached": False, "neurons": 0, "edges": 0},
             "model_identity": None,
+            "decoded_population_names": [],
             "populations": {},
             "sensory_bus": {"attached": False},
             "body": body.describe(),
@@ -867,6 +871,11 @@ def run_behaviour(
             "wiring_sha256_12": wiring,
             "build_key": identity,
             "compiled_kernel": compiled_kernel_fingerprint(build_root, identity),
+            # Keep the populations monitored by the recorder separate from the subset
+            # the decoder is allowed to read.  The first corrected feeding contract
+            # required this distinction but the run summary recorded only the former,
+            # making its own F6 mapping criterion impossible to score.
+            "decoded_population_names": list(DECODED[behaviour]),
             "populations": populations.as_dict(),
             "sensory_bus": bus.describe(),
             "approaching_object": cue_object.as_dict() if cue_object else None,

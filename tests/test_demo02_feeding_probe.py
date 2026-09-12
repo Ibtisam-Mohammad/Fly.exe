@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from flysim.config import load_json, project_root
+from flysim.demo02_acceptance import _raw_spikes_after, _spearman
+from flysim.demo02_embodied import VARIANTS
 from flysim.demo02_feeding_probe import score_feeding_candidate, select_operating_point, spearman
 
 
@@ -33,6 +35,26 @@ def _measured(counts: list[int]) -> dict[str, object]:
 
 def test_spearman_handles_ties_without_scipy() -> None:
     assert spearman([0.25, 0.5, 0.75, 1.0], [1, 2, 2, 4]) > 0.9
+    assert _spearman([0.25, 0.5, 0.75, 1.0], [1, 2, 2, 4]) > 0.9
+
+
+def test_embodied_feeding_registers_the_frozen_concentration_conditions() -> None:
+    assert {
+        "concentration-0.25",
+        "concentration-0.5",
+        "concentration-0.75",
+    }.issubset(VARIANTS)
+
+
+def test_acceptance_counts_only_post_quiescent_readout_spikes() -> None:
+    variant = {
+        "rows": [
+            {"t_us": 15_000, "readout_raw_counts": {"rostrum-mn9": 50}},
+            {"t_us": 1_500_000, "readout_raw_counts": {"rostrum-mn9": 2}},
+            {"t_us": 1_515_000, "readout_raw_counts": {"rostrum-mn9": 3}},
+        ]
+    }
+    assert _raw_spikes_after(variant, "rostrum-mn9", 1_500_000) == 5
 
 
 def test_feeding_candidate_requires_large_graded_recovering_response() -> None:
