@@ -373,6 +373,13 @@ def run_behaviour(
             if k not in {"functional_edge_signs", "entry_body_ids"}
         },
         "wiring": wiring,
+        # The seed MUST be in the build key. GeNN bakes it into the generated code, so
+        # three seeds produced three different librunner.so hashes under one key, and a
+        # later run reusing that key loads whichever kernel was compiled last. That is not
+        # hypothetical: it is the only explanation that survived for a pair of escape runs
+        # that reported a different trajectory under byte-identical recorded provenance,
+        # twice, and then stopped once other runs had rewritten the cache.
+        "seed": seed,
     })[:12]
     engine = TrackAGeNNEngine(build_root / identity, variant="exact")
     build_started = time.perf_counter()
