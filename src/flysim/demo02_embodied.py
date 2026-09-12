@@ -184,6 +184,33 @@ def _shuffled_graph(
     }
 
 
+
+def compiled_kernel_fingerprint(build_root: Path, identity: str) -> dict[str, Any]:
+    """Hash the shared object that was actually loaded, not the key it was filed under.
+
+    The build cache is keyed on parameters, so two runs with the same key are *assumed* to
+    have executed the same kernel. They are not guaranteed to: a build interrupted
+    mid-link leaves a file that the key still points at. This session hit the loud version
+    of that -- three truncated librunner.so files after a WSL crash, each failing with
+    "file too short" -- and a silent version is the same failure without the error, giving
+    deterministic wrong answers under correct-looking provenance.
+
+    Hashing the object closes it after the fact: two runs claiming one build key and
+    carrying different kernel hashes did not run the same code, whatever their summaries
+    say.
+    """
+    directory = build_root / identity
+    for candidate in sorted(directory.rglob("librunner.so")):
+        payload = candidate.read_bytes()
+        return {
+            "path": str(candidate),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "bytes": len(payload),
+        }
+    return {"path": str(directory), "sha256": None, "bytes": 0,
+            "note": "no librunner.so found under the build key"}
+
+
 class Recorder:
     """Streams one row per coupling interval, plus poses and spikes."""
 
@@ -581,6 +608,7 @@ def run_behaviour(
             "model_identity": engine.checkpoint().get("model_identity"),
             "wiring_sha256_12": wiring,
             "build_key": identity,
+            "compiled_kernel": compiled_kernel_fingerprint(build_root, identity),
             "populations": populations.as_dict(),
             "sensory_bus": bus.describe(),
             "approaching_object": cue_object.as_dict() if cue_object else None,
