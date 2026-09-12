@@ -15,6 +15,24 @@ from flysim.errors import ReadinessError
 from flysim.runs import read_trace
 
 
+def showcase_disclosures(manifest: dict[str, Any]) -> tuple[str, ...]:
+    """Return the visible claim boundary for an engineering-showcase render."""
+    connectome = manifest.get("connectome", {})
+    graph_label = (
+        f"full MaleCNS graph: {connectome.get('neurons', '?')} neurons, "
+        f"{connectome.get('aggregate_edges', '?')} edges"
+        if connectome.get("graph_used")
+        else "reference controller without the MaleCNS graph"
+    )
+    return (
+        graph_label,
+        "central sensory bridges -> neural readouts -> controller-mediated body",
+        "female body prior; no VNC-to-muscle pathway",
+        "feeding initiation only; no ingestion",
+        "ENGINEERING SHOWCASE - V0 Structural; no new validation tier",
+    )
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -50,6 +68,11 @@ def render_run(run_directory: Path, fps: int = 30) -> Path:
         "dust_y_mm": 0.35,
         "dust_radius_mm": 0.8,
     }
+    recorded_geometry = manifest.get("run_metadata", {}).get("world_geometry", {})
+    if isinstance(recorded_geometry, dict):
+        for key in body_parameters:
+            if key in recorded_geometry:
+                body_parameters[key] = float(recorded_geometry[key])
     # Rendering constants affect only pixels, never simulation state.
     width, height = 960, 544
     x_min, x_max = -1.0, 9.5
@@ -134,7 +157,8 @@ def render_run(run_directory: Path, fps: int = 30) -> Path:
             neural = dict(
                 zip(record["neural"]["ids"], record["neural"]["values"], strict=True)
             )
-            draw.text((24, 18), "MaleCNS Virtual Fly - Track A storyboard", fill=(20, 25, 31))
+            disclosures = showcase_disclosures(manifest)
+            draw.text((24, 18), "MaleCNS Virtual Fly - Eon-class showcase", fill=(20, 25, 31))
             draw.text((24, 42), f"t={t_s:5.2f}s  state={state}", fill=(20, 25, 31))
             draw.text((24, 66), f"antenna contamination={contamination:.2f}", fill=(20, 25, 31))
             draw.text(
@@ -143,9 +167,11 @@ def render_run(run_directory: Path, fps: int = 30) -> Path:
                 f"MN9={neural['readout:MN9']:.1f} Hz",
                 fill=(20, 25, 31),
             )
+            for index, disclosure in enumerate(disclosures[:-1]):
+                draw.text((24, 114 + index * 22), disclosure, fill=(20, 25, 31))
             draw.text(
                 (24, height - 36),
-                "ENGINEERING DEMO - placeholder neural populations; no validation tier",
+                disclosures[-1],
                 fill=(255, 214, 88),
             )
             writer.append_data(np.asarray(image))
@@ -160,7 +186,11 @@ def render_run(run_directory: Path, fps: int = 30) -> Path:
         "video_sha256": _sha256_file(output_path),
         "fps": fps,
         "playback": "one biological second per video second",
-        "label": "engineering demo; not a scientific validation tier",
+        "label": (
+            "engineering showcase; full MaleCNS graph where recorded; central sensory "
+            "bridges; controller-mediated body; female body prior; no VNC-to-muscle "
+            "pathway; feeding initiation only; no ingestion; no new validation tier"
+        ),
     }
     (run_directory / "render-manifest.json").write_text(
         json.dumps(render_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"

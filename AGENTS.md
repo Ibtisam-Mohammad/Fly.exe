@@ -1,9 +1,9 @@
 # MaleCNS Virtual Fly — Agent Source of Truth
 
 Status: canonical project direction  
-Version: 1.11
+Version: 1.12
 Last evidence review: 2026-09-08
-Last implementation audit: 2026-09-08
+Last implementation audit: 2026-09-12
 Applies to: this repository and every subdirectory
 
 ## 1. Agent bootstrap
@@ -32,6 +32,8 @@ CURRENT_STAGE: Stage 2 fitted neural dynamics (active); the ADR-2026-006 evidenc
 DATA_STATUS: seven-artifact MaleCNS v1.0 flat-connectome profile checksum-locked; lossless contact derivative and independent dual-layout rebuilds validated
 HIGHEST_VALIDATION_TIER: V0 Structural, reissued 2026-09-08 as bundle 20260908T060641Z_V0 under ADR-2026-006; unchanged by every DEMO-01 and DEMO-02 result, and the only tier names that exist are V0 to V8 in flysim.evidence.ValidationTier
 ENGINEERING_STATUS: the Stage 2 exit gate is contract stage2-exit-gate-v4 and is 0 of 3 -- see STAGE2_EXIT_GATE below, which this line used to contradict by reporting the superseded v2 and its one passing leg; the uEPSC kernel is wrong in decay (0.463 against 0.30) and amplitude (13.6 pA median under), contact number is shown to move opposite to the published unitary-current scaling, the heterogeneous GeNN kernel is verified bit-identical to the homogeneous one on the full graph, and two registered MBON07 values are shown to depend on their measurement rule; NO tier is awarded anywhere, and the V1-limited and V2-restricted labels that appeared in four contracts and three documents were never members of the V0-to-V8 ladder and are removed (ADR-2026-018)
+EON_SHOWCASE_STATUS: eon-showcase-v1 is implemented as an engineering release lane over the existing eon-malecns-v0.2 state machine; it requires three exact seeds, four causal interface ablations, two explicitly non-gating graph diagnostics, one shared clean commit and an offline-labelled hero render. The clean-commit GPU matrix has not yet run, so the showcase is implemented but not accepted. It awards no tier and does not repair Track A's failed grooming-displacement or throughput gates
+HISTORY_REWRITE_STATUS: on 2026-09-12 the user-authorized Git history rewrite removed Co-authored-by trailers and changed every pre-existing commit identifier. Artifact content hashes are unchanged, but old commit identifiers quoted by narrative evidence are legacy identifiers; they require an explicit old-to-new mapping or reissue before being used as current Git-provenance claims
 NEXT_GATE: decide cell-dynamics v0.4 for the MBON07 set (threshold -41.8 mV at 10 percent of peak slope or a bracket, membrane tau as 33 to 48 ms, refractory back to the fallback with the 15.8 ms bound noted); acquire new recordings of any kind, because after the uEPSC holdout the corpus contains no unconsumed cellular or synaptic recording at all; specifically a unit-resolved multi-animal current-step source for a projection-neuron type, an independent held-out set for a refitted uEPSC kernel whose contract does not gate on the peak time of peak-aligned traces, and a rate-dependent recording for ND-06 to be tested against the registered 0.79 release probability and 50 spikes/s depression onset. The Nanami units question is closed by ADR-2026-007 and that trace is retired as a scoring source
 FOUNDATION_JOB: complete; bundle 20260908T060641Z_V0 pins a scoped DATA-* snapshot. The first bundle 20260906T065413Z_V0 is withdrawn because it pinned the mutable assumption register
 FOUNDATION_REBUILD: complete; canonical, 262144-row-group, and 131072-row-group contact layouts are logically identical

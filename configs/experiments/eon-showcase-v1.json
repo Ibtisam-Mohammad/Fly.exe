@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "eon-showcase-v1",
+  "title": "Eon-class MaleCNS controller-mediated showcase",
+  "status": "PREREGISTERED ENGINEERING RELEASE CONTRACT",
+  "provenance": "E",
+  "scenario_id": "eon-malecns-v0.2",
+  "preregistered_on": "2026-09-12",
+  "claim": "A full-MaleCNS, controller-mediated, closed-loop engineering demonstration using declared central sensory bridges and body controllers.",
+  "required_sequence": ["GROOM", "SEEK_RESUME", "FEED_INITIATION", "COMPLETE"],
+  "hero_seed": 1,
+  "seeds": [1, 2, 3],
+  "minimum_completed_seeds": 2,
+  "food_position_mm": [8.0, 1.0],
+  "duration_us": 12000000,
+  "required_graph": {
+    "neurons": 165122,
+    "aggregate_edges": 25563197,
+    "threshold_applied": false
+  },
+  "required_controls": {
+    "contamination-input-ablated": {
+      "arguments": ["--ablate-input", "sensory:antenna-contamination"],
+      "must_block_state": "GROOM",
+      "meaning": "The dust-to-groom transition requires the registered contamination input."
+    },
+    "groom-readout-ablated": {
+      "arguments": ["--ablate-output", "readout:antennal-grooming-DN"],
+      "must_block_state": "GROOM",
+      "meaning": "The grooming controller cannot start when its neural readout is silenced."
+    },
+    "sucrose-input-ablated": {
+      "arguments": ["--ablate-input", "sensory:sucrose-contact"],
+      "must_block_state": "FEED_INITIATION",
+      "meaning": "The feeding-initiation transition requires the registered sucrose input."
+    },
+    "mn9-readout-ablated": {
+      "arguments": ["--ablate-output", "readout:MN9"],
+      "must_block_state": "FEED_INITIATION",
+      "meaning": "The rostrum-extension controller cannot start when MN9 is silenced."
+    }
+  },
+  "diagnostic_controls": {
+    "zero-weight": {
+      "arguments": ["--control", "zero-weight"],
+      "meaning": "Recorded as a diagnostic only; it is not a topology-specificity gate."
+    },
+    "shuffled-connectome": {
+      "arguments": ["--control", "shuffled-connectome"],
+      "meaning": "Recorded as a diagnostic only because the shuffled and exact networks are not activity matched."
+    }
+  },
+  "declared_bridges": [
+    "ethyl-acetate world field to bilateral DM1/DM4 projection neurons",
+    "odor-gated direct DNg97 forward-intent drive",
+    "raw bilateral odor-gradient term in the steering controller",
+    "antennal contamination to JO-F mechanosensory entry",
+    "sucrose contact to GNG588/Fdg central feeding relay",
+    "grooming-DN readout to a published kinematic replay",
+    "MN9 readout to rostrum extension plus an engineered haustellum pose"
+  ],
+  "required_video_labels": [
+    "ENGINEERING SHOWCASE",
+    "V0 Structural; no new validation tier",
+    "full MaleCNS graph",
+    "central sensory bridges",
+    "controller-mediated body",
+    "female body prior",
+    "no VNC-to-muscle pathway",
+    "feeding initiation only; no ingestion"
+  ],
+  "topology_specificity_claimed": false,
+  "scientific_validation_tier_awarded": null,
+  "what_this_is_not": [
+    "a digital twin or recovered source fly",
+    "validated neural physiology",
+    "autonomous connectome-generated behaviour",
+    "a complete VNC, NMJ, muscle or ingestion simulation"
+  ],
+  "release_artifacts": [
+    "showcase-manifest.json",
+    "acceptance.json",
+    "hero/demo.mp4",
+    "hero/render-manifest.json",
+    "per-run manifests and validation reports"
+  ],
+  "last_reviewed": "2026-09-12"
+}

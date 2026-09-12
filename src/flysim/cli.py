@@ -62,6 +62,7 @@ from flysim.runs import (
     write_run,
 )
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
+from flysim.showcase import build_showcase
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
@@ -1651,6 +1652,15 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
                     "code generation, and model load"
                 ),
                 "food_position_mm": list(food_position) if food_position else None,
+                "requested_duration_us": duration,
+                "world_geometry": {
+                    "food_x_mm": demo.body.parameters.food_x_mm,
+                    "food_y_mm": demo.body.parameters.food_y_mm,
+                    "dust_x_mm": demo.body.parameters.dust_x_mm,
+                    "dust_y_mm": demo.body.parameters.dust_y_mm,
+                    "dust_radius_mm": demo.body.parameters.dust_radius_mm,
+                    "food_contact_radius_mm": demo.body.parameters.food_contact_radius_mm,
+                },
                 "central_relay_bypasses": ["DM1_lPN", "GNG588/Fdg"],
                 "groom_net_displacement_limit_mm": float(
                     demo.registry.value_map("MOTOR-03")["groom_max_net_displacement_mm"]
@@ -1752,6 +1762,19 @@ def _command_validate(args: argparse.Namespace) -> int:
     report = validate_run(args.run_directory)
     _print_json(report)
     return 0 if report["valid"] else 2
+
+
+def _command_showcase_build(args: argparse.Namespace) -> int:
+    result = build_showcase(
+        root=args.root,
+        graph=args.graph,
+        output_root=args.output_root,
+        contract_path=args.contract,
+        render=not args.no_render,
+        include_diagnostics=not args.skip_diagnostics,
+    )
+    _print_json(result)
+    return 0 if result["accepted_as_engineering_showcase"] else 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -2266,6 +2289,31 @@ def build_parser() -> argparse.ArgumentParser:
     validate = commands.add_parser("validate")
     validate.add_argument("run_directory", type=Path)
     validate.set_defaults(func=_command_validate)
+
+    showcase = commands.add_parser(
+        "showcase", help="Build the controller-mediated Eon-class release package"
+    )
+    showcase_commands = showcase.add_subparsers(dest="showcase_command", required=True)
+    showcase_build = showcase_commands.add_parser(
+        "build", help="Run, control, render, and package eon-showcase-v1"
+    )
+    showcase_build.add_argument("--root", type=Path, default=default_data_root())
+    showcase_build.add_argument("--graph", type=Path)
+    showcase_build.add_argument("--output-root", type=Path)
+    showcase_build.add_argument(
+        "--contract",
+        type=Path,
+        default=project_root() / "configs" / "experiments" / "eon-showcase-v1.json",
+    )
+    showcase_build.add_argument(
+        "--no-render", action="store_true", help="Run and evaluate without the MP4"
+    )
+    showcase_build.add_argument(
+        "--skip-diagnostics",
+        action="store_true",
+        help="Skip the non-gating zero-weight and shuffled-connectome runs",
+    )
+    showcase_build.set_defaults(func=_command_showcase_build)
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)

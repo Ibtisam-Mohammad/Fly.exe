@@ -21,6 +21,16 @@ uv run flysim render runs/<run-id>
 uv run pytest
 ```
 
+Build the compact, explicitly engineered Eon-class release matrix from one clean commit:
+
+```text
+flysim showcase build --root /srv/flybrain-data
+```
+
+This runs three full-graph seeds, four causal interface ablations, two non-gating graph
+diagnostics, and then renders the hero run offline. It awards no scientific tier. See
+[the showcase release guide](docs/showcase/EON_SHOWCASE.md) for the exact claim boundary.
+
 GeNN is a native source build rather than a registry package and is intentionally installed inside the WSL environment with `scripts/install_genn.sh`; it is recorded separately from the cross-platform Python lock.
 
 For the production Linux environment after `scripts/bootstrap_wsl.ps1` completes:

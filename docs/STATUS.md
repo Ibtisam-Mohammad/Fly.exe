@@ -1532,6 +1532,26 @@ plant. See `docs/evidence/DEMO02_ESCAPE_LEGS_RERUN.md`.
 **Tier unchanged: V0 Structural.** Stage 2 stays `v4` at 0 of 3. Stage 3 stays sealed. Two of
 these repairs remove a claim the project had been making.
 
+## 2026-09-12: Eon-class engineering release lane
+
+`eon-showcase-v1` is implemented as a separate engineering release boundary over the existing
+`eon-malecns-v0.2` path. Its compact matrix is three exact full-graph seeds, four causal interface
+ablations, and two explicitly non-gating diagnostics. A successful build packages immutable run
+references, acceptance results, artifact hashes and an offline-rendered hero video. The renderer
+visibly labels the central sensory bridges, controller-mediated female body, missing
+VNC-to-muscle path and feeding-initiation-only scope.
+
+The implementation is complete, but the clean-commit GPU matrix has not yet run. Therefore the
+showcase is **not yet accepted**. Even if it passes, it will award no tier and will not repair the
+Track A grooming-displacement or throughput failures. See ADR-2026-019 and
+`docs/showcase/EON_SHOWCASE.md`.
+
+The user-authorized rewrite that removed co-author trailers changed every historical Git commit
+identifier before the repository was published. Artifact content hashes are unchanged. Old commit
+IDs quoted in narrative evidence are now legacy identifiers and must be explicitly mapped or
+reissued before they are used as current Git-provenance claims. The showcase is the first release
+lane required to execute entirely from the rewritten history.
+
 
 ## 2026-09-12: verification, two searches, and a narrowed topology claim
 
