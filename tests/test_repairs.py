@@ -324,6 +324,18 @@ def test_registered_track_a_geometry_leaves_dust_clearance_after_settling() -> N
     assert clearance >= float(body["dust_entry_clearance_mm"])
 
 
+def test_track_a_body_runtime_fields_exclude_assumption_metadata() -> None:
+    from flysim.engines.flygym import TRACK_A_BODY_PARAMETER_KEYS
+
+    registry = AssumptionRegistry.load(PROJECT_ROOT / "configs" / "assumptions.json")
+    body = registry.value_map("BODY-01")
+    projected = {key: body[key] for key in TRACK_A_BODY_PARAMETER_KEYS}
+
+    assert set(projected) == set(TRACK_A_BODY_PARAMETER_KEYS)
+    assert "actuated_dof_set_is_declared_per_experiment" not in projected
+    assert "station_keeping_gains_are_never_inherited_across_dof_sets" not in projected
+
+
 def test_run_validation_rejects_excess_grooming_displacement(tmp_path: Path) -> None:
     run = tmp_path / "run"
     run.mkdir()

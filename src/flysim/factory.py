@@ -12,7 +12,11 @@ from flysim.config import ScenarioConfig, project_root
 from flysim.connectome import SparseConnectome
 from flysim.dynamics import DynamicsRegistry
 from flysim.engines.body import KinematicBodyEngine, KinematicParameters
-from flysim.engines.flygym import FlyGymTrackABodyEngine, FlyGymTrackAParameters
+from flysim.engines.flygym import (
+    TRACK_A_BODY_PARAMETER_KEYS,
+    FlyGymTrackABodyEngine,
+    FlyGymTrackAParameters,
+)
 from flysim.engines.genn import TrackAGeNNEngine
 from flysim.engines.reference import ReferenceNeuralEngine
 from flysim.errors import ConfigurationError
@@ -296,7 +300,7 @@ def build_track_a_demo(
     sensory_odor = registry.value_map("SENS-03")
     sensory_contact = registry.value_map("SENS-04")
     parameters = FlyGymTrackAParameters(
-        **body_values,
+        **{key: body_values[key] for key in TRACK_A_BODY_PARAMETER_KEYS},
         physics_dt_us=int(timing["physics_dt_us"]),
         **{
             key: sensory_odor[key]

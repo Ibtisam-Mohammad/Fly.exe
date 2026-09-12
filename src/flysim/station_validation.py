@@ -137,7 +137,11 @@ def _build_body(
     """Construct the Track A body from the registered values with the pose overridden."""
     from dataclasses import replace
 
-    from flysim.engines.flygym import FlyGymTrackABodyEngine, FlyGymTrackAParameters
+    from flysim.engines.flygym import (
+        TRACK_A_BODY_PARAMETER_KEYS,
+        FlyGymTrackABodyEngine,
+        FlyGymTrackAParameters,
+    )
     from flysim.provenance import AssumptionRegistry
 
     registry = AssumptionRegistry.load(registry_path)
@@ -147,7 +151,7 @@ def _build_body(
     odor = registry.value_map("SENS-03")
     contact = registry.value_map("SENS-04")
     parameters = FlyGymTrackAParameters(
-        **body,
+        **{key: body[key] for key in TRACK_A_BODY_PARAMETER_KEYS},
         physics_dt_us=int(timing["physics_dt_us"]),
         **{
             key: odor[key]

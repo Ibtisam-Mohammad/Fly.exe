@@ -46,6 +46,22 @@ STATION_KEEPING_SECONDARY_DOFS: dict[str, str] = {
     "TiTa_pitch": "{leg}_tibia-{leg}_tarsus1-pitch",
 }
 
+# BODY-01 also carries provenance rules that describe how experiments must be built.
+# Project only the numeric arena/body fields into the dataclass so adding metadata to the
+# assumption record cannot accidentally change this runtime constructor's public interface.
+TRACK_A_BODY_PARAMETER_KEYS: tuple[str, ...] = (
+    "initial_x_mm",
+    "initial_y_mm",
+    "initial_heading_rad",
+    "spawn_height_mm",
+    "food_x_mm",
+    "food_y_mm",
+    "dust_x_mm",
+    "dust_y_mm",
+    "dust_radius_mm",
+    "dust_entry_clearance_mm",
+)
+
 
 def _clamp(value: float, limit: float) -> float:
     return min(limit, max(-limit, value))
