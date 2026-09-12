@@ -113,12 +113,23 @@ engine's sucrose signal used an invisible 1.0 mm thorax-proximity radius. The ci
 therefore shows both geometries and labels the larger one as an engineered trigger zone rather
 than physical mouth contact.
 
+The production cinematic source ran from clean commit
+`f6e4a60b825fcd71892559085b5d413bb5917798`. It reproduced the accepted hero signature exactly:
+`GROOM` at 0.465 s, `SEEK_RESUME` at 3.465 s, `FEED_INITIATION` at 5.595 s and `COMPLETE` at
+6.600 s. Its 440 intervals contain 4,413,426 sparse spike events and 440 complete, 133-value
+MuJoCo poses. Clean renderer commit `64a7a0bc7505fd54e749e26209a6273ac11b26a1` generated a
+13.6-second, 1920 by 1080 H.264 presentation at 30 frames per second. The red food core, amber
+trigger halo, replayed body, trajectory inset, full CNS soma cloud and synchronized traces are
+all visible in the final cut. Rendering changes pixels only and awards no tier.
+
 The compact release files are tracked under `artifacts/showcase/eon-showcase-v1/` with a
 `SHA256SUMS` file. The primary hashes are:
 
 - acceptance: `ee0b515c9e3d8b7236a1d42c75af1c50fa254bb7a19c22949309e5053edec672`;
 - package manifest: `dd02aba525240f0649a8217003e73f90ac507958048cd766c45f3a1f541ad4ec`;
-- hero video: `7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7`.
+- schematic hero video: `7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7`;
+- cinematic hero video: `97a3790ed0ab6ffb2eca3c3e49f5f6807bda67cf1b6f489ed575252792c268b7`;
+- cinematic source manifest: `4d2e5896fc2c0b74119196120570b7d94e951cc5f19be26b2a3ebc9724574e81`.
 
 This acceptance is only for the engineering release contract. The project's scientific tier
 remains V0 Structural, Stage 2 remains 0 of 3, and Track A's stricter displacement and throughput

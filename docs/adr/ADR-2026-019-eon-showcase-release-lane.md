@@ -59,3 +59,9 @@ sparse full-graph spike counts and the complete MuJoCo pose during one clean-com
 requires its transition signature to match the accepted hero, and then renders a 1080p dashboard
 offline. It shows the released soma cloud, actual replayed body pose, synchronized traces and both
 food geometries. The larger geometry is labelled an engineered proximity zone, not contact.
+
+The released cut records the simulation and renderer revisions independently. The source rerun
+at clean commit `f6e4a60b825fcd71892559085b5d413bb5917798` exactly matches the accepted hero signature;
+the visually revised cut comes from clean renderer commit
+`64a7a0bc7505fd54e749e26209a6273ac11b26a1`. It adds a visible red food core inside a low-opacity
+amber trigger halo without changing the recorded spikes, poses, transitions, or scientific claim.

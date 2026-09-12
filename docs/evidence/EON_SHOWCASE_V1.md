@@ -39,6 +39,29 @@ and the same execution commit. The acceptance report contains no failures.
 The MP4 independently probes as H.264, 960 by 544 pixels, 30 frames per second, 6.6 seconds,
 and 93,629 bytes. Rendering happened after simulation from the immutable hero trace.
 
+## Cinematic presentation artifact
+
+The cinematic source is a separate clean-commit rerun of the already accepted hero, not a new
+acceptance trial. Commit `f6e4a60b825fcd71892559085b5d413bb5917798` reproduced the exact
+accepted transition signature: `GROOM` at 465,000 us, `SEEK_RESUME` at 3,465,000 us,
+`FEED_INITIATION` at 5,595,000 us and `COMPLETE` at 6,600,000 us. The immutable presentation
+record contains 440 trace intervals, 4,413,426 full-graph sparse spike events, and 440 complete
+133-value MuJoCo poses.
+
+Renderer commit `64a7a0bc7505fd54e749e26209a6273ac11b26a1` produced a 13.6-second,
+1920 by 1080 H.264 video at 30 frames per second. The 0.25 mm red food core and engineered
+1.0 mm thorax-proximity trigger halo are both visible and named. The video does not reinterpret
+the trigger as physical mouth or tarsal contact.
+
+| Cinematic file | SHA-256 |
+|---|---|
+| `cinematic-demo.mp4` | `97a3790ed0ab6ffb2eca3c3e49f5f6807bda67cf1b6f489ed575252792c268b7` |
+| `cinematic-render-manifest.json` | `ac037ab3b77cc8ba30df2e881ca3faa4f6468a82f61623cdb0445c9aae59bc57` |
+| `cinematic-source/presentation-manifest.json` | `4d2e5896fc2c0b74119196120570b7d94e951cc5f19be26b2a3ebc9724574e81` |
+| `cinematic-source/trace.jsonl` | `cb46f09c4108e34ab32db705c0d39d66ba4133eeae4fa97f925c9f309d4c9427` |
+| `cinematic-source/spikes.npz` | `b2cf2279fd02ad6db5fda343464f605e8b50369b41d88038a3a886394bb7a474` |
+| `cinematic-source/poses.npz` | `babdce282609fca94855a177c3f362ff7b24734aa5d900513ee1ce3e48beb85e` |
+
 ## Claim boundary
 
 Supported:

@@ -1552,6 +1552,17 @@ This result awards no tier and does not repair the Track A grooming-displacement
 failures. See ADR-2026-019, `docs/showcase/EON_SHOWCASE.md`, and
 `docs/evidence/EON_SHOWCASE_V1.md`.
 
+The richer cinematic is also complete. A clean hero rerun at commit
+`f6e4a60b825fcd71892559085b5d413bb5917798` reproduced the accepted four-transition signature
+at 0.465, 3.465, 5.595 and 6.600 seconds while recording 440 coupling intervals, 4,413,426
+spikes and 133-value MuJoCo poses. Clean renderer commit
+`64a7a0bc7505fd54e749e26209a6273ac11b26a1` produced the 1920 by 1080 H.264 presentation at
+30 frames per second. It draws a red 0.25 mm food core and a distinct translucent 1.0 mm
+thorax-proximity trigger halo, so reaching the engineered feeding gate is visible without
+misstating it as mouth contact. Video SHA-256 is
+`97a3790ed0ab6ffb2eca3c3e49f5f6807bda67cf1b6f489ed575252792c268b7`. The complete recording
+needed for visual-only rerendering is tracked beside the video.
+
 The user-authorized rewrite that removed co-author trailers changed every historical Git commit
 identifier before the repository was published. Artifact content hashes are unchanged. Old commit
 IDs quoted in narrative evidence are now legacy identifiers and must be explicitly mapped or

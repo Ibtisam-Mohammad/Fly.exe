@@ -1,0 +1,22 @@
+{
+  "fps": 30,
+  "presentation_id": "eon-showcase-cinematic-v1",
+  "renderer_code_commit": "64a7a0bc7505fd54e749e26209a6273ac11b26a1",
+  "renderer_git_dirty": false,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "schema_version": "1.0",
+  "scientific_validation_tier_awarded": null,
+  "simulation_rendering": "offline from recorded spikes and qpos",
+  "source_manifest_sha256": "4d2e5896fc2c0b74119196120570b7d94e951cc5f19be26b2a3ebc9724574e81",
+  "sucrose_zone_disclosure": {
+    "food_object_radius_mm": 0.25,
+    "rendering_is_offline": true,
+    "sucrose_trigger_radius_mm": 1.0,
+    "sucrose_trigger_uses": "thorax-centre proximity, not physical contact"
+  },
+  "video": "cinematic-demo.mp4",
+  "video_sha256": "97a3790ed0ab6ffb2eca3c3e49f5f6807bda67cf1b6f489ed575252792c268b7"
+}

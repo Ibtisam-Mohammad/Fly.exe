@@ -36,6 +36,8 @@ the accepted hero's full-graph spikes and MuJoCo poses and produces a 1080p pres
 rendering inside the simulation loop. Neither command awards a scientific tier. See
 [the showcase release guide](docs/showcase/EON_SHOWCASE.md) for the exact claim boundary.
 
+[Watch or download the released 1080p cinematic](artifacts/showcase/eon-showcase-v1/cinematic-demo.mp4).
+
 GeNN is a native source build rather than a registry package and is intentionally installed inside the WSL environment with `scripts/install_genn.sh`; it is recorded separately from the cross-platform Python lock.
 
 For the production Linux environment after `scripts/bootstrap_wsl.ps1` completes:
