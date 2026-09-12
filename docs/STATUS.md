@@ -1521,6 +1521,14 @@ on the id **count**, the NumPy LIF started every neuron at the global resting po
 binding per-neuron values, and MuJoCo's silent repair of non-finite accelerations was never
 rejected.
 
+**The escape matrix was then re-run from one commit under the repaired orchestration**: 21
+runs, three seeds, seven variants each, `chain_is_sound` true on all three, and command replay
+matching the run it replays at 400 of 400 intervals. NO DEMONSTRATION on every seed. It also
+corrects a statement from 2026-09-11: seeds 2 and 3 both invert and `E5` passes on one seed,
+not two. That statement had been read off console output while three seeds were overwriting
+one file. Seed 1 reproduces the surviving artifact exactly, so the repairs did not move the
+plant. See `docs/evidence/DEMO02_ESCAPE_LEGS_RERUN.md`.
+
 **Tier unchanged: V0 Structural.** Stage 2 stays `v4` at 0 of 3. Stage 3 stays sealed. Two of
 these repairs remove a claim the project had been making.
 

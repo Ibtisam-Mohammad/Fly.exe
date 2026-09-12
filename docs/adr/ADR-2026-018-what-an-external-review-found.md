@@ -246,7 +246,13 @@ Two of these repairs **remove** a claim the project had been making. That is the
 
 1. A registered operating-point search for the tarsal-taste to `MN9` route. None exists.
 2. Every behaviour matrix re-run from **one** commit, one seed at a time through the fixed
-   orchestration, with every required control present.
+   orchestration, with every required control present. **Done for `demo02-escape-legs-v1`**
+   at `50a64be`: 21 runs, three seeds, seven variants, `chain_is_sound` true on all three,
+   NO DEMONSTRATION on all three. It corrected a 2026-09-11 statement in the process -- seeds
+   2 and 3 both invert and `E5` passes on one seed, not two -- and seed 1 reproduced the
+   surviving artifact exactly, so the repairs did not move the plant. See
+   `docs/evidence/DEMO02_ESCAPE_LEGS_RERUN.md`. Grooming and feeding are NOT re-run: feeding
+   has no operating point and grooming names a control that is now refused.
 3. `entry-swapped` implemented or struck from `demo02-grooming-v1`'s control list in a
    superseding contract.
 
