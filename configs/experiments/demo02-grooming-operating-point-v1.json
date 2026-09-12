@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "demo02-grooming-operating-point-v1",
+  "title": "A neural-only operating point for the antennal grooming route",
+  "status": "PREREGISTERED. Committed before the search that it scores.",
+  "provenance": "E",
+  "preregistered_on": "2026-09-12",
+  "values_opened": false,
+  "assumption_ids": ["DEMO-03", "SENS-01", "SENS-04", "SENS-05", "ND-10", "VAL-01"],
+
+  "why_this_exists": "DEMO-02 reported grooming as a route-level negative on the strength of ONE operating point, selected by a registered search for a different readout. The escape search then showed what that is worth: eleven of thirty-six points drove the giant fibre cleanly and the parameter responsible was one DEMO-01 had selected at the boundary of its own grid. Grooming has had the same zero candidates searched, so its negative rests on the same untested assumption.",
+
+  "the_measurement_that_makes_this_worth_running": "30.2 per cent of the grooming readout's input contacts were ACTIVE while the readout produced zero spikes. The drive arrives and does not cross threshold, which is a gain question before it is anything else.",
+
+  "and_the_measurement_that_says_it_is_gain_and_not_sign": "Only 1.5 per cent of the grooming readout's input contacts carry no sign, BELOW the 2.6 per cent network average, so ND-10's unresolved-to-zero policy is not starving it. What differs is net excitatory contacts per cell: 474 for the grooming readout against 5,177 for the giant fibre and 5,875 for the DNp loom pool that fired. Seven to twelve times less drive per cell at a similar E/I ratio. The escape operating point was never going to transfer.",
+
+  "what_is_searched_and_what_is_fixed": {
+    "searched": ["antennal_max_rate_hz", "synaptic_mv_per_contact",
+                 "inhibitory_weight_gain"],
+    "why_the_entry_rate_rather_than_a_lamina_rate": "Grooming does not enter at the lamina and has no frozen retinotopic encoder. It enters through the sensory bus with a declared saturating transducer, so that transducer's peak rate is the analogue of the escape search's lamina_max_rate_hz.",
+    "fixed": {
+      "lamina_on_off_balance": 1.0,
+      "adaptation_increment_mv": 0.0,
+      "transducer_half_saturation": 0.2,
+      "transducer_threshold": 0.02,
+      "deflection_rad": 0.0735
+    },
+    "why_the_deflection_is_fixed": "0.0735 rad is the measured funiculus deflection the scripted torque produces in the embodied body. Searching it would be searching the stimulus, not the operating point."
+  },
+
+  "searched_grid": {
+    "antennal_max_rate_hz": [500.0, 1000.0, 1500.0, 2000.0],
+    "synaptic_mv_per_contact": [0.7, 0.9, 1.1],
+    "inhibitory_weight_gain": [1.5, 1.75, 2.0]
+  },
+  "grid_size": 36,
+
+  "a_pilot_informed_this_grid": {
+    "disclosed": true,
+    "candidates": 16,
+    "what_it_found": "Two things, and the second inverts a finding from the escape search. The transducer rate is the dominant lever: at 140 Hz the readout produced 0 to 1 spikes in almost every combination, at 1500 Hz up to 154. And MORE inhibition helps grooming, where escape preferred less. At inhibitory_weight_gain 1.0 the network runs away -- 15,000 to 22,500 active neurons per interval -- and the readout is starved, producing 0 to 3 spikes. At 1.5 the network sits at 700 to 8,200 active and the readout produces 16 to 154.",
+    "how_it_shaped_the_grid": "synaptic_mv_per_contact brackets 0.9, the pilot's best. inhibitory_weight_gain starts at 1.5 and goes UP, because 1.0 was measured to be the runaway regime for this route. antennal_max_rate_hz brackets 1500.",
+    "the_pilot_is_not_evidence": "It ran on the same graph and the same stimulus this search will use, so it cannot also be a test of it. It is disclosed so the grid is not mistaken for an a priori choice."
+  },
+
+  "a_biologically_indefensible_number_declared_as_one": "The transducer rates searched here, 500 to 2000 Hz, are far above any afferent firing rate ever measured in a fly. They are achievable in this model only because of a defect DEMO-03 already records: the kernel sets RefracTime to zero for any neuron with a nonzero InputRateHz, removing its refractory period and raising its ceiling from about 455 Hz to 10,000 Hz. So these rates are physically realisable in the simulation and biologically meaningless. If this search selects a point, the selected entry rate is a statement about how much drive this route needs to reach threshold in this model, and it is NOT a claim about Johnston's organ. That the route needs roughly ten times the escape entry rate is itself the result.",
+
+  "coupling_us": 15000,
+  "epochs": {
+    "baseline_us": 750000,
+    "stimulus_left_us": 1500000,
+    "stimulus_right_us": 1500000,
+    "recovery_us": 750000,
+    "settle_fraction": 0.4
+  },
+
+  "readout": {
+    "decoded": ["groom-dn-left", "groom-dn-right"],
+    "types": ["DNg62", "DNge078", "DNg21"],
+    "bodies": 6,
+    "scored_in_spikes_not_rates": "Six cells at a 15 ms interval, where one spike is 66.7 Hz. Raw counts are the honest unit."
+  },
+
+  "neural_criteria": {
+    "baseline_max_readout_spikes": 0,
+    "baseline_max_descending_hz": 5.0,
+    "saturation_max_fraction": 0.25,
+    "min_response_readout_spikes": 20,
+    "min_selectivity_swing": 0.2,
+    "max_recovery_fraction": 0.5,
+    "min_active_fraction": 0.02,
+    "max_active_fraction": 0.9,
+    "statements": {
+      "N1_silent_and_stable_at_rest": "Zero readout spikes in the scored baseline epoch, descending pool at most 5 Hz at rest, and at most a quarter of the 454.5 Hz refractory ceiling while driven.",
+      "N2_responds_to_the_stimulus": "The better side produces at least 20 raw readout spikes in its scored epoch. DEMO-01's C5 floor, carried over unchanged.",
+      "N3_side_selectivity_reverses": "The selectivity index must change sign between a left and a right deflection with a swing of at least 0.2. Identical arithmetic and threshold to DEMO-01's C3. This is a HARDER test here than for escape: LC4 and LPLC2 onto DNp01 carry zero cross-side edges, whereas the grooming subclass supplies eleven direct edges in total and the largest bundle runs CONTRALATERAL, so a sign reversal is not anatomically guaranteed and may well fail.",
+      "N4_recovers_to_silence": "After the deflection is removed the readout rate falls to within half the evoked increment above baseline.",
+      "N5_the_network_is_alive_and_not_saturated": "Between 2 and 90 per cent of the descending pool fires at least once per interval while the stimulus is present. This is what stops a dead network passing N1 by being dead, and given the pilot's runaway regime it is also what stops a saturated one passing."
+    },
+    "the_bar_did_not_move": "Every threshold is the escape search's, which are DEMO-01's. Only the parameter names differ."
+  },
+
+  "selection_rule": "Among candidates meeting all five criteria, the one with the largest selectivity swing. Ties break toward the lowest antennal_max_rate_hz, then the lowest synaptic_mv_per_contact, so the least extreme point wins.",
+
+  "what_this_run_can_establish": "Whether any point on the registered grid makes the exact full graph carry a lateralised antennal deflection from Johnston's organ to selective, recoverable spiking in the six declared grooming descending neurons under the transmitter-only LIF. Nothing more.",
+  "what_it_cannot_establish": "Anything biological. It cannot establish that the fly grooms, which is demo02-grooming-v1's question and is scored by criteria this search may not see. It cannot make the entry rate physiological.",
+  "if_nothing_passes": "That is the result and it is reported as a concrete neural-operating-point failure for this route. Combined with the 474-contacts-per-cell measurement it would be a specific, falsifiable statement: this readout has too little net excitatory input to be driven from this entry at any searched gain without destabilising the network.",
+
+  "this_search_may_not_see_the_behaviour_contract": "demo02-grooming-v1 and its criteria G1 to G7 are frozen and are not read or scored by anything here. If a point passes, the grooming matrix is re-run against those criteria exactly as they stand, and if it then fails, the failure is recorded.",
+  "no_criterion_may_be_restated": "The five criteria, their thresholds, the grid, the epochs, the stimulus and the fixed transducer shape are closed as of this commit.",
+  "every_candidate_is_recorded": "Passing or failing, every searched point and its criterion values are written to the artifact.",
+
+  "claim_boundary": "Engineering calibration. Finding an operating point awards no tier and validates no mechanism.",
+  "last_reviewed": "2026-09-12"
+}
