@@ -257,6 +257,12 @@ def evaluate(
                 for name in criteria
             },
             "claim_boundary": contract["claim_boundary"],
+            "tier": "V0 Structural, unchanged. This is engineering acceptance, not evidence.",
+            "variants_recorded": sorted(variants),
+            "why_no_verdict": (
+                "The exact run is not among the recorded variants, so there is nothing to "
+                "score the controls against."
+            ),
         }
 
     # --- the behaviour-exists criterion, one per behaviour -----------------------
