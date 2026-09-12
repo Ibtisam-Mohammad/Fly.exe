@@ -35,6 +35,7 @@ recording.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from dataclasses import dataclass, replace
@@ -59,6 +60,7 @@ from flysim.demo01_visual import (
     VisualLocomotorDecoder,
 )
 from flysim.demo01_visual_probe import resolve_visual_populations
+from flysim.demo02_embodied import compiled_kernel_fingerprint
 from flysim.engines.body import COMMAND_FORWARD, COMMAND_IDS, COMMAND_YAW
 from flysim.engines.genn import TrackAGeNNEngine
 from flysim.errors import ConfigurationError
@@ -274,7 +276,23 @@ def run_embodied(
         graph.validate()
 
     parameters = {**contract["fixed_parameters"], **operating_point}
-    engine = TrackAGeNNEngine(build_root / f"{sha256_json(parameters)[:12]}", variant="exact")
+    # PROVENANCE FIX 2026-09-12. The key was sha256_json(parameters) alone, which omits
+    # both the seed and the wiring. GeNN bakes the RNG seed and the connectivity structure
+    # into the generated code, so the exact and shuffled-connectome variants shared one
+    # build key while executing DIFFERENT graphs, and two seeds would have shared one key
+    # while executing different kernels. Whichever variant compiled first won, and the
+    # other silently loaded it.
+    #
+    # This changes no physics and no parameter. It makes the kernel that runs match the
+    # kernel the summary claims ran. DEMO-02 hit the live version of this: three seeds
+    # produced three librunner.so hashes under one key, and one run would not reproduce.
+    wiring_digest = hashlib.sha256(
+        np.asarray(graph.target_indices, dtype=np.int64).tobytes()
+    ).hexdigest()[:12]
+    build_key = sha256_json(
+        {**parameters, "wiring": wiring_digest, "seed": seed}
+    )[:12]
+    engine = TrackAGeNNEngine(build_root / build_key, variant="exact")
     started = time.perf_counter()
     engine.initialize(
         graph,
@@ -461,7 +479,13 @@ def run_embodied(
             "edges": graph.edge_count,
             "every_edge_built": True,
             "shuffle": shuffle_report,
+            "wiring_sha256_12": wiring_digest,
         },
+        # The shared object that was actually loaded, not the key it was filed under. Two
+        # runs claiming one build key and carrying different kernel hashes did not run the
+        # same code, whatever the rest of the summary says.
+        "compiled_kernel": compiled_kernel_fingerprint(build_root, build_key),
+        "build_key": build_key,
         "populations": populations.as_dict(),
         "body": body.describe(),
         "coupling_us": coupling_us,
