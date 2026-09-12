@@ -251,7 +251,22 @@ def main() -> int:
         print(f"               {outcome['detail']}")
     print(f"\nVERDICT: {verdict['verdict']}")
     print(f"tier:    {verdict['tier']}")
-    out = root / f"evidence/demo02/{behaviour}-acceptance.json"
+    # The filename carries the experiment id and, for multi-seed contracts, the seed. It
+    # used to be f"{behaviour}-acceptance.json" for every contract, so scoring v2 and then
+    # legs-v1 silently overwrote the recorded v1 verdict -- twice -- with a different
+    # experiment's result under v1's name.
+    stem = str(contract["experiment_id"])
+    out = root / "evidence/demo02" / (
+        f"{stem}-acceptance.json" if len(seeds) == 1
+        else f"{stem}-acceptance-seed{seed}.json"
+    )
+    if out.exists():
+        held = json.loads(out.read_text(encoding="utf-8")).get("experiment_id")
+        if held and held != stem:
+            raise SystemExit(
+                f"{out} holds a verdict for {held!r} and this run is {stem!r}. Refusing "
+                "to overwrite one experiment's recorded verdict with another's."
+            )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(verdict, indent=2, sort_keys=True, default=str) + "\n",
