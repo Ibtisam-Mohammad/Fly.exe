@@ -75,6 +75,12 @@ DECODERS: dict[str, dict[str, object]] = {
 }
 
 
+def _run_dir(root, behaviour: str, suffix: str, version: str, seed: int, variant: str):
+    """Where one variant's recording lives. v2 keeps seeds apart so none can overwrite."""
+    base = root / f"runs/demo02-{behaviour}{suffix}"
+    return base / (variant if version == "v1" else f"seed{seed}/{variant}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--behaviour", required=True, choices=BEHAVIOURS)
@@ -83,6 +89,16 @@ def main() -> int:
     parser.add_argument("--duration-us", type=int, default=None)
     parser.add_argument("--allow-dirty-tree", action="store_true")
     parser.add_argument("--progress", action="store_true")
+    parser.add_argument(
+        "--contract-version", default="v1", choices=("v1", "v2"),
+        help="v2 runs the contract's registered seed set into per-seed run directories "
+             "and requires every seed to pass.",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None,
+        help="One seed from the contract's registered set. The set is frozen; a seed "
+             "outside it is refused.",
+    )
     parser.add_argument(
         "--score-only", action="store_true",
         help="Skip running and apply the frozen contract to whatever is already recorded. "
@@ -94,11 +110,23 @@ def main() -> int:
 
     root: Path = args.root
     behaviour: str = args.behaviour
-    contract_path = REPO / f"configs/experiments/demo02-{behaviour}-v1.json"
+    version = args.contract_version
+    contract_path = REPO / f"configs/experiments/demo02-{behaviour}-{version}.json"
     contract = load_json(contract_path)
     variants = args.variants or list(contract["control_variants"])
     duration_us = args.duration_us or int(contract["fixed_parameters"]["duration_us"])
-    seed = int(contract["fixed_parameters"]["seed"])
+    # v1 carries one seed in fixed_parameters; v2 carries a seed set and every seed
+    # must pass. Runs go into per-seed directories so a seed can never overwrite another.
+    seeds = contract.get("seeds") or [int(contract["fixed_parameters"]["seed"])]
+    if args.seed is not None:
+        if args.seed not in seeds:
+            raise SystemExit(
+                f"Seed {args.seed} is not in the contract's registered set {seeds}. "
+                "The seed set is frozen."
+            )
+        seeds = [args.seed]
+    seed = int(seeds[0])
+    suffix = "" if version == "v1" else f"-{version}"
 
     # DEMO-01's frozen operating point, read and not varied.
     operating = load_json(root / "evidence/demo01/demo01-visual-operating-point-v1.json")
@@ -155,7 +183,10 @@ def main() -> int:
 
     results = {}
     for variant in [] if args.score_only else variants:
-        directory = root / f"runs/demo02-{behaviour}/{variant}"
+        directory = (
+            root / f"runs/demo02-{behaviour}{suffix}"
+            / (variant if version == "v1" else f"seed{seed}/{variant}")
+        )
         print(f"\n=== {behaviour} / {variant} ===", flush=True)
         result = run_behaviour(
             behaviour=behaviour,
@@ -194,7 +225,7 @@ def main() -> int:
         }
 
     if results:
-        index = root / f"runs/demo02-{behaviour}/variants.json"
+        index = root / f"runs/demo02-{behaviour}{suffix}/variants-seed{seed}.json"
         index.parent.mkdir(parents=True, exist_ok=True)
         index.write_text(
             json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -204,9 +235,10 @@ def main() -> int:
     # Apply the frozen contract in the same clean-tree window that produced the runs, so
     # the verdict cannot be computed against a tree that has moved since.
     recorded = {
-        name: read_variant(root / f"runs/demo02-{behaviour}/{name}")
+        name: read_variant(_run_dir(root, behaviour, suffix, version, seed, name))
         for name in variants
-        if (root / f"runs/demo02-{behaviour}/{name}/summary.json").exists()
+        if _run_dir(root, behaviour, suffix, version, seed, name).joinpath(
+            "summary.json").exists()
     }
     verdict = evaluate(behaviour=behaviour, contract=contract, variants=recorded)
     print(f"\n--- {contract['experiment_id']} ---")

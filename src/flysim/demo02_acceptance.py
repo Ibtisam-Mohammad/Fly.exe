@@ -155,6 +155,39 @@ def _airborne_displacement_mm(variant: dict[str, Any]) -> float:
 
 
 
+
+def _first_decoded_spike_in_window_us(
+    variant: dict[str, Any], behaviour: str, window: tuple[int, int]
+) -> int | None:
+    """First decoded spike inside the scoring window.
+
+    v1 anchored on the first spike of the whole run, which a single stochastic spike at
+    90,000 us satisfied 3.4 seconds before the response it was supposed to time.
+    """
+    for row in variant["rows"]:
+        t = int(row["t_us"])
+        if not window[0] <= t <= window[1]:
+            continue
+        counts = row.get("readout_raw_counts", {})
+        if sum(int(counts.get(name, 0)) for name in DECODED_BY_BEHAVIOUR[behaviour]) > 0:
+            return t
+    return None
+
+
+def _spike_window_fractions(
+    variant: dict[str, Any], behaviour: str, window: tuple[int, int]
+) -> tuple[int, int]:
+    """(total decoded spikes, how many fall inside the window)."""
+    total = inside = 0
+    for row in variant["rows"]:
+        counts = row.get("readout_raw_counts", {})
+        n = sum(int(counts.get(name, 0)) for name in DECODED_BY_BEHAVIOUR[behaviour])
+        total += n
+        if window[0] <= int(row["t_us"]) <= window[1]:
+            inside += n
+    return total, inside
+
+
 def _attitude(variant: dict[str, Any]) -> dict[str, Any]:
     """Body roll over the run, so an inverted fly cannot be read as an airborne one.
 
@@ -254,6 +287,11 @@ def evaluate(
             spec["min_z_rise_mm"]
         )
         attitude = _attitude(exact)
+        # v2 adds an uprightness clause. v1 has no max_abs_roll_deg key, so this is a
+        # no-op there and the v1 verdict is untouched by anything in this function.
+        roll_cap = spec.get("max_abs_roll_deg")
+        if roll_cap is not None:
+            ok = ok and attitude.get("max_abs_roll_deg", 0.0) < float(roll_cap)
         note = ""
         if attitude.get("inverted_at_end"):
             note = (
@@ -368,11 +406,20 @@ def evaluate(
         # criterion that asks whether a takeoff is stimulus-locked was being satisfied by
         # two pieces of startup noise.
         approach = (exact["summary"].get("approaching_object") or {})
+        coupling = int(exact["summary"].get("coupling_us", 15_000))
+        # v2 extends the scoring window at its close by one coupling interval, because the
+        # declared sensorimotor delay is one interval: a response to a stimulus peaking at
+        # the close cannot be observed before the next interval. v1 has no such key and
+        # keeps its original window, so its recorded verdict does not move.
+        extend = coupling if "min_fraction_of_spikes_in_window" in spec5 else 0
         window = (
             int(approach.get("approach_start_us", 0)),
-            int(approach.get("approach_end_us", 0)),
+            int(approach.get("approach_end_us", 0)) + extend,
         )
-        spike_us = _first_decoded_spike_us(exact, behaviour)
+        spike_us = (
+            _first_decoded_spike_in_window_us(exact, behaviour, window)
+            if extend else _first_decoded_spike_us(exact, behaviour)
+        )
         release_us = (
             _first_release_after_us(exact, spike_us) if spike_us is not None else None
         )
@@ -386,12 +433,23 @@ def evaluate(
             else None
         )
         within = gap is not None and gap <= limit_us
+        # v2's specificity clause. Moving the anchor off "the first spike of the run"
+        # would otherwise let a constantly-firing network pass on one well-timed spike.
+        need_fraction = spec5.get("min_fraction_of_spikes_in_window")
+        total, inside = _spike_window_fractions(exact, behaviour, window)
+        fraction = inside / total if total else 0.0
+        specific = need_fraction is None or fraction >= float(need_fraction)
         results["E5_the_timing_is_stimulus_locked"] = _criterion(
-            PASS if (in_window and within) else FAIL,
+            PASS if (in_window and within and specific) else FAIL,
             (
                 f"first giant-fibre spike at {spike_us} us, approach window "
                 f"{window[0]}-{window[1]} us, in window: {in_window}; first release after "
                 f"it {release_us} us, gap {gap} us against a limit of {limit_us}"
+                + (
+                    f"; {inside}/{total} spikes in window ({fraction:.3f}) against "
+                    f"{need_fraction}"
+                    if need_fraction is not None else ""
+                )
             ),
             first_spike_us=spike_us,
             first_release_us=release_us,
@@ -399,6 +457,10 @@ def evaluate(
             approach_window_us=list(window),
             spike_inside_approach_window=in_window,
             gap_within_limit=within,
+            spikes_in_window=inside,
+            spikes_total=total,
+            fraction_in_window=fraction,
+            specificity_met=specific,
         )
 
         spec6 = criteria["E6_it_is_an_escape_and_not_a_walk"]
@@ -425,8 +487,15 @@ def evaluate(
         "feeding": "F6_topology_claim_gate",
         "escape": "E7_topology_claim_gate",
     }[behaviour]
-    reason = missing("shuffled-connectome")
-    if reason:
+    # escape v2 removes the topology gate outright: the degree-preserving shuffle
+    # destabilises this network rather than neutralising it (14,025 active neurons per
+    # interval against 2,948), so passing or failing it licenses nothing. The variant is
+    # still run and recorded, as an observation about the shuffle.
+    has_gate = gate_name in criteria
+    reason = missing("shuffled-connectome") if has_gate else None
+    if not has_gate:
+        pass
+    elif reason:
         results[gate_name] = _criterion(NOT_SCORED, reason)
     else:
         shuffled = variants["shuffled-connectome"]
@@ -479,7 +548,7 @@ def evaluate(
         verdict = VERDICT_INVALID
     elif failed_required or unscored_required:
         verdict = "INCOMPLETE"
-    elif results[gate_name]["status"] == PASS:
+    elif has_gate and results[gate_name]["status"] == PASS:
         verdict = VERDICT_CAUSAL_TOPOLOGY
     else:
         verdict = VERDICT_CAUSAL
