@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -95,7 +96,12 @@ class CausalScheduler:
             "assumption_ids": ["NUM-01"],
         }
 
-    def run_until(self, duration_us: int) -> SchedulerResult:
+    def run_until(
+        self,
+        duration_us: int,
+        *,
+        interval_observer: Callable[[dict[str, Any]], None] | None = None,
+    ) -> SchedulerResult:
         if duration_us <= self.body.t_us:
             raise ConfigurationError("Run duration must exceed current simulation time")
         initial = ActuatorCommandFrame(
@@ -175,16 +181,20 @@ class CausalScheduler:
                     "active_since_t_us": applied_command.t_us,
                 },
             )
-            trace.append(
-                {
-                    "t_us": next_t,
-                    "state": self.controller.state.value,
-                    "body": self.body.snapshot(),
-                    "sensors": sensors_after.as_dict(),
-                    "neural": neural_outputs.as_dict(),
-                    "actuators": traced_command.as_dict(),
-                }
-            )
+            row = {
+                "t_us": next_t,
+                "state": self.controller.state.value,
+                "body": self.body.snapshot(),
+                "sensors": sensors_after.as_dict(),
+                "neural": neural_outputs.as_dict(),
+                "actuators": traced_command.as_dict(),
+            }
+            trace.append(row)
+            if interval_observer is not None:
+                # Presentation recorders may copy already-computed state here. The
+                # observer runs only after the command for this boundary is committed;
+                # it is never allowed to supply a value back to the simulation.
+                interval_observer(row)
 
         return SchedulerResult(
             completed=self.controller.state == DemoState.COMPLETE,

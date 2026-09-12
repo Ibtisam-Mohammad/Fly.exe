@@ -5,10 +5,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from flysim.cli import build_parser
 from flysim.config import load_json
 from flysim.render import showcase_disclosures
 from flysim.showcase import _latest_reusable_run, evaluate_showcase
+from flysim.showcase_cinematic import food_distance_mm
 
 REPO = Path(__file__).resolve().parents[1]
 CONTRACT = load_json(REPO / "configs/experiments/eon-showcase-v1.json")
@@ -57,9 +60,7 @@ def _run(
         },
     }
     (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-    (directory / "validation-report.json").write_text(
-        json.dumps({"valid": True}), encoding="utf-8"
-    )
+    (directory / "validation-report.json").write_text(json.dumps({"valid": True}), encoding="utf-8")
     return directory
 
 
@@ -74,9 +75,7 @@ def _matrix(tmp_path: Path) -> tuple[dict[int, Path], dict[str, Path], dict[str,
         "contamination-input-ablated": _run(
             tmp_path, "c-contamination", seed=1, states=[], completed=False
         ),
-        "groom-readout-ablated": _run(
-            tmp_path, "c-groom", seed=1, states=[], completed=False
-        ),
+        "groom-readout-ablated": _run(tmp_path, "c-groom", seed=1, states=[], completed=False),
         "sucrose-input-ablated": _run(
             tmp_path,
             "c-sucrose",
@@ -114,10 +113,7 @@ def test_showcase_accepts_two_of_three_and_four_causal_controls(tmp_path: Path) 
     assert report["completed_exact_seeds"] == 2
     assert report["scientific_validation_tier_awarded"] is None
     assert all(item["passed"] for item in report["required_controls"].values())
-    assert all(
-        item["gates_acceptance"] is False
-        for item in report["diagnostic_controls"].values()
-    )
+    assert all(item["gates_acceptance"] is False for item in report["diagnostic_controls"].values())
 
 
 def test_showcase_fails_closed_when_an_ablation_reaches_its_state(tmp_path: Path) -> None:
@@ -182,7 +178,28 @@ def test_showcase_resume_requires_the_complete_condition_signature(tmp_path: Pat
         "control_variant": "exact",
     }
 
-    assert (
-        _latest_reusable_run(tmp_path, duration_us=12_000_000, **expected) == run
-    )
+    assert _latest_reusable_run(tmp_path, duration_us=12_000_000, **expected) == run
     assert _latest_reusable_run(tmp_path, duration_us=11_000_000, **expected) is None
+
+
+def test_cinematic_cli_surface_is_stable() -> None:
+    args = build_parser().parse_args(
+        [
+            "showcase",
+            "cinematic",
+            "--root",
+            "/srv/flybrain-data",
+            "--fps",
+            "24",
+            "--source-directory",
+            "/tmp/presentation",
+        ]
+    )
+    assert args.showcase_command == "cinematic"
+    assert args.fps == 24
+    assert args.source_directory == Path("/tmp/presentation")
+
+
+def test_cinematic_food_distance_uses_recorded_thorax_pose() -> None:
+    row = {"body": {"x_mm": 8.6, "y_mm": 1.8}}
+    assert food_distance_mm(row, (8.0, 1.0)) == pytest.approx(1.0)

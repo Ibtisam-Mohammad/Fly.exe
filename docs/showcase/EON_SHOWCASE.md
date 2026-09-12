@@ -38,6 +38,22 @@ For a matrix-only run while developing the presentation:
 flysim showcase build --root /srv/flybrain-data --no-render
 ```
 
+Build the rich 1080p presentation after the matrix has been accepted:
+
+```bash
+flysim showcase cinematic --root /srv/flybrain-data
+```
+
+After recording, a visual-only revision can reuse the immutable trace, spike, and pose files:
+
+```text
+flysim showcase cinematic --root /srv/flybrain-data --source-directory PRESENTATION_DIR
+```
+
+This performs one clean-commit hero rerun while recording sparse full-graph spike counts and the
+complete MuJoCo pose at each coupling boundary. Rendering happens afterward. The rerun must
+reproduce the accepted hero transition signature exactly or the command refuses to render.
+
 The runner is resumable only within one code commit. A run from a dirty tree, another commit,
 another scenario, or an invalid artifact is never reused.
 
@@ -88,9 +104,14 @@ Seeds 1 and 2 completed the sequence; seed 3 reached `FEED_INITIATION` but did n
 specified state. Zero-weight produced no transitions; shuffled connectivity reached grooming and
 resumed seeking, and remains a non-gating diagnostic because activity was not matched.
 
-The 6.6-second hero video is H.264, 960 by 544 pixels at 30 frames per second. The compact release
-files are tracked under `artifacts/showcase/eon-showcase-v1/` with a `SHA256SUMS` file. The primary
-hashes are:
+The first 6.6-second schematic hero video is H.264, 960 by 544 pixels at 30 frames per second.
+It exposed a presentation problem: the red food disk represented a 0.25 mm object while the
+engine's sucrose signal used an invisible 1.0 mm thorax-proximity radius. The cinematic renderer
+therefore shows both geometries and labels the larger one as an engineered trigger zone rather
+than physical mouth contact.
+
+The compact release files are tracked under `artifacts/showcase/eon-showcase-v1/` with a
+`SHA256SUMS` file. The primary hashes are:
 
 - acceptance: `ee0b515c9e3d8b7236a1d42c75af1c50fa254bb7a19c22949309e5053edec672`;
 - package manifest: `dd02aba525240f0649a8217003e73f90ac507958048cd766c45f3a1f541ad4ec`;

@@ -23,6 +23,7 @@ from flysim.connectome import (
 from flysim.engines.body import COMMAND_FORWARD, COMMAND_IDS, COMMAND_YAW
 from flysim.errors import ConfigurationError, DatasetError, ValidationError
 from flysim.evidence import resolve_supported_tier
+from flysim.factory import build_reference_demo
 from flysim.provenance import AssumptionRegistry
 from flysim.runs import require_clean_worktree
 from flysim.scheduler import coupling_quantised_delay_us
@@ -334,6 +335,19 @@ def test_track_a_body_runtime_fields_exclude_assumption_metadata() -> None:
     assert set(projected) == set(TRACK_A_BODY_PARAMETER_KEYS)
     assert "actuated_dof_set_is_declared_per_experiment" not in projected
     assert "station_keeping_gains_are_never_inherited_across_dof_sets" not in projected
+
+
+def test_scheduler_interval_observer_is_read_only_and_complete() -> None:
+    demo = build_reference_demo(seed=17)
+    observed: list[tuple[int, str]] = []
+
+    result = demo.scheduler.run_until(
+        demo.duration_us,
+        interval_observer=lambda row: observed.append((row["t_us"], row["state"])),
+    )
+
+    assert observed == [(row["t_us"], row["state"]) for row in result.trace]
+    assert result.completed is True
 
 
 def test_run_validation_rejects_excess_grooming_displacement(tmp_path: Path) -> None:

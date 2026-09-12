@@ -838,6 +838,10 @@ class FlyGymTrackABodyEngine:
             **self.station_keeping(),
         }
 
+    def qpos(self) -> np.ndarray:
+        """Copy the complete body pose for deterministic offline rendering."""
+        return np.asarray(self._simulation.mj_data.qpos, dtype=np.float64).copy()
+
     def save_video(self, output: Path) -> Path:
         if not self._render or self._simulation.renderer is None:
             raise ConfigurationError("FlyGym rendering was not enabled for this run")

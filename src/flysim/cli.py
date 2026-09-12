@@ -63,6 +63,7 @@ from flysim.runs import (
 )
 from flysim.shiu_feeding import prepare_shiu_feeding_screen
 from flysim.showcase import build_showcase
+from flysim.showcase_cinematic import build_cinematic_showcase
 from flysim.stage1 import run_shiu_malecns_transfer
 from flysim.stage2 import (
     GOUWENS_MODELDB_COMMIT,
@@ -126,9 +127,7 @@ def _command_data_sync(args: argparse.Namespace) -> int:
 
 def _command_data_validate(args: argparse.Namespace) -> int:
     spec = DatasetSpec.load(args.spec)
-    results = validate_dataset(
-        spec, args.root, args.profile, remote=args.remote, deep=args.deep
-    )
+    results = validate_dataset(spec, args.root, args.profile, remote=args.remote, deep=args.deep)
     _print_json({"dataset_id": spec.dataset_id, "artifacts": results})
     return 0 if all(item["status"] == "ok" for item in results) else 2
 
@@ -294,8 +293,7 @@ def _command_stage2_uepsc_kernel_family(args: argparse.Namespace) -> int:
         {
             "result_id": result["result_id"],
             "direct_peak_amplitude_pa": {
-                key: result["direct_peak_amplitude_pa"][key]
-                for key in ("mean", "median", "sem")
+                key: result["direct_peak_amplitude_pa"][key] for key in ("mean", "median", "sem")
             },
             "single_component": {
                 key: result["single_component"][key]
@@ -462,9 +460,7 @@ def _command_stage2_stp_joint_holdout(args: argparse.Namespace) -> int:
                 }
                 for role, row in result["scores"].items()
             },
-            "hypotheses": {
-                k: v for k, v in result["hypotheses"].items() if k != "verdict_note"
-            },
+            "hypotheses": {k: v for k, v in result["hypotheses"].items() if k != "verdict_note"},
             "verdict": result["verdict"],
             "verdict_note": result["verdict_note"],
             "output": result["output"],
@@ -549,9 +545,7 @@ def _command_stage2_stp_train(args: argparse.Namespace) -> int:
                     "pulses": row["pulses"],
                     "finite_animals_at_first_pulse": row["finite_animals_per_pulse"][0],
                     "trajectory_head": row["primary_normalised_trajectory"][:6],
-                    "steady_state_last_five": sum(
-                        row["primary_normalised_trajectory"][-5:]
-                    ) / 5.0,
+                    "steady_state_last_five": sum(row["primary_normalised_trajectory"][-5:]) / 5.0,
                     "largest_normalisation_difference": row[
                         "largest_difference_between_the_two_normalisations"
                     ],
@@ -895,9 +889,7 @@ def _command_stage2_fit_pn_dynamic(args: argparse.Namespace) -> int:
 
 
 def _command_stage2_evaluate_pn_dynamic(args: argparse.Namespace) -> int:
-    result = evaluate_dynamic_projection_neuron_holdout(
-        args.evaluation, args.root, args.output
-    )
+    result = evaluate_dynamic_projection_neuron_holdout(args.evaluation, args.root, args.output)
     _print_json(
         {
             "result_id": result["result_id"],
@@ -912,9 +904,7 @@ def _command_stage2_evaluate_pn_dynamic(args: argparse.Namespace) -> int:
 
 
 def _command_stage2_review_pn_dynamic_timestep(args: argparse.Namespace) -> int:
-    result = review_dynamic_projection_neuron_timestep(
-        args.review, args.root, args.output
-    )
+    result = review_dynamic_projection_neuron_timestep(args.review, args.root, args.output)
     _print_json(
         {
             "review_id": result["review_id"],
@@ -1032,17 +1022,11 @@ def _command_evidence_build_v0(args: argparse.Namespace) -> int:
 
 def _command_data_import(args: argparse.Namespace) -> int:
     source = args.source or (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+        args.root / "raw" / "male-cns-v1.0" / "connectome-weights-male-cns-v1.0-minconf-0.5.feather"
     )
     output = args.output or args.root / "derived" / "male-cns-v1.0" / "graph"
     annotations = args.annotations or (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+        args.root / "raw" / "male-cns-v1.0" / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
     )
     graph = import_aggregate_graph(
         source,
@@ -1064,14 +1048,9 @@ def _command_data_import(args: argparse.Namespace) -> int:
 
 def _command_data_resolve_populations(args: argparse.Namespace) -> int:
     annotations = args.annotations or (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+        args.root / "raw" / "male-cns-v1.0" / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
     )
-    output = args.output or (
-        args.root / "derived" / "male-cns-v1.0" / "population-resolution.json"
-    )
+    output = args.output or (args.root / "derived" / "male-cns-v1.0" / "population-resolution.json")
     payload = resolve_populations(annotations, args.registry, output)
     _print_json(
         {
@@ -1092,11 +1071,7 @@ def _command_data_resolve_populations(args: argparse.Namespace) -> int:
 
 def _command_data_import_grooming(args: argparse.Namespace) -> int:
     source = args.source or (
-        args.root
-        / "raw"
-        / "auxiliary"
-        / "ozdil-2026-antennal-grooming"
-        / "Fig1_panelC.pkl"
+        args.root / "raw" / "auxiliary" / "ozdil-2026-antennal-grooming" / "Fig1_panelC.pkl"
     )
     output = args.output or (
         args.root
@@ -1113,10 +1088,7 @@ def _command_data_import_grooming(args: argparse.Namespace) -> int:
 def _command_data_build_edge_signs(args: argparse.Namespace) -> int:
     graph = SparseConnectome.load(args.graph)
     source = args.transmitters or (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "body-neurotransmitters-male-cns-v1.0.feather"
+        args.root / "raw" / "male-cns-v1.0" / "body-neurotransmitters-male-cns-v1.0.feather"
     )
     payload = write_edge_sign_variant(
         graph,
@@ -1138,9 +1110,7 @@ def _command_data_import_contacts(args: argparse.Namespace) -> int:
     raw_directory = args.root / "raw" / spec.dataset_id.replace(":", "-")
     lock_path = raw_directory / "dataset-lock.json"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    output_root = args.output_root or (
-        args.root / "derived" / "male-cns-v1.0" / "contacts"
-    )
+    output_root = args.output_root or (args.root / "derived" / "male-cns-v1.0" / "contacts")
     contact_artifact_ids = {
         "syn-points",
         "syn-partners",
@@ -1228,9 +1198,7 @@ def _command_data_audit_contacts(args: argparse.Namespace) -> int:
 
 
 def _command_data_sync_skeleton_canaries(args: argparse.Namespace) -> int:
-    output = args.output or (
-        args.root / "derived" / "male-cns-v1.0" / "morphology-canaries"
-    )
+    output = args.output or (args.root / "derived" / "male-cns-v1.0" / "morphology-canaries")
     result = sync_morphology_canaries(args.config, output)
     _print_json(result)
     return 0 if result["complete"] else 2
@@ -1319,20 +1287,12 @@ def _command_benchmark(args: argparse.Namespace) -> int:
 def _command_benchmark_circuit(args: argparse.Namespace) -> int:
     experiment_path = args.experiment
     if str(experiment_path) == "shiu-antennal-grooming":
-        experiment_path = (
-            project_root() / "configs" / "experiments" / "shiu-antennal-grooming.json"
-        )
+        experiment_path = project_root() / "configs" / "experiments" / "shiu-antennal-grooming.json"
     population_path = args.populations or (
-        args.root
-        / "derived"
-        / "male-cns-v1.0"
-        / "shiu-antennal-grooming-populations.json"
+        args.root / "derived" / "male-cns-v1.0" / "shiu-antennal-grooming-populations.json"
     )
     output = args.output or (
-        args.root
-        / "evidence"
-        / "male-cns-v1.0"
-        / "shiu-antennal-grooming-transfer.json"
+        args.root / "evidence" / "male-cns-v1.0" / "shiu-antennal-grooming-transfer.json"
     )
     result = run_shiu_malecns_transfer(
         root=args.root,
@@ -1362,10 +1322,7 @@ def _command_benchmark_circuit(args: argparse.Namespace) -> int:
 
 def _command_benchmark_feeding_screen(args: argparse.Namespace) -> int:
     annotations = args.annotations or (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
+        args.root / "raw" / "male-cns-v1.0" / "body-annotations-male-cns-v1.0-minconf-0.5.feather"
     )
     evidence_root = args.root / "evidence" / "male-cns-v1.0"
     preparation = args.preparation or evidence_root / "shiu-feeding-screen-preparation.json"
@@ -1397,10 +1354,7 @@ def _command_benchmark_feeding_screen(args: argparse.Namespace) -> int:
     elif args.phase == "execute":
         output = args.output or predictions
         transmitter = args.transmitters or (
-            args.root
-            / "raw"
-            / "male-cns-v1.0"
-            / "body-neurotransmitters-male-cns-v1.0.feather"
+            args.root / "raw" / "male-cns-v1.0" / "body-neurotransmitters-male-cns-v1.0.feather"
         )
         result = execute_feeding_screen(
             root=args.root,
@@ -1514,9 +1468,7 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
     missing: list[str] = []
     if not args.graph.exists():
         missing.append("imported MaleCNS aggregate graph")
-    population_path = (
-        args.root / "derived" / "male-cns-v1.0" / "population-resolution.json"
-    )
+    population_path = args.root / "derived" / "male-cns-v1.0" / "population-resolution.json"
     if not population_path.is_file():
         missing.append("numeric Track A population-resolution registry")
     else:
@@ -1529,10 +1481,7 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
             ]
             missing.append(f"resolved numeric populations: {unresolved}")
     transmitter_path = (
-        args.root
-        / "raw"
-        / "male-cns-v1.0"
-        / "body-neurotransmitters-male-cns-v1.0.feather"
+        args.root / "raw" / "male-cns-v1.0" / "body-neurotransmitters-male-cns-v1.0.feather"
     )
     trajectory_path = (
         args.root
@@ -1564,13 +1513,7 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
         if args.food_x_mm is not None and args.food_y_mm is not None
         else None
     )
-    build_path = (
-        args.root
-        / "cache"
-        / "genn"
-        / "track-a"
-        / args.control
-    )
+    build_path = args.root / "cache" / "genn" / "track-a" / args.control
     # The project tier is resolved from a currently valid evidence bundle. It is never a
     # literal, so a bundle that stops validating immediately demotes the recorded claim.
     project_tier = resolve_supported_tier(args.root / "evidence" / "male-cns-v1.0")
@@ -1690,12 +1633,8 @@ def _command_run_eon_malecns(args: argparse.Namespace) -> int:
             "wall_seconds": wall_seconds,
             "model_build_and_load_wall_seconds": build_wall_seconds,
             "simulation_wall_seconds": simulation_wall_seconds,
-            "biological_seconds_per_wall_second": (
-                biological_seconds / simulation_wall_seconds
-            ),
-            "biological_seconds_per_wall_second_cold_start": (
-                biological_seconds / wall_seconds
-            ),
+            "biological_seconds_per_wall_second": (biological_seconds / simulation_wall_seconds),
+            "biological_seconds_per_wall_second_cold_start": (biological_seconds / wall_seconds),
             "validation": validation,
             "video": video,
             "video_sha256": video_sha256,
@@ -1777,6 +1716,18 @@ def _command_showcase_build(args: argparse.Namespace) -> int:
     return 0 if result["accepted_as_engineering_showcase"] else 2
 
 
+def _command_showcase_cinematic(args: argparse.Namespace) -> int:
+    result = build_cinematic_showcase(
+        root=args.root,
+        acceptance_path=args.acceptance,
+        output_root=args.output_root,
+        source_directory=args.source_directory,
+        fps=args.fps,
+    )
+    _print_json(result)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="flysim")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -1791,9 +1742,7 @@ def build_parser() -> argparse.ArgumentParser:
     status.set_defaults(func=_command_data_status)
 
     sync = data_commands.add_parser("sync")
-    sync.add_argument(
-        "--profile", choices=("metadata", "starter", "full"), default="starter"
-    )
+    sync.add_argument("--profile", choices=("metadata", "starter", "full"), default="starter")
     sync.add_argument("--root", type=Path, default=default_data_root())
     sync.add_argument("--spec", type=Path, default=_default_dataset_spec())
     sync.add_argument("--minimum-free-gb", type=float, default=40.0)
@@ -1892,10 +1841,7 @@ def build_parser() -> argparse.ArgumentParser:
     structural.add_argument(
         "--supplement-card",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "datasets"
-        / "berg-malecns-2025-supplement.json",
+        default=project_root() / "configs" / "datasets" / "berg-malecns-2025-supplement.json",
     )
     structural.add_argument(
         "--canary-config",
@@ -2080,10 +2026,7 @@ def build_parser() -> argparse.ArgumentParser:
     volume.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "glomerular-volume-scaling-v1.json",
+        default=project_root() / "configs" / "experiments" / "glomerular-volume-scaling-v1.json",
     )
     volume.add_argument("--root", type=Path, default=default_data_root())
     volume.add_argument(
@@ -2102,10 +2045,7 @@ def build_parser() -> argparse.ArgumentParser:
     station.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "track-a-acceptance-v5-criteria.json",
+        default=project_root() / "configs" / "experiments" / "track-a-acceptance-v5-criteria.json",
     )
     station.add_argument("--root", type=Path, default=default_data_root())
     station.add_argument(
@@ -2124,10 +2064,7 @@ def build_parser() -> argparse.ArgumentParser:
     bilateral.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "stage2-bilateral-symmetry-v1.json",
+        default=project_root() / "configs" / "experiments" / "stage2-bilateral-symmetry-v1.json",
     )
     bilateral.add_argument("--root", type=Path, default=default_data_root())
     bilateral.add_argument(
@@ -2160,10 +2097,7 @@ def build_parser() -> argparse.ArgumentParser:
     correction.add_argument(
         "--convergence-artifact",
         type=Path,
-        default=default_data_root()
-        / "evidence"
-        / "male-cns-v1.0"
-        / "orn-pn-convergence-v1.json",
+        default=default_data_root() / "evidence" / "male-cns-v1.0" / "orn-pn-convergence-v1.json",
     )
     correction.add_argument(
         "--volume-artifact",
@@ -2315,6 +2249,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     showcase_build.set_defaults(func=_command_showcase_build)
 
+    cinematic = showcase_commands.add_parser(
+        "cinematic",
+        help="Record the accepted hero's spikes and poses, then render a 1080p dashboard",
+    )
+    cinematic.add_argument("--root", type=Path, default=default_data_root())
+    cinematic.add_argument("--acceptance", type=Path)
+    cinematic.add_argument("--output-root", type=Path)
+    cinematic.add_argument(
+        "--source-directory",
+        type=Path,
+        help="Re-render a completed presentation recording without rerunning the simulation",
+    )
+    cinematic.add_argument("--fps", type=int, default=30)
+    cinematic.set_defaults(func=_command_showcase_cinematic)
+
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)
     stage2_exit = stage2_commands.add_parser(
@@ -2328,9 +2277,7 @@ def build_parser() -> argparse.ArgumentParser:
         # v4 is canonical (ADR-2026-011). The default was the unversioned file, whose
         # experiment_id is stage2-exit-gate-v1, so the public command reported a different
         # project status from AGENTS.md and from every recorded artifact.
-        default=(
-            project_root() / "configs" / "experiments" / "stage2-exit-gate-v4.json"
-        ),
+        default=(project_root() / "configs" / "experiments" / "stage2-exit-gate-v4.json"),
     )
     stage2_exit.add_argument("--output", type=Path, required=True)
     stage2_exit.set_defaults(func=_command_stage2_exit_gate)
@@ -2440,10 +2387,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_stp_train.add_argument(
         "--fit-artifact",
         type=Path,
-        default=default_data_root()
-        / "evidence"
-        / "stage2"
-        / "stage2-stp-family-selection-v1.json",
+        default=default_data_root() / "evidence" / "stage2" / "stage2-stp-family-selection-v1.json",
     )
     stage2_stp_train.add_argument(
         "--manifest",
@@ -2474,10 +2418,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_stp_holdout.add_argument(
         "--fit-artifact",
         type=Path,
-        default=default_data_root()
-        / "evidence"
-        / "stage2"
-        / "stage2-stp-family-selection-v1.json",
+        default=default_data_root() / "evidence" / "stage2" / "stage2-stp-family-selection-v1.json",
     )
     stage2_stp_holdout.add_argument(
         "--manifest",
@@ -2500,10 +2441,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_stp_fit.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "stage2-stp-family-selection-v1.json",
+        default=project_root() / "configs" / "experiments" / "stage2-stp-family-selection-v1.json",
     )
     stage2_stp_fit.add_argument(
         "--manifest",
@@ -2526,9 +2464,7 @@ def build_parser() -> argparse.ArgumentParser:
         "depression-test",
         help="open the preregistered wild-type paired-pulse arrays and score them",
     )
-    stage2_depression_test.add_argument(
-        "--stage", choices=("primary", "intervals"), required=True
-    )
+    stage2_depression_test.add_argument("--stage", choices=("primary", "intervals"), required=True)
     stage2_depression_test.add_argument(
         "--experiment",
         type=Path,
@@ -2576,10 +2512,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_uepsc.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "stage2-uepsc-kinetics-holdout.json",
+        default=project_root() / "configs" / "experiments" / "stage2-uepsc-kinetics-holdout.json",
     )
     stage2_uepsc.add_argument("--output", type=Path, required=True)
     stage2_uepsc.set_defaults(func=_command_stage2_uepsc_holdout)
@@ -2603,10 +2536,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_kernel_family.add_argument(
         "--experiment",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "stage2-uepsc-kernel-family-v1.json",
+        default=project_root() / "configs" / "experiments" / "stage2-uepsc-kernel-family-v1.json",
     )
     stage2_kernel_family.add_argument("--output", type=Path, required=True)
     stage2_kernel_family.set_defaults(func=_command_stage2_uepsc_kernel_family)
@@ -2629,10 +2559,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_import_pack.add_argument(
         "--config",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "datasets"
-        / "nanami-2024-invivo-cellular-pack.json",
+        default=project_root() / "configs" / "datasets" / "nanami-2024-invivo-cellular-pack.json",
     )
     stage2_import_pack.add_argument("--source", type=Path, required=True)
     stage2_import_pack.add_argument("--output", type=Path, required=True)
@@ -2645,10 +2572,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_measure.add_argument(
         "--contract",
         type=Path,
-        default=project_root()
-        / "configs"
-        / "experiments"
-        / "stage2-cellular-observables.json",
+        default=project_root() / "configs" / "experiments" / "stage2-cellular-observables.json",
     )
     stage2_measure.add_argument("--output", type=Path, required=True)
     stage2_measure.set_defaults(func=_command_stage2_measure_cellular)
@@ -2681,9 +2605,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_fit_pn_dynamic.add_argument(
         "--experiment",
         type=Path,
-        default=(
-            project_root() / "configs" / "experiments" / "stage2-pn-dynamic-revision.json"
-        ),
+        default=(project_root() / "configs" / "experiments" / "stage2-pn-dynamic-revision.json"),
     )
     stage2_fit_pn_dynamic.add_argument("--output", type=Path, required=True)
     stage2_fit_pn_dynamic.set_defaults(func=_command_stage2_fit_pn_dynamic)
@@ -2691,15 +2613,11 @@ def build_parser() -> argparse.ArgumentParser:
         "evaluate-pn-dynamic",
         help="evaluate a frozen dynamic PN distribution on excluded recorded cells",
     )
-    stage2_evaluate_pn_dynamic.add_argument(
-        "--root", type=Path, default=default_data_root()
-    )
+    stage2_evaluate_pn_dynamic.add_argument("--root", type=Path, default=default_data_root())
     stage2_evaluate_pn_dynamic.add_argument(
         "--evaluation",
         type=Path,
-        default=(
-            project_root() / "configs" / "experiments" / "stage2-pn-condition-holdout.json"
-        ),
+        default=(project_root() / "configs" / "experiments" / "stage2-pn-condition-holdout.json"),
     )
     stage2_evaluate_pn_dynamic.add_argument("--output", type=Path, required=True)
     stage2_evaluate_pn_dynamic.set_defaults(func=_command_stage2_evaluate_pn_dynamic)
@@ -2707,23 +2625,16 @@ def build_parser() -> argparse.ArgumentParser:
         "review-pn-dynamic-timestep",
         help="review a frozen dynamic PN holdout conclusion at a smaller timestep",
     )
-    stage2_review_pn_dynamic_timestep.add_argument(
-        "--root", type=Path, default=default_data_root()
-    )
+    stage2_review_pn_dynamic_timestep.add_argument("--root", type=Path, default=default_data_root())
     stage2_review_pn_dynamic_timestep.add_argument(
         "--review",
         type=Path,
         default=(
-            project_root()
-            / "configs"
-            / "experiments"
-            / "stage2-pn-dynamic-timestep-review.json"
+            project_root() / "configs" / "experiments" / "stage2-pn-dynamic-timestep-review.json"
         ),
     )
     stage2_review_pn_dynamic_timestep.add_argument("--output", type=Path, required=True)
-    stage2_review_pn_dynamic_timestep.set_defaults(
-        func=_command_stage2_review_pn_dynamic_timestep
-    )
+    stage2_review_pn_dynamic_timestep.set_defaults(func=_command_stage2_review_pn_dynamic_timestep)
     stage2_review_pn = stage2_commands.add_parser(
         "review-pn", help="audit feature errors from an immutable frozen PN fit"
     )

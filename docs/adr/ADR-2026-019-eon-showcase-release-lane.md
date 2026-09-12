@@ -49,3 +49,13 @@ The Git history was separately rewritten at the user's request to remove co-auth
 publication. That changed all historical commit identifiers. Existing artifact hashes are retained,
 but narrative references to old commits are legacy provenance until mapped or reissued; the
 showcase itself starts from the post-rewrite history and requires one current clean commit.
+
+## Presentation addendum
+
+The first compact renderer made the 1.0 mm thorax-proximity sucrose zone invisible and drew only a
+0.25 mm food marker. The state transition was numerically correct under its contract, but the
+video looked as though the fly had stopped short. A separate cinematic renderer now records
+sparse full-graph spike counts and the complete MuJoCo pose during one clean-commit hero rerun,
+requires its transition signature to match the accepted hero, and then renders a 1080p dashboard
+offline. It shows the released soma cloud, actual replayed body pose, synchronized traces and both
+food geometries. The larger geometry is labelled an engineered proximity zone, not contact.
