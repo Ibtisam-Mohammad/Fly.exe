@@ -1,0 +1,68 @@
+{
+  "accepted_as_engineering_showcase": true,
+  "artifacts": {
+    "acceptance": {
+      "path": "/srv/flybrain-data/runs/eon-showcase-v1/acceptance.json",
+      "sha256": "ee0b515c9e3d8b7236a1d42c75af1c50fa254bb7a19c22949309e5053edec672"
+    },
+    "contract": {
+      "path": "/mnt/i/AI/fly_brain/configs/experiments/eon-showcase-v1.json",
+      "sha256": "d0ad102276c2d1da32152adf969bd2bca4e4f97f60e32b26f7c9fc20a3bc9c10"
+    },
+    "hero_render_manifest": {
+      "path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1/render-manifest.json",
+      "sha256": "533b6e1f7f706958b28a8f740720edaa8c4109aea568f079307f9ebb6cb07c34"
+    },
+    "hero_video": {
+      "path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1/demo.mp4",
+      "sha256": "7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7"
+    }
+  },
+  "claim": "A full-MaleCNS, controller-mediated, closed-loop engineering demonstration using declared central sensory bridges and body controllers.",
+  "code_commit": "efe5c0de0094cd81337c55deb036b08bc208320e",
+  "control_runs": {
+    "contamination-input-ablated": "/srv/flybrain-data/runs/eon-showcase-v1/controls/contamination-input-ablated/20260912T161143Z_eon-malecns-v0.2_seed-1",
+    "groom-readout-ablated": "/srv/flybrain-data/runs/eon-showcase-v1/controls/groom-readout-ablated/20260912T161239Z_eon-malecns-v0.2_seed-1",
+    "mn9-readout-ablated": "/srv/flybrain-data/runs/eon-showcase-v1/controls/mn9-readout-ablated/20260912T161456Z_eon-malecns-v0.2_seed-1",
+    "sucrose-input-ablated": "/srv/flybrain-data/runs/eon-showcase-v1/controls/sucrose-input-ablated/20260912T161331Z_eon-malecns-v0.2_seed-1"
+  },
+  "declared_bridges": [
+    "ethyl-acetate world field to bilateral DM1/DM4 projection neurons",
+    "odor-gated direct DNg97 forward-intent drive",
+    "raw bilateral odor-gradient term in the steering controller",
+    "antennal contamination to JO-F mechanosensory entry",
+    "sucrose contact to GNG588/Fdg central feeding relay",
+    "grooming-DN readout to a published kinematic replay",
+    "MN9 readout to rostrum extension plus an engineered haustellum pose"
+  ],
+  "diagnostic_runs": {
+    "shuffled-connectome": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/shuffled-connectome/20260912T161712Z_eon-malecns-v0.2_seed-1",
+    "zero-weight": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/zero-weight/20260912T161604Z_eon-malecns-v0.2_seed-1"
+  },
+  "exact_runs": {
+    "1": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1",
+    "2": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-2/20260912T160949Z_eon-malecns-v0.2_seed-2",
+    "3": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-3/20260912T161046Z_eon-malecns-v0.2_seed-3"
+  },
+  "hero_run": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1",
+  "hero_seed": 1,
+  "limitations": [
+    "a digital twin or recovered source fly",
+    "validated neural physiology",
+    "autonomous connectome-generated behaviour",
+    "a complete VNC, NMJ, muscle or ingestion simulation"
+  ],
+  "package_id": "eon-showcase-v1",
+  "required_video_labels": [
+    "ENGINEERING SHOWCASE",
+    "V0 Structural; no new validation tier",
+    "full MaleCNS graph",
+    "central sensory bridges",
+    "controller-mediated body",
+    "female body prior",
+    "no VNC-to-muscle pathway",
+    "feeding initiation only; no ingestion"
+  ],
+  "schema_version": "1.0",
+  "scientific_validation_tier_awarded": null
+}

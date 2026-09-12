@@ -1541,10 +1541,16 @@ references, acceptance results, artifact hashes and an offline-rendered hero vid
 visibly labels the central sensory bridges, controller-mediated female body, missing
 VNC-to-muscle path and feeding-initiation-only scope.
 
-The implementation is complete, but the clean-commit GPU matrix has not yet run. Therefore the
-showcase is **not yet accepted**. Even if it passes, it will award no tier and will not repair the
-Track A grooming-displacement or throughput failures. See ADR-2026-019 and
-`docs/showcase/EON_SHOWCASE.md`.
+The complete matrix ran from clean commit `efe5c0de0094cd81337c55deb036b08bc208320e` and
+is **accepted as an engineering showcase**. Seeds 1 and 2 completed the required sequence; seed 3
+reached feeding initiation but not completion, satisfying the frozen two-of-three rule. All four
+causal ablations passed. The two graph variants remain non-gating diagnostics. Acceptance SHA-256
+is `ee0b515c9e3d8b7236a1d42c75af1c50fa254bb7a19c22949309e5053edec672`, and the hero MP4
+SHA-256 is `7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7`.
+
+This result awards no tier and does not repair the Track A grooming-displacement or throughput
+failures. See ADR-2026-019, `docs/showcase/EON_SHOWCASE.md`, and
+`docs/evidence/EON_SHOWCASE_V1.md`.
 
 The user-authorized rewrite that removed co-author trailers changed every historical Git commit
 identifier before the repository was published. Artifact content hashes are unchanged. Old commit

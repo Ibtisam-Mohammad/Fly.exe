@@ -1,0 +1,10 @@
+{
+  "fps": 30,
+  "label": "engineering showcase; full MaleCNS graph where recorded; central sensory bridges; controller-mediated body; female body prior; no VNC-to-muscle pathway; feeding initiation only; no ingestion; no new validation tier",
+  "playback": "one biological second per video second",
+  "schema_version": "1.0",
+  "source_manifest_sha256": "6e7ef39c1e11002cbfa63fee900671306735310e598b436fd0bec7badd6f4404",
+  "source_run_id": "20260912T160851Z_eon-malecns-v0.2_seed-1",
+  "video": "demo.mp4",
+  "video_sha256": "7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7"
+}

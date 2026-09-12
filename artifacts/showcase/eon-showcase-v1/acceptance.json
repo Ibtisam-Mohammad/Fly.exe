@@ -1,0 +1,192 @@
+{
+  "accepted_as_engineering_showcase": true,
+  "claim": "A full-MaleCNS, controller-mediated, closed-loop engineering demonstration using declared central sensory bridges and body controllers.",
+  "code_commits": [
+    "efe5c0de0094cd81337c55deb036b08bc208320e"
+  ],
+  "completed_exact_seeds": 2,
+  "diagnostic_controls": {
+    "shuffled-connectome": {
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME"
+      ],
+      "gates_acceptance": false,
+      "meaning": "Recorded as a diagnostic only because the shuffled and exact networks are not activity matched.",
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/shuffled-connectome/20260912T161712Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/shuffled-connectome/20260912T161712Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "cea192d2c0ffe94c7a21e1ffb7e15abaa84bffc7b513152d9bee33959344e69f",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/shuffled-connectome/20260912T161712Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "362c9c33e0d5c0d732ceec4ff23954b57ae263564435d669d468403f2325e1a2"
+      }
+    },
+    "zero-weight": {
+      "event_targets": [],
+      "gates_acceptance": false,
+      "meaning": "Recorded as a diagnostic only; it is not a topology-specificity gate.",
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/zero-weight/20260912T161604Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/zero-weight/20260912T161604Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "dec4aaeab698166e2a4bd1458fd8602aa01d883124b259294d746e952d615115",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/diagnostics/zero-weight/20260912T161604Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "9745f1ad16c43710791ced408914f6977e414d6992b42c1696f11224f32cb36d"
+      }
+    }
+  },
+  "exact": {
+    "1": {
+      "completed": true,
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME",
+        "FEED_INITIATION",
+        "COMPLETE"
+      ],
+      "required_sequence_observed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME",
+          "FEED_INITIATION",
+          "COMPLETE"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "6e7ef39c1e11002cbfa63fee900671306735310e598b436fd0bec7badd6f4404",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-1/20260912T160851Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "51e72e7a32f89610dc1eb86962ebab15c991cb6de949a593f97c5c4ca8cda72c"
+      }
+    },
+    "2": {
+      "completed": true,
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME",
+        "FEED_INITIATION",
+        "COMPLETE"
+      ],
+      "required_sequence_observed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-2/20260912T160949Z_eon-malecns-v0.2_seed-2",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME",
+          "FEED_INITIATION",
+          "COMPLETE"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-2/20260912T160949Z_eon-malecns-v0.2_seed-2/manifest.json",
+        "manifest_sha256": "a1821e084b68bc059a09825b2c26b6632cb2ac8a8625d076c7effb4444159e81",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-2/20260912T160949Z_eon-malecns-v0.2_seed-2/validation-report.json",
+        "validation_sha256": "a96cbef230ff01686270a24cfbba4d50f5f728df1a35abce7c7e23d4e5961b69"
+      }
+    },
+    "3": {
+      "completed": false,
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME",
+        "FEED_INITIATION"
+      ],
+      "required_sequence_observed": false,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-3/20260912T161046Z_eon-malecns-v0.2_seed-3",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME",
+          "FEED_INITIATION"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-3/20260912T161046Z_eon-malecns-v0.2_seed-3/manifest.json",
+        "manifest_sha256": "3ca9885b9c9283270fd6fc458fc3dead6bcc4e88ce94083c6d665fba1385f744",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/exact-seed-3/20260912T161046Z_eon-malecns-v0.2_seed-3/validation-report.json",
+        "validation_sha256": "2869136a2f35b28ab18070e69921861790b37c7e4ed765dcd0b53854868ab495"
+      }
+    }
+  },
+  "experiment_id": "eon-showcase-v1",
+  "experiment_sha256": "210eb13d5b1cb4634a7282ee316bbb888ca14d0664acc4a5a74ab56a972b2134",
+  "failures": [],
+  "limitations": [
+    "a digital twin or recovered source fly",
+    "validated neural physiology",
+    "autonomous connectome-generated behaviour",
+    "a complete VNC, NMJ, muscle or ingestion simulation"
+  ],
+  "required_controls": {
+    "contamination-input-ablated": {
+      "blocked_state": "GROOM",
+      "event_targets": [],
+      "meaning": "The dust-to-groom transition requires the registered contamination input.",
+      "passed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/controls/contamination-input-ablated/20260912T161143Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/contamination-input-ablated/20260912T161143Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "c33fbf15f5ce5ce5b039b04bdc3686f9fca5d0d2995af870aaf96bebd177fea5",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/contamination-input-ablated/20260912T161143Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "31c86ba4207c9a1364da769ce7ea0be534049387d639d8e51d2641f8e087ee7c"
+      }
+    },
+    "groom-readout-ablated": {
+      "blocked_state": "GROOM",
+      "event_targets": [],
+      "meaning": "The grooming controller cannot start when its neural readout is silenced.",
+      "passed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/controls/groom-readout-ablated/20260912T161239Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/groom-readout-ablated/20260912T161239Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "1e83c4859c710dda82affcb8a2982898f7c3dda4e494c508b27b7fdcf879301f",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/groom-readout-ablated/20260912T161239Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "a627396854380a83b84286b71d0fe2968f9194c40c293295eab21b82e783ed02"
+      }
+    },
+    "mn9-readout-ablated": {
+      "blocked_state": "FEED_INITIATION",
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME"
+      ],
+      "meaning": "The rostrum-extension controller cannot start when MN9 is silenced.",
+      "passed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/controls/mn9-readout-ablated/20260912T161456Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/mn9-readout-ablated/20260912T161456Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "e9cd306a602c47c081f601dc023af3b689a4e90e37a25f2bc6320234aeb0926d",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/mn9-readout-ablated/20260912T161456Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "553f1f71115e9c9c5f2ad63d7b3e501bd0bafd8020324be5a83b637822c99390"
+      }
+    },
+    "sucrose-input-ablated": {
+      "blocked_state": "FEED_INITIATION",
+      "event_targets": [
+        "GROOM",
+        "SEEK_RESUME"
+      ],
+      "meaning": "The feeding-initiation transition requires the registered sucrose input.",
+      "passed": true,
+      "run": {
+        "directory": "/srv/flybrain-data/runs/eon-showcase-v1/controls/sucrose-input-ablated/20260912T161331Z_eon-malecns-v0.2_seed-1",
+        "event_targets": [
+          "GROOM",
+          "SEEK_RESUME"
+        ],
+        "manifest_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/sucrose-input-ablated/20260912T161331Z_eon-malecns-v0.2_seed-1/manifest.json",
+        "manifest_sha256": "173302628f1a54897b9041eab1a8954d934e05567d6cf47d035a91ecda26329f",
+        "validation_path": "/srv/flybrain-data/runs/eon-showcase-v1/controls/sucrose-input-ablated/20260912T161331Z_eon-malecns-v0.2_seed-1/validation-report.json",
+        "validation_sha256": "41ed30100950f7072cb5fd317d0bcb296dbe6661735ab65361e0bcfbcfea17d7"
+      }
+    }
+  },
+  "schema_version": "1.0",
+  "scientific_validation_tier_awarded": null
+}

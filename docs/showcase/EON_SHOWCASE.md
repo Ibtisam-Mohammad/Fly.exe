@@ -1,7 +1,9 @@
 # Eon-class MaleCNS showcase
 
-Status: implementation complete; clean-commit GPU matrix pending  
-Scientific tier: unchanged at V0 Structural  
+Status: accepted as an engineering showcase on 2026-09-12
+
+Scientific tier: unchanged at V0 Structural
+
 Contract: `configs/experiments/eon-showcase-v1.json`
 
 ## Purpose
@@ -77,3 +79,23 @@ already supported V0 Structural tier.
 The command writes `acceptance.json`, `showcase-manifest.json`, the hero video and render
 manifest, plus the per-condition run manifests and validation reports. A failed matrix is still
 packaged and remains a useful reproducible negative; no threshold is changed after seeing it.
+
+## Recorded result
+
+The complete matrix ran from clean commit `efe5c0de0094cd81337c55deb036b08bc208320e`.
+Seeds 1 and 2 completed the sequence; seed 3 reached `FEED_INITIATION` but did not reach
+`COMPLETE`. This satisfies the frozen two-of-three rule. All four causal ablations blocked their
+specified state. Zero-weight produced no transitions; shuffled connectivity reached grooming and
+resumed seeking, and remains a non-gating diagnostic because activity was not matched.
+
+The 6.6-second hero video is H.264, 960 by 544 pixels at 30 frames per second. The compact release
+files are tracked under `artifacts/showcase/eon-showcase-v1/` with a `SHA256SUMS` file. The primary
+hashes are:
+
+- acceptance: `ee0b515c9e3d8b7236a1d42c75af1c50fa254bb7a19c22949309e5053edec672`;
+- package manifest: `dd02aba525240f0649a8217003e73f90ac507958048cd766c45f3a1f541ad4ec`;
+- hero video: `7cc50aebf1382d3d8527e24e7d547e81263530658e3ef2d1ade5b201ae1b15a7`.
+
+This acceptance is only for the engineering release contract. The project's scientific tier
+remains V0 Structural, Stage 2 remains 0 of 3, and Track A's stricter displacement and throughput
+gates remain failed.
