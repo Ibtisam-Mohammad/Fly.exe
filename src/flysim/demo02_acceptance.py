@@ -69,7 +69,14 @@ def read_variant(directory: Path) -> dict[str, Any]:
                 f"summary records {str(recorded_digest)[:12]}. The trace has changed "
                 "since the run that wrote the summary."
             )
-    decoded = tuple(summary["populations"]["readout_sizes"])
+    # Graph-free controls intentionally have no resolved neural populations.  They are
+    # still valid body-envelope/replay records and must remain scoreable alongside the
+    # neural variants.  Older code indexed this field unconditionally, so the first
+    # genuine controller-only run crashed the whole acceptance pass after every GPU run
+    # had completed.
+    population_summary = summary.get("populations", {})
+    readout_sizes = population_summary.get("readout_sizes", {})
+    decoded = tuple(readout_sizes)
     acting = [row for row in rows if row.get("command", {}).get("state") == "ACTING"]
     peak_readout = 0.0
     raw_spikes = 0

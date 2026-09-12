@@ -185,6 +185,21 @@ def test_a_dirty_worktree_anywhere_breaks_the_chain() -> None:
     assert any("dirty worktree" in f for f in chain["chain_faults"])
 
 
+def test_graph_free_controller_only_record_is_scoreable(tmp_path: Path) -> None:
+    """A body-only baseline has no population registry by construction."""
+    run = tmp_path / "controller-only"
+    _write_run(run, 2, declared=2, digest="real")
+    summary_path = run / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["populations"] = {}
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    loaded = read_variant(run)
+
+    assert loaded["decoded_populations"] == ()
+    assert loaded["intervals"] == 2
+
+
 def test_different_contract_versions_break_the_chain() -> None:
     chain = _provenance(CONTRACT, {
         "exact": _variant("exact", experiment="1" * 64),
