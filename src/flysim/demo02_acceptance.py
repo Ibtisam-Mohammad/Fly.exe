@@ -175,6 +175,23 @@ def _first_decoded_spike_in_window_us(
     return None
 
 
+def _spikes_before_us(variant: dict[str, Any], behaviour: str, start_us: int) -> int:
+    """Decoded spikes strictly before a time.
+
+    The signature of a network that fires regardless of the stimulus, which is what a
+    specificity clause should be testing.
+    """
+    total = 0
+    for row in variant["rows"]:
+        if int(row["t_us"]) >= start_us:
+            break
+        counts = row.get("readout_raw_counts", {})
+        total += sum(
+            int(counts.get(name, 0)) for name in DECODED_BY_BEHAVIOUR[behaviour]
+        )
+    return total
+
+
 def _spike_window_fractions(
     variant: dict[str, Any], behaviour: str, window: tuple[int, int]
 ) -> tuple[int, int]:
@@ -439,14 +456,18 @@ def evaluate(
         # declared sensorimotor delay is one interval: a response to a stimulus peaking at
         # the close cannot be observed before the next interval. v1 has no such key and
         # keeps its original window, so its recorded verdict does not move.
-        extend = coupling if "min_fraction_of_spikes_in_window" in spec5 else 0
+        windowed = (
+            "min_fraction_of_spikes_in_window" in spec5
+            or "max_fraction_of_spikes_before_window" in spec5
+        )
+        extend = coupling if windowed else 0
         window = (
             int(approach.get("approach_start_us", 0)),
             int(approach.get("approach_end_us", 0)) + extend,
         )
         spike_us = (
             _first_decoded_spike_in_window_us(exact, behaviour, window)
-            if extend else _first_decoded_spike_us(exact, behaviour)
+            if windowed else _first_decoded_spike_us(exact, behaviour)
         )
         release_us = (
             _first_release_after_us(exact, spike_us) if spike_us is not None else None
@@ -466,7 +487,19 @@ def evaluate(
         need_fraction = spec5.get("min_fraction_of_spikes_in_window")
         total, inside = _spike_window_fractions(exact, behaviour, window)
         fraction = inside / total if total else 0.0
-        specific = need_fraction is None or fraction >= float(need_fraction)
+        max_before = spec5.get("max_fraction_of_spikes_before_window")
+        before = _spikes_before_us(exact, behaviour, window[0])
+        before_fraction = before / total if total else 0.0
+        # Two shapes of specificity clause. v2 asked for a fraction INSIDE the
+        # window and that was the wrong test: the object stays at full angular size
+        # after the window closes, so the response correctly continues and only 2 of
+        # 250 spikes landed inside. What identifies a constantly-firing network is
+        # activity BEFORE the stimulus, which is what escape-legs-v1 asks for.
+        specific = True
+        if need_fraction is not None:
+            specific = specific and fraction >= float(need_fraction)
+        if max_before is not None:
+            specific = specific and before_fraction <= float(max_before)
         results["E5_the_timing_is_stimulus_locked"] = _criterion(
             PASS if (in_window and within and specific) else FAIL,
             (
@@ -477,6 +510,11 @@ def evaluate(
                     f"; {inside}/{total} spikes in window ({fraction:.3f}) against "
                     f"{need_fraction}"
                     if need_fraction is not None else ""
+                )
+                + (
+                    f"; {before}/{total} spikes before the window "
+                    f"({before_fraction:.3f}) against {max_before}"
+                    if max_before is not None else ""
                 )
             ),
             first_spike_us=spike_us,
@@ -489,6 +527,8 @@ def evaluate(
             spikes_total=total,
             fraction_in_window=fraction,
             specificity_met=specific,
+            spikes_before_window=before,
+            fraction_before_window=before_fraction,
         )
 
         spec6 = criteria["E6_it_is_an_escape_and_not_a_walk"]
