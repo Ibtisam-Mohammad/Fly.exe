@@ -90,7 +90,7 @@ def main() -> int:
     parser.add_argument("--allow-dirty-tree", action="store_true")
     parser.add_argument("--progress", action="store_true")
     parser.add_argument(
-        "--contract-version", default="v1", choices=("v1", "v2"),
+        "--contract-version", default="v1", choices=("v1", "v2", "legs-v1"),
         help="v2 runs the contract's registered seed set into per-seed run directories "
              "and requires every seed to pass.",
     )
@@ -179,7 +179,11 @@ def main() -> int:
     body_parameters = BehaviourBodyParameters.from_mapping(
         {**SCENARIOS[behaviour], "station_keeping_settle_us": 2_000_000}
     )
-    decoder = DecoderParameters.from_mapping(DECODERS[behaviour])
+    decoder_spec = dict(DECODERS[behaviour])
+    if contract.get("adr") == "ADR-2026-017":
+        # The contract, not the code, decides whether the wing command is emitted.
+        decoder_spec["command_wings"] = False
+    decoder = DecoderParameters.from_mapping(decoder_spec)
 
     results = {}
     for variant in [] if args.score_only else variants:

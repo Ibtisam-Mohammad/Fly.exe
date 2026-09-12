@@ -503,6 +503,20 @@ def evaluate(
             airborne_horizontal_mm=travelled,
         )
 
+    # --- E8, escape-legs only: the withheld command is withheld in the recording ----
+    if behaviour == "escape" and "E8_the_wing_command_is_actually_withheld" in criteria:
+        values = [
+            float(row["command"].get("actuator:wing-depression", 0.0))
+            for row in exact["rows"]
+        ]
+        peak = max(values) if values else 0.0
+        results["E8_the_wing_command_is_actually_withheld"] = _criterion(
+            PASS if peak == 0.0 else FAIL,
+            f"peak wing-depression command across {len(values)} intervals: {peak}",
+            peak_wing_command=peak,
+            intervals=len(values),
+        )
+
     # --- the topology gate, shared in shape --------------------------------------
     gate_name = {
         "grooming": "G7_topology_claim_gate",

@@ -238,6 +238,9 @@ class DecoderParameters:
     #: Escape only: microseconds by which wing depression leads the jump. Literature
     #: ordering, not measured here.
     wing_lead_us: int = 0
+    #: Escape only. False withholds actuator:wing-depression entirely (ADR-2026-017).
+    #: Defaults True so demo02-escape-v1 and v2 decode exactly as they were recorded.
+    command_wings: bool = True
 
     @classmethod
     def from_mapping(cls, raw: dict[str, Any]) -> DecoderParameters:
@@ -376,6 +379,14 @@ class EscapeDecoder(_Decoder):
         acting = self._advance(neural.t_us, fired, self.coupling_us)
         if not acting:
             return self._frame(neural.t_us, {})
+        if not self.parameters.command_wings:
+            # ADR-2026-017. In a body with no fluid the wings generate no force -- 0.219 mm
+            # of rise against a 0.204-0.211 mm standing noise floor -- and commanding them
+            # inverts the fly: 180 degrees of roll against jump-only's 17.1. The command
+            # stays in the MOTOR-03 vocabulary and the wing joints stay actuated, so the
+            # wing-only control is still runnable and the zero-lift claim stays verifiable
+            # from a trace. This decoder simply stops emitting it.
+            return self._frame(neural.t_us, {COMMAND_JUMP: 1.0})
         elapsed = neural.t_us - (self._started_us or neural.t_us)
         wings = 1.0 if elapsed >= -self.parameters.wing_lead_us else 0.0
         return self._frame(
