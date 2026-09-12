@@ -1437,3 +1437,33 @@ at 14,025 active neurons per interval against the intact 2,948 and fires the gia
 times where the real connectome fires it zero times. That is the same instability the DEMO-01
 shuffle showed and hedged for, now measured in spikes; the qualifier "at this operating point"
 in the DEMO-01 topology claim is carrying more weight than it looks.
+
+## DEMO-02 escape, corrected (2026-09-12)
+
+The DEMO-02 section above reports escape as a route-level negative. **That does not
+survive.** Full record in the addendum to `docs/evidence/DEMO02_THREE_BEHAVIOURS.md`.
+
+A registered neural-criteria search (`demo02-escape-operating-point-v1`, frozen before the
+probe that runs it) found **11 of 36 candidates** that drive the two-cell giant fibre
+cleanly: silent at rest, 78 and 115 spikes with perfect ipsilateral separation, silent on
+recovery, descending pool at 10.5 Hz against a 113.6 Hz ceiling.
+
+One parameter carried the entire negative. Every `lamina_max_rate_hz = 400` candidate scores
+zero giant-fibre spikes, and 400 is what DEMO-01 selected -- **the maximum of its own
+searched grid**. A search that selects a boundary value has told you its range was too
+narrow. That is a finding about DEMO-01's frozen operating point, not only about DEMO-02.
+
+With the searched point the fly leaves the ground (1.562 mm rise) and both controls sit at
+the 0.204 mm chatter floor without acting. The verdict remains **INVALID AS A CAUSAL CLAIM**
+on four failures, three of which are defects in criteria I wrote: `E2` and `E3` cap the
+control rise below the noise floor their own justification quotes; `E5` anchors on "the
+first spike" and one stray spike at 90,000 us is it, though 249 of 250 spikes land after the
+object reaches 38.68 degrees; and `E1` passes hollowly because the exact run ends at **179.4
+degrees of roll**, and "no tarsus touching" is satisfied by a fly on its back.
+
+`E4` resolved as predicted and **the word "loom" is struck**: the object fires the giant
+fibre in the matched-size-static case too, because the encoder computes angular size rather
+than expansion rate.
+
+Grooming and feeding stand as recorded, and by the same argument are **untested rather than
+refuted**: no search has been run for either.

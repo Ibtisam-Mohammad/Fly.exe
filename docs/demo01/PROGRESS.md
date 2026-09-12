@@ -21,6 +21,7 @@ populations* change, never the threshold. See `docs/adr/` for the standing disci
 | S4 | Video: brain view + body view + traces + control comparison | **CLOSED**: eight per-variant videos and two comparisons rendered |
 | S5 | Retinotopic upgrade / further chapters | out of scope for this push |
 | D2 | DEMO-02: every labelled sense resolved, three behaviours attempted | **CLOSED NEGATIVE** 2026-09-11: 12 runs, all three NO DEMONSTRATION |
+| D3 | Registered operating-point search for the escape route | **11 of 36 PASSED** 2026-09-12; behaviour contract still INVALID on 4 criteria, 3 of them specification defects |
 
 ## S0 findings (measured 2026-09-10, read-only, exact graph)
 
@@ -402,7 +403,7 @@ Full record: `docs/evidence/DEMO02_THREE_BEHAVIOURS.md`. ADR: `ADR-2026-016`.
 
     grooming  NO DEMONSTRATION   G1 fail
     feeding   NO DEMONSTRATION   F1 fail
-    escape    NO DEMONSTRATION   E1 fail
+    escape    NO DEMONSTRATION   E1 fail   <- SUPERSEDED 2026-09-12, see D3
 
 Twelve runs at `7b292e3a`, clean worktree. No criterion was restated and the operating point
 was not tuned; both would have converted a frozen contract into a fitted result. The rule at
@@ -417,3 +418,28 @@ never crossed threshold.
 
 Declared next step, unstarted: a registered operating-point search for these routes scored on
 neural criteria only, with the three behavioural contracts left frozen exactly as they stand.
+
+## D3 outcome (2026-09-12): the escape negative was a sample of one
+
+`demo02-escape-operating-point-v1`, frozen before the probe that scores it. 36 candidates,
+five neural criteria carrying DEMO-01's thresholds unchanged wherever they could travel.
+**11 passed.** Selected: `lamina_max_rate_hz 800, synaptic_mv_per_contact 0.40,
+inhibitory_weight_gain 1.0`.
+
+The rule at the top of this ledger says a frozen criterion that fails is recorded and the
+*stimulus or the declared populations* change, never the threshold. This search changed
+neither: it changed the **operating point**, on neural criteria alone, with the behaviour
+contract sealed and unreadable by the probe. That is the DEMO-01 sequence, run for a route
+it had never been run for.
+
+What justified moving a range at all: DEMO-01 selected `lamina_max_rate_hz = 400`, the
+maximum of its own grid. Boundary selection means the range was too narrow. Every other
+searched parameter brackets the DEMO-01 selection on both sides.
+
+The behaviour contract still fails, 4 of 7, and three failures are mine rather than the
+network's: `E2`/`E3` cap control rise below the noise floor they quote, `E5` anchors on a
+first spike that is one stray at 90,000 us, and `E1` is satisfied by an inverted fly because
+"no tarsus touching" has a degenerate case I did not check for. `E4` struck the word "loom".
+
+Declared and unstarted: a v2 contract fixing those four specification defects, run across
+three seeds. Everything about escape so far is seed 1.

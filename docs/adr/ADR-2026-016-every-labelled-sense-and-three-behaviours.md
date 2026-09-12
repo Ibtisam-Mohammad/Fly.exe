@@ -266,3 +266,31 @@ ADR-2026-014 uses the same permutation for the DEMO-01 topology control and inhe
 problem.
 
 No assumption record changes as a result. `foundation-v0.9` stands.
+
+## Outcome amended, 2026-09-12: one of the three negatives was not a negative
+
+The outcome section above reports escape as NO DEMONSTRATION and treats that as a result
+about the route. It was a result about one operating point, and the distinction is the whole
+point of this amendment.
+
+`demo02-escape-operating-point-v1` searched 36 points on neural criteria alone, with
+`demo02-escape-v1` sealed and unreadable by the probe. **11 passed.** The giant fibre fires
+78 and 115 spikes with perfect ipsilateral separation, an empty baseline and an empty
+recovery. Every candidate at `lamina_max_rate_hz = 400` -- the value DEMO-01 selected, at the
+top of DEMO-01's own grid -- produces exactly zero.
+
+This does not overturn the ADR's reasoning; it vindicates the part of it that said the
+survey had found a real route and warned that a low score rules nothing out. What it
+overturns is my reading of the first result, and the lesson is symmetrical with the one this
+project usually applies: a flattering result is suspect, and so is an unflattering one, when
+the sample is one.
+
+The behaviour contract still returns INVALID AS A CAUSAL CLAIM on four criteria, three of
+them defects in criteria written for this ADR rather than properties of the network. They are
+disclosed in `docs/evidence/DEMO02_THREE_BEHAVIOURS.md` and not repaired, because the
+contract is frozen. A v2 is declared and unstarted.
+
+Grooming and feeding are unchanged, and are now correctly described as **untested rather
+than refuted**: no search has been run for either.
+
+`foundation-v0.9` still stands. No assumption record changes.

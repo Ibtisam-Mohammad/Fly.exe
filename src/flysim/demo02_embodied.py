@@ -409,6 +409,30 @@ def run_behaviour(
         seed=seed,
         trajectory_path=trajectory_path,
     )
+    # AGENTS.md section 10 requires a command replay: the exact run's recorded commands
+    # driven into the body with the graph playing no part. If the body moves the same way,
+    # the motion followed from the commands and nothing else was quietly contributing.
+    replayed_commands: list[dict[str, float]] | None = None
+    if variant == "command-replay":
+        source = output_directory.parent / "exact" / "trace.jsonl"
+        if not source.exists():
+            raise ConfigurationError(
+                f"command-replay needs the exact run's trace at {source}, and it is not "
+                "recorded. Run the exact variant first."
+            )
+        replayed_commands = [
+            {k: float(v) for k, v in json.loads(line)["command"].items()
+             if k != "state"}
+            for line in source.read_text(encoding="utf-8").splitlines() if line.strip()
+        ]
+    if variant == "controller-only":
+        raise ConfigurationError(
+            "controller-only is named in the contracts and is not implemented. It must "
+            "drive a fixed command into the body with no graph attached, and the current "
+            "code would silently execute it as the exact run with the stimulus silenced, "
+            "which is a different experiment wearing this one's name."
+        )
+
     recorder = Recorder(output_directory, neuron_count=graph.neuron_count)
     readout_ids = populations.readout_body_ids
     intervals = duration_us // coupling_us
@@ -477,6 +501,25 @@ def run_behaviour(
                 else frozenset(),
             )
             pending = controller.decode(neural)
+            if replayed_commands is not None:
+                # The graph ran and its output is recorded, but it does not reach the body.
+                recorded = replayed_commands[min(step, len(replayed_commands) - 1)]
+                pending = ActuatorCommandFrame(
+                    t_us=pending.t_us,
+                    ids=BEHAVIOUR_COMMAND_IDS,
+                    values=tuple(
+                        recorded.get(name, 0.0) for name in BEHAVIOUR_COMMAND_IDS
+                    ),
+                    units=pending.units,
+                    signal_type=pending.signal_type,
+                    provenance="E",
+                    assumption_ids=pending.assumption_ids,
+                    metadata={
+                        "state": "REPLAY",
+                        "replayed_from": str(output_directory.parent / "exact"),
+                        "the_graph_did_not_drive_this": True,
+                    },
+                )
             if onset_us is None and controller.state.value == "ACTING":
                 onset_us = pending.t_us
             body.step_until(t_us + coupling_us)

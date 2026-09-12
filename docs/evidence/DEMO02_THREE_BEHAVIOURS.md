@@ -7,7 +7,7 @@ Tier unchanged at **V0 Structural**. The Stage 2 exit gate is untouched at v4, 0
 |---|---|---|
 | grooming | **NO DEMONSTRATION** | `G1` fail |
 | feeding | **NO DEMONSTRATION** | `F1` fail |
-| escape | **NO DEMONSTRATION** | `E1` fail |
+| escape | superseded -- see the addendum | re-run after a registered search |
 
 No fly groomed, extended its proboscis, or took off. Each contract's claim ladder sends a
 failed behaviour-exists criterion straight to NO DEMONSTRATION, so nothing else can rescue
@@ -77,7 +77,14 @@ rather than hidden.
 The dynamics have now confirmed the structural survey was pointing at the right place, and
 the body is what prevents using it. The pump motor neuron fires with nothing to pump.
 
-### Escape: the loom pathway computes, the giant fibre does not fire
+### Escape: SUPERSEDED. Read the addendum at the end of this document first.
+
+> The section below records what happened at DEMO-01's operating point and is left
+> unedited. Its conclusion does not survive: a registered search found 11 of 36
+> candidates that fire the giant fibre cleanly, and the single parameter responsible
+> was one DEMO-01 had selected at the top of its own grid.
+
+#### (superseded) the visual pathway computes, the giant fibre does not fire
 
 The visual stimulus enters at the lamina through the frozen DEMO-01 retinotopic encoder,
 unchanged, and the optic lobe computes on it: 5,307 lamina cells driven, 2,948 neurons active
@@ -220,3 +227,117 @@ The other open question is whether 30.2 percent of a readout input being active 
 readout stays silent is a parameter problem at all, or whether it is the transmitter-only
 sign model (`ND-10`, unresolved signs set to zero) doing the work. The two are separable and
 neither has been tested.
+
+---
+
+# Addendum, 2026-09-12: the escape negative does not survive a search
+
+The escape section above concluded that the route does not carry. That conclusion was
+wrong, and the error is worth more than the correction.
+
+**What was actually tested.** One operating point, selected by a registered search for a
+different readout, with zero candidates searched for this one. DEMO-01 needed 108 candidates
+to find the 31 that worked for its route. Reporting "the route does not carry" from a sample
+of one is the same overclaim this project exists to avoid, pointed in the pessimistic
+direction.
+
+**The search.** `demo02-escape-operating-point-v1`, frozen before the probe that runs it.
+36 candidates, five neural criteria carrying DEMO-01's thresholds unchanged wherever they
+could travel. **11 passed.** Selected, by the rule declared before the run:
+
+    lamina_max_rate_hz 800   synaptic_mv_per_contact 0.40   inhibitory_weight_gain 1.0
+
+    baseline    left object (L,R)   right object (L,R)   recovery   descending active
+         0           78, 0               0, 115              0          10.6%
+
+Perfect ipsilateral separation, which is what zero cross-side edges from `LC4` and `LPLC2`
+predicts. Silent at rest, silent on recovery, descending pool at 10.5 Hz against a 113.6 Hz
+ceiling.
+
+**One parameter carried the whole negative.** Every `lamina_max_rate_hz = 400` row in the
+search is `0,0 / 0,0`. DEMO-01 searched that parameter over [200, 300, 400] and selected
+400 -- the maximum of its own grid. A search that selects a boundary value has told you the
+range was too narrow, and nobody read it that way at the time, including me.
+
+## What the re-run found
+
+With the searched point, the fly leaves the ground and the controls behave correctly:
+
+    variant             acting   z rise    off-ground    roll at end
+    exact                 yes    1.562 mm   2,835,000 us     179.4 deg
+    readout-ablated        no    0.204 mm       5,500 us       0.7 deg
+    stimulus-absent        no    0.204 mm       5,500 us       0.7 deg
+
+The verdict is still **INVALID AS A CAUSAL CLAIM**, on four failures, and three of them are
+defects in criteria I wrote rather than results.
+
+**`E2` and `E3` are unpassable**, as this document already recorded: they cap the control's
+rise at 0.15 mm while quoting a 0.204-0.211 mm noise floor in their own justification. Both
+controls behaved exactly as controls should and both criteria fail them.
+
+**`E5` fails on a stray spike.** 249 of the 250 giant-fibre spikes land after the object
+reaches 38.68 degrees, with nothing at all in the 3.4 seconds before -- the response is
+tightly locked to the stimulus. But the criterion anchors on "the first giant-fibre spike",
+and one stochastic spike at 90,000 us is the first. The real response also begins 10,000 us
+after the approach window closes, one coupling interval late. My first implementation scored
+only the first half of the criterion and returned PASS; implementing the second clause
+turned a false positive built from a stray spike and a settling bounce into an honest FAIL.
+
+**`E4` resolved as the contract predicted.** The object fires the giant fibre in the
+matched-size-static case too, so **the word "loom" is struck from every artifact** and the
+claim narrows to a visual object of sufficient angular size. The frozen encoder computes
+angular size, not expansion rate, and said so before the run.
+
+**`E1` passes hollowly, and this is the one I should have caught.** The airborne test
+everywhere in this pipeline is "no tarsus touching", and the exact run ends at **179.4
+degrees of roll with its thorax below standing height**. It hopped, turned over, and never
+put a foot down again. Both `E1` clauses are literally satisfied. The degenerate case for
+"lost ground contact" is a fly on its back, and checking new criteria against degenerate
+outcomes is a rule already written down in this project.
+
+## The wings generate nothing, and they are what turn the fly over
+
+The prediction registered in the contract before the run -- wing depression alone produces
+approximately 0.0 mm of rise -- holds exactly:
+
+    jump-only    rise 1.651 mm   max roll  17.1 deg   lands upright
+    wing-only    rise 0.219 mm   max roll   1.9 deg   inside the 0.204-0.211 mm noise floor
+
+## Can air be added? Yes, and it was measured rather than assumed
+
+Fluid is disabled: `density` 0, `viscosity` 0, and all 70 rows of `geom_fluid` zero. It can
+be enabled at runtime with no download. The units were pinned by measurement:
+
+    density 1.204e-6 g/mm^3   drag at  100 mm/s = 0.031   (0.31% of body weight)
+                              drag at 1000 mm/s = 3.102   (31% of body weight)
+
+Exactly quadratic, implying a terminal velocity near 1.8 m/s, which is right for a fruit
+fly. The `g/cm^3` value would give 309 times body weight and is definitively wrong here.
+
+Two corrections to claims made earlier in this project. MuJoCo's simple density model is
+**velocity-dependent drag only and has no buoyancy term**. And the wing geoms are **meshes**,
+not ellipsoids -- geom type 7 is `mjGEOM_MESH`.
+
+What air does: air alone halves the time on its back and does not stop the flip (roll still
+180). Enabling the ellipsoid wing model gives 19,000 us airborne and roll 165 -- and 19 ms is
+the ballistically correct flight time for a 1.7 mm hop, against 1.88 s of lying inverted.
+That is independent evidence that the long airborne numbers are an artifact.
+
+**Air is not in the plant.** It voids every threshold measured on the current one, and the
+actuator-set digest would not catch the change because density is not an actuator.
+
+## Video
+
+`evidence/demo02/video/escape-control-matrix.mp4` and `escape-effectors.mp4`. The subject is
+the control matrix rather than the fly, because a single panel of the exact run shows a leap
+and a tumble and reads as an escape. Roll is on every panel and turns red past 90 degrees;
+the airborne clock is split into off-ground and inverted time; and the struck words are
+unrepresentable rather than merely avoided -- the renderer raises if a caption contains
+"loom", "flight", "flying" or "lift". The verdict is on every frame.
+
+## What still stands from the original document
+
+Grooming and feeding are unchanged and their negatives stand, because **no search has been
+run for either**. By the argument above that makes them untested rather than refuted, and
+`MN9` responding while the decoded proboscis motor neurons stay silent remains the sharpest
+single result in this experiment.
