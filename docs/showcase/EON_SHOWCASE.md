@@ -48,28 +48,28 @@ this release is comparable to Eon's controller-mediated integration rather than 
 
 ## Historical v1 commands
 
-From the pinned WSL environment:
+From the pinned production environment, with `FLYSIM_DATA_ROOT` set to the dataset root:
 
 ```bash
-flysim showcase build --root /srv/flybrain-data
+flysim showcase build
 ```
 
 For a matrix-only run while developing the presentation:
 
 ```bash
-flysim showcase build --root /srv/flybrain-data --no-render
+flysim showcase build --no-render
 ```
 
 Build the rich 1080p presentation after the matrix has been accepted:
 
 ```bash
-flysim showcase cinematic --root /srv/flybrain-data
+flysim showcase cinematic
 ```
 
 After recording, a visual-only revision can reuse the immutable trace, spike, and pose files:
 
 ```text
-flysim showcase cinematic --root /srv/flybrain-data --source-directory PRESENTATION_DIR
+flysim showcase cinematic --source-directory PRESENTATION_DIR
 ```
 
 The source and renderer commits are recorded independently, and both recording and rendering

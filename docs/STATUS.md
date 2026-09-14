@@ -80,7 +80,8 @@ on every one of 133 `qpos` components. The multi-object lamina encoder reproduce
 `RetinotopicVisualEncoder` for a single cue to **1.1e-13 Hz** on rates spanning 1 to 400 Hz.
 Both live in `tests/test_swarm3d.py`.
 
-The video is `artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4`, rendered offline from the
+The published cut is `artifacts/showcase/swarm3d-v1/swarm3d-showcase-web.mp4` (19 MB, the
+41.5 MB master re-encoded at CRF 26, both hashed in `SHA256SUMS`), rendered offline from the
 recorded whole-scene `qpos`; the replay path refuses a world that has ever been stepped, so
 rendering cannot advance a simulation. It is **presentation-grade, not evidence-grade**: the
 source tree was dirty, no preregistered biological hypothesis or acceptance contract exists

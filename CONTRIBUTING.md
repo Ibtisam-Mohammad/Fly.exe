@@ -13,7 +13,8 @@ uv run mypy
 uv run pytest
 ```
 
-That is exactly what CI runs. The body, GPU and connectome extras are not installed there, so
+Those are the checks CI runs; CI adds `--frozen` to the sync and a coverage floor to pytest.
+The body, GPU and connectome extras are not installed there, so
 tests needing FlyGym, MuJoCo or GeNN skip; if your change touches them, say in the pull
 request what you ran locally and on what hardware.
 

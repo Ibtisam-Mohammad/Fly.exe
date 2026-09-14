@@ -73,6 +73,9 @@ MaleCNS v1.0 (CC-BY)          165,122 neurons, 25,563,197 edges, checksum-locked
         MuJoCo + NeuroMechFly 133 DOF, 42 actuated, contacts and adhesion solved
 ```
 
+The full frame chain, including the causal queues that keep the body one interval behind the
+neural engine, is in [docs/architecture.md](docs/architecture.md).
+
 The loop is deliberately narrow and every narrowing is declared. Light enters one synapse
 downstream of the photoreceptors, because all 66,533 photoreceptor output edges are zeroed by
 the frozen unresolved-sign policy. The gait is a published pattern generator, not the
@@ -116,10 +119,10 @@ The lightweight reference engine runs before FlyGym, CUDA or the MaleCNS data ar
 
 ```bash
 uv python install 3.12
-uv sync --python 3.12 --extra render
+uv sync --python 3.12 --extra data --extra render
 uv run flysim run eon-demo --seed 1 --headless
 uv run flysim render runs/<run-id>
-uv run pytest
+uv run pytest        # tests needing FlyGym, MuJoCo or CUDA skip
 ```
 
 That produces the semantic engineering storyboard, which is also the project's neural-bypass
@@ -180,19 +183,126 @@ for the neuron state alone against the card's 360 GB/s.
 | `docs/adr/` | decision records, in order, including the ones that record failures |
 | `docs/evidence/` | measured reports; `LITERATURE_PARAMETER_CORPUS.md` is the parameter audit trail |
 | `docs/STATUS.md` | what is true right now, dated |
+| `docs/OPERATIONS.md` | the long-running commands: data, benchmarks, matrices, evidence bundles |
+| `docs/REFERENCES.md` | how each source was used, licences, and the sources that were rejected |
+| `docs/architecture.md` | the frame chain and the boundaries between tracks |
 | `AGENTS.md` | the project's source of truth for scientific interfaces and claim discipline |
 | `tests/` | 782 tests in 70 files; the two bit-parity tests for the swarm are in `test_swarm3d.py` |
 
-## References and credits
+## Sources
 
-The connectome, every paper a registered parameter came from, the body and simulator
-software, and the licence and redistribution status of each dataset are indexed in
-[docs/REFERENCES.md](docs/REFERENCES.md). Short version: the anatomy is
-[MaleCNS v1.0](https://male-cns.janelia.org/download/) from HHMI Janelia FlyEM under CC-BY;
-the body is [NeuroMechFly v2 / FlyGym](https://github.com/NeLy-EPFL/flygym); the neural engine
-is [GeNN](https://github.com/genn-team/genn); [Shiu et al. 2024](https://doi.org/10.1038/s41586-024-07763-9)
-is the reference implementation regression-tested against; and fourteen primary papers supply
-the physiology parameters.
+Everything below was read, downloaded or reused to build this. **No dataset here is
+redistributed by this repository:** each is fetched by `flysim data sync`, checksummed, and
+recorded in an immutable dataset lock. Licences and redistribution terms, which registry each
+number landed in, and the sources that were read and *rejected*, are in
+[docs/REFERENCES.md](docs/REFERENCES.md).
+
+### The connectome
+
+**MaleCNS v1.0** - HHMI Janelia FlyEM, CC-BY, <https://male-cns.janelia.org/download/>.
+165,122 neurons and 25,563,197 edges across seven checksum-locked flat-connectome tables.
+
+* Sexual dimorphism in the complete *Drosophila* male central nervous system connectome -
+  [10.1016/j.cell.2026.08.015](https://doi.org/10.1016/j.cell.2026.08.015)
+* Male gustatory connectome -
+  [10.1016/j.cell.2026.08.016](https://doi.org/10.1016/j.cell.2026.08.016)
+* Structural and male-female comparison supplement -
+  <https://github.com/flyconnectome/2025malecns>
+
+What the graph does not say about itself - its reconstruction completion rates, which qualify
+every structural and functional claim made anywhere in this repository - is section 5 of
+[the literature corpus](docs/evidence/LITERATURE_PARAMETER_CORPUS.md).
+
+### Software this is built on
+
+| component | role here | licence and source |
+|---|---|---|
+| **NeuroMechFly v2 / FlyGym** 2.1.0 | the body: 133 DOF, contact, adhesion, the published `HybridTurningController` gait | Apache-2.0, [10.1038/s41592-024-02497-y](https://doi.org/10.1038/s41592-024-02497-y), <https://github.com/NeLy-EPFL/flygym> |
+| **MuJoCo** 3.9 | rigid-body physics, contacts, rendering | Apache-2.0 |
+| **GeNN / PyGeNN** | the sparse CUDA engine that executes the full graph | <https://github.com/genn-team/genn> |
+| **Brian2** | small-circuit numerical oracle the engine is checked against | CeCILL-2.1, <https://github.com/brian-team/brian2> |
+| **Shiu et al. 2024** whole-brain LIF model | Stage 1 regression reference; selected circuit tests reproduce its archived outputs | MIT, [10.1038/s41586-024-07763-9](https://doi.org/10.1038/s41586-024-07763-9), archive [10.17617/3.CZODIW](https://doi.org/10.17617/3.CZODIW) |
+| **Eon fly-brain** | reproduction reference and attributed implementation ideas | GPL-2.0-or-later, <https://github.com/eonsystemspbc/fly-brain> |
+
+### Papers behind the registered parameters
+
+Fourteen full-text papers were read and every quantitative value extracted with its
+measurement conditions. A paper appearing here does not mean its value was accepted: the corpus
+records what was rejected, and one registered value that an independent measurement
+contradicts.
+
+| citation | what it supplies |
+|---|---|
+| Kazama & Wilson 2008, *Neuron* 58:401-413 - [10.1016/j.neuron.2008.02.030](https://doi.org/10.1016/j.neuron.2008.02.030) | uEPSC/uEPSP amplitudes per glomerulus, quantal parameters, release-site counts, 7 Hz depression |
+| Kazama & Wilson 2009, *Nat Neurosci* - origins of correlated activity in an olfactory circuit | complete ORN-to-PN convergence, ORN counts per glomerulus |
+| Nagel, Hong & Wilson 2015, *Nat Neurosci* 18:56-65 - [10.1038/nn.3895](https://doi.org/10.1038/nn.3895) | two-component EPSC kinetics and conductances, the registered depression fit, presynaptic inhibition |
+| Gouwens & Wilson 2009, *J Neurosci* - [10.1523/JNEUROSCI.0764-09.2009](https://doi.org/10.1523/JNEUROSCI.0764-09.2009) | measured PN input resistance, seal-conductance correction to resting potential |
+| Gaudry, Hong, Kain, de Bivort & Wilson 2012, *Nature* - [10.1038/nature11747](https://doi.org/10.1038/nature11747) | ipsi/contra release asymmetry and odour lateralisation |
+| Gugel et al. 2023, *eLife* 12:e85443 - [10.7554/eLife.85443](https://doi.org/10.7554/eLife.85443) | the DL5 uEPSC recordings in the corpus |
+| Rozenfeld, Ehmann, Manoim, Kittel & Parnas 2023, *Nat Commun* - [10.1038/s41467-023-38575-6](https://doi.org/10.1038/s41467-023-38575-6) | independent release-site estimate, homeostatic active-zone plasticity |
+| Pooryasin et al. 2021, *Nat Commun* - Unc13A and Unc13B | two release-machinery populations with distinct short-term plasticity |
+| Nanami et al. 2024, *Front Neurosci* 18:1384336 - [10.3389/fnins.2024.1384336](https://doi.org/10.3389/fnins.2024.1384336) | PN current-clamp recordings, and an unfitted-LIF comparison model |
+| Davis et al. 2020, *eLife* 50901 - [10.7554/eLife.50901](https://doi.org/10.7554/eLife.50901) | cell-type-resolved transcriptomes, visual system only |
+| Lappalainen et al. 2024, *Nature* 634:1132 - [10.1038/s41586-024-07939-3](https://doi.org/10.1038/s41586-024-07939-3) | connectome-constrained network prior art; the methodological benchmark |
+| Mapping of neurotransmitter receptor subtypes to the connectome | receptor subunit localisation; the definitive answer on functional edge polarity |
+| Interactions between specialized gain control mechanisms in olfactory processing | LN classes performing local versus global gain control |
+| The MaleCNS paper itself | counts and reconstruction completion rates |
+| Liu et al. 2022 - [PMC8825683](https://pmc.ncbi.nlm.nih.gov/articles/PMC8825683/) | the contact-to-release-site relationship; obtained only in part |
+| Takagi et al. 2024, *Nat Commun* - [10.1038/s41467-024-50808-w](https://doi.org/10.1038/s41467-024-50808-w) | ORN population expansions and PN adaptation |
+
+### Behaviour, mapping and cell-type sources
+
+| source | supplies |
+|---|---|
+| Ozdil et al. 2026, centralized brain networks controlling antennal grooming - [10.1038/s41467-026-72152-x](https://doi.org/10.1038/s41467-026-72152-x), collection [10.7910/DVN/N8ITTG](https://doi.org/10.7910/DVN/N8ITTG) | the checksum-locked antennal-grooming joint trajectory Track A replays |
+| Johnston's-organ receptor spiking - [10.1016/j.cub.2013.10.006](https://doi.org/10.1016/j.cub.2013.10.006) | class-level evidence behind the LIF fallback registered for JO-F and JO-FD types |
+| [10.1038/srep21841](https://doi.org/10.1038/srep21841), [10.1038/s41467-019-09069-1](https://doi.org/10.1038/s41467-019-09069-1) | odorant-receptor-glomerulus mapping for the `eon-demo` storyboard, declared an engineering bypass |
+| [10.1038/s41586-025-09554-2](https://doi.org/10.1038/s41586-025-09554-2) | the DNg97/oDN1 identity behind Track A's descending crosswalk |
+| Seki et al. 2010 - [10.1152/jn.00249.2010](https://doi.org/10.1152/jn.00249.2010); Inada et al. 2017 - [10.1016/j.celrep.2017.05.049](https://doi.org/10.1016/j.celrep.2017.05.049) | antennal-lobe local neuron and Kenyon cell physiology |
+| Gouwens & Wilson DM1 passive model - [ModelDB 118662](https://github.com/ModelDBRepository/118662) | published passive-model source; redistribution from this project is disabled |
+
+### Method and boundary prior art
+
+Used as method or as a limit marker, never as a source of numbers:
+[Effectome](https://doi.org/10.1038/s41586-024-07982-0) (connectome weights as priors for
+fitted causal effects), [FlyVis](https://doi.org/10.1038/s41586-024-07939-3) (visual type
+sharing and fitting precedent), [BrainTrace](https://doi.org/10.1038/s41467-026-68453-w)
+(scalable fitting, and evidence that background drive matters),
+[inter-individual connectome variability](https://doi.org/10.1038/s41586-024-07686-5),
+[BANC](https://doi.org/10.1038/s41586-026-10735-w) (female brain-and-cord comparison),
+[the adult mushroom-body connectome](https://doi.org/10.7554/eLife.62576),
+[adult muscle motor-unit physiology](https://pmc.ncbi.nlm.nih.gov/articles/PMC7347388/),
+[femoral chordotonal biomechanics](https://pmc.ncbi.nlm.nih.gov/articles/PMC10644877/) and
+[the DoOR odour-response database](https://pmc.ncbi.nlm.nih.gov/articles/PMC4766438/).
+
+[Flybody](https://doi.org/10.1038/s41586-025-09029-4) and
+[FlyMimic](https://openreview.net/forum?id=6lEjX1getx) were consulted as whole-body and
+muscle-level baselines and are **not** used. That is why wing flapping produces exactly zero
+lift in this body, and why the project says so instead of implying flight
+([ADR-2026-017](docs/adr/ADR-2026-017-a-wing-command-in-a-body-with-no-air.md)).
+
+### Datasets with their own cards
+
+Each carries its source URL, checksum, licence and redistribution status in
+[`configs/datasets/`](configs/datasets):
+
+```
+malecns-v1.0                     the connectome, CC-BY
+berg-malecns-2025-supplement     structural and male-female comparison tables
+morphology-canaries              skeleton SWCs that detect a silently changed release
+shiu-2024-brain-model            Stage 1 regression reference and archived outputs
+ozdil-2026-antennal-grooming     grooming supplementary data ...
+   ... -trajectory               ... and the replayed joint trajectory
+gugel-2023-elife-85443           uEPSC source data, Dryad 10.5061/dryad.v15dv420q
+nanami-2024-pn-current-clamp     PN current-clamp recordings ...
+   ... -invivo-cellular-pack     ... and the in vivo pack redistributed alongside them
+gouwens-wilson-2009-dm1-modeldb  published DM1 passive model, redistribution disabled
+stage2-2026-09-09-intake         classification of a staged dataset drop
+stage2-reservations-v1           which files, variables and columns are RESERVED and unopened
+```
+
+The last card is load-bearing for the validation discipline: data declared reserved stays
+unread until a preregistered test opens it, because reading it spends it.
 
 ## Contributing, licence, citation, security
 

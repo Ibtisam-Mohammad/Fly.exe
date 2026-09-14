@@ -38,18 +38,20 @@ Read in this order.
 
 ## How to reproduce, in order
 
+Set `FLYSIM_DATA_ROOT` to the dataset root first; `--root` defaults to it.
+
 The order is not a convenience. Each step freezes something the next step is not allowed to
 vary.
 
 ```
 # 1. the network, scored on neural criteria with no behavioural quantity anywhere
-PYTHONPATH=src python scripts/run_demo01_visual_search.py --root /srv/flybrain-data --progress
+PYTHONPATH=src python scripts/run_demo01_visual_search.py --progress
 
 # 2. the decoder, on development scenarios only, with the network frozen
-PYTHONPATH=src python scripts/tune_demo01_decoder.py --root /srv/flybrain-data
+PYTHONPATH=src python scripts/tune_demo01_decoder.py
 
 # 3. the evaluation: four identical-seed variants, then the verdict and the video
-PYTHONPATH=src python scripts/run_demo01_embodied.py --root /srv/flybrain-data \
+PYTHONPATH=src python scripts/run_demo01_embodied.py \
     --duration-s 20 --render --progress
 ```
 
