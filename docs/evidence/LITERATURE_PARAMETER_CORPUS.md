@@ -32,8 +32,8 @@ which qualify every structural and functional claim the project makes.
 | `Pooryasin2021` | Pooryasin et al. 2021, *Nat Commun*, "Unc13A and Unc13B..." | two release-machinery populations with distinct STP |
 | `OlfSNN2024` | *Front Neurosci* 18:1384336, data-driven olfactory SNN | comparison model, unfitted LIF |
 
-Extracted plain text is in the session scratchpad under `papers_txt/`; the PDFs are in
-`C:\Users\ibtis\Downloads\papers`. Neither is checksum-locked into `/srv/flybrain-data`, so
+The PDFs are held locally by the project owner and are not redistributed; the extracted
+plain text lived in a working scratchpad. Neither is checksum-locked into the data root, so
 nothing here is evidence-grade until a value is registered with its own dataset card.
 
 ## 2. ORN→PN synapse

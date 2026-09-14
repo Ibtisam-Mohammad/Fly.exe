@@ -3,7 +3,7 @@
   "manifest_id": "stage2-2026-09-09-intake",
   "title": "Intake of the Stage 2 dataset index supplied 2026-09-09, classified by whether it is raw, summary, already used or reserved",
   "staged_at": "/srv/flybrain-data/incoming/stage2-2026-09-09",
-  "index_supplied_by_user": "C:/Users/ibtis/Downloads/papers/supplementary.md",
+  "index_supplied_by_user": "papers/supplementary.md, held locally by the project owner and not redistributed",
   "status": "staged and classified; nothing is promoted to raw/ or derived/, nothing is fitted, and every reserved observation is unread",
   "inspection_rule": {
     "rule": "Structure may be read; values may not. File names, formats, sizes, checksums, variable names, array shapes, column headers and row counts are metadata and were read. No numeric value of any reserved observable was read, printed or summarised.",
