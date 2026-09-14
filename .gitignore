@@ -12,6 +12,13 @@ data/
 *.part
 *.mp4
 *.gif
+
+# The README's motion stills are tracked on purpose: they are the only part of the
+# showcase a visitor sees without downloading anything. Everything else under
+# artifacts/ stays out of the history and is force-added file by file when a
+# published artifact needs to travel with the source.
+!docs/media/
+!docs/media/*.gif
 .coverage
 htmlcov/
 /artifacts/

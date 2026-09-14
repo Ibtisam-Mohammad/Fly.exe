@@ -1,19 +1,120 @@
 # MaleCNS Virtual Fly
 
-This repository builds a stochastic, MaleCNS-constrained embodied sensorimotor model of a representative adult male *Drosophila*. It is not a recovered copy of the imaged fly, a complete biological emulation, or a digital twin.
+A *Drosophila* brain simulator that runs the **complete released male CNS connectome** —
+165,122 neurons, 25,563,197 synaptic edges — inside a physical fly body, in closed loop, on
+one GPU.
 
-The project has two tracks:
+It is not a recovered copy of the imaged fly, a complete biological emulation, or a digital
+twin. What it is, and the evidence behind every number on this page, is set out in
+[What is and is not claimed](#what-is-and-is-not-claimed).
 
-- **Track A:** a visibly labelled Eon-like engineering demonstration: seek food, groom after antennal contamination, resume walking, and initiate proboscis extension.
-- **Track B:** a scientific closed-loop walking model that preserves the MaleCNS brain–VNC–motor-neuron pathway and tests it against causal controls and held-out data.
+![Twelve embodied flies, each running the whole connectome](docs/media/swarm-establish.gif)
 
-Read [AGENTS.md](AGENTS.md) before changing scientific interfaces or claims. Current implementation status and honest limitations are in [docs/STATUS.md](docs/STATUS.md).
+## Twelve flies, twelve connectomes, one scene
+
+Twelve full NeuroMechFly bodies in one MuJoCo scene, scattered at random over a 30 mm disc
+and aimed at random. Each fly executes its own copy of the entire connectome every 15 ms
+coupling interval, over **one** shared connectivity allocation with independent membrane,
+adaptation, spike-counter and noise state. Food spheres and pillars are geoms with real
+contact pairs; the bodies share one solver step, so they collide with each other and with the
+objects through the physics rather than through a rule, and each fly is a visible object in
+the others' visual fields.
+
+Nothing steers them but two descending population rates read out of their own network.
+
+| | GIF |
+|---|---|
+| **Twelve independent neural states over one connectivity allocation.** Brightness is spike count with a declared decay. | ![](docs/media/swarm-brains.gif) |
+| **0.30x speed.** Six legs in a tripod gait, adhesion switching per leg, every contact solved by MuJoCo. | ![](docs/media/swarm-closeup.gif) |
+| **Exact against its control** — same seed, same bodies, encoder held at baseline. | ![](docs/media/swarm-control.gif) |
+
+[**Watch the full 1:38 video**](artifacts/showcase/swarm3d-v1/swarm3d-showcase-web.mp4)
+(1920x1080, 19 MB). What it measured, against the identical-seed stimulus-absent control:
+
+| | exact | stimulus-absent |
+| --- | --- | --- |
+| flies that entered the locomoting state | 12 / 12 | 0 / 12 |
+| flies that ended within 1 mm of an object's surface | 12 / 12 | 0 / 12 |
+| neurons spiking per fly per coupling interval | 9,337 | 164 |
+| straight-line displacement | 5.0 to 25.6 mm | 3.0 to 7.3 mm |
+| ended nearer a food object | 12 / 12, median +11.48 mm | 8 / 12, median +2.25 mm |
+
+Eleven of twelve reached a food sphere and stopped at its surface; the twelfth ended against
+a pillar. **The last row is the one to be careful about**, and the video says so on screen: a
+standing body drifts forward along its own axis, and headings are bounded so that food lies
+inside the encoder's mapped visual field, so the control leans the same way. Closing distance
+to food is *not* the discriminator. Ending against an object is — 12 of 12 against 0 of 12.
+
+Two properties are checked rather than asserted, because the swarm reuses the frozen DEMO-01
+network and reimplements its per-fly actuation. One fly driven through `SwarmWorld` and
+through `Demo01VisualBody` under an identical command sequence agree to **0.0** on every one
+of 133 `qpos` components; the multi-object encoder reproduces the frozen single-cue encoder to
+**1.1e-13 Hz** on rates spanning 1 to 400 Hz. Both are in `tests/test_swarm3d.py`.
+
+Operator handoff: [docs/showcase/SWARM3D.md](docs/showcase/SWARM3D.md). Decision record:
+[ADR-2026-023](docs/adr/ADR-2026-023-embodied-3d-swarm-showcase.md), which also records the
+two arenas that were built, measured and discarded first — each one exposed a property of the
+frozen visual route that no previous experiment had tested.
+
+## How it works
+
+```
+MaleCNS v1.0 (CC-BY)          165,122 neurons, 25,563,197 edges, checksum-locked
+        |
+   transmitter sign           per-neuron; unresolved signs are zeroed, not guessed
+        |
+   sparse graph build         hashed arrays, verified on every load
+        |
+   GeNN / CUDA                one connectivity allocation, N independent neuron states
+        |    ^
+ retinotopic |    | two descending population rates
+ lamina      |    |
+ encoder     |    v
+        MuJoCo + NeuroMechFly 133 DOF, 42 actuated, contacts and adhesion solved
+```
+
+The loop is deliberately narrow and every narrowing is declared. Light enters one synapse
+downstream of the photoreceptors, because all 66,533 photoreceptor output edges are zeroed by
+the frozen unresolved-sign policy. The gait is a published pattern generator, not the
+simulated ventral nerve cord. The readout is two numbers. Everything else the body and the
+connectome could do is inert in this demonstration, and the inventory of what is inert is
+part of the artifact rather than a footnote.
+
+## What is and is not claimed
+
+**The project sits at tier V0 Structural on its own V0–V8 ladder.** The swarm demonstration
+awards no tier at all: both the run summary and the render manifest carry
+`validation_tier_awarded: null` and `evidence_grade: false`, because no preregistered
+biological hypothesis and no acceptance contract exists for a swarm. It demonstrates
+machinery and validates no biology.
+
+Specifically **not** claimed, and printed on the video frames rather than hidden here:
+
+* **No social behaviour.** Flies aggregate because a nearby fly is a large object in the
+  visual field and the network approaches large objects.
+* **No foraging.** Food is a coloured sphere with a radius. The encoder has no colour channel
+  and cannot tell food from a pillar; what separates them is angular size. There is no
+  ingestion, no proboscis extension, no taste channel in this run.
+* **The walking is engineered.** No part of the simulated ventral nerve cord contributes to
+  leg movement.
+* **The flies are not individuals.** Twelve parameterised copies of one specimen, differing
+  in where they start, what they see from there, and their independent noise stream.
+* **Rendering is software rasterisation** on the machine that produced these files, and the
+  manifest records it.
+
+The discipline that produces those statements is the point of the project as much as the
+simulation is: every parameter carries a provenance class (`M` measured, `P` population prior,
+`F` fitted, `E` engineering scaffold, `I` irrecoverable) and an assumption ID in
+[`configs/assumptions.json`](configs/assumptions.json); evidence-grade runs refuse to start
+from a dirty worktree; and criteria are registered before they are scored. Results that
+failed are kept — see [docs/STATUS.md](docs/STATUS.md) for the current state, including
+Track A's 0-of-30 grooming-displacement failure and a withdrawn evidence round.
 
 ## Quick start
 
-The lightweight reference engine runs before FlyGym, CUDA, or MaleCNS data are installed:
+The lightweight reference engine runs before FlyGym, CUDA or the MaleCNS data are installed:
 
-```powershell
+```bash
 uv python install 3.12
 uv sync --python 3.12 --extra render
 uv run flysim run eon-demo --seed 1 --headless
@@ -21,161 +122,84 @@ uv run flysim render runs/<run-id>
 uv run pytest
 ```
 
-Reproduce the historical v1 preview, or validate a corrected v2 bundle:
+That produces the semantic engineering storyboard, which is also the project's neural-bypass
+control. It is an `E` engineering scaffold and its manifest says so.
 
-```text
-flysim showcase build --root /srv/flybrain-data
-flysim showcase cinematic --root /srv/flybrain-data
-# Visual-only rerender from an immutable presentation recording:
-flysim showcase cinematic --root /srv/flybrain-data --source-directory PRESENTATION_DIR
-flysim showcase render-v2 /path/to/eon-showcase-v2/draft-bundle.json --output /path/to/eon-showcase-v2/showcase.mp4
-flysim showcase validate-v2 /path/to/eon-showcase-v2/bundle.json
+For anything that executes the real connectome you need the dataset and an NVIDIA GPU:
+
+```bash
+export FLYSIM_DATA_ROOT=/path/with/room          # dataset + run outputs
+flysim data sync --profile starter               # public, no credentials
+flysim data validate
+flysim data import-aggregate
 ```
 
-The first two commands reproduce the v1 artifact, now retained as a limited preview. Review found
-that its navigation contains a direct world-gradient term and that its hero slides 8.477 mm during
-grooming against the recorded 2.5 mm cap. The corrected v2 validator accepts only separate causal
-navigation, grooming and feeding chapters, all required controls, three held-out visual targets,
-and a 60--90 second exact-versus-ablation cut. Neither version awards a scientific tier. See
-[the v2 operator handoff](docs/showcase/EON_SHOWCASE_V2.md) for the exact boundary and bundle
-format.
+GeNN is a native CUDA source build rather than a registry package
+(`scripts/install_genn.sh`), and the pinned production environment is Linux. On Windows it is
+reached through WSL2. Full operator documentation, including the dataset profiles, the
+preregistered matrices and the evidence-bundle path, is in
+[docs/OPERATIONS.md](docs/OPERATIONS.md).
 
-[Watch the archived v1 1080p preview](artifacts/showcase/eon-showcase-v1/cinematic-demo.mp4). It is
-not the corrected final showcase.
+### Reproduce the swarm video
 
-GeNN is a native source build rather than a registry package and is intentionally installed inside the WSL environment with `scripts/install_genn.sh`; it is recorded separately from the cross-platform Python lock.
+Recording and rendering are separate by construction: the run records whole-scene `qpos`
+once per coupling interval and no frames at all, and the replay path refuses a world that has
+ever been stepped, so rendering cannot advance a simulation.
 
-For the production Linux environment after `scripts/bootstrap_wsl.ps1` completes:
-
-```powershell
-wsl -d FlyBrain -u flybrain -- bash /mnt/i/AI/fly_brain/scripts/bootstrap_python.sh
-wsl -d FlyBrain -u flybrain -- bash /mnt/i/AI/fly_brain/scripts/install_genn.sh
-wsl -d FlyBrain -u flybrain -- env CUDA_PATH=/usr /srv/flybrain-data/envs/production/bin/python /mnt/i/AI/fly_brain/scripts/smoke_genn.py
+```bash
+PYTHONPATH=src python scripts/run_swarm3d_showcase.py \
+    --duration-s 30 --variant exact --variant stimulus-absent --progress
+PYTHONPATH=src python scripts/render_swarm3d_showcase.py \
+    --run RUN_DIR/exact --control RUN_DIR/stimulus-absent \
+    --out artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4 --progress
 ```
 
-Generate the explicit controller-only NeuroMechFly/MuJoCo control baseline:
+Cost, measured: twelve flies at 0.015x biological real time, about 33 minutes of wall clock
+per variant on one RTX 3060 at 4.2 GB of device memory. That is not the GPU being slow — 30 s
+of biology at the registered 100 µs neural step is 300,000 timesteps over 165,122 x 12 neuron
+states, or 594 billion state updates, which would need roughly 1.2 TB/s of memory bandwidth
+for the neuron state alone against the card's 360 GB/s.
 
-```powershell
-wsl -d FlyBrain -u flybrain -- /srv/flybrain-data/envs/production/bin/python /mnt/i/AI/fly_brain/scripts/body_controller_preview.py --output /mnt/i/AI/fly_brain/artifacts/controller-only/body-preview.mp4 --duration-s 2 --seed 1 --headless
-```
+## Other demonstrations
 
-The generated demonstration is an `E` engineering scaffold. Its run manifest explicitly says that it is not a validated MaleCNS simulation.
+| | |
+|---|---|
+| **Interactive multi-fly arena** — a browser arena where you place cues and obstacles. The browser changes the world only; it cannot set neural activity, actuator commands or poses. `flysim web serve --mode preview` runs dependency-light and is explicitly labelled **no CNS**; `--mode full-cns` runs the real graph, slowly. | [ADR-2026-021](docs/adr/ADR-2026-021-live-multifly-showcase.md) |
+| **Full-CNS cohort cinematic** — eight independent MaleCNS states around one visual cue, sharing one connectivity allocation. Engineering visualisation of cohort target approach, not biological swarming; the body is a display proxy rather than a recorded gait, which is why the embodied swarm above replaced it. | [ADR-2026-022](docs/adr/ADR-2026-022-swarm-cinematic-boundary.md) |
+| **Eon-class showcase** — the earlier engineering demonstration lane and its corrected v2 validator. The archived v1 preview is [in this repository](artifacts/showcase/eon-showcase-v1/cinematic-demo.mp4); review found a direct world-gradient term in its navigation and 8.477 mm of grooming slide against a 2.5 mm cap, so it is retained as a labelled preview and not as a result. | [handoff](docs/showcase/EON_SHOWCASE_V2.md) |
 
-## Production workflow
+## Repository map
 
-```text
-flysim data sync --profile starter --root /srv/flybrain-data
-flysim data validate --root /srv/flybrain-data
-flysim data import-aggregate --root /srv/flybrain-data
-flysim benchmark neural --scales 0.01 0.1 1.0 --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
-flysim run eon-demo --seed 1 --headless
-flysim run eon-malecns --root /srv/flybrain-data --graph /srv/flybrain-data/derived/male-cns-v1.0/graph --output-root /srv/flybrain-data/runs --seed 1 --headless
-flysim run full-vnc-walk --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
-```
+| path | what is there |
+|---|---|
+| `src/flysim/` | the package: graph build, engines (`genn`, `lif`, `reference`), bodies, encoders, decoders, showcases |
+| `src/flysim/swarm3d*.py` | the current embodied swarm: world, vision, runner, replay, video |
+| `configs/assumptions.json` | the assumption register — every declared boundary, with an ID |
+| `configs/datasets/` | one card per external dataset: source, checksum, licence, redistribution status |
+| `configs/experiments/` | preregistered acceptance contracts and validation protocols |
+| `docs/adr/` | decision records, in order, including the ones that record failures |
+| `docs/evidence/` | measured reports; `LITERATURE_PARAMETER_CORPUS.md` is the parameter audit trail |
+| `docs/STATUS.md` | what is true right now, dated |
+| `AGENTS.md` | the project's source of truth for scientific interfaces and claim discipline |
+| `tests/` | 782 tests in 70 files; the two bit-parity tests for the swarm are in `test_swarm3d.py` |
 
-The command above is the conservative dry sizing check. Inside the pinned WSL environment, add `--genn` for a measured CUDA topology-load run. That benchmark sets every functional synaptic weight to zero and therefore makes no neural-dynamics claim:
+## References and credits
 
-```text
-flysim benchmark neural --genn --scales 0.01 0.1 1.0 --graph /srv/flybrain-data/derived/male-cns-v1.0/graph --output /srv/flybrain-data/derived/male-cns-v1.0/genn-benchmark.json
-```
+The connectome, every paper a registered parameter came from, the body and simulator
+software, and the licence and redistribution status of each dataset are indexed in
+[docs/REFERENCES.md](docs/REFERENCES.md). Short version: the anatomy is
+[MaleCNS v1.0](https://male-cns.janelia.org/download/) from HHMI Janelia FlyEM under CC-BY;
+the body is [NeuroMechFly v2 / FlyGym](https://github.com/NeLy-EPFL/flygym); the neural engine
+is [GeNN](https://github.com/genn-team/genn); [Shiu et al. 2024](https://doi.org/10.1038/s41586-024-07763-9)
+is the reference implementation regression-tested against; and fourteen primary papers supply
+the physiology parameters.
 
-Use `--profile metadata` for the initial 55 MB annotation/transmitter audit, `starter` for the aggregate graph inputs, and `full` only when contact-level Stage 0 validation begins.
+## Contributing, licence, citation, security
 
-For an unattended full-profile download, launch the Windows-host supervisor rather than a
-service inside WSL. The host process keeps `wsl.exe` attached, preserves HTTP partial files,
-retries failures, prevents system sleep while active, and exits only after full-profile
-checksum validation succeeds:
+Setup, the checks CI runs, and the handful of rules that are not style are in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-```powershell
-$script = (Resolve-Path scripts\supervise_full_dataset.ps1).Path
-Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script)
-Get-Content artifacts\logs\full-dataset-supervisor.log -Wait
-```
-
-Completion is recorded in `artifacts\logs\full-dataset-supervisor.complete`. A single-instance
-mutex prevents two supervisors from writing the same partial artifact.
-
-The full profile is now seven checksum-locked flat-connectome tables. Contact-level Stage 0 work
-uses bounded, resumable sharding and keeps contact rows off the GPU:
-
-```text
-flysim data status --profile full --json --root /srv/flybrain-data
-flysim data validate --profile full --remote --deep --root /srv/flybrain-data
-flysim data import-contacts --resume --memory-limit-gb 3 --threads 2 --root /srv/flybrain-data
-flysim data audit-contacts --strict --root /srv/flybrain-data
-flysim data sync-skeleton-canaries --root /srv/flybrain-data
-flysim data audit-body-universes --root /srv/flybrain-data
-flysim data audit-structural-references --root /srv/flybrain-data
-```
-
-For the long normalization and audit sequence, use
-`scripts/supervise_contact_foundation.ps1`, followed by
-`scripts/supervise_contact_rebuild.ps1`. Progress is JSONL in the matching logs. The foundation
-marker covers contact and body-universe audits; the rebuild marker is written only after both clean
-layouts, their logical comparisons, evidence-derived V0 construction, and final bundle validation.
-
-Scientific tier claims require an immutable evidence bundle. A bundle cannot be created unless
-all registered gates for its requested tier are explicitly passed and every artifact is hashed:
-
-```text
-flysim evidence build-v0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence-r2.json
-flysim evidence build --tier V0 --root /srv/flybrain-data --output /srv/flybrain-data/evidence/male-cns-v1.0/V0-evidence-r2.json
-flysim evidence validate PATH
-```
-
-`build-v0` is the release path for V0: it derives the gates from the canonical reports and clean
-rebuild manifests, re-hashes all seven raw artifacts and morphology canaries, recomputes each
-artifact's upstream MD5 from local bytes, and rejects a clean contact build that reached the
-3-GiB RSS ceiling. The generic builder remains available for reviewed non-V0 tiers and test
-fixtures; manually supplied booleans are not sufficient for V0.
-
-A bundle pins an immutable, V0-scoped snapshot of the `DATA-*` foundation records rather than the
-whole mutable assumption register, so unrelated Stage 2 edits cannot invalidate a structural
-bundle while any change to a scoped record still does. No command prints a tier as a literal:
-`flysim run eon-malecns` resolves the project tier by validating the bundles under
-`<root>/evidence/male-cns-v1.0` at run time and records `null` when none of them still validate.
-
-Runtime graph arrays are hashed in their manifest and verified on every load:
-
-```text
-flysim data verify-graph --graph /srv/flybrain-data/derived/male-cns-v1.0/graph
-```
-
-Track A's full-graph `eon-malecns` gate is now open. It uses numeric MaleCNS populations, direct
-PyGeNN, the full traced aggregate graph, FlyGym, and the checksum-locked Ozdil grooming trajectory.
-To render the physical run, add `--render`; the final MP4 and checksum are recorded in the run
-manifest. Its central sensory relays, direct DNg97 intent drive, odor-gradient steering and joint
-controllers are visibly registered engineering scaffolds, so this is an offline engineering
-prototype rather than autonomous connectome-generated behavior.
-
-The preregistered Track A matrix and controls are resumable. Both refuse to start from a
-dirty worktree and will not reuse a run recorded against a different commit:
-
-```text
-python scripts/run_track_a_acceptance.py --root /srv/flybrain-data --output-root /srv/flybrain-data/runs/track-a-acceptance-v3 --progress /srv/flybrain-data/runs/track-a-acceptance-v3/primary-progress.json
-python scripts/run_track_a_controls.py --root /srv/flybrain-data --run-root /srv/flybrain-data/runs/track-a-controls-v3 --primary-progress /srv/flybrain-data/runs/track-a-acceptance-v3/primary-progress.json --output /srv/flybrain-data/evidence/male-cns-v1.0/track-a-controls-v3.json
-```
-
-The v2 acceptance evidence has been withdrawn. It was produced from an uncommitted worktree,
-at food positions a discarded v1 round had already used, with a shuffled-connectome control
-that could not fail, and with the body settling inside the dust patch. The v3 matrix ran from a
-clean commit at three unused positions: 29 of 30 runs complete the sequence and all nine
-controls pass, but **0 of 30 clear the grooming-displacement cap**, so Track A is not an
-accepted milestone. The body translates a median 6.26 mm during a 3-second grooming bout under
-a zero forward command, and it drifts even while standing, so the defect is stance
-station-keeping. Of the nine controls, five are causal ablations, one is a quantitative
-degradation control, one is an equivalence check that tests transition identities but not
-timing, and two are recorded baselines. See
-[the Track A evidence report](docs/evidence/TRACK_A_EON_MALECNS.md) for the v3 results and the
-withdrawal record, and [the repair ADR](docs/adr/ADR-2026-006-evidence-chain-repair.md) for
-what changed.
-`full-vnc-walk` remains gated; there is no synthetic fallback hidden behind that scientific
-command. `eon-demo` remains the semantic engineering storyboard and neural-bypass control.
-
-## Data and credentials
-
-MaleCNS v1.0 is the canonical anatomy and is licensed CC-BY. The importer uses official HHMI Janelia/Google Storage artifacts. Bulk downloads are checksummed locally into an immutable lock. neuPrint credentials must be provided through `NEUPRINT_APPLICATION_CREDENTIALS`; they are never written to a manifest or log.
-
-## License
-
-Project code is licensed under GPL-2.0-or-later. Dataset and dependency licenses remain their own; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Project code is GPL-2.0-or-later. Dataset and dependency licences remain their own — see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Cite the software release **and** the exact
+MaleCNS release a run used ([CITATION.cff](CITATION.cff)). Credential handling and the dataset
+lock rules are in [SECURITY.md](SECURITY.md).
