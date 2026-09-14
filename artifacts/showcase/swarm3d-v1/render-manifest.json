@@ -205,10 +205,10 @@
   "frames": 2940,
   "gl": {
     "backend": "glfw",
-    "gl_renderer": "unknown",
-    "gl_vendor": "unknown",
-    "hardware_accelerated": true,
-    "note": "Hardware rasterisation."
+    "gl_renderer": "llvmpipe (LLVM 20.1.2, 256 bits)",
+    "gl_vendor": "Mesa",
+    "hardware_accelerated": false,
+    "note": "Software rasterisation: the GPU drew none of these frames. CUDA compute takes a different path and is unaffected, which is why the network still runs on the GPU while the rasteriser cannot."
   },
   "ground_plane_drawn_half_size_mm": 420.0,
   "how_the_arena_was_drawn": "The scene was rebuilt from the scenario and every frame was drawn by writing a recorded whole-scene qpos into a world that has never been stepped. The replay path refuses to draw a world that has been stepped, so rendering cannot have advanced the simulation.",
@@ -234,7 +234,7 @@
       "video_seconds": 11.0
     },
     {
-      "caption": "Every fly stood still for the first 1.5 s by construction, so the moment it starts walking is caused by something. What changed is descending activity, not a timer.",
+      "caption": "Every fly stands still for the first 1.5 s by construction, and then needs its descending drive held above threshold for 150 ms, so all twelve start at 1.665 s. The timer sets WHEN. What the stimulus decides is WHETHER: the control never leaves the standing state.",
       "layout": "stage",
       "mode": "orbit",
       "name": "sweep",
@@ -344,7 +344,7 @@
   },
   "tracking_shot_clearance_rule": "Each tracking shot's azimuth offset is the one that keeps the other eleven flies furthest off the line between camera and subject, sampled across the shot. It chooses a viewpoint on an already recorded trajectory and can change no behaviour.",
   "validation_tier_awarded": null,
-  "video": "/srv/flybrain-data/artifacts/swarm3d-v1/swarm3d-showcase.mp4",
+  "video": "artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4",
   "video_seconds": 98.0,
   "what_separates_the_run_from_its_control": {
     "flies_that_ended_against_an_object": {

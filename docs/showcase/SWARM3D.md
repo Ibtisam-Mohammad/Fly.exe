@@ -74,7 +74,7 @@ rather than an assurance.
 | file | in git | what it is |
 |---|---|---|
 | `artifacts/showcase/swarm3d-v1/swarm3d-showcase-web.mp4` | yes, 19 MB | the published cut: 1920x1080, 30 fps, 1:38, H.264 CRF 26 |
-| `artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4` | no, 41.5 MB | the renderer's own output, re-encoded to produce the file above and otherwise identical frame for frame |
+| `artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4` | no, 41.5 MB | the renderer's own output, re-encoded to produce the file above and otherwise identical frame for frame. Re-rendered on 2026-09-14 after the audit, from the same recording, to correct one caption and the GL provenance field |
 | `render-manifest.json`, `run-exact-summary.json`, `run-stimulus-absent-summary.json`, `SHA256SUMS` | yes | the provenance: every camera choice, the run digests, and a checksum for each file including the master |
 | `preview/*.png` | no, 9.4 MB | one full-resolution still at each shot boundary |
 | `docs/media/*.gif` | yes, 7.3 MB | the four loops in the README, cut from the same video |
