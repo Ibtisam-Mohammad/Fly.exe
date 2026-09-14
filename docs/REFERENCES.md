@@ -96,6 +96,13 @@ Two further sources are cited in the registries without a full corpus entry:
 
 * Liu et al. 2022, connectomic features underlying synaptic strength — [PMC8825683](https://pmc.ncbi.nlm.nih.gov/articles/PMC8825683/) — the contact-to-release-site question; obtained only in part.
 * Takagi et al. 2024, ORN population expansions and PN adaptation — [10.1038/s41467-024-50808-w](https://doi.org/10.1038/s41467-024-50808-w).
+* Croset, Treiber & Waddell 2018, *eLife* 7:e34550 — [10.7554/eLife.34550](https://doi.org/10.7554/eLife.34550), GEO GSE95361 / SRA SRP128516. Located while searching for transmitter-identity evidence and **found unusable** for it: it is a midbrain single-cell atlas, not a receptor-localisation measurement. Recorded because a source that was looked for and rejected is part of the audit trail.
+
+**One citation in this repository is a correction.** An early record cited
+[10.1016/j.neuron.2008.04.024](https://doi.org/10.1016/j.neuron.2008.04.024) as Kazama & Wilson
+2008. That DOI is a different paper — Kruglikov & Rudy 2008, on neocortical GABA release. The
+correct DOI is [10.1016/j.neuron.2008.02.030](https://doi.org/10.1016/j.neuron.2008.02.030), and
+the wrong one is kept in the register so the substitution stays visible instead of disappearing.
 
 Where the registered numbers live: [`configs/neural/cell-dynamics-v0.4.json`](../configs/neural/cell-dynamics-v0.4.json)
 and [`configs/neural/short-term-plasticity-v0.3.json`](../configs/neural/short-term-plasticity-v0.3.json).
@@ -144,7 +151,7 @@ redistributed by this repository.
 | `morphology-canaries` | Skeleton SWCs used to detect a changed release | Part of the MaleCNS release |
 | `shiu-2024-brain-model` | Stage 1 regression reference and archived outputs | MIT for repository and Edmond dataset v3.0 |
 | `ozdil-2026-antennal-grooming` / `-trajectory` | Grooming supplementary data and the replayed trajectory | CC-BY-NC-ND-4.0 article terms; publisher data terms — verify before any redistribution |
-| `gugel-2023-elife-85443` | uEPSC source data | CC0 for the Dryad release; preserve attribution |
+| `gugel-2023-elife-85443` | uEPSC source data, Dryad [10.5061/dryad.v15dv420q](https://doi.org/10.5061/dryad.v15dv420q) | CC0 for the Dryad release; preserve attribution |
 | `nanami-2024-pn-current-clamp` / `-invivo-cellular-pack` | PN current-clamp recordings | MIT repository licence; preserve paper and original-recording attribution |
 | `gouwens-wilson-2009-dm1-modeldb` | Published DM1 passive model | ModelDB terms require verification; redistribution disabled |
 | `stage2-2026-09-09-intake` | Classification of a staged dataset drop | — |
