@@ -51,6 +51,7 @@ from flysim.feeding_stage1 import (
 from flysim.glomerular import run_glomerular_volume_scaling
 from flysim.grooming import import_grooming_trajectory
 from flysim.morphology import sync_morphology_canaries
+from flysim.multifly_benchmark import benchmark_multifly_full_graph
 from flysim.polarity import UnresolvedSignPolicy, write_edge_sign_variant
 from flysim.populations import resolve_populations
 from flysim.provenance import AssumptionRegistry
@@ -95,6 +96,7 @@ from flysim.universes import audit_body_universes
 from flysim.v0 import CONTACT_CHECKS as V0_CONTACT_CHECKS
 from flysim.v0 import build_v0_evidence_bundle
 from flysim.validation import validate_run
+from flysim.web_demo import run_server as run_web_demo_server
 from flysim.widened import run_widened_grooming_transfer
 
 
@@ -1748,6 +1750,31 @@ def _command_showcase_render_v2(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_benchmark_multifly(args: argparse.Namespace) -> int:
+    result = benchmark_multifly_full_graph(
+        data_root=args.root,
+        agent_counts=args.agents,
+        duration_us=round(args.duration_s * 1_000_000),
+        seed=args.seed,
+        output_path=args.output,
+    )
+    _print_json(result)
+    return 0 if all(run["status"] == "completed" for run in result["runs"]) else 2
+
+
+def _command_web_serve(args: argparse.Namespace) -> int:
+    run_web_demo_server(
+        mode=args.mode,
+        data_root=args.root,
+        scenario_path=args.scenario,
+        seed=args.seed,
+        include_shuffled=args.include_shuffled,
+        host=args.host,
+        port=args.port,
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="flysim")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -1954,6 +1981,17 @@ def build_parser() -> argparse.ArgumentParser:
     neural.add_argument("--output", type=Path)
     neural.add_argument("--build-root", type=Path)
     neural.set_defaults(func=_command_benchmark)
+
+    multifly = benchmark_commands.add_parser(
+        "multi-fly",
+        help="measure two/four-state VRAM and throughput with one shared exact graph",
+    )
+    multifly.add_argument("--agents", type=int, nargs="+", default=[2, 4])
+    multifly.add_argument("--duration-s", type=float, default=0.15)
+    multifly.add_argument("--seed", type=int, default=1)
+    multifly.add_argument("--root", type=Path, default=default_data_root())
+    multifly.add_argument("--output", type=Path)
+    multifly.set_defaults(func=_command_benchmark_multifly)
 
     circuit = benchmark_commands.add_parser("circuit")
     circuit.add_argument(
@@ -2309,6 +2347,29 @@ def build_parser() -> argparse.ArgumentParser:
         default=project_root() / "configs" / "experiments" / "eon-showcase-v2.json",
     )
     render_v2.set_defaults(func=_command_showcase_render_v2)
+
+    web = commands.add_parser("web", help="Run the interactive multi-fly browser arena")
+    web_commands = web.add_subparsers(dest="web_command", required=True)
+    web_serve = web_commands.add_parser("serve")
+    web_serve.add_argument("--mode", choices=("preview", "full-cns"), default="preview")
+    web_serve.add_argument("--root", type=Path, default=default_data_root())
+    web_serve.add_argument(
+        "--scenario",
+        type=Path,
+        default=project_root() / "configs" / "scenarios" / "multifly-web.json",
+    )
+    web_serve.add_argument("--seed", type=int, default=1)
+    web_serve.add_argument("--host", default="127.0.0.1")
+    web_serve.add_argument("--port", type=int, default=7860)
+    web_serve.add_argument(
+        "--include-shuffled",
+        action="store_true",
+        help=(
+            "load a second shuffled graph allocation; expected to exceed a 12 GB GPU "
+            "when the exact cohort is also resident"
+        ),
+    )
+    web_serve.set_defaults(func=_command_web_serve)
 
     stage2 = commands.add_parser("stage2", help="Inspect fitted-dynamics readiness")
     stage2_commands = stage2.add_subparsers(dest="stage2_command", required=True)

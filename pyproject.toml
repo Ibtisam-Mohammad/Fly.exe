@@ -38,6 +38,11 @@ render = [
   "imageio-ffmpeg>=0.6,<1",
   "pillow>=11,<13",
 ]
+web = [
+  "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
+  "uvicorn[standard]>=0.35,<1",
+]
 
 [dependency-groups]
 dev = [

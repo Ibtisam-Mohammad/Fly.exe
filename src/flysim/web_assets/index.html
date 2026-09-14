@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Interactive MaleCNS-constrained multi-fly arena" />
+    <title>MaleCNS Live Arena</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <header>
+      <div>
+        <p class="eyebrow">MALECNS VIRTUAL FLY / LIVE ARENA</p>
+        <h1>Place a stimulus.<br /><span>Watch the loop close.</span></h1>
+      </div>
+      <div class="status-stack">
+        <div id="connection" class="pill offline">CONNECTING</div>
+        <div id="execution" class="mode">Loading runtime boundary…</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="arena-card">
+        <div class="arena-toolbar">
+          <div class="tool-group" aria-label="Stimulus tool">
+            <button class="tool active" data-kind="food">Food cue</button>
+            <button class="tool" data-kind="visual-target">Visual cue</button>
+            <button class="tool" data-kind="obstacle">Obstacle</button>
+            <button class="tool" data-kind="dust">Dust</button>
+          </div>
+          <p>Click to move a 3 mm calibrated cue, or place dust and obstacles.</p>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="arena" width="1200" height="760"></canvas>
+          <div class="corner-label top-left">SHARED WORLD / TOP VIEW</div>
+          <div class="corner-label bottom-right" id="sim-clock">t = 0.000 s</div>
+        </div>
+        <div class="transport">
+          <button id="start" class="primary">Run</button>
+          <button id="pause">Pause</button>
+          <button id="step">Single step</button>
+          <button id="reset">Reset</button>
+          <div class="speed">
+            <span>biological / wall</span>
+            <strong id="speed">0.00×</strong>
+          </div>
+        </div>
+      </section>
+
+      <aside>
+        <section class="panel claim">
+          <p class="eyebrow">WHAT IS RUNNING</p>
+          <h2 id="mode-title">Engineering preview</h2>
+          <p id="claim">Waiting for the service boundary.</p>
+          <div class="warning" id="warning">No validation tier is awarded.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <p class="eyebrow">AGENTS</p>
+            <span id="fly-count">0</span>
+          </div>
+          <div id="flies" class="fly-list"></div>
+        </section>
+
+        <section class="panel neural-panel">
+          <p class="eyebrow">SELECTED NEURAL READOUT</p>
+          <h2 id="selected-name">Select a fly</h2>
+          <div id="neural-bars" class="neural-bars"></div>
+          <p class="fineprint">Rates are presentation summaries. They do not award a scientific validation tier.</p>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <span>WORLD → SENSORY ENCODER → MALECNS → DESCENDING READOUT → E DECODER → BODY</span>
+      <span>Browser controls world stimuli only</span>
+    </footer>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

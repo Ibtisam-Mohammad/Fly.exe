@@ -1,0 +1,366 @@
+{
+  "body_proxy_used": false,
+  "brain_view": {
+    "brightness": "spike count per neuron, summed over the preceding intervals with a per-interval decay of 0.89 over 26 intervals, then compressed by a fixed logarithmic map. Not membrane voltage, and never normalised per run.",
+    "missing_by_superclass": {
+      "ENS": 46,
+      "None": 144,
+      "ascending_neuron": 7,
+      "cb_endocrine": 4,
+      "cb_intrinsic": 88,
+      "cb_motor": 4,
+      "cb_sensory": 4868,
+      "cb_sensory_tbc": 5,
+      "descending_neuron": 6,
+      "ol_intrinsic": 7708,
+      "ol_sensory": 4086,
+      "sensory_ascending": 537,
+      "sensory_ascending_tbc": 2,
+      "sensory_descending": 12,
+      "visual_projection": 22,
+      "vnc_efferent": 3,
+      "vnc_intrinsic": 204,
+      "vnc_motor": 4,
+      "vnc_sensory": 6363,
+      "vnc_sensory_tbc": 9
+    },
+    "projection": "released soma coordinates, orthographic, fixed viewpoint",
+    "somata_drawn": 141000,
+    "somata_without_released_position": 24122
+  },
+  "closing_seconds": 7.0,
+  "control_final_object_census": {
+    "by_kind": {
+      "food": 3,
+      "pillar": 9
+    },
+    "contact_gap_mm": 1.0,
+    "flies_within_contact_gap": 0,
+    "measured_from": "the recorded pose at the last coupling interval",
+    "per_fly": [
+      {
+        "fly_id": "cns-01",
+        "kind": "food",
+        "nearest_object": "food-b",
+        "surface_gap_mm": 3.3589265227682437
+      },
+      {
+        "fly_id": "cns-02",
+        "kind": "pillar",
+        "nearest_object": "pillar-6",
+        "surface_gap_mm": 6.33670291827805
+      },
+      {
+        "fly_id": "cns-03",
+        "kind": "pillar",
+        "nearest_object": "pillar-3",
+        "surface_gap_mm": 4.970668027045167
+      },
+      {
+        "fly_id": "cns-04",
+        "kind": "pillar",
+        "nearest_object": "pillar-6",
+        "surface_gap_mm": 2.1556749072890247
+      },
+      {
+        "fly_id": "cns-05",
+        "kind": "pillar",
+        "nearest_object": "pillar-5",
+        "surface_gap_mm": 4.491985256585612
+      },
+      {
+        "fly_id": "cns-06",
+        "kind": "pillar",
+        "nearest_object": "pillar-2",
+        "surface_gap_mm": 9.533533316432719
+      },
+      {
+        "fly_id": "cns-07",
+        "kind": "pillar",
+        "nearest_object": "pillar-4",
+        "surface_gap_mm": 4.174457525853535
+      },
+      {
+        "fly_id": "cns-08",
+        "kind": "pillar",
+        "nearest_object": "pillar-3",
+        "surface_gap_mm": 8.344657649722564
+      },
+      {
+        "fly_id": "cns-09",
+        "kind": "pillar",
+        "nearest_object": "pillar-6",
+        "surface_gap_mm": 5.89437933418416
+      },
+      {
+        "fly_id": "cns-10",
+        "kind": "pillar",
+        "nearest_object": "pillar-3",
+        "surface_gap_mm": 12.359941433864194
+      },
+      {
+        "fly_id": "cns-11",
+        "kind": "food",
+        "nearest_object": "food-c",
+        "surface_gap_mm": 1.9346096782547484
+      },
+      {
+        "fly_id": "cns-12",
+        "kind": "food",
+        "nearest_object": "food-b",
+        "surface_gap_mm": 8.707914277560787
+      }
+    ],
+    "surface_gap_mm_is": "centre-to-centre distance minus the object's radius, so zero means the fly is against the object",
+    "what_this_is_not": "No threshold on this was preregistered and none is scored. It describes what a finished recording did, and the control can satisfy it: on the pair of runs this video was cut from, one control fly reaches an object by drift alone."
+  },
+  "control_recording": "/srv/flybrain-data/runs/swarm3d-showcase-v3/20260913T170632Z_seed-1/stimulus-absent",
+  "evidence_grade": false,
+  "final_object_census": {
+    "by_kind": {
+      "food": 11,
+      "pillar": 1
+    },
+    "contact_gap_mm": 1.0,
+    "flies_within_contact_gap": 12,
+    "measured_from": "the recorded pose at the last coupling interval",
+    "per_fly": [
+      {
+        "fly_id": "cns-01",
+        "kind": "food",
+        "nearest_object": "food-b",
+        "surface_gap_mm": 0.038968664848240575
+      },
+      {
+        "fly_id": "cns-02",
+        "kind": "food",
+        "nearest_object": "food-d",
+        "surface_gap_mm": 0.29661844210794364
+      },
+      {
+        "fly_id": "cns-03",
+        "kind": "food",
+        "nearest_object": "food-d",
+        "surface_gap_mm": 0.22231649225722627
+      },
+      {
+        "fly_id": "cns-04",
+        "kind": "food",
+        "nearest_object": "food-a",
+        "surface_gap_mm": -0.21245306572809852
+      },
+      {
+        "fly_id": "cns-05",
+        "kind": "food",
+        "nearest_object": "food-b",
+        "surface_gap_mm": 0.061686443445130745
+      },
+      {
+        "fly_id": "cns-06",
+        "kind": "food",
+        "nearest_object": "food-d",
+        "surface_gap_mm": 0.37190597286259264
+      },
+      {
+        "fly_id": "cns-07",
+        "kind": "food",
+        "nearest_object": "food-c",
+        "surface_gap_mm": -0.017001066383899754
+      },
+      {
+        "fly_id": "cns-08",
+        "kind": "food",
+        "nearest_object": "food-c",
+        "surface_gap_mm": 0.28905259309100995
+      },
+      {
+        "fly_id": "cns-09",
+        "kind": "pillar",
+        "nearest_object": "pillar-6",
+        "surface_gap_mm": 0.5548285674238851
+      },
+      {
+        "fly_id": "cns-10",
+        "kind": "food",
+        "nearest_object": "food-c",
+        "surface_gap_mm": -0.10166175370185826
+      },
+      {
+        "fly_id": "cns-11",
+        "kind": "food",
+        "nearest_object": "food-c",
+        "surface_gap_mm": -0.013373886823951686
+      },
+      {
+        "fly_id": "cns-12",
+        "kind": "food",
+        "nearest_object": "food-b",
+        "surface_gap_mm": 0.02796270193108885
+      }
+    ],
+    "surface_gap_mm_is": "centre-to-centre distance minus the object's radius, so zero means the fly is against the object",
+    "what_this_is_not": "No threshold on this was preregistered and none is scored. It describes what a finished recording did, and the control can satisfy it: on the pair of runs this video was cut from, one control fly reaches an object by drift alone."
+  },
+  "fps": 30,
+  "frames": 2940,
+  "gl": {
+    "backend": "glfw",
+    "gl_renderer": "unknown",
+    "gl_vendor": "unknown",
+    "hardware_accelerated": true,
+    "note": "Hardware rasterisation."
+  },
+  "ground_plane_drawn_half_size_mm": 420.0,
+  "how_the_arena_was_drawn": "The scene was rebuilt from the scenario and every frame was drawn by writing a recorded whole-scene qpos into a world that has never been stepped. The replay path refuses to draw a world that has been stepped, so rendering cannot have advanced the simulation.",
+  "opening_seconds": 5.0,
+  "recording": "/srv/flybrain-data/runs/swarm3d-showcase-v3/20260913T170632Z_seed-1/exact",
+  "rendering_advanced_simulator_state": false,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "run_summary_sha256": null,
+  "scenario_checked_against_the_recording": true,
+  "shots": [
+    {
+      "caption": "Twelve Drosophila bodies on flat ground. Each one is running its own copy of the whole released male CNS connectome, and nothing else is steering.",
+      "layout": "stage",
+      "mode": "orbit",
+      "name": "establish",
+      "partner": null,
+      "sim_rate": 0.6,
+      "sim_start_s": 0.0,
+      "subject": null,
+      "video_seconds": 11.0
+    },
+    {
+      "caption": "Every fly stood still for the first 1.5 s by construction, so the moment it starts walking is caused by something. What changed is descending activity, not a timer.",
+      "layout": "stage",
+      "mode": "orbit",
+      "name": "sweep",
+      "partner": null,
+      "sim_rate": 0.72,
+      "sim_start_s": 5.4,
+      "subject": null,
+      "video_seconds": 10.0
+    },
+    {
+      "caption": "CNS-08. The camera angle is chosen to keep the other eleven flies and the objects off the line to it. The turns are the network's: its decoder reads two descending population rates and has no access to where anything is.",
+      "layout": "stage",
+      "mode": "follow",
+      "name": "follow",
+      "partner": null,
+      "sim_rate": 0.9272727272727274,
+      "sim_start_s": 3.6,
+      "subject": "cns-08",
+      "video_seconds": 11.0
+    },
+    {
+      "caption": "Twelve independent neural states over one connectivity allocation.",
+      "layout": "grid",
+      "mode": "orbit",
+      "name": "brains",
+      "partner": null,
+      "sim_rate": 1.0666666666666667,
+      "sim_start_s": 8.4,
+      "subject": null,
+      "video_seconds": 9.0
+    },
+    {
+      "caption": "CNS-02 and CNS-06, which ended 0.20 mm apart. Each fly is a visible object to the others, so the swarm is coupled through vision and not merely co-located.",
+      "layout": "stage",
+      "mode": "pair",
+      "name": "pair",
+      "partner": "cns-06",
+      "sim_rate": 1.0666666666666667,
+      "sim_start_s": 9.6,
+      "subject": "cns-02",
+      "video_seconds": 9.0
+    },
+    {
+      "caption": "0.30 x speed. Six legs in a tripod gait, adhesion switching per leg, every contact solved by MuJoCo. The gait is an engineered pattern generator, not the simulated ventral nerve cord.",
+      "layout": "stage",
+      "mode": "follow",
+      "name": "close",
+      "partner": null,
+      "sim_rate": 0.30000000000000004,
+      "sim_start_s": 6.0,
+      "subject": "cns-08",
+      "video_seconds": 8.0
+    },
+    {
+      "caption": "The same twelve flies, the same seed, the same bodies, one change: the encoder is held at its baseline. Both sides end a little nearer the food, because a standing body drifts forward along its own axis and every fly was aimed so that food lies inside the encoder's mapped field. What the stimulus changes is whether a fly walks at all, and whether it arrives at anything.",
+      "layout": "compare",
+      "mode": "orbit",
+      "name": "control",
+      "partner": null,
+      "sim_rate": 2.1,
+      "sim_start_s": 9.0,
+      "subject": null,
+      "video_seconds": 10.0
+    },
+    {
+      "caption": "The encoder has no colour channel and cannot tell food from a pillar. What separates them is angular size, so the largest thing in view wins.",
+      "layout": "stage",
+      "mode": "orbit",
+      "name": "arrive",
+      "partner": null,
+      "sim_rate": 1.2,
+      "sim_start_s": 18.0,
+      "subject": null,
+      "video_seconds": 10.0
+    },
+    {
+      "caption": "Where twelve flies ended up after 30 seconds of simulated behaviour.",
+      "layout": "stage",
+      "mode": "top",
+      "name": "overhead",
+      "partner": null,
+      "sim_rate": 0.05624999999999991,
+      "sim_start_s": 29.55,
+      "subject": null,
+      "video_seconds": 8.0
+    }
+  ],
+  "stills": null,
+  "subject_selection_rule": "closer = largest reduction in distance to a food object; traveller = longest path walked; pair = the two flies nearest each other at the last recorded interval. All read from the run summary, none chosen by eye.",
+  "subjects": {
+    "closer": "cns-08",
+    "closer_label": "CNS-08",
+    "pair_a": "cns-02",
+    "pair_a_label": "CNS-02",
+    "pair_b": "cns-06",
+    "pair_b_label": "CNS-06",
+    "pair_gap_mm": "0.20",
+    "traveller": "cns-08",
+    "traveller_label": "CNS-08"
+  },
+  "timeline_frames": 2580,
+  "tracking_shot_clearance_mm": {
+    "close": 5.66385850902669,
+    "close_offset_deg": 120.0,
+    "follow": 3.2791427879472943,
+    "follow_offset_deg": 140.0
+  },
+  "tracking_shot_clearance_rule": "Each tracking shot's azimuth offset is the one that keeps the other eleven flies furthest off the line between camera and subject, sampled across the shot. It chooses a viewpoint on an already recorded trajectory and can change no behaviour.",
+  "validation_tier_awarded": null,
+  "video": "/srv/flybrain-data/artifacts/swarm3d-v1/swarm3d-showcase.mp4",
+  "video_seconds": 98.0,
+  "what_separates_the_run_from_its_control": {
+    "flies_that_ended_against_an_object": {
+      "contact_gap_mm": 1.0,
+      "control": 0,
+      "exact": 12
+    },
+    "flies_that_ever_walked": {
+      "control": 0,
+      "exact": 12
+    },
+    "mean_spiking_neurons_per_fly_per_interval": {
+      "control": 163.70466666666667,
+      "exact": 9337.347583333334
+    },
+    "not_closing_distance": "Both runs end nearer a food object. A body commanded to stand drifts forward along its own axis, which Track A measured (see docs/evidence/TRACK_A_STATION_KEEPING.md), and every fly was aimed so that food lies inside the encoder's mapped visual field, so the control leans the same way. Use flies_that_ended_against_an_object."
+  },
+  "why_the_ground_plane_is_wider_than_the_run_declared": "A MuJoCo plane geom is a half-space: infinite for collision, with `size` read by the visualiser alone. Widening the drawn extent moves the horizon out of the widest shots and changes no contact, no recorded state and no number."
+}

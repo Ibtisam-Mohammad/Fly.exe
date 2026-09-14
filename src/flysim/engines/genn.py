@@ -226,11 +226,38 @@ class TrackAGeNNParameters:
 
 
 class TrackAGeNNEngine:
-    """Keep one complete MaleCNS model loaded across every body exchange."""
+    """Keep one complete MaleCNS model loaded across every body exchange.
 
-    def __init__(self, build_path: Path, *, variant: str = "exact") -> None:
+    ``batch_size`` runs several independent neural states over one immutable sparse
+    connectivity allocation.  This is the only supported way to represent several
+    MaleCNS-constrained agents in one CUDA model: duplicating the graph per fly would
+    waste the dominant device allocation and would not fit the development RTX 3060.
+    Batch labels are presentation/provenance identifiers, never biological identities.
+    """
+
+    def __init__(
+        self,
+        build_path: Path,
+        *,
+        variant: str = "exact",
+        batch_size: int = 1,
+        batch_labels: Sequence[str] | None = None,
+    ) -> None:
+        if batch_size <= 0:
+            raise ConfigurationError("Track A GeNN batch size must be positive")
+        labels = (
+            tuple(str(value) for value in batch_labels)
+            if batch_labels is not None
+            else tuple(f"fly-{index + 1}" for index in range(batch_size))
+        )
+        if len(labels) != batch_size:
+            raise ConfigurationError("Track A GeNN batch labels must match batch size")
+        if len(set(labels)) != len(labels) or any(not value.strip() for value in labels):
+            raise ConfigurationError("Track A GeNN batch labels must be nonempty and unique")
         self.build_path = build_path
         self.variant = variant
+        self.batch_size = batch_size
+        self.batch_labels = labels
         self._t_us = 0
         self._graph: SparseConnectome | None = None
         self._parameters: TrackAGeNNParameters | None = None
@@ -250,6 +277,7 @@ class TrackAGeNNEngine:
         self._input_dense_index: dict[tuple[str, tuple[Any, ...]], np.ndarray] = {}
         self._last_frame_counts: np.ndarray | None = None
         self._last_counts: dict[int, float] = {}
+        self._last_batch_counts: dict[tuple[int, ...], np.ndarray] = {}
         self._last_pool_counts: dict[str, np.ndarray] = {}
         self._model_identity: str | None = None
         self._cell_parameters: dict[str, Any] = {}
@@ -419,6 +447,10 @@ class TrackAGeNNEngine:
         # generated CUDA model; all seeds of one graph/parameter variant share
         # the same compiled binary.
         identity.update(self.variant.encode())
+        if self.batch_size != 1:
+            # GeNN emits batch-sized state and RNG handling into the generated model.
+            # Keep batch-one identities stable for every existing immutable run.
+            identity.update(f"batch:{self.batch_size}".encode())
         if per_neuron is None:
             identity.update(b"homogeneous")
         else:
@@ -433,6 +465,7 @@ class TrackAGeNNEngine:
             manual_device_id=0,
         )
         model.dt = values.dt_ms
+        model.batch_size = self.batch_size
         model.seed = seed
         # A single GeNN ragged projection would pad every source row to the
         # 11k-edge maximum out-degree. On MaleCNS this expands 25.6M logical
@@ -479,15 +512,35 @@ class TrackAGeNNEngine:
                 "G": 0.0,
                 "RefracTime": 0.0,
                 "SpikeCount": 0.0,
-                "InputRateHz": 0.0,
+                "InputRateHz": (
+                    0.0
+                    if self.batch_size == 1
+                    else np.zeros(
+                        (self.batch_size, int(dense_indices.size)), dtype=np.float32
+                    )
+                ),
             }
             if adapting:
                 neuron_vars["A"] = 0.0
             if per_neuron is not None:
                 for name in HETEROGENEOUS_NEURON_PARAMETER_NAMES:
-                    neuron_vars[name] = per_neuron[name][dense_indices]
+                    resolved = per_neuron[name][dense_indices]
+                    neuron_vars[name] = (
+                        resolved
+                        if self.batch_size == 1
+                        else np.broadcast_to(
+                            resolved, (self.batch_size, int(dense_indices.size))
+                        ).copy()
+                    )
                 # Each neuron starts at its own resting potential, not a shared one.
-                neuron_vars["V"] = per_neuron["Vrest"][dense_indices]
+                resting = per_neuron["Vrest"][dense_indices]
+                neuron_vars["V"] = (
+                    resting
+                    if self.batch_size == 1
+                    else np.broadcast_to(
+                        resting, (self.batch_size, int(dense_indices.size))
+                    ).copy()
+                )
             populations.append(
                 model.add_neuron_population(
                     f"neurons_{group_index}",
@@ -634,6 +687,16 @@ class TrackAGeNNEngine:
                     "MaleCNSTrackAAdaptiveLIF" if adapting else "MaleCNSTrackALIF"
                 ),
             },
+            "batch": {
+                "size": self.batch_size,
+                "labels": list(self.batch_labels),
+                "connectivity_allocations": 1,
+                "connectivity_shared_between_batches": self.batch_size > 1,
+                "interpretation": (
+                    "independent stochastic model states over one MaleCNS specimen; "
+                    "not reconstructions of different biological animals"
+                ),
+            },
         }
         # Flat offsets over the disjoint degree-bucket populations. The buckets partition
         # the neurons, so concatenating their SpikeCount views yields one array that any
@@ -651,21 +714,37 @@ class TrackAGeNNEngine:
         self._last_frame_counts = None
         self._t_us = 0
         self._last_counts.clear()
+        self._last_batch_counts.clear()
         self._last_pool_counts.clear()
         self._loaded = True
 
     def push_inputs(self, frame: NeuralInputFrame) -> None:
-        graph, _ = self._require_ready()
-        if frame.t_us != self._t_us:
-            raise CausalityError(
-                f"Track A input time {frame.t_us} does not match engine time {self._t_us}"
+        if self.batch_size != 1:
+            raise ConfigurationError(
+                "push_inputs is a single-agent API; use push_batch_inputs for a batched engine"
             )
-        if frame.signal_type is not SignalType.FIRING_RATE or frame.units != "Hz":
-            raise ConfigurationError("Track A GeNN inputs must be firing rates in Hz")
+        self.push_batch_inputs((frame,))
+
+    def push_batch_inputs(self, frames: Sequence[NeuralInputFrame]) -> None:
+        """Push one independent sensory frame per batched virtual fly."""
+        graph, _ = self._require_ready()
+        if len(frames) != self.batch_size:
+            raise ConfigurationError(
+                f"Track A GeNN needs {self.batch_size} batch frames, got {len(frames)}"
+            )
+        for frame in frames:
+            if frame.t_us != self._t_us:
+                raise CausalityError(
+                    f"Track A input time {frame.t_us} does not match engine time {self._t_us}"
+                )
+            if frame.signal_type is not SignalType.FIRING_RATE or frame.units != "Hz":
+                raise ConfigurationError("Track A GeNN inputs must be firing rates in Hz")
         assert self._group_by_dense is not None and self._local_by_dense is not None
         for variable in self._input_rates:
             variable.view.fill(0.0)
-        if frame.ids:
+        for batch_index, frame in enumerate(frames):
+            if not frame.ids:
+                continue
             if any(not isinstance(identifier, int) for identifier in frame.ids):
                 raise ConfigurationError("Track A GeNN input IDs must be numeric body IDs")
             values = np.asarray(frame.values, dtype=np.float64)
@@ -691,7 +770,11 @@ class TrackAGeNNEngine:
             for group_index, variable in enumerate(self._input_rates):
                 selected = groups == group_index
                 if selected.any():
-                    variable.view[locals_[selected]] = values[selected]
+                    view = np.asarray(variable.view)
+                    if self.batch_size == 1:
+                        view[locals_[selected]] = values[selected]
+                    else:
+                        view[batch_index, locals_[selected]] = values[selected]
         for variable in self._input_rates:
             variable.push_to_device()
 
@@ -707,6 +790,16 @@ class TrackAGeNNEngine:
         self._t_us = t_us
 
     def read_outputs(self, ids: tuple[str | int, ...], window_us: int) -> NeuralOutputFrame:
+        if self.batch_size != 1:
+            raise ConfigurationError(
+                "read_outputs is a single-agent API; use read_batch_outputs for a batched engine"
+            )
+        return self.read_batch_outputs(ids, window_us)[0]
+
+    def read_batch_outputs(
+        self, ids: tuple[str | int, ...], window_us: int
+    ) -> tuple[NeuralOutputFrame, ...]:
+        """Read the same declared population from every independent batch state."""
         graph, _ = self._require_ready()
         if window_us <= 0:
             raise ConfigurationError("Track A output window must be positive")
@@ -725,12 +818,13 @@ class TrackAGeNNEngine:
             index = self._flat_index(body_ids)
             self._pool_flat_index[key] = index
         flat = self._flat_counts()
-        cumulative_all = flat[index].astype(np.float64)
-        previous_all = np.fromiter(
-            (self._last_counts.get(body_id, 0.0) for body_id in body_ids),
-            dtype=np.float64,
-            count=len(body_ids),
-        )
+        cumulative_all = np.asarray(
+            flat[index] if self.batch_size == 1 else flat[:, index], dtype=np.float64
+        ).reshape(self.batch_size, len(body_ids))
+        id_key = tuple(body_ids)
+        previous_all = self._last_batch_counts.get(id_key)
+        if previous_all is None:
+            previous_all = np.zeros_like(cumulative_all)
         if np.any(cumulative_all < previous_all):
             raise CausalityError("Track A spike counter moved backward")
         delta_all = cumulative_all - previous_all
@@ -738,32 +832,54 @@ class TrackAGeNNEngine:
         # 15 ms coupling interval one spike is 66.7 Hz, so a consumer that wants to
         # filter the rate causally needs the integer count rather than the quantised
         # rate it was divided into.
-        values = (delta_all / (window_us / 1_000_000.0)).tolist()
-        counts = np.rint(delta_all).astype(np.int64).tolist()
-        for body_id, cumulative in zip(body_ids, cumulative_all.tolist(), strict=True):
-            self._last_counts[body_id] = cumulative
-        return NeuralOutputFrame(
-            t_us=self._t_us,
-            ids=ids,
-            values=tuple(values),
-            units="Hz",
-            signal_type=SignalType.FIRING_RATE,
-            provenance="M/P/E",
-            assumption_ids=("ND-01", "ND-02", "ND-03", "ND-04", "ND-05", "TRACKA-01"),
-            metadata={
-                "backend": "direct-pygenn-5.4",
-                "model_identity": self._model_identity,
-                "variant": self.variant,
-                "window_us": window_us,
-                "spike_counts": dict(zip(ids, counts, strict=True)),
-                "full_graph": True,
-                "neurons": graph.neuron_count,
-                "edges": graph.edge_count,
-                "sparse_layout": self._sparse_layout,
-                "cell_parameters": self._cell_parameters,
-                "physiological_default": False,
-                "warning": "Shiu transmitter-only regression baseline; not fitted physiology",
-            },
+        values = delta_all / (window_us / 1_000_000.0)
+        counts = np.rint(delta_all).astype(np.int64)
+        self._last_batch_counts[id_key] = cumulative_all.copy()
+        if self.batch_size == 1:
+            for body_id, cumulative in zip(
+                body_ids, cumulative_all[0].tolist(), strict=True
+            ):
+                self._last_counts[body_id] = cumulative
+        return tuple(
+            NeuralOutputFrame(
+                t_us=self._t_us,
+                ids=ids,
+                values=tuple(values[batch_index].tolist()),
+                units="Hz",
+                signal_type=SignalType.FIRING_RATE,
+                provenance="M/P/E",
+                assumption_ids=(
+                    "ND-01",
+                    "ND-02",
+                    "ND-03",
+                    "ND-04",
+                    "ND-05",
+                    "TRACKA-01",
+                ),
+                metadata={
+                    "backend": "direct-pygenn-5.4",
+                    "model_identity": self._model_identity,
+                    "variant": self.variant,
+                    "window_us": window_us,
+                    "spike_counts": dict(
+                        zip(ids, counts[batch_index].tolist(), strict=True)
+                    ),
+                    "batch_index": batch_index,
+                    "batch_label": self.batch_labels[batch_index],
+                    "batch_size": self.batch_size,
+                    "connectivity_allocations": 1,
+                    "full_graph": True,
+                    "neurons": graph.neuron_count,
+                    "edges": graph.edge_count,
+                    "sparse_layout": self._sparse_layout,
+                    "cell_parameters": self._cell_parameters,
+                    "physiological_default": False,
+                    "warning": (
+                        "Shiu transmitter-only regression baseline; not fitted physiology"
+                    ),
+                },
+            )
+            for batch_index in range(self.batch_size)
         )
 
     def _locate(self, body_ids: Sequence[int]) -> tuple[np.ndarray, np.ndarray]:
@@ -793,7 +909,12 @@ class TrackAGeNNEngine:
         variables = tuple(pop.vars["SpikeCount"] for pop in self._populations)
         for variable in variables:
             variable.pull_from_device()
-        return np.concatenate([np.asarray(variable.view) for variable in variables])
+        views = [np.asarray(variable.view) for variable in variables]
+        if self.batch_size == 1:
+            return np.concatenate([view.reshape(-1) for view in views])
+        return np.concatenate(
+            [view.reshape(self.batch_size, -1) for view in views], axis=1
+        )
 
     def population_activity(
         self, pools: Mapping[str, Sequence[int]], window_us: int
@@ -804,12 +925,24 @@ class TrackAGeNNEngine:
         per-neuron traces, so an 89,390-body optic lobe costs one device pull and a
         vectorised gather, not a membrane trace at the 0.1 ms neural step.
         """
+        if self.batch_size != 1:
+            raise ConfigurationError(
+                "population_activity is a single-agent API; use population_activity_batch"
+            )
+        return self.population_activity_batch(pools, window_us)[0]
+
+    def population_activity_batch(
+        self, pools: Mapping[str, Sequence[int]], window_us: int
+    ) -> tuple[dict[str, dict[str, float]], ...]:
+        """Binned activity for every named pool and every batched state."""
         self._require_ready()
         if window_us <= 0:
             raise ConfigurationError("Population activity window must be positive")
         flat = self._flat_counts()
         seconds = window_us / 1_000_000.0
-        report: dict[str, dict[str, float]] = {}
+        reports: list[dict[str, dict[str, float]]] = [
+            {} for _ in range(self.batch_size)
+        ]
         for name, body_ids in pools.items():
             if not body_ids:
                 raise ConfigurationError(f"Activity pool {name} is empty")
@@ -817,22 +950,31 @@ class TrackAGeNNEngine:
             if index is None or index.size != len(body_ids):
                 index = self._flat_index(body_ids)
                 self._pool_flat_index[name] = index
-            cumulative = flat[index].astype(np.float64)
+            cumulative = np.asarray(
+                flat[index] if self.batch_size == 1 else flat[:, index],
+                dtype=np.float64,
+            ).reshape(self.batch_size, len(body_ids))
             previous = self._last_pool_counts.get(name)
             if previous is None:
                 previous = np.zeros_like(cumulative)
             delta = cumulative - previous
             if np.any(delta < 0.0):
                 raise CausalityError(f"Track A spike counter moved backward in pool {name}")
-            self._last_pool_counts[name] = cumulative
-            report[name] = {
-                "bodies": float(index.size),
-                "spikes": float(delta.sum()),
-                "mean_rate_hz": float(delta.sum() / index.size / seconds),
-                "active_fraction": float(np.count_nonzero(delta) / index.size),
-                "max_rate_hz": float(delta.max() / seconds) if index.size else 0.0,
-            }
-        return report
+            self._last_pool_counts[name] = cumulative.copy()
+            for batch_index in range(self.batch_size):
+                batch_delta = delta[batch_index]
+                reports[batch_index][name] = {
+                    "bodies": float(index.size),
+                    "spikes": float(batch_delta.sum()),
+                    "mean_rate_hz": float(batch_delta.sum() / index.size / seconds),
+                    "active_fraction": float(
+                        np.count_nonzero(batch_delta) / index.size
+                    ),
+                    "max_rate_hz": (
+                        float(batch_delta.max() / seconds) if index.size else 0.0
+                    ),
+                }
+        return tuple(reports)
 
     def spike_counts_since_last_frame(self) -> np.ndarray:
         """Per-neuron spike count since the previous call, in dense graph order.
@@ -841,10 +983,27 @@ class TrackAGeNNEngine:
         over 165,122 counters, and it carries neuron identity, which a population rate
         does not and a membrane trace would only bury under ten thousand samples a second.
         """
+        if self.batch_size != 1:
+            raise ConfigurationError(
+                "spike_counts_since_last_frame is a single-agent API; use the batched API"
+            )
+        return np.asarray(
+            self.spike_counts_since_last_frame_batch()[0], dtype=np.int32
+        )
+
+    def spike_counts_since_last_frame_batch(self) -> np.ndarray:
+        """Per-neuron spike counts shaped ``(batch, neuron)``."""
         self._require_ready()
         assert self._flat_index_by_dense is not None
         flat = self._flat_counts()
-        cumulative = flat[self._flat_index_by_dense].astype(np.float64)
+        cumulative = np.asarray(
+            (
+                flat[self._flat_index_by_dense]
+                if self.batch_size == 1
+                else flat[:, self._flat_index_by_dense]
+            ),
+            dtype=np.float64,
+        ).reshape(self.batch_size, -1)
         previous = self._last_frame_counts
         if previous is None:
             previous = np.zeros_like(cumulative)
@@ -884,6 +1043,10 @@ class TrackAGeNNEngine:
             "backend": "direct-pygenn-5.4",
             "model_identity": self._model_identity,
             "variant": self.variant,
+            "batch_size": self.batch_size,
+            "batch_labels": list(self.batch_labels),
+            "connectivity_allocations": 1,
+            "connectivity_shared_between_batches": self.batch_size > 1,
             "neurons": graph.neuron_count,
             "edges": graph.edge_count,
             "sparse_layout": self._sparse_layout,

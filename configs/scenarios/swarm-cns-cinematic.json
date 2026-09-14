@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "swarm-cns-cinematic-v1",
+  "title": "Eight independent MaleCNS states approach one shared visual cue",
+  "status": "Engineering cinematic; not a social-behaviour experiment and awards no tier.",
+  "assumption_set": "foundation-v0.13",
+  "assumption_ids": [
+    "DATA-03",
+    "ND-01",
+    "ND-03",
+    "ND-04",
+    "DEMO-03",
+    "MOTOR-03",
+    "MULTI-01",
+    "WEB-01"
+  ],
+  "coupling_us": 15000,
+  "duration_us": 7500000,
+  "activity_sample_every_intervals": 10,
+  "arena": {
+    "physics_dt_us": 1000,
+    "half_width_mm": 22.0,
+    "half_height_mm": 16.0,
+    "max_forward_mm_s": 12.0,
+    "max_yaw_rad_s": 3.0,
+    "antenna_separation_mm": 0.35,
+    "odor_softening_mm2": 4.0,
+    "odor_half_saturation": 0.04,
+    "food_depletion_per_s": 0.08
+  },
+  "decoder": {
+    "quiescent_us": 1500000,
+    "forward_half_rate_hz": 6.0,
+    "forward_threshold_hz": 0.6,
+    "initiation_hold_us": 150000,
+    "yaw_gain_per_hz": 1.6,
+    "max_yaw_rad_s": 3.0,
+    "turn_sign": 1.0,
+    "provenance": "E",
+    "boundary": "Receives only bilateral descending rates; no target coordinates or body pose."
+  },
+  "initial_stimuli": [
+    {
+      "id": "central-cue",
+      "kind": "visual-target",
+      "x_mm": 0.0,
+      "y_mm": 0.0,
+      "radius_mm": 3.0,
+      "strength": 1.0,
+      "remaining": 1.0
+    }
+  ],
+  "full_cns_flies": [
+    {"id": "CNS-01", "mode": "full-cns", "x_mm": 0.0, "y_mm": 13.0, "heading_rad": -2.35619449, "color": "#65fbd2"},
+    {"id": "CNS-02", "mode": "full-cns", "x_mm": 9.2, "y_mm": 9.2, "heading_rad": -1.57079633, "color": "#7ee8fa"},
+    {"id": "CNS-03", "mode": "full-cns", "x_mm": 13.0, "y_mm": 0.0, "heading_rad": 2.35619449, "color": "#80ff72"},
+    {"id": "CNS-04", "mode": "full-cns", "x_mm": 9.2, "y_mm": -9.2, "heading_rad": 3.14159265, "color": "#f9f871"},
+    {"id": "CNS-05", "mode": "full-cns", "x_mm": 0.0, "y_mm": -13.0, "heading_rad": 0.78539816, "color": "#ffcf70"},
+    {"id": "CNS-06", "mode": "full-cns", "x_mm": -9.2, "y_mm": -9.2, "heading_rad": 1.57079633, "color": "#ff8fab"},
+    {"id": "CNS-07", "mode": "full-cns", "x_mm": -13.0, "y_mm": 0.0, "heading_rad": -0.78539816, "color": "#c77dff"},
+    {"id": "CNS-08", "mode": "full-cns", "x_mm": -9.2, "y_mm": 9.2, "heading_rad": 0.0, "color": "#a0c4ff"}
+  ],
+  "cinematic": {
+    "title": "Eight virtual flies. One shared visual world.",
+    "subtitle": "Independent MaleCNS states converge from eight directions",
+    "opening_seconds": 4.0,
+    "simulation_seconds": 28.0,
+    "closing_seconds": 5.0,
+    "fps": 30,
+    "resolution": [1920, 1080]
+  },
+  "claim_boundary": "All eight agents execute independent state over one shared MaleCNS v1.0 topology. The visual encoder, transmitter-sign LIF, descending decoder and collision-disc body are P/E. This is coordinated target approach, not biological swarming or social behaviour."
+}

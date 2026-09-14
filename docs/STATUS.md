@@ -1,10 +1,159 @@
 # Implementation status
 
-Status date: 2026-09-13
+Status date: 2026-09-14
 
 > The header said 2026-09-09 while entries below it were dated 2026-09-12. Anyone
 > reading the top of this file to decide whether it was current was told it was three
 > days stale when it was not.
+
+## 2026-09-14: embodied 3D swarm
+
+Twelve full NeuroMechFly bodies run in one MuJoCo scene, each driven by its own copy of the
+whole released MaleCNS connectome. This is the embodied counterpart to the collision-disc
+arena in `flysim.multifly`, which answers a capacity question honestly and has no legs, no
+ground and no contact. ADR-2026-023 records the decision; `SWARM-01` registers the boundary;
+the assumption set moves to `foundation-v0.13`.
+
+The recording is twelve flies for 30.0 simulated seconds, 2,000 coupling intervals at 15 ms,
+on one RTX 3060 at 4.2 GB of device memory and 0.015x biological real time, so about 33
+minutes of wall clock per variant. Each fly executes all 165,122 neurons and all 25,563,197
+edges every interval over **one** shared connectivity allocation, with independent membrane,
+adaptation, spike-counter and noise state. Food spheres and pillars are geoms in the compiled
+model with explicit contact pairs, and the bodies share one solver step, so they collide with
+each other and with the objects through the physics rather than through a rule. Flies are
+placed uniformly over a 30 mm disc and aimed at random under seed 11.
+
+What the run and its identical-seed stimulus-absent control measured:
+
+| | exact | stimulus-absent |
+| --- | --- | --- |
+| flies that entered the locomoting state | 12 / 12 | 0 / 12 |
+| flies that ended within 1 mm of an object's surface | 12 / 12 | 0 / 12 |
+| neurons spiking per fly per coupling interval | 9,337 | 164 |
+| straight-line displacement | 5.0 to 25.6 mm | 3.0 to 7.3 mm |
+| ended nearer a food object | 12 / 12, median +11.48 mm | 8 / 12, median +2.25 mm |
+| nearest object at the end | 11 at food, 1 at a pillar | 3 at food, 9 at a pillar |
+
+Eleven of twelve reached a food sphere and stopped at its surface, final gaps -0.21 to
++0.37 mm; the twelfth ended against a pillar at 0.55 mm. Every one had to turn first, with
+starting bearings to its target from -104 to +90 degrees.
+
+The last row is still the one to be careful about and the video says so on screen. Closing
+distance to food does **not** separate the runs on its own: a body commanded to stand drifts
+forward along its own axis, and the heading is bounded so that food lies inside the encoder's
+mapped visual field, so the control leans that way too. The measure that is not confounded is
+whether a fly ended against an object -- 12 of 12 against 0 of 12.
+
+### Three properties of the frozen DEMO-01 loop that nobody had measured
+
+Two arenas were built and discarded before this one, and each failure is a real measurement
+rather than a mistake in the code.
+
+**Object salience is angular, so near and thin beats far and fat.** In the first arena the
+flies sat on a 26 mm ring and the pillars lay between them and the food. A 1.3 mm pillar at
+8.6 mm subtends 8.72 degrees; a 2.2 mm food sphere at 20.4 mm subtends 6.19. Nine of twelve
+flies locked onto a pillar at the first coupling interval and never switched, and at the last
+interval every fly still carried forward drive 0.31 to 0.43 with the object filling 36 to 57
+degrees -- the frozen operating point has `adaptation_increment_mv: 0.0` and there is no
+avoidance term, so walking into the largest object and pushing is a stable fixed point.
+
+**A directional start geometry can pass the null control.** In that same arena every fly
+faced inward. A body commanded to stand drifts forward along its own axis, which Track A
+measured, so the stimulus-absent control ended 12 of 12 nearer a food object at +3.99 mm
+against the exact run's +7.19 mm. The control looked like it had succeeded. Isotropic
+headings reduced that to +2.25 against +11.48.
+
+**The route has a blind zone, and it is exactly where the declared map ends.** With headings
+drawn from the full circle, five of twelve flies had their target beyond the retina map's
+declared -10 to +160 degree azimuth span. Measured on one of them: descending readout 0.000
+to 0.03 Hz throughout, yaw command -0.001 -- no steering signal at all. Because the drive was
+tiny rather than exactly zero the fly did not fall into the standing controller either, so it
+walked in a straight line out of the arena. Every fly whose target started inside 105 degrees
+arrived; five of seven past 116 degrees did not. The showcase now rejects a heading that
+leaves no food inside the mapped field, which is a domain condition and is declared in the
+scenario, and this blind zone is the reason.
+
+Two properties are checked rather than asserted, because the swarm reuses DEMO-01's frozen
+network and reimplements its per-fly actuation. One fly driven through `SwarmWorld` and
+through `Demo01VisualBody` under an identical 170-interval command sequence agree to **0.0**
+on every one of 133 `qpos` components. The multi-object lamina encoder reproduces
+`RetinotopicVisualEncoder` for a single cue to **1.1e-13 Hz** on rates spanning 1 to 400 Hz.
+Both live in `tests/test_swarm3d.py`.
+
+The video is `artifacts/showcase/swarm3d-v1/swarm3d-showcase.mp4`, rendered offline from the
+recorded whole-scene `qpos`; the replay path refuses a world that has ever been stepped, so
+rendering cannot advance a simulation. It is **presentation-grade, not evidence-grade**: the
+source tree was dirty, no preregistered biological hypothesis or acceptance contract exists
+for a swarm, and both the run summary and the render manifest carry
+`validation_tier_awarded: null`. The project remains at V0 Structural. The operator handoff
+is `docs/showcase/SWARM3D.md`.
+
+Rendering is software rasterisation on this machine and the manifest says so. Every GL
+backend reports `llvmpipe`: `/dev/dri` does not exist in the distro, `/sys/class/drm` holds
+only `version`, and `dmesg` shows `dxgkio_query_adapter_info: Ioctl failed: -2`, so Mesa's
+`d3d12_dri.so` cannot reach the card. CUDA takes a different path, which is why the network
+runs on the GPU while the rasteriser cannot. glfw is 1.7x faster than osmesa here (282
+against 487 ms a frame) and is the default.
+
+The earlier swarm artifacts are not withdrawn or rewritten. They recorded what they recorded.
+
+## 2026-09-13: full-CNS cohort cinematic
+
+`swarm-cns-scientific-v2` supersedes the infographic-style v1 presentation under ADR-2026-022;
+the underlying recording is unchanged. The
+recording started eight independent full-CNS states approximately 13 mm from one calibrated
+visual cue, with alternating left/right 45-degree body-relative bearings. Each state retained all
+165,122 neurons while the cohort shared one immutable 25,563,197-edge sparse allocation. All eight
+reduced target distance; the recorded final range is 1.24 to 3.38 mm and the median reduction is
+10.26 mm. The decoder received bilateral descending rates and no target coordinates.
+
+The 37.0-second, 1920 by 1080, 30-fps H.264 video is
+`artifacts/showcase/swarm-cns-v2/swarm-cns-scientific.mp4`, SHA-256
+`c23de7ee15d057937c1e1649ec15d959080ae96983bc910740bfe49fca2a9d07`. It adopts the restrained
+DEMO-01 scientific-instrument language: a dominant released-soma CNS view, a measured arena and
+continuous target-distance, descending-readout and decoder traces. It renders only the
+checksum-pinned body and neural trace and does not advance simulator state. A full decode check
+and representative-frame comparison against `I:\AI\demo01-videos\2-single-run-exact.mp4`
+passed.
+
+This is **cohort target approach, not biological swarming**. The eight states are replicates of
+one donor topology and do not sense, follow or communicate with one another. The retinotopic
+visual encoder, transmitter-sign LIF dynamics, descending decoder and collision-disc body remain
+`P/E`. The arena uses a real NeuroMechFly default-pose render as an explicitly labelled anatomical
+display proxy; it does not imply that eight MuJoCo gait trajectories were recorded. The source was
+intentionally recorded from the current dirty implementation tree and is
+presentation-grade rather than evidence-grade. It adds no scientific validation tier; the project
+remains at V0 Structural.
+
+## 2026-09-13: interactive shared arena
+
+The first live multi-fly engineering lane is implemented under ADR-2026-021. A FastAPI and
+WebSocket service exposes a responsive browser arena where the user can move a calibrated
+food/visual cue and place obstacles or dust. The client can mutate world stimuli only; there is
+no route that writes neural state, motor output or body pose. A CPU preview is explicitly labelled
+`controller-preview-no-cns`.
+
+Full mode uses the existing DEMO-01 visual pathway: body-relative target geometry enters a
+retinotopic lamina scaffold, the complete MaleCNS runtime graph executes, and only the bilateral
+descending readout reaches the engineering locomotor decoder. Exact and sensory-ablated agents
+share one immutable connectivity allocation while keeping independent neural and RNG state. The
+shared kinematic collision-disc body, visual transduction, transmitter-sign LIF and decoder remain
+`P/E`; this is not the Track B body or motor pathway. A food object is a calibrated 3 mm visual and
+odor cue, not a claim that the CNS recognizes food. Controller-only agents use the local bilateral
+odor field; full-CNS agents use the declared visual route.
+
+The requested local capacity run completed for two and four full-CNS states over 2.01 biological
+seconds each. All states moved toward the target. Two states ran at 0.167 biological seconds per
+wall second; four ran at 0.080. Both used one 25,563,197-edge allocation, with all 165,122 neuron
+states retained per agent. Total GPU use after load was 3,588 MiB and 3,616 MiB respectively, but
+the host baseline differed, so those are not standalone model-allocation estimates. The run came
+from a dirty working tree and is engineering evidence only:
+`/srv/flybrain-data/evidence/multifly/multifly-capacity-working-tree.json`, SHA-256
+`8e64e3cecc00df9d9cec32e23208fa1619eb357edbd52a077462b12fc2b3d260`.
+
+No scientific validation tier changed. Courtship, aggression, pheromone communication, social
+learning, individual personality and cross-animal generalisation remain explicitly deferred until
+each behavior has sourced inputs, a preregistered contract and causal controls.
 
 ## Implemented
 

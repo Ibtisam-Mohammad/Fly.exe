@@ -1,0 +1,305 @@
+{
+ "schema_version": "1.0",
+ "scenario_id": "swarm3d-showcase-v2",
+ "title": "Twelve embodied flies scattered at random among food and pillars",
+ "provenance": "E",
+ "status": "Engineering demonstration scenario. Not evidence, not a tier, not a measurement.",
+ "assumption_set": "foundation-v0.13",
+ "last_reviewed": "2026-09-13",
+ "supersedes": "swarm3d-showcase-v1",
+ "seed": 11,
+ "what_changed_from_v1": {
+  "flies_are_placed_and_aimed_at_random": "Rejection sampling under seed 11: uniform over a 30 mm disc, at least 6 mm between flies and 5 mm clear of every object surface, with heading uniform over the full circle. The concrete coordinates are written here rather than regenerated at load time. The heading is rejected if no food lies within 100 degrees of the fly's nose.",
+  "why_the_heading_is_bounded": "The retina map is declared over -10 to +160 degrees of azimuth per eye. Measured on the first randomised arena, a fly whose target started beyond that edge received a descending readout of 0.000 to 0.03 Hz -- no steering signal at all -- and because the drive was tiny rather than exactly zero it did not fall into the standing controller either, so it walked in a straight line out of the arena. Five of twelve did. That is the encoder having no mapping there, not the animal behaving, and filming it would be reporting a blind spot as a decision.",
+  "why_random_headings_matter": "In v1 every fly faced inward. A body commanded to stand drifts forward along its own axis, so the stimulus-absent control drifted toward the food as well and ended 12 of 12 nearer it, median +3.99 mm. A directional start geometry makes the null control look successful. Isotropic headings remove that confound.",
+  "food_is_larger_and_the_pillars_are_thin": "In v1 the pillars sat between the flies and the food. Angular size is radius over distance, so a 1.3 mm pillar at 8.6 mm subtended 8.72 degrees against a 2.2 mm food sphere at 20.4 mm at 6.19 degrees, and nine of twelve flies locked onto a pillar at the first interval and never left. Food is now 3.1 to 4.3 mm and pillars 0.7 mm, so a pillar must be about six times nearer to dominate. Some fly will still manage that, and should: the encoder genuinely cannot tell the two apart.",
+  "the_pillars_are_still_obstacles": "They remain contact geoms in the compiled model and the flies still have to get around them. What changed is their salience, not their physics."
+ },
+ "what_this_scenario_is": {
+  "the_loop": "the arena as each fly's eyes are placed -> retinotopic lamina drive over every visible object -> the full 165,122-neuron MaleCNS runtime, one independent state per fly over one shared connectivity allocation -> declared posterior descending readout -> causal filter -> the frozen DEMO-01 decoder -> an engineered walking controller -> that fly's legs in MuJoCo -> every body steps together, so the scene the next interval encodes has already changed",
+  "why_twelve": "Twelve is what one RTX 3060 holds at the full graph with one connectivity allocation. It is a capacity number, not a biological one.",
+  "why_these_positions": "They are random under a declared seed. Nothing about the layout was chosen to produce a result, and the generator is scripts/build_swarm3d_scenario.py.",
+  "food_and_pillars_are_the_same_thing_to_the_encoder": "The encoder reads bearing and angular size. It has no colour channel and no texture, so it cannot tell a food sphere from a pillar; what separates them is that the food spheres are larger and therefore drive harder at the same distance. Any approach to a pillar is the network doing exactly what it does to any object, and is reported rather than filtered out."
+ },
+ "arena": {
+  "physics_dt_us": 500,
+  "ground_half_size_mm": 120.0,
+  "spawn_height_mm": 0.5,
+  "fly_visual_radius_mm": 0.55,
+  "station_keeping_gain_rad_per_mm": 0.02,
+  "station_keeping_integral_rad_per_mm_s": 0.12,
+  "station_keeping_yaw_gain_rad_per_rad": 0.05,
+  "station_keeping_yaw_integral_rad_per_rad_s": 0.4,
+  "station_keeping_max_offset_rad": 0.07,
+  "station_keeping_max_yaw_offset_rad": 0.02,
+  "station_keeping_settle_us": 2000000,
+  "why_these_body_values": "Carried over unchanged from configs/scenarios/demo01-visual-approach.json, whose file records why each one is what it is. Nothing about a wider arena changes what holds a standing body still."
+ },
+ "vision": {
+  "include_other_flies": true,
+  "fly_visual_radius_note": "Each fly is presented to the other flies' encoders as a sphere of 0.55 mm radius, which is about the half-width of a NeuroMechFly thorax. A fly is not a sphere and nothing here models how a fly looks to a fly."
+ },
+ "objects": [
+  {
+   "object_id": "food-a",
+   "kind": "food",
+   "x_mm": 6.5,
+   "y_mm": 5.0,
+   "radius_mm": 4.3,
+   "height_mm": 3.698,
+   "rgba": [
+    0.88,
+    0.28,
+    0.1,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "food-b",
+   "kind": "food",
+   "x_mm": -8.0,
+   "y_mm": 7.0,
+   "radius_mm": 3.6,
+   "height_mm": 3.096,
+   "rgba": [
+    0.93,
+    0.62,
+    0.09,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "food-c",
+   "kind": "food",
+   "x_mm": -6.0,
+   "y_mm": -8.0,
+   "radius_mm": 4.0,
+   "height_mm": 3.44,
+   "rgba": [
+    0.8,
+    0.18,
+    0.32,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "food-d",
+   "kind": "food",
+   "x_mm": 9.0,
+   "y_mm": -6.5,
+   "radius_mm": 3.1,
+   "height_mm": 2.666,
+   "rgba": [
+    0.95,
+    0.45,
+    0.12,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-1",
+   "kind": "pillar",
+   "x_mm": 12.087,
+   "y_mm": 12.642,
+   "radius_mm": 0.7,
+   "height_mm": 2.802,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-2",
+   "kind": "pillar",
+   "x_mm": 18.087,
+   "y_mm": -6.088,
+   "radius_mm": 0.7,
+   "height_mm": 2.407,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-3",
+   "kind": "pillar",
+   "x_mm": 7.385,
+   "y_mm": -16.567,
+   "radius_mm": 0.7,
+   "height_mm": 3.143,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-4",
+   "kind": "pillar",
+   "x_mm": -16.311,
+   "y_mm": -5.726,
+   "radius_mm": 0.7,
+   "height_mm": 2.483,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-5",
+   "kind": "pillar",
+   "x_mm": 1.976,
+   "y_mm": 21.337,
+   "radius_mm": 0.7,
+   "height_mm": 3.462,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  },
+  {
+   "object_id": "pillar-6",
+   "kind": "pillar",
+   "x_mm": 19.628,
+   "y_mm": 11.297,
+   "radius_mm": 0.7,
+   "height_mm": 2.504,
+   "rgba": [
+    0.44,
+    0.42,
+    0.38,
+    1.0
+   ],
+   "visible_to_vision": true
+  }
+ ],
+ "flies": [
+  {
+   "fly_id": "cns-01",
+   "x_mm": -11.627,
+   "y_mm": 16.936,
+   "heading_rad": -1.009578,
+   "label": "CNS-01"
+  },
+  {
+   "fly_id": "cns-02",
+   "x_mm": 20.336,
+   "y_mm": -0.455,
+   "heading_rad": 1.200339,
+   "label": "CNS-02"
+  },
+  {
+   "fly_id": "cns-03",
+   "x_mm": 13.035,
+   "y_mm": -18.952,
+   "heading_rad": -2.580898,
+   "label": "CNS-03"
+  },
+  {
+   "fly_id": "cns-04",
+   "x_mm": 17.985,
+   "y_mm": 18.49,
+   "heading_rad": -1.91227,
+   "label": "CNS-04"
+  },
+  {
+   "fly_id": "cns-05",
+   "x_mm": -6.824,
+   "y_mm": 24.654,
+   "heading_rad": -0.042858,
+   "label": "CNS-05"
+  },
+  {
+   "fly_id": "cns-06",
+   "x_mm": 28.832,
+   "y_mm": -3.955,
+   "heading_rad": 1.548861,
+   "label": "CNS-06"
+  },
+  {
+   "fly_id": "cns-07",
+   "x_mm": -23.396,
+   "y_mm": -6.924,
+   "heading_rad": 1.208125,
+   "label": "CNS-07"
+  },
+  {
+   "fly_id": "cns-08",
+   "x_mm": 5.602,
+   "y_mm": -28.344,
+   "heading_rad": 0.792499,
+   "label": "CNS-08"
+  },
+  {
+   "fly_id": "cns-09",
+   "x_mm": 25.965,
+   "y_mm": 10.448,
+   "heading_rad": -2.137865,
+   "label": "CNS-09"
+  },
+  {
+   "fly_id": "cns-10",
+   "x_mm": -5.269,
+   "y_mm": -26.389,
+   "heading_rad": 1.63624,
+   "label": "CNS-10"
+  },
+  {
+   "fly_id": "cns-11",
+   "x_mm": -1.553,
+   "y_mm": -16.092,
+   "heading_rad": 1.877374,
+   "label": "CNS-11"
+  },
+  {
+   "fly_id": "cns-12",
+   "x_mm": -19.215,
+   "y_mm": 11.345,
+   "heading_rad": 1.089167,
+   "label": "CNS-12"
+  }
+ ],
+ "decoder": {
+  "quiescent_us": 1500000,
+  "forward_half_rate_hz": 6.0,
+  "forward_threshold_hz": 0.6,
+  "initiation_hold_us": 150000,
+  "yaw_gain_per_hz": 1.6,
+  "max_yaw_rad_s": 3.0,
+  "turn_sign": 1.0,
+  "provenance": "E",
+  "why_each_value": {
+   "quiescent_us": "The fly stands still for the first 1.5 s regardless of the network, so the video shows a stationary starting point and the onset of locomotion is visibly caused by something.",
+   "forward_threshold_hz": "0.6, and the value is measurably arbitrary between the two searched. Settings differing only in this threshold were identical to the last decimal in every reported quantity, because the frozen operating point's 2.435 Hz cue response sits well above both 0.6 and 1.2 Hz, so the threshold never binds.",
+   "forward_half_rate_hz": "A half-saturation constant, so forward drive is 0.5 at 6 Hz of descending drive rather than saturating at the first spike.",
+   "yaw_gain_per_hz": "1.6, chosen by the sweep. Approach is non-monotonic in this gain: 0.8 gave +12.07 mm, 1.6 gave +12.61 mm and 3.2 gave only +5.00 mm, because too much steering gain makes the fly overshoot and oscillate rather than close on the cue.",
+   "turn_sign": "+1, turn toward the stronger descending side, which produces an approach. The sweep measured the mirror: -1 at the same gain gives -8.05 mm, a retreat. One number flips the behaviour, so the direction is an engineering choice and is reported as one. What the network supplies is the lateralisation, and the sign-agreement fraction barely moves between the two, 0.718 against 0.854."
+  },
+  "what_the_decoder_cannot_see": "Everything except two descending population rates. It takes no sensor frame, no pose, no distance and no time-to-target. There is no gain to zero because there is no sensory term.",
+  "frozen": {
+   "status": "FROZEN 2026-09-10 by scripts/tune_demo01_decoder.py",
+   "artifact": "evidence/demo01/demo01-decoder-tuning.json",
+   "selection_rule": "Among settings that walked in every development scenario, the largest mean approach. Declared before the sweep ran.",
+   "development_scenarios": "Three cue placements and seeds that are not the evaluation configuration: right-near (9.0, -7.0) seed 2, right-far (13.0, -11.0) seed 3, and left-far (13.5, 11.5) seed 4. The evaluation uses (10.7, 9.0) with seed 1, so the frozen decoder meets an unseen configuration.",
+   "the_network_was_not_touched": "The operating point was read from the frozen search artifact and never varied, so only the decoder moved."
+  }
+ }
+}

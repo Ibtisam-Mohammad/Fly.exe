@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "assumption_set_id": "foundation-v0.11",
+  "assumption_set_id": "foundation-v0.13",
   "records": [
     {
       "id": "DATA-01",
@@ -1021,6 +1021,103 @@
       "uncertainty": "unfitted; delay resolution is one coupling interval",
       "validation": "per-channel live-edge gate, and the stimulus-absent control of each behaviour contract",
       "why_this_record_exists": "Cited as an assumption_id in committed contracts and previously undefined."
+    },
+    {
+      "status": "accepted",
+      "owner": "embodiment",
+      "last_reviewed": "2026-09-13",
+      "source": "ADR-2026-021",
+      "id": "MULTI-01",
+      "name": "multi-fly shared-world engineering scaffold",
+      "units": "categorical execution boundary",
+      "provenance": "E",
+      "applies_to": "the interactive multi-fly arena and batched full-graph execution",
+      "value": {
+        "shared_world_fields": [
+          "food odor",
+          "visual target geometry",
+          "obstacle geometry",
+          "fly contact",
+          "food depletion"
+        ],
+        "default_body": "kinematic collision disc",
+        "exact_and_sensory_ablated_share_one_connectivity_allocation": true,
+        "separate_neural_state_per_fly": true,
+        "shuffled_graph_requires_a_separate_opt-in_allocation": true,
+        "full_graph_agents_are_parameterised_copies_of_one_specimen": true,
+        "social_behaviour_claim_permitted": false,
+        "cross_animal_generalisation_claim_permitted": false
+      },
+      "biological_mismatch": "The initial shared body is a collision disc, sensory fields are engineered, and multiple neural agents reuse one donor's anatomy rather than representing different measured flies.",
+      "uncertainty": "No population distribution of connectomes or social-state model is represented.",
+      "validation": "software causality, collision, shared-field, depletion and batched-state tests only; no validation tier",
+      "why_this_record_exists": "A visually shared arena can be mistaken for biological social behaviour unless the clone and body boundaries are machine-readable."
+    },
+    {
+      "status": "accepted",
+      "owner": "interface",
+      "last_reviewed": "2026-09-13",
+      "source": "ADR-2026-021",
+      "id": "WEB-01",
+      "name": "interactive browser transport boundary",
+      "units": "API and timing contract",
+      "provenance": "E",
+      "applies_to": "the HTTP and WebSocket live-demonstration service",
+      "value": {
+        "browser_may_mutate": [
+          "world stimulus placement",
+          "world stimulus removal",
+          "run or pause state"
+        ],
+        "browser_may_not_mutate": [
+          "neural state",
+          "neural output",
+          "motor command",
+          "body pose"
+        ],
+        "controller_target_coordinates_available": false,
+        "biological_time_is_published": true,
+        "slow_motion_is_not_hidden": true,
+        "cpu_fallback_label": "controller-preview-no-cns"
+      },
+      "biological_mismatch": "The browser is an experiment operator, not part of the fly.",
+      "uncertainty": "Network latency changes presentation latency but never simulation timestamps.",
+      "validation": "schema rejection, command whitelist, timestamp and no-target-coordinate tests",
+      "why_this_record_exists": "An interactive target is scientifically useful only if user input changes the world and cannot write an actuator or future body state."
+    },
+    {
+      "status": "accepted",
+      "owner": "embodiment",
+      "last_reviewed": "2026-09-13",
+      "source": "ADR-2026-023",
+      "id": "SWARM-01",
+      "name": "embodied multi-fly scene and multi-object retinal composition",
+      "units": "categorical execution boundary",
+      "provenance": "P/E",
+      "applies_to": "the embodied swarm arena, its object set, and the lamina drive every fly in it receives",
+      "value": {
+        "bodies": "one full NeuroMechFly per fly, all in one compiled MuJoCo model",
+        "bodies_share_one_solver_step": true,
+        "objects_are_model_geoms_with_explicit_contact_pairs": true,
+        "object_kinds": [
+          "food",
+          "pillar"
+        ],
+        "food_is_a_visual_object_only": true,
+        "ingestion_or_proboscis_claim_permitted": false,
+        "retinal_composition_rule": "per-lamina-cell maximum over every visible object",
+        "reduces_to_the_demo01_single_cue_encoder_exactly": true,
+        "other_flies_enter_vision_as_spheres_of_declared_radius_mm": 0.55,
+        "encoder_has_no_colour_channel": true,
+        "food_and_pillar_are_distinguishable_to_the_encoder": false,
+        "walking_is_an_engineered_pattern_generator_not_the_simulated_vnc": true,
+        "social_behaviour_claim_permitted": false,
+        "aggregation_is_a_consequence_of_flies_being_visible_objects": true
+      },
+      "biological_mismatch": "A fly is presented to another fly's retina as a sphere of one radius, which models no part of how a fly looks to a fly. The composition rule is a maximum rather than the summed photon flux a real lamina cell integrates. Food carries no odour, no taste and no nutritional value, and every fly in the scene is the same specimen's connectome.",
+      "uncertainty": "Unfitted. No measured inter-fly visual salience, no measured lamina summation rule, and no population distribution of connectomes.",
+      "validation": "software tests only: bit-level parity against the DEMO-01 encoder for a single cue, bit-level parity of one fly's trajectory against Demo01VisualBody, and the stimulus-absent control run. No validation tier.",
+      "why_this_record_exists": "A video of twelve flies converging on food will be read as foraging and as social behaviour unless the object semantics and the clone boundary are machine-readable."
     }
   ],
   "revision_history": [
@@ -1047,6 +1144,18 @@
       "to": "foundation-v0.11",
       "on": "2026-09-13",
       "why": "ADR-2026-020 withdraws eon-showcase-v1 as the final public demo without changing its artifacts, requires separate behaviour chapters and graph-free body controls, and preregisters the v2 bundle gate plus a neural-only tarsal-taste to MN9 operating-point search."
+    },
+    {
+      "from": "foundation-v0.11",
+      "to": "foundation-v0.12",
+      "on": "2026-09-13",
+      "why": "ADR-2026-021 adds the interactive multi-fly shared-world boundary, batched full-graph execution, controller-free world mutation rules and the explicitly non-neural CPU fallback."
+    },
+    {
+      "from": "foundation-v0.12",
+      "to": "foundation-v0.13",
+      "on": "2026-09-13",
+      "why": "ADR-2026-023 adds the embodied multi-fly scene: one NeuroMechFly body per fly in one compiled model, objects as real contact geoms, and a per-lamina-cell maximum composition over every visible object that reduces exactly to the DEMO-01 single-cue encoder."
     }
   ]
 }
