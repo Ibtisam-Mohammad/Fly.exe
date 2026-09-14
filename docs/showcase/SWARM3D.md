@@ -6,12 +6,19 @@ project publishes; ADR-2026-023 records why it exists and what changed.
 ## What is on screen
 
 Twelve *Drosophila* bodies in one MuJoCo scene with food spheres and pillars between them.
-Each fly runs its own copy of the whole released MaleCNS connectome -- 165,122 neurons and
-25,563,197 edges, executed every coupling interval -- over one shared connectivity
-allocation on one GPU. Each fly sees the arena through DEMO-01's frozen retinotopic lamina
-encoder, steers on nothing but two descending population rates, and walks on an engineered
-pattern generator. The bodies share one solver step, so they collide with each other and
-with the objects.
+Each fly runs its own copy of the released MaleCNS connectome's `Traced` universe -- 165,122
+of the 166,700 annotated bodies, and all 25,563,197 edges between them, executed every
+coupling interval -- over one shared connectivity allocation on one GPU. Each fly sees the
+arena through DEMO-01's frozen retinotopic lamina encoder, steers on nothing but two
+descending population rates, and walks on an engineered pattern generator. The bodies share
+one solver step, so the objects stop them through the physics. They do **not** collide with each other: no fly-fly contact pair exists and every
+fly geom carries `contype 0`, so two bodies pass through one another. The flies are coupled
+through vision alone.
+
+The vision is an analytic scene oracle, not an optical one. Each encoder is handed the exact
+position and radius of every visible object -- food, pillars, and the other flies as 0.55 mm
+spheres -- and computes bearing and angular size directly. No pixels, no rays, no occlusion,
+no colour, no elevation, no optic flow.
 
 The video carries four panel layouts:
 
@@ -73,9 +80,20 @@ rather than an assurance.
 | `docs/media/*.gif` | yes, 7.3 MB | the four loops in the README, cut from the same video |
 | the run itself | no | whole-scene `qpos` per coupling interval plus per-fly spike counts, under `$FLYSIM_DATA_ROOT/runs/` |
 
-`SHA256SUMS` covers the master as well as the published cut, so the 41.5 MB file can be
-verified against this repository wherever it is archived. Re-encoding is the only difference
-between them: no frame, caption or camera is regenerated.
+`SHA256SUMS` covers the master as well as the published cut, so the master can be verified
+against this repository wherever it is archived. Re-encoding is the only difference between
+them: no frame, caption or camera is regenerated.
+
+**One provenance repair.** The run summary records `code_commit: a8d86941c150f8897b53ef1e866164e359f315cc`,
+and that object no longer exists: the 2026-09-14 authorship rewrite changed every commit
+identifier in the repository. Its successor is
+[`398e05dd46deb70d872f9b6967bd69ca6d4bc23e`](https://github.com/Ibtisam-Mohammad/Fly.exe/commit/398e05dd46deb70d872f9b6967bd69ca6d4bc23e)
+-- same subject, same date, same position as the parent of the commit that landed this
+showcase. The rewrite changed author and committer emails only and left the root tree hash
+byte-identical, so the recorded content is unchanged; only the name for it moved. The run was
+also recorded from a dirty worktree, which `worktree_dirty: true` in the summary has always
+said, so the recording is presentation-grade and not evidence-grade and cannot be reproduced
+byte-for-byte from a commit alone.
 
 ## The boundary
 
@@ -124,8 +142,11 @@ stimulus-absent control:
 | ended nearer a food object | 12 / 12, median +11.48 mm | 8 / 12, median +2.25 mm |
 | nearest object at the end | 11 at food, 1 at a pillar | 3 at food, 9 at a pillar |
 
-Eleven of twelve reached a food sphere and stopped at its surface, final gaps -0.21 to
-+0.37 mm; the twelfth ended against a pillar at 0.55 mm. Every fly had to turn first, with
+Eleven of twelve ended against a food sphere, final gaps -0.21 to +0.37 mm; the twelfth
+ended against a pillar at 0.55 mm. They were stopped by the object rather than deciding to
+stop: the decoder has no transition out of LOCOMOTING, so a blocked fly is still being
+commanded forward, and the gap is a two-dimensional thorax-centre distance minus the object
+radius, not MuJoCo contact telemetry. Every fly had to turn first, with
 starting bearings to its target from -104 to +90 degrees.
 
 **Read the last two rows carefully.** Distance closed to food is not the discriminator: a

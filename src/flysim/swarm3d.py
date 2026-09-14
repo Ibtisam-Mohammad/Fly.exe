@@ -56,6 +56,16 @@ from flysim.errors import CausalityError, ConfigurationError
 
 # Every engineered stand-in this world relies on. The video prints these verbatim, so a
 # viewer is told what is a model and what is a prop before being shown either.
+FLY_FLY_COLLISION_NOTE = (
+    "Flies do not collide with each other. FlyGym gives every fly geom contype 0 and "
+    "relies entirely on explicit contact pairs; this world writes fly-object pairs and "
+    "writes no fly-fly pairs, so two bodies pass through one another. Measured on the "
+    "compiled model: every fly geom is (contype, conaffinity) = (0, 0), no explicit pair "
+    "joins two flies, and driving two thorax free joints to the same point produces no "
+    "fly-fly contact. The flies are coupled through vision only: each one enters the "
+    "others' encoders as a sphere of one declared radius."
+)
+
 SCAFFOLDS: tuple[str, ...] = (
     "FlyGym HybridTurningController: a published engineered central pattern generator "
     "driven by two normalised descending drives. It is not a VNC model, and no part of "
@@ -70,6 +80,7 @@ SCAFFOLDS: tuple[str, ...] = (
     "sphere that the encoder sees as an object of that angular size and nothing more.",
     "Each fly is presented to the other flies' encoders as a sphere of one declared "
     "radius. Nothing here models how a fly looks to a fly.",
+    FLY_FLY_COLLISION_NOTE,
     "Every fly in the scene carries the same connectome and the same parameters. They "
     "differ in where they start, what they see from there, and their independent "
     "membrane-noise stream. They are not individuals.",
@@ -385,6 +396,10 @@ class SwarmWorld:
         # touches, with the same friction and solver constants. Without these the fly
         # geoms carry contype 0 and walk through a pillar, because FlyGym gives the ground
         # plane contype 0 as well and relies entirely on explicit pairs.
+        # Fly-fly pairs are deliberately not written; see FLY_FLY_COLLISION_NOTE. The
+        # counter exists so that `describe()` reports the number rather than a promise, and
+        # so a test can fail the day the two diverge.
+        self._fly_fly_pairs = 0
         self._object_pairs = 0
         for _, fly, _ in built:
             for segment in contact_segments:
@@ -989,13 +1004,14 @@ class SwarmWorld:
                 "nbody": int(model.nbody),
                 "nlight": int(model.nlight),
                 "explicit_object_contact_pairs": self._object_pairs,
+                "explicit_fly_fly_contact_pairs": self._fly_fly_pairs,
             },
             "every_fly_is_a_separate_body": (
                 "Each fly is a full NeuroMechFly attached to the world with its own free "
-                "joint, its own actuators and its own walking controller. They share one "
-                "`mj_step`, so they collide with each other and with the objects through "
-                "the solver rather than through a rule."
+                "joint, its own actuators and its own walking controller, and they share "
+                "one `mj_step`."
             ),
+            "fly_fly_collision": FLY_FLY_COLLISION_NOTE,
             "scaffolds": list(SCAFFOLDS),
         }
 

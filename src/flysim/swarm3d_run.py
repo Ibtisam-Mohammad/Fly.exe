@@ -9,7 +9,8 @@ The loop, per fly, per coupling interval::
       -> declared posterior descending readout, causally filtered      (flysim.demo01)
       -> two normalised drives                                         (flysim.demo01_visual)
       -> HybridTurningController -> that fly's legs                    (flysim.swarm3d)
-      -> the bodies all step together, so they collide with each other and the objects
+      -> the bodies all step together and collide with the objects, though not with
+         each other: no fly-fly contact pair exists, so they are coupled by vision only
       -> the scene has changed, and every fly sees the change
 
 Three structural properties, each of which is a thing that can be checked rather than
@@ -601,6 +602,9 @@ def run_swarm3d(
         "outcome": outcome,
         "scaffolds": list(SCAFFOLDS),
         "omissions": [
+            "No fly-fly collision: FlyGym gives every fly geom contype 0 and this "
+            "world writes no fly-fly contact pair, so two bodies pass through one "
+            "another. The flies are coupled through vision only.",
             "No retina-to-lamina synapse: every photoreceptor edge is zeroed by the "
             "frozen unresolved-sign policy, so the loop enters one synapse downstream.",
             "No VNC motor hierarchy: leg movement comes from an engineered pattern "

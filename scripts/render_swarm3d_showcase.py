@@ -46,19 +46,50 @@ def choose_gl_backend() -> str:
     return "glfw"
 
 
+SOFTWARE_RENDERER_TOKENS = ("llvmpipe", "softpipe", "swrast", "swiftshader")
+
+
 def report_gl_backend() -> dict[str, object]:
-    """What actually rasterised, read from the live context rather than from the request."""
+    """What actually rasterises, measured from a live context and failing closed.
+
+    The first version of this ran after the render finished, when no context was current.
+    `glGetString` returned None, the renderer string became "unknown", the substring test
+    for a software rasteriser found nothing in "unknown", and the manifest recorded
+    `hardware_accelerated: true` on a machine that had drawn every frame with llvmpipe. A
+    provenance field that reports the flattering answer when it knows nothing is worse than
+    no field, so this opens a context of its own -- the same backend the renderer will use
+    -- and an undetermined answer is recorded as `null`, never as hardware.
+    """
+    undetermined: dict[str, object] = {
+        "backend": os.environ.get("MUJOCO_GL"),
+        "gl_renderer": None,
+        "gl_vendor": None,
+        "hardware_accelerated": None,
+        "note": "The GL context could not be queried, so this is unknown, not hardware.",
+    }
     try:
+        import mujoco
         import OpenGL.GL as gl
 
-        renderer = gl.glGetString(gl.GL_RENDERER)
-        vendor = gl.glGetString(gl.GL_VENDOR)
-        renderer_name = renderer.decode() if renderer else "unknown"
-        vendor_name = vendor.decode() if vendor else "unknown"
+        model = mujoco.MjModel.from_xml_string("<mujoco/>")
+        renderer = mujoco.Renderer(model, height=8, width=8)
+        try:
+            renderer.update_scene(mujoco.MjData(model))
+            renderer.render()
+            raw_renderer = gl.glGetString(gl.GL_RENDERER)
+            raw_vendor = gl.glGetString(gl.GL_VENDOR)
+        finally:
+            renderer.close()
     except Exception as error:  # pragma: no cover - depends on the live GL context
-        return {"backend": os.environ.get("MUJOCO_GL"), "error": repr(error)}
+        undetermined["error"] = repr(error)
+        return undetermined
+
+    if not raw_renderer:
+        return undetermined
+    renderer_name = raw_renderer.decode()
+    vendor_name = raw_vendor.decode() if raw_vendor else None
     software = any(
-        token in renderer_name.lower() for token in ("llvmpipe", "softpipe", "swrast")
+        token in renderer_name.lower() for token in SOFTWARE_RENDERER_TOKENS
     )
     return {
         "backend": os.environ.get("MUJOCO_GL"),
@@ -66,9 +97,9 @@ def report_gl_backend() -> dict[str, object]:
         "gl_vendor": vendor_name,
         "hardware_accelerated": not software,
         "note": (
-            "Software rasterisation. /dev/dri is absent in this distro and the dxgk "
-            "graphics adapter query fails, so Mesa falls back to llvmpipe; CUDA compute "
-            "is unaffected and the network still runs on the GPU."
+            "Software rasterisation: the GPU drew none of these frames. CUDA compute takes "
+            "a different path and is unaffected, which is why the network still runs on the "
+            "GPU while the rasteriser cannot."
             if software
             else "Hardware rasterisation."
         ),
@@ -183,9 +214,10 @@ def build_timeline(
         Shot(
             name="sweep",
             caption=(
-                "Every fly stood still for the first 1.5 s by construction, so the moment "
-                "it starts walking is caused by something. What changed is descending "
-                "activity, not a timer."
+                "Every fly stands still for the first 1.5 s by construction, and then "
+                "needs its descending drive held above threshold for 150 ms, so all "
+                "twelve start at 1.665 s. The timer sets WHEN. What the stimulus "
+                "decides is WHETHER: the control never leaves the standing state."
             ),
             video_seconds=10.0,
             sim_start_s=at(0.18),
@@ -363,7 +395,8 @@ def main() -> int:
     args = parser.parse_args()
 
     backend = choose_gl_backend()
-    print(f"gl backend  {backend}")
+    gl_report = report_gl_backend()
+    print(f"gl backend  {backend}  renderer {gl_report.get('gl_renderer')}")
 
     recording = RunRecording.load(args.run)
     control = RunRecording.load(args.control, load_spikes_for=()) if args.control else None
@@ -408,7 +441,7 @@ def main() -> int:
         title=args.title,
         progress=args.progress,
     )
-    manifest["gl"] = report_gl_backend()
+    manifest["gl"] = gl_report
     manifest["subjects"] = subjects
     manifest["tracking_shot_clearance_mm"] = clearance
     manifest["tracking_shot_clearance_rule"] = (

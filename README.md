@@ -1,8 +1,13 @@
 # MaleCNS Virtual Fly
 
-A *Drosophila* brain simulator that runs the **complete released male CNS connectome** —
-165,122 neurons, 25,563,197 synaptic edges — inside a physical fly body, in closed loop, on
-one GPU.
+A *Drosophila* brain simulator that runs the **whole `Traced` universe of the released male
+CNS connectome** — 165,122 neurons and every one of the 25,563,197 edges between them —
+inside a physical fly body, in closed loop, on one GPU.
+
+That universe is 165,122 of the 166,700 bodies the MaleCNS paper annotates: the runtime graph
+is the subgraph induced by annotation status `Traced`, a decision recorded in
+[ADR-2026-002](docs/adr/ADR-2026-002-traced-neuron-universe.md). Widening it to
+`Traced+Assign+Anchor` would add 2,443 bodies (1.48%) and 60,281 edges (0.24%).
 
 It is not a recovered copy of the imaged fly, a complete biological emulation, or a digital
 twin. What it is, and the evidence behind every number on this page, is set out in
@@ -13,14 +18,25 @@ twin. What it is, and the evidence behind every number on this page, is set out 
 ## Twelve flies, twelve connectomes, one scene
 
 Twelve full NeuroMechFly bodies in one MuJoCo scene, scattered at random over a 30 mm disc
-and aimed at random. Each fly executes its own copy of the entire connectome every 15 ms
+and aimed at random. Each fly executes its own copy of that whole graph every 15 ms
 coupling interval, over **one** shared connectivity allocation with independent membrane,
 adaptation, spike-counter and noise state. Food spheres and pillars are geoms with real
-contact pairs; the bodies share one solver step, so they collide with each other and with the
-objects through the physics rather than through a rule, and each fly is a visible object in
-the others' visual fields.
+contact pairs, and the bodies share one solver step, so an object stops a fly through the
+physics rather than through a rule. **Flies do not collide with each other** — FlyGym gives
+every fly geom `contype 0` and this world writes no fly-fly contact pair, so two bodies pass
+through one another. What couples them is vision: each fly enters the others' encoders as a
+sphere of one declared radius.
+
+That vision is analytic, not optical. The encoder is handed each object's exact position and
+radius and computes a bearing and an angular size from them; there are no camera pixels, no
+ray casting, no occlusion, no colour and no texture anywhere in the loop.
 
 Nothing steers them but two descending population rates read out of their own network.
+
+Onset is on a timer and the video says so: every fly stands still for 1.5 s by construction
+and then needs its drive held above threshold for 150 ms, so all twelve start walking at
+1.665 s. The timer decides *when*. What the stimulus decides is *whether* — the control below
+never leaves the standing state at all.
 
 | | GIF |
 |---|---|
@@ -39,11 +55,18 @@ Nothing steers them but two descending population rates read out of their own ne
 | straight-line displacement | 5.0 to 25.6 mm | 3.0 to 7.3 mm |
 | ended nearer a food object | 12 / 12, median +11.48 mm | 8 / 12, median +2.25 mm |
 
-Eleven of twelve reached a food sphere and stopped at its surface; the twelfth ended against
-a pillar. **The last row is the one to be careful about**, and the video says so on screen: a
+Eleven of twelve ended against a food sphere and the twelfth against a pillar. **They were
+stopped by the object, they did not decide to stop:** the decoder has no transition out of
+its locomoting state, so a blocked fly keeps being commanded forward. "Within 1 mm" is a
+two-dimensional thorax-centre distance minus the object radius, not MuJoCo contact
+telemetry. **The last row is the one to be careful about**, and the video says so on screen: a
 standing body drifts forward along its own axis, and headings are bounded so that food lies
 inside the encoder's mapped visual field, so the control leans the same way. Closing distance
 to food is *not* the discriminator. Ending against an object is — 12 of 12 against 0 of 12.
+
+This is **one seed and one arena** — the third arena, designed after measuring two that
+failed, with starting headings bounded so that food falls inside the encoder's mapped field.
+There is no multi-seed matrix, and no acceptance contract scores any of it.
 
 Two properties are checked rather than asserted, because the swarm reuses the frozen DEMO-01
 network and reimplements its per-fly actuation. One fly driven through `SwarmWorld` and
@@ -70,7 +93,7 @@ MaleCNS v1.0 (CC-BY)          165,122 neurons, 25,563,197 edges, checksum-locked
  retinotopic |    | two descending population rates
  lamina      |    |
  encoder     |    v
-        MuJoCo + NeuroMechFly 133 DOF, 42 actuated, contacts and adhesion solved
+        MuJoCo + NeuroMechFly 133 qpos / 132 DOF, 42 actuated, contacts solved
 ```
 
 The full frame chain, including the causal queues that keep the body one interval behind the
@@ -102,6 +125,12 @@ Specifically **not** claimed, and printed on the video frames rather than hidden
   leg movement.
 * **The flies are not individuals.** Twelve parameterised copies of one specimen, differing
   in where they start, what they see from there, and their independent noise stream.
+* **No fly-fly contact and no optical vision**, as above: the bodies pass through one another
+  and the encoder reads exact coordinates rather than pixels.
+* **The controls that would make this a swarm result do not exist yet.** There is no
+  flies-invisible arm, no swarm-specific readout ablation, no matched controller-only arm, no
+  activity-matched shuffle, no multi-seed matrix and no equal-angular-size food-versus-pillar
+  preference test. The published run is `exact` against `stimulus-absent`, and nothing more.
 * **Rendering is software rasterisation** on the machine that produced these files, and the
   manifest records it.
 
@@ -187,7 +216,12 @@ for the neuron state alone against the card's 360 GB/s.
 | `docs/REFERENCES.md` | how each source was used, licences, and the sources that were rejected |
 | `docs/architecture.md` | the frame chain and the boundaries between tracks |
 | `AGENTS.md` | the project's source of truth for scientific interfaces and claim discipline |
-| `tests/` | 782 tests in 70 files; the two bit-parity tests for the swarm are in `test_swarm3d.py` |
+| `tests/` | the suite; the two bit-parity tests for the swarm are in `test_swarm3d.py` |
+
+**Green CI does not mean the headline system ran.** CI installs neither GeNN, CUDA, FlyGym
+nor MuJoCo, so it never executes the connectome, the body or the swarm; it runs the pure-Python
+half and the contracts, at a 53% coverage floor. The GPU work is verified by hand on one
+machine, and the run manifests are the record of that.
 
 ## Sources
 
@@ -217,7 +251,7 @@ every structural and functional claim made anywhere in this repository - is sect
 
 | component | role here | licence and source |
 |---|---|---|
-| **NeuroMechFly v2 / FlyGym** 2.1.0 | the body: 133 DOF, contact, adhesion, the published `HybridTurningController` gait | Apache-2.0, [10.1038/s41592-024-02497-y](https://doi.org/10.1038/s41592-024-02497-y), <https://github.com/NeLy-EPFL/flygym> |
+| **NeuroMechFly v2 / FlyGym** 2.1.0 | the body: 133 generalized coordinates and 132 mechanical DOF, contact, adhesion, the published `HybridTurningController` gait | Apache-2.0, [10.1038/s41592-024-02497-y](https://doi.org/10.1038/s41592-024-02497-y), <https://github.com/NeLy-EPFL/flygym> |
 | **MuJoCo** 3.9 | rigid-body physics, contacts, rendering | Apache-2.0 |
 | **GeNN / PyGeNN** | the sparse CUDA engine that executes the full graph | <https://github.com/genn-team/genn> |
 | **Brian2** | small-circuit numerical oracle the engine is checked against | CeCILL-2.1, <https://github.com/brian-team/brian2> |

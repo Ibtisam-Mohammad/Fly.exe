@@ -27,15 +27,21 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from flysim.contracts import NeuralOutputFrame, SignalType
 from flysim.demo01 import Demo01Populations, PopulationSpec
 from flysim.demo01_visual import (
+    VISUAL_LEFT_READOUT,
+    VISUAL_RIGHT_READOUT,
     RetinaMap,
     RetinotopicVisualEncoder,
     VisualCue,
     VisualEncodingParameters,
+    VisualLocomotorDecoder,
+    VisualLocomotorState,
 )
 from flysim.errors import CausalityError, ConfigurationError
 from flysim.swarm3d import (
+    FLY_FLY_COLLISION_NOTE,
     SCAFFOLDS,
     SwarmArenaParameters,
     SwarmFlySpec,
@@ -513,7 +519,7 @@ def test_one_fly_in_the_swarm_world_moves_exactly_like_the_demo01_body() -> None
     both through the identical command sequence and requires the full generalised position
     vector to agree.
     """
-    from flysim.contracts import ActuatorCommandFrame, SignalType
+    from flysim.contracts import ActuatorCommandFrame
     from flysim.demo01_body import Demo01BodyParameters, Demo01VisualBody
     from flysim.engines.body import COMMAND_IDS
     from flysim.swarm3d import SwarmWorld
@@ -628,3 +634,138 @@ def test_objects_are_compiled_into_the_model_with_contact_pairs() -> None:
             ), name
     finally:
         world.close()
+
+
+def test_flies_cannot_collide_with_each_other_and_every_artifact_says_so() -> None:
+    """The claim this repository shipped and had never tested.
+
+    FlyGym gives every fly geom `contype 0` and relies entirely on explicit contact pairs.
+    `SwarmWorld` writes fly-object pairs and no fly-fly pairs, so two bodies pass through
+    one another. The documentation said the opposite for a week. This test pins the real
+    behaviour to the prose in both directions: if a future change adds fly-fly pairs, the
+    note and this test must change together.
+    """
+    assert "do not collide with each other" in FLY_FLY_COLLISION_NOTE
+    assert FLY_FLY_COLLISION_NOTE in SCAFFOLDS
+
+
+@pytest.mark.slow
+def test_the_compiled_model_has_no_fly_fly_contact_pair() -> None:
+    """Measured on the real model rather than read off the source."""
+    from flysim.swarm3d import SwarmWorld
+
+    arena, _ = _arena_from_demo01()
+    objects = (SwarmObject("food-1", "food", 8.0, 0.0, 2.0, 1.7, (0.9, 0.3, 0.1, 1.0)),)
+    world = SwarmWorld(
+        arena,
+        (
+            SwarmFlySpec("a", 0.0, 0.0, 0.0),
+            SwarmFlySpec("b", 3.0, 0.0, math.pi),
+        ),
+        objects,
+        seed=1,
+        camera_resolution=(120, 160),
+        appearance=False,
+        lighting=False,
+    )
+    try:
+        description = world.describe()
+        assert description["model"]["explicit_fly_fly_contact_pairs"] == 0
+        assert description["model"]["explicit_object_contact_pairs"] > 0
+
+        model = world.render_model
+
+        def geom_name(index: int) -> str:
+            return mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, index) or ""
+
+        fly_geoms = [
+            i
+            for i in range(model.ngeom)
+            if geom_name(i).startswith("a/") or geom_name(i).startswith("b/")
+        ]
+        assert fly_geoms, "the flies contributed no geoms, so this test proves nothing"
+        # No fly geom can collide by mask either, which is what makes the explicit-pair
+        # count the whole story rather than half of it.
+        for index in fly_geoms:
+            assert int(model.geom_contype[index]) == 0
+            assert int(model.geom_conaffinity[index]) == 0
+        for pair in range(model.npair):
+            first = geom_name(int(model.pair_geom1[pair]))
+            second = geom_name(int(model.pair_geom2[pair]))
+            owners = {name.split("/")[0] for name in (first, second) if "/" in name}
+            assert owners != {"a", "b"}, f"a fly-fly pair appeared: {first} {second}"
+    finally:
+        world.close()
+
+
+def test_locomotion_onset_is_set_by_the_timer_and_the_stimulus_sets_whether() -> None:
+    """The caption said "not a timer". The timer is exactly what sets the onset instant.
+
+    At the registered operating point the cue response is 2.435 Hz against a 0.6 Hz
+    threshold, so the threshold never binds: the fly leaves QUIESCENT when `quiescent_us`
+    elapses and enters LOCOMOTING one interval after `initiation_hold_us` has passed,
+    which is the same instant for every fly in the cohort. What the stimulus decides is
+    whether the transition happens at all.
+    """
+    scenario = SwarmScenario.load(SCENARIO)
+    parameters = scenario.decoder
+    interval_us = 15_000
+
+    def run(rate_hz: float) -> int | None:
+        decoder = VisualLocomotorDecoder(parameters)
+        for step in range(400):
+            t_us = step * interval_us
+            frame = NeuralOutputFrame(
+                t_us=t_us,
+                ids=(VISUAL_LEFT_READOUT, VISUAL_RIGHT_READOUT),
+                values=(rate_hz, rate_hz),
+                units="Hz",
+                signal_type=SignalType.FIRING_RATE,
+                provenance="M",
+                assumption_ids=("DEMO-01",),
+            )
+            decoder.decode(frame)
+            if decoder.state is VisualLocomotorState.LOCOMOTING:
+                return t_us
+        return None
+
+    # A drive far above threshold from the first interval: onset is the timer's answer.
+    expected = parameters.quiescent_us + parameters.initiation_hold_us + interval_us
+    assert run(2.435) == expected
+    assert expected == 1_665_000
+
+    # Ten times the threshold does not arrive any sooner. Nothing about the stimulus
+    # magnitude moves the instant.
+    assert run(6.0) == expected
+
+    # Below threshold it never leaves the standing state, which is the whole of the
+    # stimulus-absent control's behaviour.
+    assert run(parameters.forward_threshold_hz - 0.01) is None
+
+
+def test_the_gl_probe_reports_unknown_rather_than_hardware() -> None:
+    """A provenance field that guesses "hardware" when it knows nothing is worse than none.
+
+    The shipped manifest recorded `gl_renderer: "unknown"` and `hardware_accelerated: true`
+    for a render that llvmpipe drew every frame of, because the probe ran with no current
+    context and then tested the string "unknown" for the substring "llvmpipe".
+    """
+    import importlib.util
+
+    path = REPO / "scripts/render_swarm3d_showcase.py"
+    spec = importlib.util.spec_from_file_location("render_swarm3d_showcase", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    report = module.report_gl_backend()
+    assert set(report) >= {"backend", "gl_renderer", "hardware_accelerated", "note"}
+    if report["gl_renderer"] is None:
+        assert report["hardware_accelerated"] is None
+        assert "unknown" in str(report["note"]).lower()
+    else:
+        software = any(
+            token in str(report["gl_renderer"]).lower()
+            for token in module.SOFTWARE_RENDERER_TOKENS
+        )
+        assert report["hardware_accelerated"] is not software

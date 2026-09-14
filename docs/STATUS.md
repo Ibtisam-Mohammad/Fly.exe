@@ -9,7 +9,8 @@ Status date: 2026-09-14
 ## 2026-09-14: embodied 3D swarm
 
 Twelve full NeuroMechFly bodies run in one MuJoCo scene, each driven by its own copy of the
-whole released MaleCNS connectome. This is the embodied counterpart to the collision-disc
+whole `Traced` universe of the released MaleCNS connectome -- 165,122 of the 166,700
+annotated bodies, per ADR-2026-002. This is the embodied counterpart to the collision-disc
 arena in `flysim.multifly`, which answers a capacity question honestly and has no legs, no
 ground and no contact. ADR-2026-023 records the decision; `SWARM-01` registers the boundary;
 the assumption set moves to `foundation-v0.13`.
@@ -19,9 +20,17 @@ on one RTX 3060 at 4.2 GB of device memory and 0.015x biological real time, so a
 minutes of wall clock per variant. Each fly executes all 165,122 neurons and all 25,563,197
 edges every interval over **one** shared connectivity allocation, with independent membrane,
 adaptation, spike-counter and noise state. Food spheres and pillars are geoms in the compiled
-model with explicit contact pairs, and the bodies share one solver step, so they collide with
-each other and with the objects through the physics rather than through a rule. Flies are
-placed uniformly over a 30 mm disc and aimed at random under seed 11.
+model with explicit contact pairs, and the bodies share one solver step, so an object stops a
+fly through the physics rather than through a rule. Flies are placed uniformly over a 30 mm
+disc and aimed at random under seed 11.
+
+**Flies do not collide with each other**, which this entry and four other documents claimed
+for a week before a third-party audit measured it on 2026-09-14. FlyGym gives every fly geom
+`contype 0` and relies on explicit contact pairs; the world writes fly-object pairs and no
+fly-fly pairs. Measured on the compiled model: 220 explicit pairs, none joining two flies;
+every fly geom at `(contype, conaffinity) = (0, 0)`; and two thorax free joints driven to the
+same point produce 48 contacts, none of them fly-fly. The flies are coupled through vision
+only. `tests/test_swarm3d.py` now pins this in both directions.
 
 What the run and its identical-seed stimulus-absent control measured:
 
@@ -34,8 +43,11 @@ What the run and its identical-seed stimulus-absent control measured:
 | ended nearer a food object | 12 / 12, median +11.48 mm | 8 / 12, median +2.25 mm |
 | nearest object at the end | 11 at food, 1 at a pillar | 3 at food, 9 at a pillar |
 
-Eleven of twelve reached a food sphere and stopped at its surface, final gaps -0.21 to
-+0.37 mm; the twelfth ended against a pillar at 0.55 mm. Every one had to turn first, with
+Eleven of twelve ended against a food sphere, final gaps -0.21 to +0.37 mm; the twelfth
+ended against a pillar at 0.55 mm. They were stopped by the object rather than deciding to
+stop: the decoder has no transition out of LOCOMOTING, so a blocked fly is still being
+commanded forward, and the gap is a two-dimensional thorax-centre distance minus the object
+radius, not MuJoCo contact telemetry. Every one had to turn first, with
 starting bearings to its target from -104 to +90 degrees.
 
 The last row is still the one to be careful about and the video says so on screen. Closing

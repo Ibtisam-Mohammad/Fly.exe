@@ -30,8 +30,9 @@ not a result.
 Build the embodied counterpart, from the parts that already exist and are already checked.
 
 **One MuJoCo scene holding every fly.** `flysim.swarm3d.SwarmWorld` attaches N full
-NeuroMechFly bodies to one `FlatGroundWorld` and steps them together, so they collide with
-each other and with the objects through the solver rather than through a rule. Measured at
+NeuroMechFly bodies to one `FlatGroundWorld` and steps them together, so the objects stop
+them through the solver rather than through a rule. They do not collide with each other; see
+the audit section at the end of this document. Measured at
 twelve flies: `nq` 1596, 2.07 ms per 500 us physics step at eight, and the whole scene is
 one compiled model.
 
@@ -172,3 +173,56 @@ separate path, which is why the 165,122-neuron network runs on the GPU at 4.2 GB
 rasteriser cannot touch it. glfw is 1.7x faster than osmesa here, 282 against 487 ms a frame,
 and is the default. The render manifest records `gl_renderer` and `hardware_accelerated` so
 that a render on a machine where the GPU is reachable says so rather than looking the same.
+
+
+## What a third-party audit found, 2026-09-14
+
+An external review of the published repository raised seventeen findings. Every one was
+checked against the code rather than against this document, and every one held. Three were
+claims this ADR or its artifacts made and could not support.
+
+**Flies do not collide with each other.** This ADR said "steps them together, so they collide
+with each other and with the objects through the solver rather than through a rule". The
+first half is false. FlyGym gives every fly geom `contype 0` and relies entirely on explicit
+contact pairs; `SwarmWorld` writes fly-object pairs and never writes fly-fly pairs. Measured
+on the compiled two-fly model: 220 explicit pairs, **zero** joining two flies; every fly geom
+at `(contype, conaffinity) = (0, 0)`; two thorax free joints driven to the same point produce
+48 contacts, **zero** of them fly-fly. The claim was asserted from the design and never
+tested, which is the failure this project has a rule against. The swarm coupling that does
+exist is visual: each fly enters the others' encoders as a sphere of one declared radius.
+Implementing fly-fly contact is possible but would invalidate the published recording, so it
+is registered as a gap rather than silently added.
+
+**Locomotion onset is timer-determined.** The frozen decoder holds every fly in `QUIESCENT`
+until `quiescent_us` = 1.5 s, then requires the drive to stay above `forward_threshold_hz`
+= 0.6 Hz for `initiation_hold_us` = 150 ms. The registered operating point answers a cue at
+2.435 Hz, so the threshold never binds and all twelve flies enter `LOCOMOTING` at exactly
+1,665,000 us. The shot caption "What changed is descending activity, not a timer" was false
+as written and has been replaced. The honest split: the timer sets *when*, and the stimulus
+sets *whether* -- the stimulus-absent control never leaves the standing state.
+
+**The renderer provenance field failed open.** `report_gl_backend` ran after the render, with
+no current GL context, so `glGetString` returned `None`, the renderer string became
+`"unknown"`, the substring test for `llvmpipe` found nothing in `"unknown"`, and the manifest
+recorded `hardware_accelerated: true` for a render that software rasterisation drew every
+frame of. The probe now opens a context of its own and records `null` when it cannot tell.
+
+Four further findings were true and under-disclosed rather than false, and are now stated in
+the README and the operator handoff: the visual encoder is an analytic scene oracle with no
+pixels, rays or occlusion; "ended against an object" is a two-dimensional thorax-centre
+proximity measure and the decoder has no stop transition, so a blocked fly is still being
+commanded forward; the result rests on one seed and one arena; and the runtime graph is the
+`Traced` induced subgraph, 165,122 of 166,700 annotated bodies, rather than every MaleCNS
+record.
+
+The remaining findings restated boundaries this project already documents: the gait is
+engineered, `turn_sign` is a registered engineering choice whose mirror was measured, there
+is no social behaviour or foraging, the cell dynamics are generic, no tier above V0 is
+awarded, there is no aerodynamic flight, and green CI does not exercise the GPU or the body.
+
+The controls the audit asked for and this recording does not have -- flies-invisible, a
+swarm-specific readout ablation, a matched controller-only arm, an activity-matched shuffle,
+a multi-seed matrix, and an equal-angular-size food-versus-pillar preference test -- are the
+real scientific gap. The flies-invisible control is the one that decides whether the word
+"swarm" means anything here, and until it is run, this remains twelve flies that can see each
+other and cannot touch each other.
