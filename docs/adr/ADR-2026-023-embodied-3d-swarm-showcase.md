@@ -122,11 +122,18 @@ is P/E, it is registered in `SWARM-01`, and it is declared on screen.
   size, because GeNN bakes all four into the generated code. Without the batch term a
   one-fly build would be silently loaded for a twelve-fly run.
 * Cost, measured: twelve flies at 0.015 x real time, so 30 s of simulated behaviour is about
-  33 minutes per variant on one RTX 3060, at 4.2 GB of device memory. The wall clock is not
-  the GPU being slow: 30 s of biology at the registered 100 us neural step is 300,000
-  timesteps over 165,122 x 12 neuron states, which is 594 billion state updates. Real time
-  would need about 1.2 TB/s of memory bandwidth for the neuron state alone against the
-  card's 360 GB/s, so a perfect implementation is still roughly 3x short at twelve flies.
+  33 minutes per variant on one RTX 3060, at 4.2 GB of device memory. Profiled on the
+  published run's own kernel (build key `80a56edd9181`), a 15 ms coupling interval is 497 ms
+  of GeNN kernels, 124 ms of MuJoCo physics for twelve bodies, 39 ms of device reads and
+  25 ms of encoding and decoding. The stepping phase is device execution and not submission
+  overhead: the 150 `step_time()` calls enqueue in 2.9 ms while the barrier after them takes
+  497 ms. Each neural step moves about 317 MB, because the merged neuron kernel gives every
+  neuron nine `outPostInSyn` accumulators -- one per source degree bucket, the price of the
+  bucket split that keeps ragged padding bounded -- on top of its own state and RNG, at 160
+  bytes per neuron per 100 us. That is 95 GB/s sustained, 26% of the card's 360 GB/s. Real
+  time at this traffic would need 3.2 TB/s, about 9x beyond the card at perfect efficiency.
+  An earlier version of this bullet said 1.2 TB/s and "roughly 3x short"; both numbers were
+  derived from neuron state alone, before the fan-in was measured.
 * The prior swarm artifacts (`swarm-cns-cinematic-v1`, ADR-2026-021 and ADR-2026-022) are
   not withdrawn or rewritten. They recorded what they recorded.
 

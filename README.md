@@ -187,10 +187,28 @@ PYTHONPATH=src python scripts/render_swarm3d_showcase.py \
 ```
 
 Cost, measured: twelve flies at 0.015x biological real time, about 33 minutes of wall clock
-per variant on one RTX 3060 at 4.2 GB of device memory. That is not the GPU being slow — 30 s
-of biology at the registered 100 µs neural step is 300,000 timesteps over 165,122 x 12 neuron
-states, or 594 billion state updates, which would need roughly 1.2 TB/s of memory bandwidth
-for the neuron state alone against the card's 360 GB/s.
+per variant on one RTX 3060 at 4.2 GB of device memory. Profiled on the same kernel the
+published run used, one 15 ms coupling interval divides as:
+
+| phase | ms | share |
+| --- | --- | --- |
+| GeNN kernels, 150 neural steps | 497 | 72% |
+| MuJoCo physics, 30 steps x 12 bodies | 124 | 18% |
+| three device reads per interval | 39 | 6% |
+| visual encoding, readout, decode | 25 | 4% |
+
+That stepping phase is device execution rather than submission overhead, which the split
+settles: the 150 `step_time()` calls enqueue in **2.9 ms** and the barrier after them takes
+**497 ms**. Each step moves about **317 MB**, because every neuron reads and writes nine
+`inSyn` accumulators — one per source degree bucket — plus its own state and RNG, which is
+160 bytes per neuron per 100 µs. The kernel therefore sustains **95 GB/s, about 26% of the
+card's 360 GB/s**.
+
+So the card is the limit, but not because it is saturated. Real time at this traffic would
+need 3.2 TB/s, roughly 9x beyond the card even at perfect efficiency. The headroom that does
+exist is about **2x end-to-end**: 3.8x on the kernel if it reached peak bandwidth, of which
+the nine-way fan-in is 40% of the traffic, plus 5% for the two device reads that duplicate a
+third.
 
 ## Other demonstrations
 
